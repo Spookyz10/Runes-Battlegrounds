@@ -1,0 +1,30 @@
+{
+  "name": "Runes Battlegrounds",
+  "tree": {
+    "$className": "DataModel",
+
+    "ReplicatedStorage": {
+      "Shared": {
+        "$path": "src/shared"
+      }
+    },
+
+    "ServerScriptService": {
+      "$path": "src/server"
+    },
+
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "Client": {
+          "$path": "src/client"
+        }
+      }
+    },
+
+    "ServerStorage": {
+      "Modules": {
+        "$path": "src/modules"
+      }
+    }
+  }
+}
