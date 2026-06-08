@@ -1,23 +1,10 @@
--- CombatHandler (Script em ServerScriptService)
-
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
 local CombatService = require(ServerStorage.Modules.Combat.CombatService)
 local CombatState = require(ServerStorage.Modules.Combat.CombatState)
-local RapidPunches = require(ServerStorage.Modules.Combat.Skills.RapidPunches)
-
---[[
-	Estrutura de Remotes em ReplicatedStorage.Shared:
-	Shared/
-	  Remotes/
-	    Combat/
-	      M1          RemoteEvent   args: isAir (bool), isUppercut (bool)
-	      BlockStart  RemoteEvent   sem args
-	      BlockEnd    RemoteEvent   sem args
-	      Skill       RemoteEvent   args: skillName (string)
-]]
+local CharacterService = require(ServerStorage.Modules.Characters)
 
 local CombatRemotes = ReplicatedStorage.Remotes.Combat
 
@@ -30,7 +17,8 @@ CombatRemotes.M1.OnServerEvent:Connect(function(player, isAir, isUppercut)
 	if not character then
 		return
 	end
-	CombatService.m1(player, character, isAir == true, isUppercut == true)
+	local config = CharacterService.getConfig(CombatState.get(player).characterName)
+	CombatService.m1(player, character, config, isAir == true, isUppercut == true)
 end)
 
 CombatRemotes.BlockStart.OnServerEvent:Connect(function(player)
@@ -41,17 +29,27 @@ CombatRemotes.BlockEnd.OnServerEvent:Connect(function(player)
 	CombatService.blockEnd(player)
 end)
 
-CombatRemotes.Skill.OnServerEvent:Connect(function(player, skillName)
+CombatRemotes.Skill.OnServerEvent:Connect(function(player, tool)
+	if not tool or not tool:IsA("Tool") then
+		return
+	end
+	if tool.Parent ~= player.Backpack then
+		return
+	end
 	local character = getChar(player)
 	if not character then
 		return
 	end
-
-	if skillName == "RapidPunches" then
-		task.spawn(RapidPunches.execute, player, character)
+	local config = CharacterService.getConfig(CombatState.get(player).characterName)
+	for _, toolName in config.skills do
+		if toolName == tool.Name then
+			local skillModule = CharacterService.getSkillModule(toolName)
+			task.spawn(skillModule.execute, player, character)
+			return
+		end
 	end
 end)
 
-Players.PlayerRemoving:Connect(function(player)
-	CombatState.clear(player)
+CombatRemotes.ChangeCharacter.OnServerEvent:Connect(function(player, characterName)
+	CharacterService.assign(player, characterName)
 end)

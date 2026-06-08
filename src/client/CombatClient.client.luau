@@ -1,5 +1,3 @@
--- CombatClient (LocalScript em StarterPlayer > StarterPlayerScripts > Client)
-
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -19,18 +17,22 @@ local function isInAir()
 	return hum and hum.FloorMaterial == Enum.Material.Air
 end
 
-local function isHoldingJump()
-	return UserInputService:IsKeyDown(Enum.KeyCode.Space)
+local function getSkillTool(slot)
+	local tools = {}
+	for _, t in player.Backpack:GetChildren() do
+		if t:IsA("Tool") then
+			tools[#tools + 1] = t
+		end
+	end
+	return tools[slot]
 end
 
--- M1
 mouse.Button1Down:Connect(function()
 	local air = isInAir()
-	local uppercut = (not air) and isHoldingJump()
+	local uppercut = (not air) and UserInputService:IsKeyDown(Enum.KeyCode.Space)
 	CombatRemotes.M1:FireServer(air, uppercut)
 end)
 
--- Block
 UserInputService.InputBegan:Connect(function(input, gpe)
 	if gpe then
 		return
@@ -39,7 +41,15 @@ UserInputService.InputBegan:Connect(function(input, gpe)
 	if input.UserInputType == Enum.UserInputType.MouseButton2 then
 		CombatRemotes.BlockStart:FireServer()
 	elseif input.KeyCode == Enum.KeyCode.Q then
-		CombatRemotes.Skill:FireServer("RapidPunches")
+		local tool = getSkillTool(1)
+		if tool then
+			CombatRemotes.Skill:FireServer(tool)
+		end
+	elseif input.KeyCode == Enum.KeyCode.E then
+		local tool = getSkillTool(2)
+		if tool then
+			CombatRemotes.Skill:FireServer(tool)
+		end
 	end
 end)
 
@@ -47,7 +57,6 @@ UserInputService.InputEnded:Connect(function(input, gpe)
 	if gpe then
 		return
 	end
-
 	if input.UserInputType == Enum.UserInputType.MouseButton2 then
 		CombatRemotes.BlockEnd:FireServer()
 	end
