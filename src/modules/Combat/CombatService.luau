@@ -170,25 +170,25 @@ end
 
 -- ─── M1 ──────────────────────────────────────────────────────────────────────
 
-function CombatService.m1(player, character, config, isAir, isUppercut)
+function CombatService.m1(player, character, config, _, _)
 	local state = CombatState.get(player)
 	if state.inAttack or state.inEndlag then
 		return
 	end
 
-	local attackData
+	local now = tick()
+	if now - state.lastAttackTime > config.comboWindow then
+		state.comboStep = 0
+	end
+	state.comboStep = (state.comboStep % #config.m1) + 1
+	state.lastAttackTime = now
 
-	if isAir then
-		attackData = config.m1Air
-	elseif isUppercut then
-		attackData = config.m1Uppercut
+	local attackData
+	if state.comboStep == #config.m1 then
+		local humanoid = character:FindFirstChildOfClass("Humanoid")
+		local inAir = humanoid and humanoid.FloorMaterial == Enum.Material.Air
+		attackData = inAir and config.m1Air or config.m1Uppercut
 	else
-		local now = tick()
-		if now - state.lastAttackTime > config.comboWindow then
-			state.comboStep = 0
-		end
-		state.comboStep = (state.comboStep % #config.m1) + 1
-		state.lastAttackTime = now
 		attackData = config.m1[state.comboStep]
 	end
 

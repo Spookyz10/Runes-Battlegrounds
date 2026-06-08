@@ -13,6 +13,7 @@ StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
 local hotbar = playerGui:WaitForChild("HUD"):WaitForChild("Hotbar")
 
 local slots = {}
+local hotbarSlots = {}
 
 local function clearHotbar()
 	for _, slot in slots do
@@ -23,7 +24,7 @@ end
 
 local function buildHotbar(tools)
 	clearHotbar()
-	for _, tool in tools do
+	for i, tool in tools do
 		local slot = skillTemplate:Clone()
 		slot.Name = tool.Name
 		slot.SkillName.Text = tool.Name
@@ -36,9 +37,9 @@ local function buildHotbar(tools)
 		end)
 
 		slots[#slots + 1] = slot
+		hotbarSlots[i] = tool
 	end
 end
-
 local function refreshFromBackpack()
 	local tools = {}
 	for _, item in player.Backpack:GetChildren() do

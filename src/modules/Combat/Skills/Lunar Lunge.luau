@@ -9,10 +9,13 @@ local CombatService = require(script.Parent.Parent.CombatService)
 local CooldownService = require(ServerStorage.Modules.CooldownService)
 local HitboxService = require(ServerStorage.Modules.HitboxService)
 local KnockbackService = require(ServerStorage.Modules.KnockbackService)
+local RagdollService = require(ServerStorage.Modules.RagdollService)
 
 local COOLDOWN = 1
 local DASH_SPEED = 80
-local DASH_DURATION = 0.35
+local DASH_DURATION = 0.4
+local LATENCY_MARGIN = 0.15
+local LINGER_DURATION = 0.3
 local HITBOX_SIZE = Vector3.new(10, 10, 10)
 local STUN_DURATION = 1.2
 local ENDLAG = 0.45
@@ -22,6 +25,7 @@ local IGNORE_COUNTER = 0
 local CANCEL_TIER = 2
 
 local VFXRemotes = ReplicatedStorage.Remotes.VFX
+local SkillMovementRemote = VFXRemotes.SkillMovement
 
 local function applyStun(victimChar, duration)
 	local humanoid = victimChar:FindFirstChildOfClass("Humanoid")
@@ -36,21 +40,44 @@ local function applyStun(victimChar, duration)
 	end)
 end
 
-local function doDash(character, direction, speed, duration)
-	local root = character:FindFirstChild("HumanoidRootPart")
-	if not root then
+local function processHit(victimChar, attackerChar, attackerRoot, dir, state)
+	local victimPlayer = Players:GetPlayerFromCharacter(victimChar)
+	if not victimPlayer then
 		return
 	end
 
-	local bv = Instance.new("BodyVelocity")
-	bv.Velocity = direction * speed
-	bv.MaxForce = Vector3.new(1e5, 0, 1e5)
-	bv.P = 1e4
-	bv.Parent = root
+	local victimState = CombatState.get(victimPlayer)
+	local victimRoot = victimChar:FindFirstChild("HumanoidRootPart")
+	if not victimRoot then
+		return
+	end
 
-	task.wait(duration)
+	if victimState.iframeType > IGNORE_IFRAME then
+		return
+	end
 
-	bv:Destroy()
+	if victimState.isCountering and victimState.counterTier > IGNORE_COUNTER then
+		victimState.counterTriggered = true
+		victimState.counterTarget = attackerChar
+		return
+	end
+
+	if victimState.isBlocking then
+		local toAttacker = (attackerRoot.Position - victimRoot.Position)
+		toAttacker = Vector3.new(toAttacker.X, 0, toAttacker.Z).Unit
+		if toAttacker:Dot(victimRoot.CFrame.LookVector) > 0 then
+			VFXRemotes.SkillEffect:FireAllClients("Lunar Lunge", "blocked", victimChar, dir)
+			return
+		end
+	end
+
+	if victimState.inAttack and victimState.interruptTier <= INTERRUPT_TIER then
+		CombatService.forceInterrupt(victimPlayer, victimChar)
+	end
+
+	RagdollService.applyRagdoll(victimChar, Vector3.new(0, 100, 0), STUN_DURATION)
+	victimChar.Humanoid:TakeDamage(20)
+	VFXRemotes.SkillEffect:FireAllClients("Lunar Lunge", "hit", victimChar, dir)
 end
 
 function LunarLunge.execute(player, character)
@@ -68,81 +95,40 @@ function LunarLunge.execute(player, character)
 	if not root then
 		return
 	end
-
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if not humanoid then
 		return
 	end
 
-	local dir = root.CFrame.LookVector
-	dir = Vector3.new(dir.X, 0, dir.Z).Unit
-
 	state.inAttack = true
 	state.cancelTier = CANCEL_TIER
 	state.interruptTier = INTERRUPT_TIER
-	humanoid.WalkSpeed = 0
-	humanoid.JumpPower = 0
 
-	VFXRemotes.SkillEffect:FireAllClients("Lunar Lunge", "dash", character, dir)
+	SkillMovementRemote:FireClient(player, "Lunar Lunge", {
+		speed = DASH_SPEED,
+		duration = DASH_DURATION,
+	})
 
-	doDash(character, dir, DASH_SPEED, DASH_DURATION)
+	VFXRemotes.SkillEffect:FireAllClients("Lunar Lunge", "dash", character)
+
+	task.wait(DASH_DURATION + LATENCY_MARGIN)
 
 	if not state.inAttack then
-		humanoid.WalkSpeed = 16
-		humanoid.JumpPower = 50
 		return
 	end
 
-	-- Relê a posição APÓS o dash
-	local postDashCFrame = root.CFrame
-
+	local dir = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
 	VFXRemotes.SkillEffect:FireAllClients("Lunar Lunge", "impact", character, dir)
 
-	local hits = HitboxService.query({
-		origin = postDashCFrame,
+	HitboxService.queryLinger({
+		anchor = root,
 		size = HITBOX_SIZE,
+		duration = LINGER_DURATION,
 		exclude = { character },
+		onHit = function(victimChar)
+			processHit(victimChar, character, root, dir, state)
+		end,
 	})
-
-	for _, victimChar in hits do
-		local victimPlayer = Players:GetPlayerFromCharacter(victimChar)
-		if not victimPlayer then
-			continue
-		end
-
-		local victimState = CombatState.get(victimPlayer)
-		local victimRoot = victimChar:FindFirstChild("HumanoidRootPart")
-		if not victimRoot then
-			continue
-		end
-
-		if victimState.iframeType > IGNORE_IFRAME then
-			continue
-		end
-
-		if victimState.isCountering and victimState.counterTier > IGNORE_COUNTER then
-			victimState.counterTriggered = true
-			victimState.counterTarget = character
-			continue
-		end
-
-		if victimState.isBlocking then
-			local toAttacker = (root.Position - victimRoot.Position)
-			toAttacker = Vector3.new(toAttacker.X, 0, toAttacker.Z).Unit
-			if toAttacker:Dot(victimRoot.CFrame.LookVector) > 0 then
-				VFXRemotes.SkillEffect:FireAllClients("Lunar Lunge", "blocked", victimChar, dir)
-				continue
-			end
-		end
-
-		if victimState.inAttack and victimState.interruptTier <= INTERRUPT_TIER then
-			CombatService.forceInterrupt(victimPlayer, victimChar)
-		end
-
-		applyStun(victimChar, STUN_DURATION)
-		KnockbackService.applyFromHit(victimChar, root.Position, 25, 10)
-		VFXRemotes.SkillEffect:FireAllClients("Lunar Lunge", "hit", victimChar, dir)
-	end
 
 	state.inAttack = false
 	state.inEndlag = true
@@ -151,8 +137,6 @@ function LunarLunge.execute(player, character)
 
 	state.inEndlag = false
 	state.cancelTier = 0
-	humanoid.WalkSpeed = 16
-	humanoid.JumpPower = 50
 end
 
 return LunarLunge

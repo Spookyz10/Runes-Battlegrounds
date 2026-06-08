@@ -12,13 +12,13 @@ local function getChar(player)
 	return player.Character
 end
 
-CombatRemotes.M1.OnServerEvent:Connect(function(player, isAir, isUppercut)
+CombatRemotes.M1.OnServerEvent:Connect(function(player)
 	local character = getChar(player)
 	if not character then
 		return
 	end
 	local config = CharacterService.getConfig(CombatState.get(player).characterName)
-	CombatService.m1(player, character, config, isAir == true, isUppercut == true)
+	CombatService.m1(player, character, config)
 end)
 
 CombatRemotes.BlockStart.OnServerEvent:Connect(function(player)

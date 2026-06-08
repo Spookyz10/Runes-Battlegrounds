@@ -238,6 +238,84 @@ function HitboxService.query(options)
 	return hits
 end
 
+--[[
+    HitboxService.queryLinger(options) → { character, ... }
+
+    Igual ao query normal, mas repete a checagem a cada frame durante
+    options.duration segundos, seguindo a posição de options.anchor (Part).
+    Útil para dashes onde o servidor recebe a posição com delay de rede.
+
+    options extras:
+        anchor      Part      – part cujo CFrame é usado a cada tick (obrigatório)
+        duration    number    – segundos de linger (obrigatório)
+        onHit       (char) -> ()? – callback chamado imediatamente em cada hit novo
+]]
+function HitboxService.queryLinger(options)
+	assert(options.anchor, "HitboxService.queryLinger: 'anchor' é obrigatório")
+	assert(options.size, "HitboxService.queryLinger: 'size' é obrigatório")
+	assert(options.duration, "HitboxService.queryLinger: 'duration' é obrigatório")
+
+	local anchor = options.anchor
+	local size = options.size
+	local offset = options.offset or Vector3.zero
+	local exclude = options.exclude or {}
+	local maxHits = options.maxHits
+	local filterFunc = options.filterFunc
+	local onHit = options.onHit
+	local duration = options.duration
+
+	local params = OverlapParams.new()
+	params.FilterDescendantsInstances = exclude
+	params.FilterType = Enum.RaycastFilterType.Exclude
+
+	local hits = {}
+	local seen = {}
+	local elapsed = 0
+
+	while elapsed < duration do
+		local dt = task.wait()
+		elapsed += dt
+
+		if not anchor.Parent then
+			break
+		end
+
+		local cf = anchor.CFrame * CFrame.new(offset)
+		spawnDebugBox(cf, size)
+
+		local parts = workspace:GetPartBoundsInBox(cf, size, params)
+
+		for _, part in parts do
+			if not part:GetAttribute(ATTR_PLAYER_HITBOX) then
+				continue
+			end
+
+			local char = part.Parent
+			if seen[char] then
+				continue
+			end
+			seen[char] = true
+
+			if filterFunc and not filterFunc(char) then
+				continue
+			end
+
+			hits[#hits + 1] = char
+
+			if onHit then
+				print(char)
+				onHit(char)
+			end
+
+			if maxHits and #hits >= maxHits then
+				return hits
+			end
+		end
+	end
+
+	return hits
+end
+
 -- ─── Auto-init de players ────────────────────────────────────────────────────
 
 Players.PlayerAdded:Connect(function(player)
