@@ -1,11 +1,16 @@
-local Vitality = {}
+--[[
+	Character: Lunar
+	src/modules/Characters/Lunar.luau
+]]
+
+local Lunar = {}
 
 local RagdollService = require(game:GetService("ServerStorage").Modules.RagdollService)
 
-Vitality.comboWindow = 1.8
-Vitality.skills = { "Rapid Punches" }
+Lunar.comboWindow = 1.8
+Lunar.skills = { "Lunar Lunge" }
 
-Vitality.m1 = {
+Lunar.m1 = {
 	[1] = {
 		windup = 0.15,
 		endlag = 0.20,
@@ -67,7 +72,7 @@ Vitality.m1 = {
 	},
 }
 
-Vitality.m1Air = {
+Lunar.m1Air = {
 	windup = 0.20,
 	endlag = 0.40,
 	endlagMiss = 0.60,
@@ -85,7 +90,7 @@ Vitality.m1Air = {
 	end,
 }
 
-Vitality.m1Uppercut = {
+Lunar.m1Uppercut = {
 	windup = 0.20,
 	endlag = 0.50,
 	endlagMiss = 0.65,
@@ -103,4 +108,4 @@ Vitality.m1Uppercut = {
 	end,
 }
 
-return Vitality
+return Lunar
