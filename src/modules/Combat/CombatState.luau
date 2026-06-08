@@ -29,7 +29,7 @@ local CombatState = {}
 ]]
 
 local DEFAULT = {
-	characterName = "Vitality",
+	characterName = "Lunar",
 	comboStep = 0,
 	lastAttackTime = 0,
 	inAttack = false,
