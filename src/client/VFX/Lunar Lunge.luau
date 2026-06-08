@@ -42,6 +42,10 @@ function LunarLungeVFX.impact(character, direction)
 	local slash = VFXAssets.Slash:Clone()
 	slash.Parent = root
 	slash.CFrame = root.CFrame
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = slash
+	weld.Part1 = root
+	weld.Parent = slash
 	emitAll(slash)
 	Debris:AddItem(slash, 3)
 end

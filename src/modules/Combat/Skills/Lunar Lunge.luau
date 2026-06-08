@@ -13,7 +13,7 @@ local StunService = require(ServerStorage.Modules.StunService)
 local DamageService = require(ServerStorage.Modules.DamageService)
 
 local COOLDOWN = 1
-local DASH_SPEED = 80
+local DASH_SPEED = 60
 local DASH_DURATION = 0.4
 local LATENCY_MARGIN = 0.15
 local LINGER_DURATION = 0.3
