@@ -82,7 +82,7 @@ local DEBUG_TRANSP = 0.7
 local DEBUG_FOLDER_NAME = "HitboxDebug"
 
 -- Permite desativar o debug manualmente mesmo em Studio
-HitboxService.debugEnabled = true
+HitboxService.debugEnabled = false
 
 -- ─── Debug folder ────────────────────────────────────────────────────────────
 
@@ -303,7 +303,6 @@ function HitboxService.queryLinger(options)
 			hits[#hits + 1] = char
 
 			if onHit then
-				print(char)
 				onHit(char)
 			end
 

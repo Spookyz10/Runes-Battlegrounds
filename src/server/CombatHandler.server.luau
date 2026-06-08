@@ -5,6 +5,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local CombatService = require(ServerStorage.Modules.Combat.CombatService)
 local CombatState = require(ServerStorage.Modules.Combat.CombatState)
 local CharacterService = require(ServerStorage.Modules.Characters)
+local StunService = require(ServerStorage.Modules.StunService)
 
 local CombatRemotes = ReplicatedStorage.Remotes.Combat
 
@@ -17,11 +18,18 @@ CombatRemotes.M1.OnServerEvent:Connect(function(player)
 	if not character then
 		return
 	end
+	if StunService.isStunned(character) then
+		return
+	end
 	local config = CharacterService.getConfig(CombatState.get(player).characterName)
 	CombatService.m1(player, character, config)
 end)
 
 CombatRemotes.BlockStart.OnServerEvent:Connect(function(player)
+	local character = getChar(player)
+	if character and StunService.isStunned(character) then
+		return
+	end
 	CombatService.blockStart(player)
 end)
 
@@ -38,6 +46,9 @@ CombatRemotes.Skill.OnServerEvent:Connect(function(player, tool)
 	end
 	local character = getChar(player)
 	if not character then
+		return
+	end
+	if StunService.isStunned(character) then
 		return
 	end
 	local config = CharacterService.getConfig(CombatState.get(player).characterName)

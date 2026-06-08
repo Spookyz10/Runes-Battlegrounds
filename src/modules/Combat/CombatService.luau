@@ -111,7 +111,7 @@ function CombatService.executeAttack(player, character, attackData, exclude, onH
 		elseif attackData.knockback then
 			local kb = attackData.knockback
 			if not RagdollService.isRagdolled(victimChar) then
-				RagdollService.applyRagdoll(victimChar, nil, kb.duration > 0 and kb.duration or nil)
+				RagdollService.applyRagdoll(victimChar, nil)
 			end
 			KnockbackService.applyFromHit(victimChar, root.Position, kb.horizontal, kb.vertical)
 		end

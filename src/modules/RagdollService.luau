@@ -60,19 +60,16 @@ local function restoreMotors(character)
 	end
 end
 
-local function applyVelocity(character, velocity)
-	for _, part in character:GetDescendants() do
-		if part:IsA("BasePart") then
-			part.AssemblyLinearVelocity = velocity
-		end
-	end
-end
-
 function RagdollService.isRagdolled(character)
 	return character:GetAttribute(RAGDOLL_ATTR) == true
 end
 
-function RagdollService.applyRagdoll(character, knockbackVector, duration)
+--[[
+	RagdollService.apply(character, duration?)
+	  Aplica ragdoll puro, sem velocidade.
+	  Use KnockbackService separadamente se quiser knockback.
+]]
+function RagdollService.apply(character, duration)
 	if RagdollService.isRagdolled(character) then
 		return
 	end
@@ -85,20 +82,16 @@ function RagdollService.applyRagdoll(character, knockbackVector, duration)
 	humanoid:ChangeState(Enum.HumanoidStateType.Physics)
 	buildConstraints(character)
 
-	if knockbackVector then
-		applyVelocity(character, knockbackVector)
-	end
-
 	if duration then
 		task.delay(duration, function()
 			if character:GetAttribute(RAGDOLL_ATTR) then
-				RagdollService.removeRagdoll(character)
+				RagdollService.remove(character)
 			end
 		end)
 	end
 end
 
-function RagdollService.removeRagdoll(character)
+function RagdollService.remove(character)
 	if not RagdollService.isRagdolled(character) then
 		return
 	end
@@ -112,5 +105,9 @@ function RagdollService.removeRagdoll(character)
 	humanoid.RequiresNeck = true
 	humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
 end
+
+-- Aliases para compatibilidade
+RagdollService.applyRagdoll = RagdollService.apply
+RagdollService.removeRagdoll = RagdollService.remove
 
 return RagdollService

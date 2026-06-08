@@ -9,7 +9,8 @@ local CombatService = require(script.Parent.Parent.CombatService)
 local CooldownService = require(ServerStorage.Modules.CooldownService)
 local HitboxService = require(ServerStorage.Modules.HitboxService)
 local KnockbackService = require(ServerStorage.Modules.KnockbackService)
-local RagdollService = require(ServerStorage.Modules.RagdollService)
+local StunService = require(ServerStorage.Modules.StunService)
+local DamageService = require(ServerStorage.Modules.DamageService)
 
 local COOLDOWN = 1
 local DASH_SPEED = 80
@@ -18,6 +19,9 @@ local LATENCY_MARGIN = 0.15
 local LINGER_DURATION = 0.3
 local HITBOX_SIZE = Vector3.new(10, 10, 10)
 local STUN_DURATION = 1.2
+local KNOCKBACK_HORIZONTAL = 20
+local KNOCKBACK_VERTICAL = 5
+local DAMAGE = 20
 local ENDLAG = 0.45
 local INTERRUPT_TIER = 1
 local IGNORE_IFRAME = 1
@@ -27,30 +31,34 @@ local CANCEL_TIER = 2
 local VFXRemotes = ReplicatedStorage.Remotes.VFX
 local SkillMovementRemote = VFXRemotes.SkillMovement
 
-local function applyStun(victimChar, duration)
-	local humanoid = victimChar:FindFirstChildOfClass("Humanoid")
-	if not humanoid then
-		return
-	end
-	humanoid.PlatformStand = true
-	task.delay(duration, function()
-		if humanoid and humanoid.Parent then
-			humanoid.PlatformStand = false
-		end
-	end)
-end
-
-local function processHit(victimChar, attackerChar, attackerRoot, dir, state)
-	local victimPlayer = Players:GetPlayerFromCharacter(victimChar)
-	if not victimPlayer then
-		return
-	end
-
-	local victimState = CombatState.get(victimPlayer)
+local function applyHit(victimChar, attackerChar, attackerRoot, dir)
 	local victimRoot = victimChar:FindFirstChild("HumanoidRootPart")
 	if not victimRoot then
 		return
 	end
+
+	DamageService.apply(victimChar, DAMAGE)
+	StunService.apply(victimChar, STUN_DURATION)
+	KnockbackService.applyFromHit(victimChar, attackerRoot.Position, KNOCKBACK_HORIZONTAL, KNOCKBACK_VERTICAL)
+
+	VFXRemotes.SkillEffect:FireAllClients("Lunar Lunge", "hit", victimChar, dir)
+end
+
+local function processHit(victimChar, attackerChar, attackerRoot, dir, state)
+	local victimRoot = victimChar:FindFirstChild("HumanoidRootPart")
+	if not victimRoot then
+		return
+	end
+
+	local victimPlayer = Players:GetPlayerFromCharacter(victimChar)
+
+	-- Dummy: sem player associado, aplica tudo direto
+	if not victimPlayer then
+		applyHit(victimChar, attackerChar, attackerRoot, dir)
+		return
+	end
+
+	local victimState = CombatState.get(victimPlayer)
 
 	if victimState.iframeType > IGNORE_IFRAME then
 		return
@@ -75,9 +83,7 @@ local function processHit(victimChar, attackerChar, attackerRoot, dir, state)
 		CombatService.forceInterrupt(victimPlayer, victimChar)
 	end
 
-	RagdollService.applyRagdoll(victimChar, Vector3.new(0, 100, 0), STUN_DURATION)
-	victimChar.Humanoid:TakeDamage(20)
-	VFXRemotes.SkillEffect:FireAllClients("Lunar Lunge", "hit", victimChar, dir)
+	applyHit(victimChar, attackerChar, attackerRoot, dir)
 end
 
 function LunarLunge.execute(player, character)
