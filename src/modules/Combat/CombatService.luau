@@ -1,3 +1,8 @@
+--[[
+	CombatService
+	src/modules/Combat/CombatService.luau
+]]
+
 local CombatService = {}
 
 local ServerStorage = game:GetService("ServerStorage")
@@ -7,6 +12,8 @@ local HitboxService = require(ServerStorage.Modules.HitboxService)
 local KnockbackService = require(ServerStorage.Modules.KnockbackService)
 local RagdollService = require(ServerStorage.Modules.RagdollService)
 local CombatState = require(script.Parent.CombatState)
+
+-- ─── Verificações de hit ─────────────────────────────────────────────────────
 
 local function passesIframe(attackData, victimState)
 	return attackData.ignoreIframe >= victimState.iframeType
@@ -35,6 +42,8 @@ local function shouldInterrupt(attackData, victimState)
 	return attackData.ignoreInterrupt >= victimState.interruptTier
 end
 
+-- ─── executeAttack ───────────────────────────────────────────────────────────
+
 function CombatService.executeAttack(player, character, attackData, exclude, onHitConfirmed)
 	local state = CombatState.get(player)
 
@@ -53,9 +62,14 @@ function CombatService.executeAttack(player, character, attackData, exclude, onH
 	end
 
 	local root = character:FindFirstChild("HumanoidRootPart")
-	local offset = attackData.hitboxOffset or Vector3.new(0, 0, -(attackData.hitbox.Z / 2))
-	local cf = root.CFrame * CFrame.new(offset)
-	local hits = HitboxService.query(cf, attackData.hitbox, exclude or { character })
+
+	-- Query usando a nova API do HitboxService
+	local hits = HitboxService.query({
+		origin = root.CFrame,
+		size = attackData.hitbox,
+		offset = attackData.hitboxOffset, -- nil é aceito (usa Vector3.zero)
+		exclude = exclude or { character },
+	})
 
 	local didHit = false
 
@@ -121,6 +135,8 @@ function CombatService.executeAttack(player, character, attackData, exclude, onH
 	return didHit
 end
 
+-- ─── Helpers de estado ───────────────────────────────────────────────────────
+
 function CombatService.interruptSelf(player, character)
 	local state = CombatState.get(player)
 	state.inAttack = false
@@ -152,7 +168,8 @@ function CombatService.forceInterrupt(player, character)
 	CombatService.interruptSelf(player, character)
 end
 
--- config é o CharacterConfig do personagem (obtido pelo CombatHandler)
+-- ─── M1 ──────────────────────────────────────────────────────────────────────
+
 function CombatService.m1(player, character, config, isAir, isUppercut)
 	local state = CombatState.get(player)
 	if state.inAttack or state.inEndlag then
@@ -178,6 +195,8 @@ function CombatService.m1(player, character, config, isAir, isUppercut)
 	CombatService.executeAttack(player, character, attackData, { character })
 end
 
+-- ─── Block ───────────────────────────────────────────────────────────────────
+
 function CombatService.blockStart(player)
 	CombatState.set(player, "isBlocking", true)
 end
@@ -186,6 +205,8 @@ function CombatService.blockEnd(player)
 	CombatState.set(player, "isBlocking", false)
 end
 
+-- ─── Iframe ──────────────────────────────────────────────────────────────────
+
 function CombatService.setIframe(player, tier)
 	CombatState.set(player, "iframeType", tier)
 end
@@ -193,6 +214,8 @@ end
 function CombatService.clearIframe(player)
 	CombatState.set(player, "iframeType", 0)
 end
+
+-- ─── Counter ─────────────────────────────────────────────────────────────────
 
 function CombatService.activateCounter(player, tier)
 	local state = CombatState.get(player)

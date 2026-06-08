@@ -1,8 +1,19 @@
+--[[
+	Skill: JawBreaker
+	src/modules/Combat/Skills/Jaw Breaker.luau
+
+	Personagem: Shatter
+	Cooldown: 8 segundos
+]]
+
 local JawBreaker = {}
 
 local ServerStorage = game:GetService("ServerStorage")
 local CombatService = require(ServerStorage.Modules.Combat.CombatService)
+local CooldownService = require(ServerStorage.Modules.CooldownService)
 local RagdollService = require(ServerStorage.Modules.RagdollService)
+
+local COOLDOWN = 8 -- segundos
 
 local ATTACK_DATA = {
 	windup = 0.35,
@@ -24,6 +35,14 @@ local ATTACK_DATA = {
 }
 
 function JawBreaker.execute(player, character)
+	-- Verifica e inicia cooldown
+	local ok = CooldownService.start(player, "JawBreaker", COOLDOWN)
+	if not ok then
+		-- Opcional: log restante pra debug
+		-- print("JawBreaker em cooldown:", CooldownService.remaining(player, "JawBreaker"))
+		return
+	end
+
 	CombatService.executeAttack(player, character, ATTACK_DATA, { character })
 end
 

@@ -1,3 +1,11 @@
+--[[
+	Skill: RapidPunches
+	src/modules/Combat/Skills/Rapid Punches.luau
+
+	Personagem: Vitality
+	Cooldown: 10 segundos
+]]
+
 local RapidPunches = {}
 
 local ServerStorage = game:GetService("ServerStorage")
@@ -5,21 +13,22 @@ local Players = game:GetService("Players")
 
 local HitboxService = require(ServerStorage.Modules.HitboxService)
 local KnockbackService = require(ServerStorage.Modules.KnockbackService)
-local RagdollService = require(ServerStorage.Modules.RagdollService)
 local CombatService = require(script.Parent.Parent.CombatService)
 local CombatState = require(script.Parent.Parent.CombatState)
+local CooldownService = require(ServerStorage.Modules.CooldownService)
 
+local COOLDOWN = 10 -- segundos
 local PUNCH_COUNT = 6
 local PUNCH_INTERVAL = 0.12
 local PUNCH_SIZE = Vector3.new(5, 5, 4)
 local PUNCH_OFFSET = Vector3.new(0, 0, -2)
 
 --[[
-	Dados do soco final do RapidPunches.
-	ignoreCounterTier = 1 → ignora counters tier 1, mas counter tier 2 ainda funciona.
+	Dados do soco final.
+	ignoreCounterTier = 1 → ignora counters tier 1.
 	ignoreInterrupt   = 1 → interrompe ataques com interruptTier <= 1.
 	ignoreIframe      = 1 → passa por iframes tier 1.
-	interruptTier     = 1 → os socos intermediarios so sao interrompidos por ignoreInterrupt >= 1.
+	interruptTier     = 1 → socos intermediários só são interrompidos por ignoreInterrupt >= 1.
 ]]
 local FINAL_PUNCH = {
 	windup = 0.10,
@@ -43,6 +52,12 @@ function RapidPunches.execute(player, character)
 		return
 	end
 
+	-- Verifica e inicia cooldown
+	local ok = CooldownService.start(player, "RapidPunches", COOLDOWN)
+	if not ok then
+		return
+	end
+
 	state.inAttack = true
 	state.cancelTier = 1
 	state.interruptTier = 1
@@ -62,8 +77,14 @@ function RapidPunches.execute(player, character)
 		end
 
 		local root = character:FindFirstChild("HumanoidRootPart")
-		local cf = root.CFrame * CFrame.new(PUNCH_OFFSET)
-		local hits = HitboxService.query(cf, PUNCH_SIZE, { character })
+
+		-- Usa a nova API do HitboxService
+		local hits = HitboxService.query({
+			origin = root.CFrame,
+			size = PUNCH_SIZE,
+			offset = PUNCH_OFFSET,
+			exclude = { character },
+		})
 
 		for _, victimChar in hits do
 			local victimPlayer = Players:GetPlayerFromCharacter(victimChar)
@@ -73,17 +94,15 @@ function RapidPunches.execute(player, character)
 			local victimState = CombatState.get(victimPlayer)
 			local victimRoot = victimChar:FindFirstChild("HumanoidRootPart")
 
-			-- Iframe: socos intermediarios tem ignoreIframe = 1
+			-- Iframe: socos intermediários têm ignoreIframe = 1
 			if victimState.iframeType > 1 then
 				continue
 			end
 
-			-- Counter: socos intermediarios tem ignoreCounterTier = 1
+			-- Counter tier 2 funciona contra socos intermediários
 			if victimState.isCountering and victimState.counterTier > 1 then
-				-- Counter tier 2 funciona contra socos intermediarios
 				victimState.counterTriggered = true
 				victimState.counterTarget = character
-				-- Cancela o RapidPunches se cancelTier permitir
 				if state.cancelTier >= 1 then
 					CombatService.interruptSelf(player, character)
 				end
@@ -99,7 +118,7 @@ function RapidPunches.execute(player, character)
 				end
 			end
 
-			-- Interrupt: socos intermediarios tem ignoreInterrupt = 1
+			-- Interrupt
 			if victimState.inAttack and victimState.interruptTier <= 1 then
 				CombatService.forceInterrupt(victimPlayer, victimChar)
 			end
