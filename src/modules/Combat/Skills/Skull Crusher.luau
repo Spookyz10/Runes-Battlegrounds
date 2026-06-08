@@ -1,4 +1,4 @@
-local LunarLunge = {}
+local SkullCrusher = {}
 
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -8,19 +8,13 @@ local CombatState = require(script.Parent.Parent.CombatState)
 local CombatService = require(script.Parent.Parent.CombatService)
 local CooldownService = require(ServerStorage.Modules.CooldownService)
 local HitboxService = require(ServerStorage.Modules.HitboxService)
-local KnockbackService = require(ServerStorage.Modules.KnockbackService)
 local StunService = require(ServerStorage.Modules.StunService)
 local DamageService = require(ServerStorage.Modules.DamageService)
+local RagdollService = require(ServerStorage.Modules.RagdollService)
 
 local COOLDOWN = 1
-local DASH_SPEED = 60
-local DASH_DURATION = 0.4
-local LATENCY_MARGIN = 0.15
-local LINGER_DURATION = 0.3
 local HITBOX_SIZE = Vector3.new(10, 10, 10)
 local STUN_DURATION = 1.2
-local KNOCKBACK_HORIZONTAL = 20
-local KNOCKBACK_VERTICAL = 5
 local DAMAGE = 20
 local ENDLAG = 0.45
 local INTERRUPT_TIER = 1
@@ -29,7 +23,6 @@ local IGNORE_COUNTER = 0
 local CANCEL_TIER = 2
 
 local VFXRemotes = ReplicatedStorage.Remotes.VFX
-local SkillMovementRemote = VFXRemotes.SkillMovement
 
 local function applyHit(victimChar, attackerChar, attackerRoot, dir)
 	local victimRoot = victimChar:FindFirstChild("HumanoidRootPart")
@@ -39,8 +32,7 @@ local function applyHit(victimChar, attackerChar, attackerRoot, dir)
 
 	DamageService.apply(victimChar, DAMAGE)
 	StunService.apply(victimChar, STUN_DURATION)
-	KnockbackService.applyFromHit(victimChar, attackerRoot.Position, KNOCKBACK_HORIZONTAL, KNOCKBACK_VERTICAL)
-
+	RagdollService.applyRagdoll(victimChar, 3)
 	VFXRemotes.SkillEffect:FireAllClients("Lunar Lunge", "hit", victimChar, dir)
 end
 
@@ -86,7 +78,7 @@ local function processHit(victimChar, attackerChar, attackerRoot, dir, state)
 	applyHit(victimChar, attackerChar, attackerRoot, dir)
 end
 
-function LunarLunge.execute(player, character)
+function SkullCrusher.execute(player, character)
 	local state = CombatState.get(player)
 	if state.inAttack or state.inEndlag then
 		return
@@ -110,14 +102,12 @@ function LunarLunge.execute(player, character)
 	state.cancelTier = CANCEL_TIER
 	state.interruptTier = INTERRUPT_TIER
 
-	VFXRemotes.SkillEffect:FireAllClients("Lunar Lunge", "dash", character)
-
-	task.wait(0.2)
-
 	SkillMovementRemote:FireClient(player, "Lunar Lunge", {
 		speed = DASH_SPEED,
 		duration = DASH_DURATION,
 	})
+
+	VFXRemotes.SkillEffect:FireAllClients("Lunar Lunge", "dash", character)
 
 	task.wait(DASH_DURATION + LATENCY_MARGIN)
 
@@ -147,4 +137,4 @@ function LunarLunge.execute(player, character)
 	state.cancelTier = 0
 end
 
-return LunarLunge
+return SkullCrusher

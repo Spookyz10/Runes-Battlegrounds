@@ -8,7 +8,7 @@ local Lunar = {}
 local RagdollService = require(game:GetService("ServerStorage").Modules.RagdollService)
 
 Lunar.comboWindow = 1.8
-Lunar.skills = { "Lunar Lunge" }
+Lunar.skills = { "Lunar Lunge", "Skull Breaker", "Lunar Uppercut", "Moon Cutter" }
 
 Lunar.m1 = {
 	[1] = {
@@ -67,7 +67,7 @@ Lunar.m1 = {
 		ignoreBlock = false,
 		onHit = function(attackerChar, victimChar, attackerRoot)
 			local forward = attackerRoot.CFrame.LookVector
-			RagdollService.applyRagdoll(victimChar, Vector3.new(forward.X * 55, 8, forward.Z * 55), 1.2)
+			RagdollService.applyRagdoll(victimChar, Vector3.new(forward.X * 55, 8, forward.Z * 55))
 		end,
 	},
 }
@@ -86,7 +86,7 @@ Lunar.m1Air = {
 	ignoreInterrupt = 0,
 	ignoreBlock = true,
 	onHit = function(attackerChar, victimChar, attackerRoot)
-		RagdollService.applyRagdoll(victimChar, Vector3.new(0, -40, 0), 0.8)
+		RagdollService.applyRagdoll(victimChar, Vector3.new(0, -40, 0))
 	end,
 }
 
@@ -104,7 +104,7 @@ Lunar.m1Uppercut = {
 	ignoreInterrupt = 0,
 	ignoreBlock = false,
 	onHit = function(attackerChar, victimChar, attackerRoot)
-		RagdollService.applyRagdoll(victimChar, Vector3.new(0, 60, 0), 1.5)
+		RagdollService.applyRagdoll(victimChar, Vector3.new(0, 60, 0))
 	end,
 }
 
