@@ -1,32 +1,32 @@
--- Services
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TextChatService   = game:GetService("TextChatService")
-local Debris            = game:GetService("Debris")
-
-
--- Remotes
-local Remotes       = ReplicatedStorage.Remotes
-
-local MovesetRemote = Remotes.MovesetHandler
-local Comunicator   = Remotes.Comunicator.Set
-local Replicate     = Remotes.Replicate.Set
-
-
 -- Modules
-local IFramesService   = require(script.Parent.iFramesService)
+local IFramesService = require(script.Parent.iFramesService)
 local AnimationService = require(script.Parent.AnimationService)
-local StunHandler      = require(script.Parent.StunHandler)
-
+local StunHandler = require(script.Parent.StunHandler)
 
 -- Functions
 return {
-	UsingMove = function(Tag: number, Player: Player, EnemyPlayer: Player, Parameters: { Weld: any, UserIFrames: any, VictimIFrames: any, UserRotate: any, EnemyRotate: any, UserAnimation: any, VictimAnimation: any, UserStun: any, VictimStun: any })
-		local Character       = Player.Character
+	UsingMove = function(
+		Tag: number,
+		Player: Player,
+		EnemyPlayer: Player,
+		Parameters: {
+			Weld: any,
+			UserIFrames: any,
+			VictimIFrames: any,
+			UserRotate: any,
+			EnemyRotate: any,
+			UserAnimation: any,
+			VictimAnimation: any,
+			UserStun: any,
+			VictimStun: any,
+		}
+	)
+		local Character = Player.Character
 		local EnemyCharacter
 		if EnemyPlayer then
 			EnemyCharacter = EnemyPlayer.Character
 		end
-		
+
 		local Bind = Instance.new("Folder")
 		Bind.Name = Tag
 		Bind.Parent = workspace.Thrown
@@ -45,16 +45,15 @@ return {
 		local UserStun = Parameters.UserStun
 		local VictimStun = Parameters.VictimStun
 
-
 		local PlayerConnection = Player.Destroying:Once(function()
 			Bind:Destroy()
-			
+
 			if Weld then
 				pcall(function()
 					Weld:Stop()
 				end)
 			end
-			
+
 			if VictimIFrames then
 				if typeof(VictimIFrames) == "table" then
 					IFramesService:RemoveiFrames(EnemyCharacter, VictimIFrames)
@@ -83,7 +82,7 @@ return {
 		if EnemyPlayer then
 			EnemyPlayerConnection = EnemyPlayer.Destroying:Once(function()
 				Bind:Destroy()
-				
+
 				if Weld then
 					pcall(function()
 						Weld:Stop()
@@ -115,7 +114,6 @@ return {
 			end)
 		end
 
-
 		Bind.Destroying:Once(function()
 			PlayerConnection:Disconnect()
 			if EnemyPlayerConnection then
@@ -125,17 +123,19 @@ return {
 
 		return Bind
 	end,
-	
+
 	DoEndLag = function(Player: Player, Stun: any, Time: number)
 		local Character = Player.Character
-		if not Character then return end
-		
+		if not Character then
+			return
+		end
+
 		task.delay(Time or 0.3, function()
 			StunHandler:Unstun(Character, Stun)
 			IFramesService:RemoveAlliFrames(Character)
 		end)
 	end,
-	
+
 	SkillText = function(Player: Player, Name)
 		print("RemovedSkilltexts")
 	end,

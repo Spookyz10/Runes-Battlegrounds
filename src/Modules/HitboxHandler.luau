@@ -16,7 +16,7 @@ local ReplicateSet = Remotes.Replicate.Set
 
 --// ReplicatedModules \\--
 
-local ReplicatedModules = RS.Modules
+local ReplicatedModules = RS.Shared.Modules
 
 local Utility = require(ReplicatedModules.Utility)
 

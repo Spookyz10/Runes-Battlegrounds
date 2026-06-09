@@ -1,70 +1,121 @@
-local combatUtils = {}
-combatUtils.__index = combatUtils
+local IFramesService = require(script.Parent.iFramesService)
+local AnimationService = require(script.Parent.AnimationService)
+local StunHandler = require(script.Parent.StunHandler)
 
-function combatUtils:AddValue(Player : Player, Class_Name : string, Value, value_name : string)
-	if Player then
-		local newvalue : PVInstance
-		newvalue = Instance.new(Class_Name)
-		newvalue.Name = value_name
-		newvalue.Value = Value
-		newvalue.Parent = Player
-
-		return newvalue
-	end
-end
-
-function combatUtils.createAngularVelocity(basePart : BasePart, velocitySettings : any, lifeTime : number)
-	local newAngularVelocity = Instance.new("BodyAngularVelocity")
-
-	for i, v in velocitySettings do
-		newAngularVelocity[i] = v
-	end
-
-	if basePart then
-		newAngularVelocity.Parent = basePart
-	end
-
-	if lifeTime then
-		task.delay(lifeTime, function()
-			shared.safeDestroy(newAngularVelocity)
-		end)
-	end
-
-	return newAngularVelocity
-end
-
-function combatUtils.createBodyVelocity(basePart : BasePart, bodyVelocitySettings : any, lifeTime : number)
-	local bodyVelocity = Instance.new("BodyVelocity")
-
-	for i, v in bodyVelocitySettings do
-		bodyVelocity[i] = v
-	end
-
-	if basePart then
-		bodyVelocity.Parent = basePart
-	end
-
-	if lifeTime then
-		task.delay(lifeTime, function()
-			shared.safeDestroy(bodyVelocity)
-		end)
-	end
-
-	return bodyVelocity
-end
-
-function combatUtils.stopVelocities(target : Model)
-	if not target or not target:IsA("Model") then
-		return
-	end
-
-	for i, v in target:GetDescendants() do
-		if v:IsA("BodyVelocity") or v:IsA("BodyPosition") then
-			shared.safeDestroy(v)
+return {
+	UsingMove = function(Tag, Player, EnemyPlayer, Parameters)
+		local Character = Player.Character
+		local EnemyCharacter
+		if EnemyPlayer then
+			EnemyCharacter = EnemyPlayer.Character
 		end
-	end
 
-	target:FindFirstChild("HumanoidRootPart").AssemblyLinearVelocity = Vector3.zero
-end
+		local Bind = Instance.new("Folder")
+		Bind.Name = Tag
+		Bind.Parent = workspace.Thrown
 
-return combatUtils
+		local Weld = Parameters.Weld
+		local UserIFrames = Parameters.UserIFrames
+		local VictimIFrames = Parameters.VictimIFrames
+		local UserRotate = Parameters.UserRotate
+		local EnemyRotate = Parameters.EnemyRotate
+		local UserAnimation = Parameters.UserAnimation
+		local VictimAnimation = Parameters.VictimAnimation
+		local UserStun = Parameters.UserStun
+		local VictimStun = Parameters.VictimStun
+
+		local PlayerConnection = Player.Destroying:Once(function()
+			Bind:Destroy()
+
+			if Weld then
+				pcall(function()
+					Weld:Stop()
+				end)
+			end
+
+			if VictimIFrames then
+				if typeof(VictimIFrames) == "table" then
+					IFramesService:RemoveiFrames(EnemyCharacter, VictimIFrames)
+				else
+					IFramesService:RemoveAlliFrames(EnemyCharacter)
+				end
+			end
+
+			if EnemyRotate then
+				EnemyCharacter:RemoveTag("CantRotate")
+			end
+
+			if VictimAnimation then
+				local AnimationTrack = AnimationService:getAnimationTrack(EnemyCharacter, VictimAnimation)
+				if AnimationTrack then
+					AnimationTrack:Stop()
+				end
+			end
+
+			if VictimStun then
+				StunHandler:Unstun(EnemyCharacter, VictimStun)
+			end
+		end)
+
+		local EnemyPlayerConnection
+		if EnemyPlayer then
+			EnemyPlayerConnection = EnemyPlayer.Destroying:Once(function()
+				Bind:Destroy()
+
+				if Weld then
+					pcall(function()
+						Weld:Stop()
+					end)
+				end
+
+				if UserIFrames then
+					if typeof(UserIFrames) == "table" then
+						IFramesService:RemoveiFrames(Character, UserIFrames)
+					else
+						IFramesService:RemoveAlliFrames(Character)
+					end
+				end
+
+				if UserRotate then
+					Character:RemoveTag("CantRotate")
+				end
+
+				if UserAnimation then
+					local AnimationTrack = AnimationService:getAnimationTrack(Character, UserAnimation)
+					if AnimationTrack then
+						AnimationTrack:Stop()
+					end
+				end
+
+				if UserStun then
+					StunHandler:Unstun(Character, UserStun)
+				end
+			end)
+		end
+
+		Bind.Destroying:Once(function()
+			PlayerConnection:Disconnect()
+			if EnemyPlayerConnection then
+				EnemyPlayerConnection:Disconnect()
+			end
+		end)
+
+		return Bind
+	end,
+
+	DoEndLag = function(Player, Stun, Time)
+		local Character = Player.Character
+		if not Character then
+			return
+		end
+
+		task.delay(Time or 0.3, function()
+			StunHandler:Unstun(Character, Stun)
+			IFramesService:RemoveAlliFrames(Character)
+		end)
+	end,
+
+	SkillText = function(Player, Name)
+		print("RemovedSkilltexts")
+	end,
+}

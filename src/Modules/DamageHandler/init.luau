@@ -1,7 +1,7 @@
 local Players = game:GetService('Players')
 local RS = game:GetService('ReplicatedStorage')
 
-local RPModules = RS.Modules
+local RPModules = RS.Shared.Modules
 local SvModules = script.Parent
 
 local StunHandler = require(SvModules.StunHandler)
@@ -9,7 +9,7 @@ local CombatLogger = require(script.CombatLogger)
 local Utility = require(RPModules.Utility)
 local AnimationService = require(SvModules.AnimationService)
 
-local InfoModule = require(RS.Info)
+local InfoModule = require(RS.Shared.Info)
 
 local CheckBehind = Utility('CheckBehind')
 
