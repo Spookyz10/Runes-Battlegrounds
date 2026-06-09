@@ -14,22 +14,19 @@ local StunService = require(ServerStorage.Modules.StunService)
 local AirborneService = require(ServerStorage.Modules.AirborneService)
 local DamageService = require(ServerStorage.Modules.DamageService)
 
--- ─── Config ──────────────────────────────────────────────────────────────────
-
-local COOLDOWN = 12
+local COOLDOWN = 1
 
 local UPPERCUT_WINDUP = 0.35
 local UPPERCUT_HITBOX = Vector3.new(6, 7, 5)
 local UPPERCUT_DAMAGE = 15
 
-local FLOAT_HEIGHT_OFFSET = 18 -- studs acima da posição atual da vítima
-local FLOAT_DURATION = 4.5 -- tempo máximo presa no ar
+local FLOAT_HEIGHT_OFFSET = 18
+local FLOAT_DURATION = 4.5
 
-local ATTACKER_FLOAT_OFFSET = 2 -- attacker flutua um pouco abaixo da vítima
-local ATTACKER_RISE_DELAY = 0.5 -- espera antes de começar a subir
-local ATTACKER_RISE_SPEED = 40
+local ATTACKER_FLOAT_OFFSET = 2
+local ATTACKER_RISE_DELAY = 0.5
 
-local SLAM_WINDUP = 0.8 -- pausa no ar antes do slam
+local SLAM_WINDUP = 0.8
 local SLAM_DAMAGE = 25
 local SLAM_HORIZONTAL = 180
 local SLAM_VERTICAL = 12
@@ -43,21 +40,6 @@ local IGNORE_COUNTER = 0
 local ENDLAG = 0.55
 
 local VFXRemotes = ReplicatedStorage.Remotes.VFX
-
--- ─── ShiftLock disable ───────────────────────────────────────────────────────
--- Força o personagem a não rotacionar pelo mouse do cliente enquanto ativo.
--- Feito mandando o CFrame do root travado no servidor a cada frame.
--- Técnica simples: PlatformStand + AutoRotate = false.
-
-local function lockFacing(character, humanoid)
-	humanoid.AutoRotate = false
-end
-
-local function unlockFacing(humanoid)
-	humanoid.AutoRotate = true
-end
-
--- ─── canHit ──────────────────────────────────────────────────────────────────
 
 local function canHit(victimChar, attackerChar, attackerRoot)
 	local victimPlayer = Players:GetPlayerFromCharacter(victimChar)
@@ -93,32 +75,21 @@ local function canHit(victimChar, attackerChar, attackerRoot)
 	return true
 end
 
--- ─── riseAttacker ────────────────────────────────────────────────────────────
--- Sobe o atacante até targetY usando AirborneService em modo lock=true.
--- Retorna uma promise-like: chama onDone() quando chega lá.
-
-local function riseAttacker(character, humanoid, targetY, onDone)
-	humanoid.WalkSpeed = 0
-
-	-- Usa AirborneService pra subir + travar na Y
-	AirborneService.apply(character, targetY, true)
-
-	-- Espera chegar perto o suficiente
-	local root = character:FindFirstChild("HumanoidRootPart")
-	task.spawn(function()
-		while root and root.Parent do
-			if math.abs(root.Position.Y - targetY) <= 1.5 then
-				break
-			end
-			task.wait()
-		end
-		if onDone then
-			onDone()
-		end
-	end)
+local function cleanupAttacker(character, humanoid)
+	AirborneService.release(character)
+	humanoid.PlatformStand = false
+	humanoid.AutoRotate = true
+	humanoid.WalkSpeed = 16
+	humanoid.JumpPower = 50
 end
 
--- ─── Execute ─────────────────────────────────────────────────────────────────
+local function cleanupVictim(victimChar)
+	AirborneService.release(victimChar)
+	if RagdollService.isRagdolled(victimChar) then
+		RagdollService.remove(victimChar)
+	end
+	StunService.clear(victimChar)
+end
 
 function LunarUppercut.execute(player, character)
 	local state = CombatState.get(player)
@@ -152,7 +123,7 @@ function LunarUppercut.execute(player, character)
 		return
 	end
 
-	-- ── Hitbox inicial ───────────────────────────────────────────────────────
+	-- ── Hitbox ───────────────────────────────────────────────────────────────
 	local hits = HitboxService.query({
 		origin = root.CFrame,
 		size = UPPERCUT_HITBOX,
@@ -193,100 +164,68 @@ function LunarUppercut.execute(player, character)
 
 	RagdollService.apply(validVictim)
 	StunService.apply(validVictim, FLOAT_DURATION + 2)
-
-	-- Impulso inicial pra subir
-	for _, part in validVictim:GetDescendants() do
-		if part:IsA("BasePart") then
-			part.AssemblyLinearVelocity = Vector3.new(0, 55, 0)
-		end
-	end
-
-	-- AirborneService trava a vítima na targetY com lock=true
 	AirborneService.apply(validVictim, targetY, true, FLOAT_DURATION)
 
-	-- ── Disable shiftlock / AutoRotate do atacante ───────────────────────────
-	lockFacing(character, humanoid)
+	humanoid.AutoRotate = false
 
-	-- ── Atacante sobe até perto da vítima ────────────────────────────────────
+	-- ── Delay antes de subir ─────────────────────────────────────────────────
 	task.wait(ATTACKER_RISE_DELAY)
 
 	if not state.inAttack then
-		AirborneService.release(validVictim)
-		RagdollService.remove(validVictim)
-		StunService.clear(validVictim)
-		unlockFacing(humanoid)
+		cleanupVictim(validVictim)
+		humanoid.AutoRotate = true
 		humanoid.WalkSpeed = 16
 		humanoid.JumpPower = 50
 		return
 	end
 
+	-- ── Sobe o attacker ──────────────────────────────────────────────────────
+	-- PlatformStand desliga o controle do Humanoid sobre a física,
+	-- permitindo que o AirborneService mova o personagem com velocidade direta.
+	humanoid.PlatformStand = true
+
 	local attackerTargetY = targetY - ATTACKER_FLOAT_OFFSET
-	local riseReady = false
+	AirborneService.apply(character, attackerTargetY, true)
 
-	riseAttacker(character, humanoid, attackerTargetY, function()
-		riseReady = true
-	end)
-
-	-- Espera subir ou ser interrompido (timeout de segurança de 3s)
+	-- Espera chegar na Y alvo (timeout 3s)
 	local riseTimeout = 0
-	while not riseReady and state.inAttack do
+	while root.Parent and math.abs(root.Position.Y - attackerTargetY) > 1.5 do
 		local dt = task.wait()
 		riseTimeout += dt
-		if riseTimeout > 3 then
+		if riseTimeout > 3 or not state.inAttack then
 			break
 		end
 	end
 
 	if not state.inAttack then
-		AirborneService.release(character)
-		AirborneService.release(validVictim)
-		RagdollService.remove(validVictim)
-		StunService.clear(validVictim)
-		unlockFacing(humanoid)
-		humanoid.WalkSpeed = 0
-		humanoid.JumpPower = 50
-		humanoid.WalkSpeed = 16
+		cleanupAttacker(character, humanoid)
+		cleanupVictim(validVictim)
 		return
 	end
 
-	-- ── Pausa no ar (slam windup) ────────────────────────────────────────────
+	-- ── Slam windup no ar ────────────────────────────────────────────────────
 	task.wait(SLAM_WINDUP)
 
 	if not state.inAttack then
-		AirborneService.release(character)
-		AirborneService.release(validVictim)
-		RagdollService.remove(validVictim)
-		StunService.clear(validVictim)
-		unlockFacing(humanoid)
-		humanoid.WalkSpeed = 16
-		humanoid.JumpPower = 50
+		cleanupAttacker(character, humanoid)
+		cleanupVictim(validVictim)
 		return
 	end
 
-	-- ── Slam — hitbox centrada NO VICTIM, não na frente do attacker ──────────
-	-- O victim foi travado na targetY; só conferimos se ainda está lá.
-	-- Não tem como errar: usamos o victimRoot diretamente como origem.
+	-- ── Slam ─────────────────────────────────────────────────────────────────
 	local victimStillAirborne = AirborneService.isAirborne(validVictim) and validVictim.Parent ~= nil
 
-	AirborneService.release(character)
-	AirborneService.release(validVictim)
-	unlockFacing(humanoid)
+	cleanupAttacker(character, humanoid)
 
 	if victimStillAirborne then
 		DamageService.apply(validVictim, SLAM_DAMAGE)
-
+		AirborneService.release(validVictim)
 		RagdollService.remove(validVictim)
 		StunService.clear(validVictim)
 
-		-- Direção do slam = da posição atual do root do attacker pro victim
-		-- (não usa LookVector, então shiftlock não interfere)
-		local toVictim = (victimRoot.Position - root.Position)
+		local toVictim = victimRoot.Position - root.Position
 		local dir = Vector3.new(toVictim.X, 0, toVictim.Z)
-		if dir.Magnitude > 0.01 then
-			dir = dir.Unit
-		else
-			dir = root.CFrame.LookVector
-		end
+		dir = dir.Magnitude > 0.01 and dir.Unit or root.CFrame.LookVector
 
 		LaunchService.apply(
 			validVictim,
@@ -294,15 +233,10 @@ function LunarUppercut.execute(player, character)
 			SLAM_LANDING
 		)
 	else
-		-- Vítima escapou (rara edge-case), limpa mesmo assim
-		if RagdollService.isRagdolled(validVictim) then
-			RagdollService.remove(validVictim)
-		end
-		StunService.clear(validVictim)
+		cleanupVictim(validVictim)
 	end
 
 	-- ── Endlag ───────────────────────────────────────────────────────────────
-	humanoid.WalkSpeed = 0
 	state.inAttack = false
 	state.inEndlag = true
 	state.cancelTier = 0
@@ -310,8 +244,6 @@ function LunarUppercut.execute(player, character)
 	task.wait(ENDLAG)
 
 	state.inEndlag = false
-	humanoid.WalkSpeed = 16
-	humanoid.JumpPower = 50
 end
 
 return LunarUppercut
