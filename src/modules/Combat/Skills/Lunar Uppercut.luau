@@ -1,5 +1,5 @@
 --[[
-	Skill: Lunar Uppercut
+	Skill: Lunar Uppercut (v3)
 	src/modules/Combat/Skills/Lunar Uppercut.luau
 ]]
 
@@ -7,7 +7,6 @@ local LunarUppercut = {}
 
 local ServerStorage = game:GetService("ServerStorage")
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
 
 local CombatState = require(script.Parent.Parent.CombatState)
 local CombatService = require(script.Parent.Parent.CombatService)
@@ -24,20 +23,21 @@ local COOLDOWN = 1
 local UPPERCUT_WINDUP = 0.35
 local UPPERCUT_HITBOX = Vector3.new(6, 7, 5)
 
-local PEAK_HEIGHT = 18
-local VICTIM_TRAVEL_TIME = 0.45
-local VICTIM_EASING = Enum.EasingStyle.Sine -- suave, parece uppercut
+local VICTIM_LAUNCH_UP = 50
+local FLOAT_HEIGHT_OFFSET = 18
+local FLOAT_CORRECTION_SPEED = 40
+local FLOAT_DEADZONE = 0.4
+local FLOAT_DURATION = 3.5
 
-local ATTACKER_BACK_OFFSET = 3
-local ATTACKER_TRAVEL_TIME = 0.35
-local ATTACKER_EASING = Enum.EasingStyle.Quad
+local ATTACKER_WAIT = 2.0
+local ATTACKER_RISE_SPEED = 45
 
-local SLAM_WINDUP = 0.2
-local SLAM_HITBOX = Vector3.new(7, 6, 6)
+local SLAM_HITBOX = Vector3.new(7, 8, 6)
+local SLAM_HITBOX_OFFSET = Vector3.new(0, 0, 0)
 
-local SLAM_LAUNCH_HORIZONTAL = 200
-local SLAM_LAUNCH_VERTICAL = 15
-local SLAM_LANDING_IMPACT = { horizontal = 25, vertical = 5 }
+local SLAM_HORIZONTAL = 180
+local SLAM_VERTICAL = 12
+local SLAM_LANDING = { horizontal = 22, vertical = 5 }
 
 local CANCEL_TIER = 2
 local INTERRUPT_TIER = 1
@@ -46,60 +46,50 @@ local IGNORE_COUNTER = 0
 
 local ENDLAG = 0.55
 
+-- ─── Float lock ──────────────────────────────────────────────────────────────
+
+-- Mantém a vítima na altura targetY corrigindo via AssemblyLinearVelocity Y.
+-- Retorna função stop() para encerrar o loop.
+local function startFloatLock(character, targetY)
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return function() end
+	end
+
+	local running = true
+
+	task.spawn(function()
+		while running and character.Parent and root.Parent do
+			local currentY = root.Position.Y
+			local diff = targetY - currentY
+
+			if math.abs(diff) > FLOAT_DEADZONE then
+				local correctionVel = math.clamp(diff * FLOAT_CORRECTION_SPEED, -60, 60)
+				for _, part in character:GetDescendants() do
+					if part:IsA("BasePart") then
+						local v = part.AssemblyLinearVelocity
+						part.AssemblyLinearVelocity = Vector3.new(v.X * 0.1, correctionVel, v.Z * 0.1)
+					end
+				end
+			else
+				for _, part in character:GetDescendants() do
+					if part:IsA("BasePart") then
+						local v = part.AssemblyLinearVelocity
+						part.AssemblyLinearVelocity = Vector3.new(v.X * 0.1, 0, v.Z * 0.1)
+					end
+				end
+			end
+
+			task.wait()
+		end
+	end)
+
+	return function()
+		running = false
+	end
+end
+
 -- ─── Helpers ─────────────────────────────────────────────────────────────────
-
--- Trava o personagem no ar (anula gravidade, desativa física)
-local function freezeInAir(character)
-	local root = character:FindFirstChild("HumanoidRootPart")
-	if not root then
-		return
-	end
-	if root:FindFirstChild("UppercutFreeze") then
-		return
-	end
-
-	local bv = Instance.new("BodyVelocity")
-	bv.Name = "UppercutFreeze"
-	bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-	bv.Velocity = Vector3.zero
-	bv.P = 1e5
-	bv.Parent = root
-
-	local hum = character:FindFirstChildOfClass("Humanoid")
-	if hum then
-		hum.PlatformStand = true
-	end
-end
-
-local function unfreezeInAir(character)
-	local root = character:FindFirstChild("HumanoidRootPart")
-	if not root then
-		return
-	end
-	local bv = root:FindFirstChild("UppercutFreeze")
-	if bv then
-		bv:Destroy()
-	end
-	local hum = character:FindFirstChildOfClass("Humanoid")
-	if hum then
-		hum.PlatformStand = false
-	end
-end
-
--- Move o HumanoidRootPart via Tween (sem gravidade interferindo)
--- Retorna o Tween criado para poder cancelar se necessário
-local function tweenTo(character, targetPos, duration, easingStyle)
-	local root = character:FindFirstChild("HumanoidRootPart")
-	if not root then
-		return nil
-	end
-
-	local info = TweenInfo.new(duration, easingStyle, Enum.EasingDirection.Out)
-	local tween =
-		TweenService:Create(root, info, { CFrame = CFrame.new(targetPos) * (root.CFrame - root.CFrame.Position) })
-	tween:Play()
-	return tween
-end
 
 local function canHit(victimChar, attackerChar, attackerRoot)
 	local victimPlayer = Players:GetPlayerFromCharacter(victimChar)
@@ -135,13 +125,62 @@ local function canHit(victimChar, attackerChar, attackerRoot)
 	return true
 end
 
-local function cleanup(humanoid, victimChar, attackerChar)
+-- ─── Helpers ─────────────────────────────────────────────────────────────────
+
+local function riseAttackerToY(root, humanoid, targetY, onDone)
+	local att = Instance.new("Attachment")
+	att.Name = "UppercutRiseAtt"
+	att.Parent = root
+
+	-- LinearVelocity de subida
+	local lv = Instance.new("LinearVelocity")
+	lv.Name = "UppercutRise"
+	lv.MaxForce = 1e5
+	lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
+	lv.VectorVelocity = Vector3.new(0, ATTACKER_RISE_SPEED, 0)
+	lv.RelativeTo = Enum.ActuatorRelativeTo.World
+	lv.Attachment0 = att
+	lv.Parent = root
+
+	humanoid.PlatformStand = true
+	humanoid.WalkSpeed = 0
+
+	task.spawn(function()
+		-- Sobe até a targetY
+		while root.Parent and root.Position.Y < targetY do
+			task.wait()
+		end
+
+		-- Troca pra velocidade zero (trava no ar, sem gravidade)
+		lv.VectorVelocity = Vector3.new(0, 0, 0)
+
+		-- Zera momentum residual
+		for _, part in root.Parent:GetDescendants() do
+			if part:IsA("BasePart") then
+				part.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+			end
+		end
+
+		if onDone then
+			onDone()
+		end
+	end)
+
+	-- Retorna função que destrói o LinearVelocity (libera gravidade)
+	return function()
+		lv:Destroy()
+		att:Destroy()
+	end
+end
+
+local function cleanup(humanoid, stopFloat, victimChar)
 	humanoid.WalkSpeed = 16
 	humanoid.JumpPower = 50
 	humanoid.PlatformStand = false
-	unfreezeInAir(attackerChar)
-	if victimChar then
-		unfreezeInAir(victimChar)
+	if stopFloat then
+		stopFloat()
+	end
+	if victimChar and victimChar.Parent then
 		if RagdollService.isRagdolled(victimChar) then
 			RagdollService.remove(victimChar)
 		end
@@ -174,7 +213,7 @@ function LunarUppercut.execute(player, character)
 	humanoid.WalkSpeed = 0
 	humanoid.JumpPower = 0
 
-	-- ── Fase 1: Uppercut windup ─────────────────────────────────────────────
+	-- ── Fase 1: Windup ──────────────────────────────────────────────────────
 	task.wait(UPPERCUT_WINDUP)
 
 	if not state.inAttack then
@@ -216,56 +255,60 @@ function LunarUppercut.execute(player, character)
 		return
 	end
 
-	-- ── Calcula destinos ────────────────────────────────────────────────────
-	local peakPos = victimRoot.Position + Vector3.new(0, PEAK_HEIGHT, 0)
-	local attackerPeakPos = peakPos
+	-- ── Fase 2: Lança vítima e trava na altura ──────────────────────────────
+	local targetY = victimRoot.Position.Y + FLOAT_HEIGHT_OFFSET
 
-	-- ── Fase 2a: Vítima sobe via Tween ─────────────────────────────────────
 	RagdollService.apply(validVictim)
-	StunService.apply(validVictim, 999)
-	freezeInAir(validVictim) -- anula gravidade durante o tween
+	StunService.apply(validVictim, FLOAT_DURATION + 1)
 
-	local victimTween = tweenTo(validVictim, peakPos, VICTIM_TRAVEL_TIME, VICTIM_EASING)
-	if victimTween then
-		victimTween.Completed:Wait()
+	-- Impulso inicial pra subir
+	for _, part in validVictim:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.AssemblyLinearVelocity = Vector3.new(0, VICTIM_LAUNCH_UP, 0)
+		end
 	end
 
+	-- Loop que mantém a vítima presa na targetY
+	local stopFloat = startFloatLock(validVictim, targetY)
+
+	-- ── Fase 3: Attacker sobe e pausa no nível da vítima ────────────────────────
+	task.wait(ATTACKER_WAIT)
+
 	if not state.inAttack then
-		cleanup(humanoid, validVictim, character)
+		cleanup(humanoid, stopFloat, validVictim)
 		state.inAttack = false
 		state.cancelTier = 0
 		return
 	end
 
-	-- ── Fase 2b: Attacker sobe via Tween ───────────────────────────────────
-	freezeInAir(character) -- attacker também sem gravidade durante o tween
-	humanoid.PlatformStand = true
+	local riseComplete = false
+	local stopRise = riseAttackerToY(root, humanoid, targetY, function()
+		riseComplete = true
+	end)
 
-	local attackerTween = tweenTo(character, attackerPeakPos, ATTACKER_TRAVEL_TIME, ATTACKER_EASING)
-	if attackerTween then
-		attackerTween.Completed:Wait()
+	while not riseComplete and state.inAttack do
+		task.wait()
 	end
 
 	if not state.inAttack then
-		cleanup(humanoid, validVictim, character)
+		stopRise()
+		cleanup(humanoid, stopFloat, validVictim)
 		state.inAttack = false
 		state.cancelTier = 0
 		return
 	end
 
-	-- ── Fase 3: Slam windup ─────────────────────────────────────────────────
-	task.wait(SLAM_WINDUP)
+	-- Pausa de 1s no ar antes do slam
+	task.wait(1.0)
 
-	if not state.inAttack then
-		cleanup(humanoid, validVictim, character)
-		state.inAttack = false
-		state.cancelTier = 0
-		return
-	end
+	-- Libera a trava do atacante antes do slam
+	stopRise()
+	humanoid.PlatformStand = false
 
 	local slamHits = HitboxService.query({
 		origin = root.CFrame,
 		size = SLAM_HITBOX,
+		offset = SLAM_HITBOX_OFFSET,
 		exclude = { character },
 	})
 
@@ -273,32 +316,31 @@ function LunarUppercut.execute(player, character)
 	for _, victimChar in slamHits do
 		if victimChar == validVictim then
 			slamHit = true
+			stopFloat()
 
-			unfreezeInAir(victimChar)
 			RagdollService.remove(victimChar)
 			StunService.clear(victimChar)
 
 			local dir = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
 			LaunchService.apply(
 				victimChar,
-				Vector3.new(dir.X * SLAM_LAUNCH_HORIZONTAL, SLAM_LAUNCH_VERTICAL, dir.Z * SLAM_LAUNCH_HORIZONTAL),
-				SLAM_LANDING_IMPACT
+				Vector3.new(dir.X * SLAM_HORIZONTAL, SLAM_VERTICAL, dir.Z * SLAM_HORIZONTAL),
+				SLAM_LANDING
 			)
 			break
 		end
 	end
 
 	if not slamHit then
-		unfreezeInAir(validVictim)
+		stopFloat()
 		if RagdollService.isRagdolled(validVictim) then
 			RagdollService.remove(validVictim)
 		end
 		StunService.clear(validVictim)
 	end
 
-	-- Libera attacker
-	unfreezeInAir(character)
 	humanoid.PlatformStand = false
+	humanoid.WalkSpeed = 0
 
 	state.inAttack = false
 	state.inEndlag = true
