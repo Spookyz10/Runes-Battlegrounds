@@ -12,9 +12,10 @@ local KnockbackService = require(ServerStorage.Modules.KnockbackService)
 local StunService = require(ServerStorage.Modules.StunService)
 local DamageService = require(ServerStorage.Modules.DamageService)
 
-local COOLDOWN = 1
+local COOLDOWN = 8
 local DASH_SPEED = 60
 local DASH_DURATION = 0.4
+local PRE_DASH_WINDUP = 0.2 -- animação antes do dash começar
 local LATENCY_MARGIN = 0.15
 local LINGER_DURATION = 0.3
 local HITBOX_SIZE = Vector3.new(10, 10, 10)
@@ -40,19 +41,16 @@ local function applyHit(victimChar, attackerChar, attackerRoot, dir)
 	DamageService.apply(victimChar, DAMAGE)
 	StunService.apply(victimChar, STUN_DURATION)
 	KnockbackService.applyFromHit(victimChar, attackerRoot.Position, KNOCKBACK_HORIZONTAL, KNOCKBACK_VERTICAL)
-
 	VFXRemotes.SkillEffect:FireAllClients("Lunar Lunge", "hit", victimChar, dir)
 end
 
-local function processHit(victimChar, attackerChar, attackerRoot, dir, state)
+local function processHit(victimChar, attackerChar, attackerRoot, dir)
 	local victimRoot = victimChar:FindFirstChild("HumanoidRootPart")
 	if not victimRoot then
 		return
 	end
 
 	local victimPlayer = Players:GetPlayerFromCharacter(victimChar)
-
-	-- Dummy: sem player associado, aplica tudo direto
 	if not victimPlayer then
 		applyHit(victimChar, attackerChar, attackerRoot, dir)
 		return
@@ -108,25 +106,49 @@ function LunarLunge.execute(player, character)
 
 	state.inAttack = true
 	state.cancelTier = CANCEL_TIER
+	-- interruptTier alto durante o dash: qualquer hit cancela tudo
 	state.interruptTier = INTERRUPT_TIER
 
+	humanoid.WalkSpeed = 0
+	humanoid.JumpPower = 0
+
+	-- ── Windup pré-dash ──────────────────────────────────────────────────────
 	VFXRemotes.SkillEffect:FireAllClients("Lunar Lunge", "dash", character)
+	task.wait(PRE_DASH_WINDUP)
 
-	task.wait(0.2)
+	if not state.inAttack then
+		-- Foi interrompido durante o windup
+		humanoid.WalkSpeed = 16
+		humanoid.JumpPower = 50
+		return
+	end
 
+	-- ── Dash (ainda é windup: se acertado aqui, cancela tudo) ───────────────
 	SkillMovementRemote:FireClient(player, "Lunar Lunge", {
 		speed = DASH_SPEED,
 		duration = DASH_DURATION,
 	})
 
-	task.wait(DASH_DURATION + LATENCY_MARGIN)
-
-	if not state.inAttack then
-		return
+	-- Enquanto dura o dash, checamos a cada frame se inAttack ainda é true.
+	-- O CombatService.forceInterrupt já seta inAttack = false se acertado.
+	local elapsed = 0
+	while elapsed < DASH_DURATION + LATENCY_MARGIN do
+		local dt = task.wait()
+		elapsed += dt
+		if not state.inAttack then
+			-- Foi interrompido/acertado durante o dash — aborta tudo
+			humanoid.WalkSpeed = 16
+			humanoid.JumpPower = 50
+			return
+		end
 	end
 
+	-- ── Impacto ──────────────────────────────────────────────────────────────
 	local dir = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
 	VFXRemotes.SkillEffect:FireAllClients("Lunar Lunge", "impact", character, dir)
+
+	humanoid.WalkSpeed = 16
+	humanoid.JumpPower = 50
 
 	HitboxService.queryLinger({
 		anchor = root,
@@ -134,7 +156,7 @@ function LunarLunge.execute(player, character)
 		duration = LINGER_DURATION,
 		exclude = { character },
 		onHit = function(victimChar)
-			processHit(victimChar, character, root, dir, state)
+			processHit(victimChar, character, root, dir)
 		end,
 	})
 

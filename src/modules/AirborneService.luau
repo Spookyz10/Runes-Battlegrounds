@@ -1,47 +1,52 @@
+local AirborneService = {}
+
 --[[
 	AirborneService
 	src/modules/AirborneService.luau
 
-	Módulo reutilizável que aplica gravidade reduzida a um personagem,
-	dando aquele efeito de "flutuando no ar" visto em jogos como
-	The Strongest Battlegrounds.
+	Leva um personagem a uma altura Y e cancela a gravidade enquanto o efeito
+	está ativo.
 
-	Técnica: VectorForce no HumanoidRootPart que contrabalanceia
-	parcialmente a gravidade (workspace.Gravity * mass).
+	Dois modos:
+	  lock = true   → Trava na Y: corrige ativamente se o personagem sair dela
+	                  (empurrado, knockback, etc.).
+	  lock = false  → Leva até Y e apenas cancela a gravidade; o personagem pode
+	                  se mover livremente no espaço mas não cai.
 
 	API:
-	  AirborneService.suspend(character, gravityScale, duration?)
-	    gravityScale: 0.0 = gravidade normal
-	                 0.5 = 50% da gravidade cancelada (cai na metade)
-	                 1.0 = gravidade totalmente cancelada (flutua)
-	    duration: opcional — auto-release após N segundos
+	  AirborneService.apply(character, targetY, lock, duration?)
+	    targetY  : number  – posição Y alvo do HumanoidRootPart
+	    lock     : bool    – se true, corrige desvios ativamente
+	    duration : number? – auto-release após N segundos (nil = manual)
 
 	  AirborneService.release(character)
-	    Remove o VectorForce e restaura estado normal.
+	    Para o efeito imediatamente.
 
-	  AirborneService.isSuspended(character) -> bool
+	  AirborneService.isAirborne(character) -> bool
 ]]
 
-local AirborneService = {}
+local Players = game:GetService("Players")
 
 local FORCE_NAME = "AirborneGravityForce"
 local ATTACH_NAME = "AirborneAttachment"
+local LOCK_DEADZONE = 0.3 -- diferença mínima pra acionar correção (studs)
+local LOCK_SPEED = 50 -- velocidade máxima de correção (studs/s)
 
-local activeTimers = {}
+local activeState = {} -- { [character] = { running=bool, timer=thread? } }
 
 local function getOrCreateAttachment(root)
-	local existing = root:FindFirstChild(ATTACH_NAME)
-	if existing then
-		return existing
+	local att = root:FindFirstChild(ATTACH_NAME)
+	if att then
+		return att
 	end
-	local att = Instance.new("Attachment")
+	att = Instance.new("Attachment")
 	att.Name = ATTACH_NAME
 	att.CFrame = CFrame.identity
 	att.Parent = root
 	return att
 end
 
-local function cleanupRoot(root)
+local function removePhysics(root)
 	local att = root:FindFirstChild(ATTACH_NAME)
 	if att then
 		att:Destroy()
@@ -52,64 +57,122 @@ local function cleanupRoot(root)
 	end
 end
 
-function AirborneService.suspend(character, gravityScale, duration)
+local function buildAntiGravity(root)
+	local att = getOrCreateAttachment(root)
+	local mass = root.AssemblyMass
+	local vf = root:FindFirstChild(FORCE_NAME)
+	if not vf then
+		vf = Instance.new("VectorForce")
+		vf.Name = FORCE_NAME
+		vf.Attachment0 = att
+		vf.RelativeTo = Enum.ActuatorRelativeTo.World
+		vf.ApplyAtCenterOfMass = true
+		vf.Parent = root
+	end
+	vf.Force = Vector3.new(0, workspace.Gravity * mass, 0)
+	return vf
+end
+
+function AirborneService.apply(character, targetY, lock, duration)
+	AirborneService.release(character)
+
 	local root = character:FindFirstChild("HumanoidRootPart")
 	if not root then
 		return
 	end
 
-	AirborneService.release(character)
+	local state = { running = true, timer = nil }
+	activeState[character] = state
 
-	local attachment = getOrCreateAttachment(root)
+	buildAntiGravity(root)
 
-	local mass = root.AssemblyMass
-	local counterForce = workspace.Gravity * mass * math.clamp(gravityScale, 0, 1)
+	task.spawn(function()
+		-- Fase 1: subir / descer até a targetY
+		while state.running and root.Parent do
+			local diff = targetY - root.Position.Y
+			if math.abs(diff) <= LOCK_DEADZONE then
+				-- Chegou — zera velocidade vertical
+				for _, part in character:GetDescendants() do
+					if part:IsA("BasePart") then
+						local v = part.AssemblyLinearVelocity
+						part.AssemblyLinearVelocity = Vector3.new(v.X, 0, v.Z)
+					end
+				end
+				break
+			end
+			local vel = math.clamp(diff * LOCK_SPEED, -LOCK_SPEED, LOCK_SPEED)
+			for _, part in character:GetDescendants() do
+				if part:IsA("BasePart") then
+					local v = part.AssemblyLinearVelocity
+					part.AssemblyLinearVelocity = Vector3.new(v.X, vel, v.Z)
+				end
+			end
+			task.wait()
+		end
 
-	local vf = Instance.new("VectorForce")
-	vf.Name = FORCE_NAME
-	vf.Attachment0 = attachment
-	vf.Force = Vector3.new(0, counterForce, 0)
-	vf.RelativeTo = Enum.ActuatorRelativeTo.World
-	vf.ApplyAtCenterOfMass = true
-	vf.Parent = root
+		if not state.running then
+			return
+		end
+
+		-- Fase 2: sustentação
+		if lock then
+			-- Mantém na Y ativamente
+			while state.running and root.Parent do
+				local diff = targetY - root.Position.Y
+				if math.abs(diff) > LOCK_DEADZONE then
+					local vel = math.clamp(diff * LOCK_SPEED, -LOCK_SPEED, LOCK_SPEED)
+					for _, part in character:GetDescendants() do
+						if part:IsA("BasePart") then
+							local v = part.AssemblyLinearVelocity
+							part.AssemblyLinearVelocity = Vector3.new(v.X, vel, v.Z)
+						end
+					end
+				end
+				task.wait()
+			end
+		else
+			-- Só cancela gravidade; não corrige posição
+			while state.running and root.Parent do
+				task.wait()
+			end
+		end
+	end)
 
 	if duration then
-		local timer = task.delay(duration, function()
-			activeTimers[character] = nil
-			if character and character.Parent then
+		state.timer = task.delay(duration, function()
+			if activeState[character] == state then
 				AirborneService.release(character)
 			end
 		end)
-		activeTimers[character] = timer
 	end
 end
 
 function AirborneService.release(character)
-	local timer = activeTimers[character]
-	if timer then
-		task.cancel(timer)
-		activeTimers[character] = nil
+	local state = activeState[character]
+	if not state then
+		return
 	end
+
+	state.running = false
+	if state.timer then
+		task.cancel(state.timer)
+		state.timer = nil
+	end
+	activeState[character] = nil
 
 	local root = character:FindFirstChild("HumanoidRootPart")
 	if root then
-		cleanupRoot(root)
+		removePhysics(root)
 	end
 end
 
-function AirborneService.isSuspended(character)
-	local root = character:FindFirstChild("HumanoidRootPart")
-	if not root then
-		return false
-	end
-	return root:FindFirstChild(FORCE_NAME) ~= nil
+function AirborneService.isAirborne(character)
+	return activeState[character] ~= nil
 end
 
-local Players = game:GetService("Players")
 Players.PlayerAdded:Connect(function(player)
 	player.CharacterRemoving:Connect(function(character)
 		AirborneService.release(character)
-		activeTimers[character] = nil
 	end)
 end)
 
