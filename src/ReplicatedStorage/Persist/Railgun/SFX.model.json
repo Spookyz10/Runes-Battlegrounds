@@ -1,0 +1,17 @@
+{
+  "className": "Sound",
+  "properties": {
+    "Volume": 2.0,
+    "AcousticSimulationEnabled": {
+      "Bool": true
+    },
+    "Tags": [
+      "UpdateSoundGroup"
+    ],
+    "AudioContent": "rbxassetid://96745895783884",
+    "RollOffMode": "InverseTapered"
+  },
+  "attributes": {
+    "SoundGroup": "SFX"
+  }
+}
