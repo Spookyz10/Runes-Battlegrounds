@@ -82,7 +82,7 @@ local DEBUG_TRANSP = 0.7
 local DEBUG_FOLDER_NAME = "HitboxDebug"
 
 -- Permite desativar o debug manualmente mesmo em Studio
-HitboxService.debugEnabled = false
+HitboxService.debugEnabled = true
 
 -- ─── Debug folder ────────────────────────────────────────────────────────────
 
