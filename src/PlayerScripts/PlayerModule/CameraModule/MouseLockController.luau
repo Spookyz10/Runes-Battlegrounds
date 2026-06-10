@@ -4,22 +4,25 @@
 	2018 Camera Update - AllYourBlox
 --]]
 
---[[ Constants ]]--
+--[[ Constants ]]
+--
 local DEFAULT_MOUSE_LOCK_CURSOR = "rbxasset://textures/MouseLockedCursor.png"
 
 local CONTEXT_ACTION_NAME = "MouseLockSwitchAction"
-local MOUSELOCK_ACTION_PRIORITY = Enum.ContextActionPriority.Default.Value
+local MOUSELOCK_ACTION_PRIORITY = Enum.ContextActionPriority.High.Value -- High priority to ensure it runs before default Roblox input bindings
 
---[[ Services ]]--
+--[[ Services ]]
+--
 local PlayersService = game:GetService("Players")
 local ContextActionService = game:GetService("ContextActionService")
-local Settings = UserSettings()	-- ignore warning
+local Settings = UserSettings() -- ignore warning
 local GameSettings = Settings.GameSettings
 
 --[[ Imports ]]
 local CameraUtils = require(script.Parent:WaitForChild("CameraUtils"))
 
---[[ The Module ]]--
+--[[ The Module ]]
+--
 local MouseLockController = {}
 MouseLockController.__index = MouseLockController
 
@@ -28,7 +31,7 @@ function MouseLockController.new()
 
 	self.isMouseLocked = false
 	self.savedMouseCursor = nil
-	self.boundKeys = {Enum.KeyCode.LeftShift, Enum.KeyCode.RightShift} -- defaults
+	self.boundKeys = { Enum.KeyCode.LeftShift, Enum.KeyCode.RightShift } -- defaults
 
 	self.mouseLockToggledEvent = Instance.new("BindableEvent")
 
@@ -87,11 +90,14 @@ end
 function MouseLockController:GetMouseLockOffset()
 	local CameraOffset = 1.75
 	local LocalPlayer = PlayersService.LocalPlayer
-	if LocalPlayer and LocalPlayer:FindFirstChild("Configuration") and LocalPlayer.Configuration:FindFirstChild("Shiftlock Offset") then
+	if
+		LocalPlayer
+		and LocalPlayer:FindFirstChild("Configuration")
+		and LocalPlayer.Configuration:FindFirstChild("Shiftlock Offset")
+	then
 		CameraOffset = LocalPlayer.Configuration["Shiftlock Offset"].Value
 	end
-	
-	
+
 	local offsetValueObj: Vector3Value = script:FindFirstChild("CameraOffset") :: Vector3Value
 	if offsetValueObj and offsetValueObj:IsA("Vector3Value") then
 		return offsetValueObj.Value
@@ -103,7 +109,7 @@ function MouseLockController:GetMouseLockOffset()
 		offsetValueObj = Instance.new("Vector3Value")
 		assert(offsetValueObj, "")
 		offsetValueObj.Name = "CameraOffset"
-		offsetValueObj.Value = Vector3.new(CameraOffset,0,0) -- Legacy Default Value
+		offsetValueObj.Value = Vector3.new(CameraOffset, 0, 0) -- Legacy Default Value
 		offsetValueObj.Parent = script
 	end
 
@@ -111,27 +117,31 @@ function MouseLockController:GetMouseLockOffset()
 		return offsetValueObj.Value
 	end
 
-	return Vector3.new(CameraOffset,0,0)
+	return Vector3.new(CameraOffset, 0, 0)
 end
 
 function MouseLockController:UpdateMouseLockAvailability()
 	local devAllowsMouseLock = PlayersService.LocalPlayer.DevEnableMouseLock
-	local devMovementModeIsScriptable = PlayersService.LocalPlayer.DevComputerMovementMode == Enum.DevComputerMovementMode.Scriptable
+	local devMovementModeIsScriptable = PlayersService.LocalPlayer.DevComputerMovementMode
+		== Enum.DevComputerMovementMode.Scriptable
 	local userHasMouseLockModeEnabled = GameSettings.ControlMode == Enum.ControlMode.MouseLockSwitch
-	local userHasClickToMoveEnabled =  GameSettings.ComputerMovementMode == Enum.ComputerMovementMode.ClickToMove
-	local MouseLockAvailable = devAllowsMouseLock and userHasMouseLockModeEnabled and not userHasClickToMoveEnabled and not devMovementModeIsScriptable
+	local userHasClickToMoveEnabled = GameSettings.ComputerMovementMode == Enum.ComputerMovementMode.ClickToMove
+	local MouseLockAvailable = devAllowsMouseLock
+		and userHasMouseLockModeEnabled
+		and not userHasClickToMoveEnabled
+		and not devMovementModeIsScriptable
 
-	if MouseLockAvailable~=self.enabled then
+	if MouseLockAvailable ~= self.enabled then
 		self:EnableMouseLock(MouseLockAvailable)
 	end
 end
 
 function MouseLockController:OnBoundKeysObjectChanged(newValue: string)
 	self.boundKeys = {} -- Overriding defaults, note: possibly with nothing at all if boundKeysObj.Value is "" or contains invalid values
-	for token in string.gmatch(newValue,"[^%s,]+") do
+	for token in string.gmatch(newValue, "[^%s,]+") do
 		for _, keyEnum in pairs(Enum.KeyCode:GetEnumItems()) do
 			if token == keyEnum.Name then
-				self.boundKeys[#self.boundKeys+1] = keyEnum :: Enum.KeyCode
+				self.boundKeys[#self.boundKeys + 1] = keyEnum :: Enum.KeyCode
 				break
 			end
 		end
@@ -140,7 +150,8 @@ function MouseLockController:OnBoundKeysObjectChanged(newValue: string)
 	self:BindContextActions()
 end
 
---[[ Local Functions ]]--
+--[[ Local Functions ]]
+--
 function MouseLockController:OnMouseLockToggled()
 	self.isMouseLocked = not self.isMouseLocked
 
@@ -190,11 +201,10 @@ end
 
 function MouseLockController:EnableMouseLock(enable: boolean)
 	if PlayersService.LocalPlayer.Character then
-		PlayersService.LocalPlayer.Character:SetAttribute('Shiftlock', enable)
+		PlayersService.LocalPlayer.Character:SetAttribute("Shiftlock", enable)
 	end
-	
-	if enable ~= self.enabled then
 
+	if enable ~= self.enabled then
 		self.enabled = enable
 
 		if self.enabled then
@@ -214,7 +224,6 @@ function MouseLockController:EnableMouseLock(enable: boolean)
 
 			self.isMouseLocked = false
 		end
-
 	end
 end
 
