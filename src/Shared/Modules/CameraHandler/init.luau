@@ -10,6 +10,8 @@ end)
 local CameraTableAnims = require(script.Parent.CameraTableAnims)
 local Camera = workspace.CurrentCamera
 local CamAnims = script.Animations
+local RS = game:GetService("ReplicatedStorage")
+
 local rad = math.rad
 workspace:GetPropertyChangedSignal('CurrentCamera'):Connect(function()
 	Camera = workspace.CurrentCamera
@@ -28,9 +30,9 @@ local getCframe = {
 
 
 local camRigs = {
-	[1] = script.CameraRig,
-	[2] = script.CameraRig2,
-	[3] = script.CameraRig3,
+	[1] = RS.Assets.CameraRigs.CameraRig,
+	[2] = RS.Assets.CameraRigs.CameraRig2,
+	[3] = RS.Assets.CameraRigs.CameraRig3,
 }
 
 local AnimTracks = {

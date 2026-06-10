@@ -5,6 +5,7 @@ local SvSt = game:GetService('ServerStorage')
 local W = game:GetService('Workspace')
 local RNS = game:GetService('RunService')
 local CollectionService = game:GetService("CollectionService")
+local ServerScriptService = game:GetService("ServerScriptService")
 
 
 
@@ -26,22 +27,20 @@ local AnimationService = require(SvModules.AnimationService)
 local RemotesContainer = RS.Remotes
 
 
-local ReplicateEffects_Set = RemotesContainer.Replicate.Set
 
 
 
 --Variables
 local LiveFolder = W.Live
-local Assets = SvSt.Assets
 
 
 
 --Functions
-function HumanoidDied(Character: Model, InitialHp: number)
+function HumanoidDied(Character, InitialHp)
 	if Character:HasTag('Destroying') then return end
 	Character:AddTag("Destroying")
 	
-	local Humanoid: Humanoid = Character:FindFirstChild('Humanoid')
+	local Humanoid = Character:FindFirstChild('Humanoid')
 
 	if not Humanoid then
 		return
@@ -103,7 +102,7 @@ function HumanoidDied(Character: Model, InitialHp: number)
 	end)
 end
 
-function spawnDummy(CF: CFrame, InitialHp: number, ScriptName: string)
+function spawnDummy(CF, InitialHp, ScriptName)
 	local dummyName = "Weakest Dummy"
 	local existingDummies = 0
 	for _,v in workspace.Live:GetChildren() do
@@ -113,7 +112,7 @@ function spawnDummy(CF: CFrame, InitialHp: number, ScriptName: string)
 	end
 
 	local DidDieFunction = false
-	local Dummy = script["Weakest Dummy"]:Clone()
+	local Dummy = ServerScriptService["Weakest Dummy"]:Clone()
 	local HumRP = Dummy.HumanoidRootPart
 	local Humanoid = Dummy.Humanoid
 
@@ -180,7 +179,7 @@ end
 
 
 --Events
-SpnDmy.Event:Connect(function(CF: CFrame, InitialHp: number, ScriptName: string)
+SpnDmy.Event:Connect(function(CF, InitialHp, ScriptName)
 	if game.PlaceId == workspace:GetAttribute("DuelsHubPlaceId") or game.PlaceId == workspace:GetAttribute("DuelsPlaceId") then return end
 	
 	spawnDummy(CF, InitialHp, ScriptName)

@@ -1035,8 +1035,8 @@ local function AddStarterPlayer(Player)
 	local userId = Player.UserId
 	local playerClass = shared.playerClasses[userId]
 
-	CombatUtils:AddValue(Player, "NumberValue", 6, "RespawnTime")
-	CombatUtils:AddValue(Player, "BoolValue", true, "CanRespawn")
+	CombatUtils.AddValue(Player, "NumberValue", 6, "RespawnTime")
+	CombatUtils.AddValue(Player, "BoolValue", true, "CanRespawn")
 
 	local Moveset = Player:GetAttribute("Moveset")
 	if not Moveset then

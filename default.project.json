@@ -5,8 +5,7 @@
 
     "ReplicatedStorage": {
       "Shared": {
-        "$path": "src/Shared",
-        "$ignoreUnknownInstances": true
+        "$path": "src/Shared"
       }
     },
 

@@ -6,7 +6,7 @@ local v_u_5 = game:GetService("Debris")
 local v_u_6 = game:GetService("SoundService")
 local v_u_7 = v_u_1.Resources
 
-local v_u_9 = require(v_u_1.Services.Package.RocksService)
+local v_u_9 = require(v_u_1.Shared.Services.Package.RocksService)
 
 local v_u_13 = RaycastParams.new()
 v_u_13.IgnoreWater = true
