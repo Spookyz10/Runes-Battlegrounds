@@ -60,16 +60,12 @@ function AnimationService:playAnimation(Character, Animation, Speed, TimePositio
 	end
 
 	if
-		workspace.Configuration.AttackSMult.Value ~= 1
-		and (
-			Animation.Parent == Animations.Throwables
-			or Animation:IsDescendantOf(Animations.Wallcombos)
-			or Animation:IsDescendantOf(Animations.Moves)
-			or Animation:IsDescendantOf(Animations.Awakenings)
-			or Animation:IsDescendantOf(Animations.Combat.Punches)
-		)
+		Animation.Parent == Animations.Throwables
+		or Animation:IsDescendantOf(Animations.Moves)
+		or Animation:IsDescendantOf(Animations.Awakenings)
+		or Animation:IsDescendantOf(Animations.Combat.Punches)
 	then
-		anim:AdjustSpeed((Speed or 1) * workspace.Configuration.AttackSMult.Value)
+		anim:AdjustSpeed((Speed or 1))
 	end
 
 	if TimePosition then
@@ -90,7 +86,12 @@ function AnimationService:stopAnimation(Character, Animation, FadeTime)
 	if not Character or not Character.Parent then
 		return
 	end
+
 	local playingAnims = AnimationService:getLoadedAnimations(Character)
+
+	if not playingAnims[Animation] then
+		return
+	end
 	local anim = playingAnims[Animation][1]
 
 	if anim then

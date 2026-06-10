@@ -1,4 +1,3 @@
-local Sounds = game.ServerStorage.Assets.Sounds
 local module = {}
 
 local getCF = {
@@ -18,14 +17,7 @@ function module:PlaySound(OriginalSound, Part, PlaybackSpeed, _, FadeOutParams, 
 
 	local Sound = OriginalSound:Clone()
 	task.spawn(function()
-		if
-			OriginalSound:IsDescendantOf(Sounds.Emotes)
-			or OriginalSound:IsDescendantOf(game.ServerStorage.Modules.Emotes)
-		then
-			Sound.SoundGroup = game.SoundService["Emote Music"]
-		else
-			Sound.SoundGroup = game.SoundService.Sounds
-		end
+		Sound.SoundGroup = game.SoundService.Sounds
 
 		if partType == "CFrame" or partType == "Vector3" then
 			local soundAttachment = Instance.new("Attachment")
@@ -42,22 +34,6 @@ function module:PlaySound(OriginalSound, Part, PlaybackSpeed, _, FadeOutParams, 
 		Sound.PlaybackSpeed = PlaybackSpeed or OriginalSound.PlaybackSpeed or 1
 		Sound.TimePosition = TimePosition or OriginalSound.TimePosition or 0
 		Sound:Play()
-
-		local AttackSMult = workspace.Configuration.AttackSMult.Value
-		if
-			AttackSMult ~= 1
-			and (
-				OriginalSound.Name == "TrashDmg"
-				or OriginalSound.Name == "TrashGrab"
-				or OriginalSound:IsDescendantOf(Sounds.Wallcombos)
-				or OriginalSound:IsDescendantOf(Sounds.Moves)
-				or OriginalSound:IsDescendantOf(Sounds.Awakenings)
-				or OriginalSound:IsDescendantOf(Sounds.Combat.Swings)
-				or OriginalSound:IsDescendantOf(Sounds.Combat.Hits)
-			)
-		then
-			Sound.PlaybackSpeed *= AttackSMult
-		end
 
 		if Sound.Looped == false then
 			task.delay(Sound.TimeLength + 5, function()

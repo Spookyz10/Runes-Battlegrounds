@@ -1,8 +1,3 @@
-local Debris = game:GetService("Debris")
-local SvSt = game:GetService("ServerStorage")
-
-local Assets = SvSt.Assets
-
 local module = {}
 module.Cache = {}
 
@@ -63,14 +58,6 @@ function module:Stun(Character, Duration, IgnoreImmunity, WalkSpeed, JumpPower, 
 		return
 	end
 
-	if
-		(workspace.Configuration.NoStun.Value == true)
-		or (not IgnoreImmunity and Character:HasTag("StunImmunity"))
-		or (Duration ~= -1 and Duration < 0)
-	then
-		return
-	end
-
 	if module.Cache[Character] then
 		pcall(function()
 			task.cancel(module.Cache[Character])
@@ -85,8 +72,6 @@ function module:Stun(Character, Duration, IgnoreImmunity, WalkSpeed, JumpPower, 
 			end
 		end
 	end)
-
-	local Humanoid = Character.Humanoid
 
 	Character:AddTag("Stunned")
 	Character:SetAttribute("Stunned", true)

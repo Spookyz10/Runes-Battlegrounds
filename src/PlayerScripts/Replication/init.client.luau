@@ -51,7 +51,6 @@ local Animator = Humanoid:FindFirstChild("Animator") or Humanoid:WaitForChild("A
 local HumRP = Character:FindFirstChild("HumanoidRootPart") or Character:WaitForChild("HumanoidRootPart", 10)
 local Camera = workspace.CurrentCamera
 
-shared.IsConsole = false
 shared.IsMobile = UIS.TouchEnabled == true
 
 local PlayerGui = Player.PlayerGui
@@ -751,14 +750,18 @@ local function ComunicationFunction(func, params)
 						return
 					else
 						if ConfigFolder["Shiftlock"].Value == true then
+							-- no ShiftlockButton InputBegan, no branch de desligar:
 							if lastShiftlock then
 								lastShiftlock:Disconnect()
 								lastShiftlock = nil
 							end
 							if not Character:HasTag("CantRotate") then
-								UIS.MouseBehavior = Enum.MouseBehavior.Default
 								Humanoid.AutoRotate = true
 							end
+							-- força após o PlayerModule ter rodado
+							task.defer(function()
+								UIS.MouseBehavior = Enum.MouseBehavior.Default
+							end)
 							Comunicator:FireServer("SetConfig", { CN = "Shiftlock", V = false })
 						else
 							if not lastShiftlock then
