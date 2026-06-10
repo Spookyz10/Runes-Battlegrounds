@@ -171,6 +171,10 @@ do
 		CameraInput.gamepadReset = gamepadResetBindable.Event
 	end
 
+	function CameraInput.resetPanInputCount()
+		panInputCount = 0
+	end
+
 	function CameraInput.getRotationActivated(): boolean
 		return panInputCount > 0 or gamepadState.Thumbstick2.Magnitude > 0
 	end
@@ -239,7 +243,6 @@ do
 		end
 
 		local function resetInputDevices()
-			panInputCount = 0
 			for _, device in pairs({
 				gamepadState,
 				keyboardState,

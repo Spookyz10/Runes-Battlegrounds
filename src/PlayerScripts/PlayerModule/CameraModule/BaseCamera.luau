@@ -641,7 +641,9 @@ function BaseCamera:UpdateMouseBehavior()
 			CameraUtils.setMouseBehaviorOverride(Enum.MouseBehavior.LockCenter)
 		else
 			CameraUtils.restoreRotationType()
-			CameraUtils.restoreMouseBehavior() -- restaura incondicionalmente ao sair do shiftlock
+			CameraInput.resetPanInputCount() -- zera aqui também
+			print("Restoring mouse behavior to default because not in first person and not in mouse locked mode")
+			CameraUtils.restoreMouseBehavior()
 		end
 	end
 end
