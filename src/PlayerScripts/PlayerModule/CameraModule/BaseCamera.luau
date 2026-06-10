@@ -5,26 +5,22 @@
 	2018 Camera Update - AllYourBlox
 --]]
 
---[[ Local Constants ]]--
-local UNIT_Z = Vector3.new(0,0,1)
-local X1_Y0_Z1 = Vector3.new(1,0,1)	--Note: not a unit vector, used for projecting onto XZ plane
+--[[ Local Constants ]]
+--
+local UNIT_Z = Vector3.new(0, 0, 1)
+local X1_Y0_Z1 = Vector3.new(1, 0, 1) --Note: not a unit vector, used for projecting onto XZ plane
 
-local DEFAULT_DISTANCE = 12.5	-- Studs
-local PORTRAIT_DEFAULT_DISTANCE = 25		-- Studs
+local DEFAULT_DISTANCE = 12.5 -- Studs
+
 local FIRST_PERSON_DISTANCE_THRESHOLD = 1.0 -- Below this value, snap into first person
 
 local VR_ANGLE = math.rad(15)
-local VR_LOW_INTENSITY_ROTATION = Vector2.new(math.rad(15), 0)
-local VR_HIGH_INTENSITY_ROTATION = Vector2.new(math.rad(45), 0)
-local VR_LOW_INTENSITY_REPEAT = 0.1
-local VR_HIGH_INTENSITY_REPEAT = 0.4
 
-local ZERO_VECTOR2 = Vector2.new(0,0)
-local ZERO_VECTOR3 = Vector3.new(0,0,0)
+local ZERO_VECTOR3 = Vector3.new(0, 0, 0)
 
-local SEAT_OFFSET = Vector3.new(0,5,0)
-local VR_SEAT_OFFSET = Vector3.new(0,4,0)
-local HEAD_OFFSET = Vector3.new(0,1.5,0)
+local SEAT_OFFSET = Vector3.new(0, 5, 0)
+
+local HEAD_OFFSET = Vector3.new(0, 1.5, 0)
 local R15_HEAD_OFFSET = Vector3.new(0, 1.5, 0)
 local R15_HEAD_OFFSET_NO_SCALING = Vector3.new(0, 2, 0)
 local HUMANOID_ROOT_PART_SIZE = Vector3.new(2, 2, 1)
@@ -38,24 +34,26 @@ local CameraToggleStateController = require(script.Parent:WaitForChild("CameraTo
 local CameraInput = require(script.Parent:WaitForChild("CameraInput"))
 local CameraUI = require(script.Parent:WaitForChild("CameraUI"))
 
---[[ Roblox Services ]]--
+--[[ Roblox Services ]]
+--
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
-local StarterGui = game:GetService("StarterGui")
+
 local VRService = game:GetService("VRService")
 local UserGameSettings = UserSettings():GetService("UserGameSettings")
 
 local player = Players.LocalPlayer
 
---[[ The Module ]]--
+--[[ The Module ]]
+--
 local BaseCamera = {}
 BaseCamera.__index = BaseCamera
 
 function BaseCamera.new()
 	local self = setmetatable({}, BaseCamera)
-	
-	self.gamepadZoomLevels = {0, 10, 20} -- zoom levels that are cycled through on a gamepad R3 press
-	
+
+	self.gamepadZoomLevels = { 0, 10, 20 } -- zoom levels that are cycled through on a gamepad R3 press
+
 	-- So that derived classes have access to this
 	self.FIRST_PERSON_DISTANCE_THRESHOLD = FIRST_PERSON_DISTANCE_THRESHOLD
 
@@ -73,7 +71,8 @@ function BaseCamera.new()
 	self.lastSubjectPosition = Vector3.new(0, 5, 0)
 	self.lastSubjectCFrame = CFrame.new(self.lastSubjectPosition)
 
-	self.currentSubjectDistance = math.clamp(DEFAULT_DISTANCE, player.CameraMinZoomDistance, player.CameraMaxZoomDistance)
+	self.currentSubjectDistance =
+		math.clamp(DEFAULT_DISTANCE, player.CameraMinZoomDistance, player.CameraMaxZoomDistance)
 
 	self.inFirstPerson = false
 	self.inMouseLockedMode = false
@@ -120,31 +119,42 @@ function BaseCamera.new()
 		self:OnCharacterAdded(char)
 	end)
 
-	if self.playerCameraModeChangeConn then self.playerCameraModeChangeConn:Disconnect() end
+	if self.playerCameraModeChangeConn then
+		self.playerCameraModeChangeConn:Disconnect()
+	end
 	self.playerCameraModeChangeConn = player:GetPropertyChangedSignal("CameraMode"):Connect(function()
 		self:OnPlayerCameraPropertyChange()
 	end)
 
-	if self.minDistanceChangeConn then self.minDistanceChangeConn:Disconnect() end
+	if self.minDistanceChangeConn then
+		self.minDistanceChangeConn:Disconnect()
+	end
 	self.minDistanceChangeConn = player:GetPropertyChangedSignal("CameraMinZoomDistance"):Connect(function()
 		self:OnPlayerCameraPropertyChange()
 	end)
 
-	if self.maxDistanceChangeConn then self.maxDistanceChangeConn:Disconnect() end
+	if self.maxDistanceChangeConn then
+		self.maxDistanceChangeConn:Disconnect()
+	end
 	self.maxDistanceChangeConn = player:GetPropertyChangedSignal("CameraMaxZoomDistance"):Connect(function()
 		self:OnPlayerCameraPropertyChange()
 	end)
 
-	if self.playerDevTouchMoveModeChangeConn then self.playerDevTouchMoveModeChangeConn:Disconnect() end
+	if self.playerDevTouchMoveModeChangeConn then
+		self.playerDevTouchMoveModeChangeConn:Disconnect()
+	end
 	self.playerDevTouchMoveModeChangeConn = player:GetPropertyChangedSignal("DevTouchMovementMode"):Connect(function()
 		self:OnDevTouchMovementModeChanged()
 	end)
 	self:OnDevTouchMovementModeChanged() -- Init
 
-	if self.gameSettingsTouchMoveMoveChangeConn then self.gameSettingsTouchMoveMoveChangeConn:Disconnect() end
-	self.gameSettingsTouchMoveMoveChangeConn = UserGameSettings:GetPropertyChangedSignal("TouchMovementMode"):Connect(function()
-		self:OnGameSettingsTouchMovementModeChanged()
-	end)
+	if self.gameSettingsTouchMoveMoveChangeConn then
+		self.gameSettingsTouchMoveMoveChangeConn:Disconnect()
+	end
+	self.gameSettingsTouchMoveMoveChangeConn = UserGameSettings:GetPropertyChangedSignal("TouchMovementMode")
+		:Connect(function()
+			self:OnGameSettingsTouchMovementModeChanged()
+		end)
 	self:OnGameSettingsTouchMovementModeChanged() -- Init
 
 	UserGameSettings:SetCameraYInvertVisible()
@@ -243,7 +253,7 @@ function BaseCamera:GetSubjectCFrame(): CFrame
 
 					local rootPart = humanoid.RootPart
 					if bodyPartToFollow == rootPart then
-						local rootPartSizeOffset = (rootPart.Size.Y - HUMANOID_ROOT_PART_SIZE.Y)/2
+						local rootPartSizeOffset = (rootPart.Size.Y - HUMANOID_ROOT_PART_SIZE.Y) / 2
 						heightOffset = heightOffset + Vector3.new(0, rootPartSizeOffset, 0)
 					end
 				else
@@ -257,12 +267,10 @@ function BaseCamera:GetSubjectCFrame(): CFrame
 				heightOffset = ZERO_VECTOR3
 			end
 
-			result = bodyPartToFollow.CFrame*CFrame.new(heightOffset + humanoid.CameraOffset)
+			result = bodyPartToFollow.CFrame * CFrame.new(heightOffset + humanoid.CameraOffset)
 		end
-
 	elseif cameraSubject:IsA("BasePart") then
 		result = cameraSubject.CFrame
-	
 	elseif cameraSubject:IsA("Model") then
 		-- Model subjects are expected to have a PrimaryPart to determine orientation
 		if cameraSubject.PrimaryPart then
@@ -289,14 +297,12 @@ function BaseCamera:GetSubjectVelocity(): Vector3
 
 	if cameraSubject:IsA("BasePart") then
 		return cameraSubject.Velocity
-
 	elseif cameraSubject:IsA("Humanoid") then
 		local rootPart = cameraSubject.RootPart
 
 		if rootPart then
 			return rootPart.Velocity
 		end
-
 	elseif cameraSubject:IsA("Model") then
 		local primaryPart = cameraSubject.PrimaryPart
 
@@ -318,14 +324,12 @@ function BaseCamera:GetSubjectRotVelocity(): Vector3
 
 	if cameraSubject:IsA("BasePart") then
 		return cameraSubject.RotVelocity
-
 	elseif cameraSubject:IsA("Humanoid") then
 		local rootPart = cameraSubject.RootPart
 
 		if rootPart then
 			return rootPart.RotVelocity
 		end
-
 	elseif cameraSubject:IsA("Model") then
 		local primaryPart = cameraSubject.PrimaryPart
 
@@ -345,10 +349,10 @@ function BaseCamera:StepZoom()
 		local newZoom
 
 		if zoomDelta > 0 then
-			newZoom = zoom + zoomDelta*(1 + zoom*ZOOM_SENSITIVITY_CURVATURE)
+			newZoom = zoom + zoomDelta * (1 + zoom * ZOOM_SENSITIVITY_CURVATURE)
 			newZoom = math.max(newZoom, self.FIRST_PERSON_DISTANCE_THRESHOLD)
 		else
-			newZoom = (zoom + zoomDelta)/(1 - zoomDelta*ZOOM_SENSITIVITY_CURVATURE)
+			newZoom = (zoom + zoomDelta) / (1 - zoomDelta * ZOOM_SENSITIVITY_CURVATURE)
 			newZoom = math.max(newZoom, FIRST_PERSON_DISTANCE_MIN)
 		end
 
@@ -387,7 +391,7 @@ function BaseCamera:GetSubjectPosition(): Vector3?
 					if humanoid.AutomaticScalingEnabled then
 						heightOffset = R15_HEAD_OFFSET
 						if bodyPartToFollow == humanoid.RootPart then
-							local rootPartSizeOffset = (humanoid.RootPart.Size.Y/2) - (HUMANOID_ROOT_PART_SIZE.Y/2)
+							local rootPartSizeOffset = (humanoid.RootPart.Size.Y / 2) - (HUMANOID_ROOT_PART_SIZE.Y / 2)
 							heightOffset = heightOffset + Vector3.new(0, rootPartSizeOffset, 0)
 						end
 					else
@@ -401,9 +405,9 @@ function BaseCamera:GetSubjectPosition(): Vector3?
 					heightOffset = ZERO_VECTOR3
 				end
 
-				result = bodyPartToFollow.CFrame.p + bodyPartToFollow.CFrame:vectorToWorldSpace(heightOffset + humanoid.CameraOffset)
+				result = bodyPartToFollow.CFrame.p
+					+ bodyPartToFollow.CFrame:vectorToWorldSpace(heightOffset + humanoid.CameraOffset)
 			end
-
 		elseif cameraSubject:IsA("VehicleSeat") then
 			local offset = SEAT_OFFSET
 			result = cameraSubject.CFrame.p + cameraSubject.CFrame:vectorToWorldSpace(offset)
@@ -484,8 +488,10 @@ end
 
 function BaseCamera:OnGameSettingsTouchMovementModeChanged()
 	if player.DevTouchMovementMode == Enum.DevTouchMovementMode.UserChoice then
-		if (UserGameSettings.TouchMovementMode == Enum.TouchMovementMode.DynamicThumbstick
-			or UserGameSettings.TouchMovementMode == Enum.TouchMovementMode.Default) then
+		if
+			UserGameSettings.TouchMovementMode == Enum.TouchMovementMode.DynamicThumbstick
+			or UserGameSettings.TouchMovementMode == Enum.TouchMovementMode.Default
+		then
 			self:OnDynamicThumbstickEnabled()
 		else
 			self:OnDynamicThumbstickDisabled()
@@ -518,15 +524,15 @@ function BaseCamera:GamepadZoomPress()
 
 	local max = player.CameraMaxZoomDistance
 
-	-- check from largest to smallest, set the first zoom level which is 
+	-- check from largest to smallest, set the first zoom level which is
 	-- below the threshold
 	for i = #self.gamepadZoomLevels, 1, -1 do
 		local zoom = self.gamepadZoomLevels[i]
-	
+
 		if max < zoom then
 			continue
 		end
-		
+
 		if zoom < player.CameraMinZoomDistance then
 			zoom = player.CameraMinZoomDistance
 		end
@@ -545,7 +551,7 @@ function BaseCamera:GamepadZoomPress()
 
 		max = zoom
 	end
-	
+
 	-- cycle back to the largest
 	self:SetCameraToSubjectDistance(self.gamepadZoomLevels[#self.gamepadZoomLevels])
 end
@@ -573,7 +579,10 @@ function BaseCamera:OnEnabledChanged()
 			end
 		end
 
-		if self.cameraChangedConn then self.cameraChangedConn:Disconnect(); self.cameraChangedConn = nil end
+		if self.cameraChangedConn then
+			self.cameraChangedConn:Disconnect()
+			self.cameraChangedConn = nil
+		end
 		self.cameraChangedConn = workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
 			self:OnCurrentCameraChanged()
 		end)
@@ -603,9 +612,9 @@ function BaseCamera:Cleanup()
 		self.viewportSizeChangedConn:Disconnect()
 		self.viewportSizeChangedConn = nil
 	end
-	if self.cameraChangedConn then 
+	if self.cameraChangedConn then
 		self.cameraChangedConn:Disconnect()
-		self.cameraChangedConn = nil 
+		self.cameraChangedConn = nil
 	end
 
 	self.lastCameraTransform = nil
@@ -632,13 +641,7 @@ function BaseCamera:UpdateMouseBehavior()
 			CameraUtils.setMouseBehaviorOverride(Enum.MouseBehavior.LockCenter)
 		else
 			CameraUtils.restoreRotationType()
-
-			local rotationActivated = CameraInput.getRotationActivated()
-			if rotationActivated then
-				CameraUtils.setMouseBehaviorOverride(Enum.MouseBehavior.LockCurrentPosition)
-			else
-				CameraUtils.restoreMouseBehavior()
-			end
+			CameraUtils.restoreMouseBehavior() -- restaura incondicionalmente ao sair do shiftlock
 		end
 	end
 end
@@ -662,7 +665,8 @@ function BaseCamera:SetCameraToSubjectDistance(desiredSubjectDistance: number): 
 			self:EnterFirstPerson()
 		end
 	else
-		local newSubjectDistance = math.clamp(desiredSubjectDistance, player.CameraMinZoomDistance, player.CameraMaxZoomDistance)
+		local newSubjectDistance =
+			math.clamp(desiredSubjectDistance, player.CameraMinZoomDistance, player.CameraMaxZoomDistance)
 		if newSubjectDistance < FIRST_PERSON_DISTANCE_THRESHOLD then
 			self.currentSubjectDistance = 0.5
 			if not self.inFirstPerson then
@@ -677,13 +681,16 @@ function BaseCamera:SetCameraToSubjectDistance(desiredSubjectDistance: number): 
 	end
 
 	-- Pass target distance and zoom direction to the zoom controller
-	ZoomController.SetZoomParameters(self.currentSubjectDistance, math.sign(desiredSubjectDistance - lastSubjectDistance))
+	ZoomController.SetZoomParameters(
+		self.currentSubjectDistance,
+		math.sign(desiredSubjectDistance - lastSubjectDistance)
+	)
 
 	-- Returned only for convenience to the caller to know the outcome
 	return self.currentSubjectDistance
 end
 
-function BaseCamera:SetCameraType( cameraType )
+function BaseCamera:SetCameraType(cameraType)
 	--Used by derived classes
 	self.cameraType = cameraType
 end
@@ -693,7 +700,7 @@ function BaseCamera:GetCameraType()
 end
 
 -- Movement mode standardized to Enum.ComputerCameraMovementMode values
-function BaseCamera:SetCameraMovementMode( cameraMovementMode )
+function BaseCamera:SetCameraMovementMode(cameraMovementMode)
 	self.cameraMovementMode = cameraMovementMode
 end
 
@@ -712,20 +719,28 @@ end
 function BaseCamera:SetMouseLockOffset(offsetVector)
 	local CameraOffset = 1.75
 	local LocalPlayer = game.Players.LocalPlayer
-	if LocalPlayer and LocalPlayer:FindFirstChild("Configuration") and LocalPlayer.Configuration:FindFirstChild("Shiftlock Offset") then
+	if
+		LocalPlayer
+		and LocalPlayer:FindFirstChild("Configuration")
+		and LocalPlayer.Configuration:FindFirstChild("Shiftlock Offset")
+	then
 		CameraOffset = LocalPlayer.Configuration["Shiftlock Offset"].Value
 	end
-	
+
 	self.mouseLockOffset = Vector3.new(CameraOffset, offsetVector.Y, offsetVector.Z)
 end
 
 function BaseCamera:GetMouseLockOffset()
 	local CameraOffset = 1.75
 	local LocalPlayer = game.Players.LocalPlayer
-	if LocalPlayer and LocalPlayer:FindFirstChild("Configuration") and LocalPlayer.Configuration:FindFirstChild("Shiftlock Offset") then
+	if
+		LocalPlayer
+		and LocalPlayer:FindFirstChild("Configuration")
+		and LocalPlayer.Configuration:FindFirstChild("Shiftlock Offset")
+	then
 		CameraOffset = LocalPlayer.Configuration["Shiftlock Offset"].Value
 	end
-	
+
 	return Vector3.new(CameraOffset, self.mouseLockOffset.Y, self.mouseLockOffset.Z)
 end
 
@@ -769,7 +784,7 @@ function BaseCamera:CalculateNewLookCFrameFromArg(suppliedLookVector: Vector3?, 
 	local yTheta = math.clamp(rotateInput.Y, -1.3962634015954636 + currPitchAngle, 1.3962634015954636 + currPitchAngle)
 	local constrainedRotateInput = Vector2.new(rotateInput.X, yTheta)
 	local startCFrame = CFrame.new(ZERO_VECTOR3, currLookVector)
-	return CFrame.Angles(0, -constrainedRotateInput.X, 0) * startCFrame * CFrame.Angles(-constrainedRotateInput.Y,0,0)
+	return CFrame.Angles(0, -constrainedRotateInput.X, 0) * startCFrame * CFrame.Angles(-constrainedRotateInput.Y, 0, 0)
 end
 
 function BaseCamera:CalculateNewLookVectorFromArg(suppliedLookVector: Vector3?, rotateInput: Vector2): Vector3
@@ -778,11 +793,15 @@ end
 
 function BaseCamera:CalculateNewLookVectorVRFromArg(rotateInput: Vector2): Vector3
 	local subjectPosition: Vector3 = self:GetSubjectPosition()
-	local vecToSubject: Vector3 = (subjectPosition - (game.Workspace.CurrentCamera :: Camera).CFrame.p)
+	local vecToSubject: Vector3 = (subjectPosition - (game.Workspace.CurrentCamera).CFrame.p)
 	local currLookVector: Vector3 = (vecToSubject * X1_Y0_Z1).unit
 	local vrRotateInput: Vector2 = Vector2.new(rotateInput.X, 0)
 	local startCFrame: CFrame = CFrame.new(ZERO_VECTOR3, currLookVector)
-	local yawRotatedVector: Vector3 = (CFrame.Angles(0, -vrRotateInput.X, 0) * startCFrame * CFrame.Angles(-vrRotateInput.Y,0,0)).LookVector
+	local yawRotatedVector: Vector3 = (CFrame.Angles(0, -vrRotateInput.X, 0) * startCFrame * CFrame.Angles(
+		-vrRotateInput.Y,
+		0,
+		0
+	)).LookVector
 	return (yawRotatedVector * X1_Y0_Z1).unit
 end
 
@@ -804,7 +823,7 @@ function BaseCamera:GetHumanoid(): Humanoid?
 	return nil
 end
 
-function BaseCamera:GetHumanoidPartToFollow(humanoid: Humanoid, humanoidStateType: Enum.HumanoidStateType) -- BasePart
+function BaseCamera:GetHumanoidPartToFollow(humanoid, humanoidStateType) -- BasePart
 	if humanoidStateType == Enum.HumanoidStateType.Dead then
 		local character = humanoid.Parent
 		if character then
@@ -816,7 +835,6 @@ function BaseCamera:GetHumanoidPartToFollow(humanoid: Humanoid, humanoidStateTyp
 		return humanoid.Torso
 	end
 end
-
 
 function BaseCamera:OnNewCameraSubject()
 	if self.subjectStateChangedConn then
