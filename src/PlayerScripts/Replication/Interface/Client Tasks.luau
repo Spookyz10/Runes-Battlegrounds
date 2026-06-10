@@ -12,6 +12,9 @@ local ClientTasks = tick()
 
 local Debris = game:GetService("Debris")
 local RS = game:GetService("ReplicatedStorage")
+local TS = game:GetService("TweenService")
+
+local Resources = RS:WaitForChild("Resources")
 
 local MapRayParams = RaycastParams.new()
 MapRayParams.FilterType = Enum.RaycastFilterType.Include
@@ -79,8 +82,52 @@ local ReplicationEffects = {
 
 		Debris:AddItem(PreloadRig, 5)
 	end,
+
+	Ring = function(Params)
+		local Ring = Resources.Misc.Ring:Clone()
+		Ring.Parent = workspace.Thrown
+		Ring.CFrame = Params.CF
+
+		for Prop, Value in Params.FirstProps do
+			if Ring[Prop] then
+				Ring[Prop] = Value
+			end
+		end
+
+		TS:Create(
+			Ring,
+			TweenInfo.new(
+				Params.TN_Info.Time,
+				Enum.EasingStyle[Params.TN_Info.Style],
+				Enum.EasingDirection[Params.TN_Info.Direction]
+			),
+			Params.FinalProps
+		):Play()
+		Debris:AddItem(Ring, Params.LF or Params.TN_Info.Time)
+	end,
 }
 
+shared.clearVelocities = function(Part: Part, Ignore: BodyVelocity?)
+	for _, Velocity in Part:GetDescendants() do
+		if
+			Velocity ~= Ignore
+			and (
+				Velocity:IsA("BodyVelocity")
+				or Velocity:IsA("LinearVelocity")
+				or Velocity:IsA("BodyPosition")
+				or Velocity:IsA("BodyGyro")
+				or Velocity:IsA("BodyAngularVelocity")
+				or Velocity:IsA("BodyMover")
+				or Velocity:IsA("BodyForce")
+				or Velocity:IsA("BodyThrust")
+				or Velocity:IsA("AngularVelocity")
+				or Velocity:IsA("VelocityMotor")
+			)
+		then
+			Velocity:Destroy()
+		end
+	end
+end
 if ClientTasksLoadTime > 0 then
 	print("CLIENT TASKS LOADED IN: ", ClientTasksLoadTime)
 end
