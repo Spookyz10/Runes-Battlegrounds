@@ -232,18 +232,15 @@ local function CheckWalkDirection()
 		Character:SetAttribute("Running", false)
 
 		local goalWalkSpeed
-		if Player.Commands.NoMovement.Value == true or workspace.Configuration.NoMovement.Value == true then
-			goalWalkSpeed = 0
-		elseif Character:GetAttribute("DefaultWalkSpeed") ~= nil then
+
+		if Character:GetAttribute("DefaultWalkSpeed") ~= nil then
 			goalWalkSpeed = Character:GetAttribute("DefaultWalkSpeed")
 		else
 			goalWalkSpeed = 16
 		end
 
 		local goalJumpPower
-		if Player.Commands.NoMovement.Value == true or workspace.Configuration.NoMovement.Value == true then
-			goalJumpPower = 0
-		elseif Character:GetAttribute("DefaultJumpPower") ~= nil then
+		if Character:GetAttribute("DefaultJumpPower") ~= nil then
 			goalJumpPower = Character:GetAttribute("DefaultJumpPower")
 		else
 			goalJumpPower = 50
