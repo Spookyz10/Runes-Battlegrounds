@@ -55,6 +55,9 @@ shared.IsMobile = UIS.TouchEnabled == true
 
 local PlayerGui = Player.PlayerGui
 
+local shiftlockActive = false
+local shiftlockDebounce = false
+
 local function Shiftlock()
 	if not Character:HasTag("CantRotate") then
 		Humanoid.AutoRotate = false
@@ -68,7 +71,38 @@ end
 
 local lastShiftlock
 if shared.IsMobile then
+	shiftlockActive = true
+	shared.customShiftlockActive = true
 	lastShiftlock = RNS.RenderStepped:Connect(Shiftlock)
+end
+
+local function setShiftlock(enabled)
+	if shiftlockDebounce then
+		return
+	end
+	shiftlockDebounce = true
+	task.delay(0.15, function()
+		shiftlockDebounce = false
+	end)
+
+	shiftlockActive = enabled
+	shared.customShiftlockActive = enabled
+
+	if enabled then
+		if not lastShiftlock then
+			lastShiftlock = RNS.RenderStepped:Connect(Shiftlock)
+		end
+		Comunicator:FireServer("SetConfig", { CN = "Shiftlock", V = true })
+	else
+		if lastShiftlock then
+			lastShiftlock:Disconnect()
+			lastShiftlock = nil
+		end
+		if not Character:HasTag("CantRotate") then
+			Humanoid.AutoRotate = true
+		end
+		Comunicator:FireServer("SetConfig", { CN = "Shiftlock", V = false })
+	end
 end
 
 Player:GetPropertyChangedSignal("Character"):Connect(function()
@@ -92,6 +126,8 @@ Player:GetPropertyChangedSignal("Character"):Connect(function()
 	end
 
 	if shared.IsMobile then
+		shiftlockActive = true
+		shared.customShiftlockActive = true
 		lastShiftlock = RNS.RenderStepped:Connect(Shiftlock)
 	end
 end)
@@ -749,29 +785,9 @@ local function ComunicationFunction(func, params)
 						selectedFrame = ShiftlockButton
 						return
 					else
-						if ConfigFolder["Shiftlock"].Value == true then
-							-- no ShiftlockButton InputBegan, no branch de desligar:
-							if lastShiftlock then
-								lastShiftlock:Disconnect()
-								lastShiftlock = nil
-							end
-							if not Character:HasTag("CantRotate") then
-								Humanoid.AutoRotate = true
-							end
-							-- força após o PlayerModule ter rodado
-							task.defer(function()
-								UIS.MouseBehavior = Enum.MouseBehavior.Default
-							end)
-							Comunicator:FireServer("SetConfig", { CN = "Shiftlock", V = false })
-						else
-							if not lastShiftlock then
-								lastShiftlock = RNS.RenderStepped:Connect(Shiftlock)
-							end
-							Comunicator:FireServer("SetConfig", { CN = "Shiftlock", V = true })
-						end
-						ShiftlockButton.Image = ShiftlockButton.Image == "rbxassetid://79664771265271"
-								and "rbxassetid://79605996519245"
-							or "rbxassetid://79664771265271"
+						setShiftlock(not shiftlockActive)
+						ShiftlockButton.Image = shiftlockActive and "rbxassetid://79664771265271"
+							or "rbxassetid://79605996519245"
 					end
 
 					if LastShiftlockConnection ~= nil then

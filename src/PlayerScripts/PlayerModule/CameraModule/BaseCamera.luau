@@ -625,6 +625,14 @@ function BaseCamera:Cleanup()
 end
 
 function BaseCamera:UpdateMouseBehavior()
+	if shared.customShiftlockActive then
+		if not UserInputService.TouchEnabled then
+			CameraUtils.setRotationTypeOverride(Enum.RotationType.CameraRelative)
+			CameraUtils.setMouseBehaviorOverride(Enum.MouseBehavior.LockCenter)
+		end
+		return
+	end
+
 	local blockToggleDueToClickToMove = UserGameSettings.ComputerMovementMode == Enum.ComputerMovementMode.ClickToMove
 
 	if self.isCameraToggle and blockToggleDueToClickToMove == false then
@@ -642,7 +650,6 @@ function BaseCamera:UpdateMouseBehavior()
 		else
 			CameraUtils.restoreRotationType()
 			CameraInput.resetPanInputCount() -- zera aqui também
-			print("Restoring mouse behavior to default because not in first person and not in mouse locked mode")
 			CameraUtils.restoreMouseBehavior()
 		end
 	end
