@@ -1,5 +1,3 @@
-local ReplicationEffects = {}
-
 type particlesModule = {
 	GetHLF: (Part: Part?) -> number,
 	Emit: (Part: Part?) -> (),
@@ -11,6 +9,9 @@ type particlesModule = {
 }
 
 local ClientTasks = tick()
+
+local Debris = game:GetService("Debris")
+local RS = game:GetService("ReplicatedStorage")
 
 local MapRayParams = RaycastParams.new()
 MapRayParams.FilterType = Enum.RaycastFilterType.Include
@@ -40,6 +41,45 @@ MapOverlapParams.FilterType = MapRayParams.FilterType
 MapOverlapParams.FilterDescendantsInstances = { workspace.Map }
 
 local ClientTasksLoadTime = tick() - ClientTasks
+
+local ReplicationEffects = {
+	preloadanims = function(AnimationsList)
+		local PreloadRig = workspace:WaitForChild("Preloader")
+		local Animator = PreloadRig:WaitForChild("Humanoid"):WaitForChild("Animator")
+
+		for _, AnimationId in
+			{
+				98691909912183,
+				115733546570440,
+			}
+		do
+			local Animation = Instance.new("Animation")
+			Animation.AnimationId = "rbxassetid://" .. AnimationId
+
+			Animator:LoadAnimation(Animation)
+			Animation:Destroy()
+		end
+
+		for _, AnimationId in AnimationsList do
+			if not AnimationId or AnimationId == "" then
+				continue
+			end
+			local Animation = Instance.new("Animation")
+			Animation.AnimationId = AnimationId
+
+			Animator:LoadAnimation(Animation)
+			Animation:Destroy()
+		end
+
+		for _, Animation: Animation in RS:GetDescendants() do
+			if Animation:IsA("Animation") and Animation.AnimationId ~= "" then
+				Animator:LoadAnimation(Animation)
+			end
+		end
+
+		Debris:AddItem(PreloadRig, 5)
+	end,
+}
 
 if ClientTasksLoadTime > 0 then
 	print("CLIENT TASKS LOADED IN: ", ClientTasksLoadTime)

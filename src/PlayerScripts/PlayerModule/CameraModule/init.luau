@@ -18,23 +18,21 @@ CameraModule.__index = CameraModule
 
 -- NOTICE: Player property names do not all match their StarterPlayer equivalents,
 -- with the differences noted in the comments on the right
-local PLAYER_CAMERA_PROPERTIES =
-{
+local PLAYER_CAMERA_PROPERTIES = {
 	"CameraMinZoomDistance",
 	"CameraMaxZoomDistance",
 	"CameraMode",
 	"DevCameraOcclusionMode",
-	"DevComputerCameraMode",			-- Corresponds to StarterPlayer.DevComputerCameraMovementMode
-	"DevTouchCameraMode",				-- Corresponds to StarterPlayer.DevTouchCameraMovementMode
+	"DevComputerCameraMode", -- Corresponds to StarterPlayer.DevComputerCameraMovementMode
+	"DevTouchCameraMode", -- Corresponds to StarterPlayer.DevTouchCameraMovementMode
 
 	-- Character movement mode
 	"DevComputerMovementMode",
 	"DevTouchMovementMode",
-	"DevEnableMouseLock",				-- Corresponds to StarterPlayer.EnableMouseLockOption
+	"DevEnableMouseLock", -- Corresponds to StarterPlayer.EnableMouseLockOption
 }
 
-local USER_GAME_SETTINGS_PROPERTIES =
-{
+local USER_GAME_SETTINGS_PROPERTIES = {
 	"ComputerCameraMovementMode",
 	"ComputerMovementMode",
 	"ControlMode",
@@ -45,7 +43,8 @@ local USER_GAME_SETTINGS_PROPERTIES =
 	"TouchMovementMode",
 }
 
---[[ Roblox Services ]]--
+--[[ Roblox Services ]]
+--
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -72,7 +71,6 @@ local Poppercam = require(script:WaitForChild("Poppercam"))
 -- Load the near-field character transparency controller and the mouse lock "shift lock" controller
 local TransparencyController = require(script:WaitForChild("TransparencyController"))
 local MouseLockController = require(script:WaitForChild("MouseLockController"))
-local GamepadLockon = require(script:WaitForChild("GamepadLockon"))
 
 -- Table of camera controllers that have been instantiated. They are instantiated as they are used.
 local instantiatedCameraControllers = {}
@@ -92,9 +90,8 @@ do
 	PlayerScripts:RegisterComputerCameraMovementMode(Enum.ComputerCameraMovementMode.CameraToggle)
 end
 
-
 function CameraModule.new()
-	local self = setmetatable({},CameraModule)
+	local self = setmetatable({}, CameraModule)
 
 	-- Current active controller instances
 	self.activeCameraController = nil
@@ -109,7 +106,7 @@ function CameraModule.new()
 	self.cameraTypeChangedConn = nil
 
 	-- Adds CharacterAdded and CharacterRemoving event handlers for all current players
-	for _,player in pairs(Players:GetPlayers()) do
+	for _, player in pairs(Players:GetPlayers()) do
 		self:OnPlayerAdded(player)
 	end
 
@@ -134,7 +131,9 @@ function CameraModule.new()
 	self:ActivateCameraController(self:GetCameraControlChoice())
 	self:ActivateOcclusionModule(Players.LocalPlayer.DevCameraOcclusionMode)
 	self:OnCurrentCameraChanged() -- Does initializations and makes first camera controller
-	RunService:BindToRenderStep("cameraRenderUpdate", Enum.RenderPriority.Camera.Value, function(dt) self:Update(dt) end)
+	RunService:BindToRenderStep("cameraRenderUpdate", Enum.RenderPriority.Camera.Value, function(dt)
+		self:Update(dt)
+	end)
 
 	-- Connect listeners to camera-related properties
 	for _, propertyName in pairs(PLAYER_CAMERA_PROPERTIES) do
@@ -223,7 +222,12 @@ function CameraModule:ActivateOcclusionModule(occlusionMode: Enum.DevCameraOcclu
 		local newModuleOcclusionMode = self.activeOcclusionModule:GetOcclusionMode()
 		-- Sanity check that the module we selected or instantiated actually supports the desired occlusionMode
 		if newModuleOcclusionMode ~= occlusionMode then
-			warn("CameraScript ActivateOcclusionModule mismatch: ",self.activeOcclusionModule:GetOcclusionMode(),"~=",occlusionMode)
+			warn(
+				"CameraScript ActivateOcclusionModule mismatch: ",
+				self.activeOcclusionModule:GetOcclusionMode(),
+				"~=",
+				occlusionMode
+			)
 		end
 
 		-- Deactivate current module if there is one
@@ -242,7 +246,7 @@ function CameraModule:ActivateOcclusionModule(occlusionMode: Enum.DevCameraOcclu
 		if occlusionMode == Enum.DevCameraOcclusionMode.Invisicam then
 			-- Optimization to only send Invisicam what we know it needs
 			if Players.LocalPlayer.Character then
-				self.activeOcclusionModule:CharacterAdded(Players.LocalPlayer.Character, Players.LocalPlayer )
+				self.activeOcclusionModule:CharacterAdded(Players.LocalPlayer.Character, Players.LocalPlayer)
 			end
 		else
 			-- When Poppercam is enabled, we send it all existing player characters for its raycast ignore list
@@ -280,7 +284,7 @@ end
 function CameraModule:ActivateCameraController(cameraMovementMode, legacyCameraType: Enum.CameraType?)
 	local newCameraCreator = nil
 
-	if legacyCameraType~=nil then
+	if legacyCameraType ~= nil then
 		--[[
 			This function has been passed a CameraType enum value. Some of these map to the use of
 			the LegacyCamera module, the value "Custom" will be translated to a movementMode enum
@@ -293,38 +297,37 @@ function CameraModule:ActivateCameraController(cameraMovementMode, legacyCameraT
 				self.activeCameraController = nil
 			end
 			return
-
 		elseif legacyCameraType == Enum.CameraType.Custom then
 			cameraMovementMode = self:GetCameraMovementModeFromSettings()
-
 		elseif legacyCameraType == Enum.CameraType.Track then
 			-- Note: The TrackCamera module was basically an older, less fully-featured
 			-- version of ClassicCamera, no longer actively maintained, but it is re-implemented in
 			-- case a game was dependent on its lack of ClassicCamera's extra functionality.
 			cameraMovementMode = Enum.ComputerCameraMovementMode.Classic
-
 		elseif legacyCameraType == Enum.CameraType.Follow then
 			cameraMovementMode = Enum.ComputerCameraMovementMode.Follow
-
 		elseif legacyCameraType == Enum.CameraType.Orbital then
 			cameraMovementMode = Enum.ComputerCameraMovementMode.Orbital
-
-		elseif legacyCameraType == Enum.CameraType.Attach or
-			   legacyCameraType == Enum.CameraType.Watch or
-			   legacyCameraType == Enum.CameraType.Fixed then
+		elseif
+			legacyCameraType == Enum.CameraType.Attach
+			or legacyCameraType == Enum.CameraType.Watch
+			or legacyCameraType == Enum.CameraType.Fixed
+		then
 			newCameraCreator = LegacyCamera
 		else
-			warn("CameraScript encountered an unhandled Camera.CameraType value: ",legacyCameraType)
+			warn("CameraScript encountered an unhandled Camera.CameraType value: ", legacyCameraType)
 		end
 	end
 
 	if not newCameraCreator then
 		if VRService.VREnabled then
 			newCameraCreator = VRCamera
-		elseif cameraMovementMode == Enum.ComputerCameraMovementMode.Classic or
-			cameraMovementMode == Enum.ComputerCameraMovementMode.Follow or
-			cameraMovementMode == Enum.ComputerCameraMovementMode.Default or
-			cameraMovementMode == Enum.ComputerCameraMovementMode.CameraToggle then
+		elseif
+			cameraMovementMode == Enum.ComputerCameraMovementMode.Classic
+			or cameraMovementMode == Enum.ComputerCameraMovementMode.Follow
+			or cameraMovementMode == Enum.ComputerCameraMovementMode.Default
+			or cameraMovementMode == Enum.ComputerCameraMovementMode.CameraToggle
+		then
 			newCameraCreator = ClassicCamera
 		elseif cameraMovementMode == Enum.ComputerCameraMovementMode.Orbital then
 			newCameraCreator = OrbitalCamera
@@ -371,9 +374,9 @@ function CameraModule:ActivateCameraController(cameraMovementMode, legacyCameraT
 	end
 
 	if self.activeCameraController then
-		if cameraMovementMode~=nil then
+		if cameraMovementMode ~= nil then
 			self.activeCameraController:SetCameraMovementMode(cameraMovementMode)
-		elseif legacyCameraType~=nil then
+		elseif legacyCameraType ~= nil then
 			-- Note that this is only called when legacyCameraType is not a type that
 			-- was convertible to a ComputerCameraMovementMode value, i.e. really only applies to LegacyCamera
 			self.activeCameraController:SetCameraType(legacyCameraType)
@@ -411,7 +414,9 @@ end
 -- Note: Called whenever workspace.CurrentCamera changes, but also on initialization of this script
 function CameraModule:OnCurrentCameraChanged()
 	local currentCamera = game.Workspace.CurrentCamera
-	if not currentCamera then return end
+	if not currentCamera then
+		return
+	end
 
 	if self.cameraSubjectChangedConn then
 		self.cameraSubjectChangedConn:Disconnect()
@@ -440,7 +445,9 @@ function CameraModule:OnLocalPlayerCameraPropertyChanged(propertyName: string)
 		if Players.LocalPlayer.CameraMode == Enum.CameraMode.LockFirstPerson then
 			-- Locked in first person, use ClassicCamera which supports this
 			if not self.activeCameraController or self.activeCameraController:GetModuleName() ~= "ClassicCamera" then
-				self:ActivateCameraController(CameraUtils.ConvertCameraModeEnumToStandard(Enum.DevComputerCameraMovementMode.Classic))
+				self:ActivateCameraController(
+					CameraUtils.ConvertCameraModeEnumToStandard(Enum.DevComputerCameraMovementMode.Classic)
+				)
 			end
 
 			if self.activeCameraController then
@@ -451,17 +458,13 @@ function CameraModule:OnLocalPlayerCameraPropertyChanged(propertyName: string)
 			local cameraMovementMode = self:GetCameraMovementModeFromSettings()
 			self:ActivateCameraController(CameraUtils.ConvertCameraModeEnumToStandard(cameraMovementMode))
 		else
-			warn("Unhandled value for property player.CameraMode: ",Players.LocalPlayer.CameraMode)
+			warn("Unhandled value for property player.CameraMode: ", Players.LocalPlayer.CameraMode)
 		end
-
-	elseif propertyName == "DevComputerCameraMode" or
-		   propertyName == "DevTouchCameraMode" then
+	elseif propertyName == "DevComputerCameraMode" or propertyName == "DevTouchCameraMode" then
 		local cameraMovementMode = self:GetCameraMovementModeFromSettings()
 		self:ActivateCameraController(CameraUtils.ConvertCameraModeEnumToStandard(cameraMovementMode))
-
 	elseif propertyName == "DevCameraOcclusionMode" then
 		self:ActivateOcclusionModule(Players.LocalPlayer.DevCameraOcclusionMode)
-
 	elseif propertyName == "CameraMinZoomDistance" or propertyName == "CameraMaxZoomDistance" then
 		if self.activeCameraController then
 			self.activeCameraController:UpdateForDistancePropertyChange()
@@ -525,14 +528,15 @@ function CameraModule:GetCameraControlChoice()
 		if UserInputService:GetLastInputType() == Enum.UserInputType.Touch or UserInputService.TouchEnabled then
 			-- Touch
 			if player.DevTouchCameraMode == Enum.DevTouchCameraMovementMode.UserChoice then
-				return CameraUtils.ConvertCameraModeEnumToStandard( UserGameSettings.TouchCameraMovementMode )
+				return CameraUtils.ConvertCameraModeEnumToStandard(UserGameSettings.TouchCameraMovementMode)
 			else
-				return CameraUtils.ConvertCameraModeEnumToStandard( player.DevTouchCameraMode )
+				return CameraUtils.ConvertCameraModeEnumToStandard(player.DevTouchCameraMode)
 			end
 		else
 			-- Computer
 			if player.DevComputerCameraMode == Enum.DevComputerCameraMovementMode.UserChoice then
-				local computerMovementMode = CameraUtils.ConvertCameraModeEnumToStandard(UserGameSettings.ComputerCameraMovementMode)
+				local computerMovementMode =
+					CameraUtils.ConvertCameraModeEnumToStandard(UserGameSettings.ComputerCameraMovementMode)
 				return CameraUtils.ConvertCameraModeEnumToStandard(computerMovementMode)
 			else
 				return CameraUtils.ConvertCameraModeEnumToStandard(player.DevComputerCameraMode)

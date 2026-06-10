@@ -1035,15 +1035,54 @@ local function AddStarterPlayer(Player)
 	local userId = Player.UserId
 	local playerClass = shared.playerClasses[userId]
 
-	CombatUtils.AddValue(Player, "NumberValue", 6, "RespawnTime")
-	CombatUtils.AddValue(Player, "BoolValue", true, "CanRespawn")
+	local template = script.StarterPlayer
 
-	local Moveset = Player:GetAttribute("Moveset")
-	if not Moveset then
-		Player:SetAttribute("Moveset", "Default")
+	for _, obj in template:GetChildren() do
+		local clone = obj:Clone()
+		clone.Parent = Player
 	end
 
-	Player:SetAttribute("Gold", playerClass.Gold)
+	local Moveset = Player:FindFirstChild("Moveset")
+	if not Moveset then
+		Moveset = Instance.new("Folder")
+		Moveset.Name = "Moveset"
+		Moveset.Parent = Player
+	end
+
+	local AwakeningProgress = Player:FindFirstChild("AwakeningProgress")
+	if not AwakeningProgress then
+		AwakeningProgress = Instance.new("NumberValue")
+		AwakeningProgress.Name = "AwakeningProgress"
+		AwakeningProgress.Value = 0
+		AwakeningProgress.Parent = Player
+	end
+
+	local leaderstats = Player:FindFirstChild("leaderstats")
+	if leaderstats then
+		local Kills = leaderstats:FindFirstChild("Kills") or Instance.new("NumberValue", leaderstats)
+		Kills.Name = "Kills"
+		Kills.Value = playerClass.Kills or 0
+
+		local TotalKills = leaderstats:FindFirstChild("Total Kills") or Instance.new("NumberValue", leaderstats)
+		TotalKills.Name = "Total Kills"
+		TotalKills.Value = playerClass.TotalKills or 0
+
+		local Gold = leaderstats:FindFirstChild("Gold") or Instance.new("NumberValue", leaderstats)
+		Gold.Name = "Gold"
+		Gold.Value = playerClass.Gold or 0
+	end
+
+	local Moveset_attr = Player:GetAttribute("Moveset")
+	if not Moveset_attr then
+		Player:SetAttribute("Moveset", playerClass.Moveset or "Lunar")
+	else
+		Player:SetAttribute("Moveset", Moveset_attr)
+	end
+
+	Player:SetAttribute("Gold", playerClass.Gold or 0)
+
+	CombatUtils.AddValue(Player, "NumberValue", 6, "RespawnTime")
+	CombatUtils.AddValue(Player, "BoolValue", true, "CanRespawn")
 
 	local loadedData = Instance.new("BoolValue")
 	loadedData.Name = "LoadedData"
@@ -1141,14 +1180,12 @@ function CharacterAdded(Character)
 	iFramesService:AddAlliFrames(Character)
 	AnimationService:loadAnimations(Character)
 
-	ReplicateSet:FireAllClients("WhiteAura", { Time = 4, Plr = Player, Light = false })
 	task.delay(4, function()
 		Character:SetAttribute("JustSpawned", nil)
 		iFramesService:RemoveAlliFrames(Character)
 	end)
 
-	if Humanoid.MoveDirection.Magnitude == 0
- then
+	if Humanoid.MoveDirection.Magnitude == 0 then
 		Humanoid:GetPropertyChangedSignal("MoveDirection"):Once(function()
 			if Humanoid.MoveDirection.Magnitude ~= 0 then
 				AnimationService:stopAll(Character)
@@ -1242,6 +1279,10 @@ CollectionService:GetInstanceRemovedSignal("CantRotate"):Connect(function(Charac
 end)
 
 ComGet.OnServerInvoke = function(Player, Function, Params)
+	print("Invoked: " .. Function)
+	if not ComunicatorFunctions[Function] then
+		return nil
+	end
 	return ComunicatorFunctions[Function](Player, Params)
 end
 

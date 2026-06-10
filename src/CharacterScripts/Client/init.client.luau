@@ -76,29 +76,15 @@ Character.ChildAdded:Connect(function(Child)
 end)
 
 task.spawn(function()
-	if Player:GetAttribute("Moveset") == "Cursed Child" then
-		Animate.walk.WalkAnim.AnimationId = "rbxassetid://104633820379399"
-	else
-		Animate.walk.WalkAnim.AnimationId = "rbxassetid://128818585458282"
-	end
+	Animate.walk.WalkAnim.AnimationId = "rbxassetid://98691909912183"
+
 	Animate:WaitForChild("toolnone", 5)
-	task.delay(0.01, function()
-		for _, Animation in Animate.idle:GetChildren() do
-			if Player:GetAttribute("Moveset") == "Cursed Child" then
-				Animation.AnimationId = "rbxassetid://114669601968410"
-			else
-				Animation.AnimationId = "rbxassetid://90258040368053"
-			end
-		end
-	end)
 end)
 
 local RunAnimation = Instance.new("Animation")
-if Player:GetAttribute("Moveset") == "Cursed Child" then
-	RunAnimation.AnimationId = "rbxassetid://87215031228753"
-else
-	RunAnimation.AnimationId = "rbxassetid://126118716093878"
-end
+
+RunAnimation.AnimationId = "rbxassetid://115733546570440"
+
 local RunTrack = Animator:LoadAnimation(RunAnimation)
 RunAnimation:Destroy()
 RunTrack.Name = "RunAnimation"
@@ -161,26 +147,22 @@ end
 
 local function isRunning()
 	local goalWalkSpeed
-	if Player.Commands.NoMovement.Value == true or workspace.Configuration.NoMovement.Value == true then
-		goalWalkSpeed = 0
-	elseif Character:GetAttribute("DefaultRunSpeed") ~= nil then
+	if Character:GetAttribute("DefaultRunSpeed") ~= nil then
 		goalWalkSpeed = Character:GetAttribute("DefaultRunSpeed")
 	else
 		goalWalkSpeed = 25
 	end
 
 	local goalJumpPower
-	if Player.Commands.NoMovement.Value == true or workspace.Configuration.NoMovement.Value == true then
-		goalJumpPower = 0
-	elseif Character:GetAttribute("DefaultJumpPower") ~= nil then
+	if Character:GetAttribute("DefaultJumpPower") ~= nil then
 		goalJumpPower = Character:GetAttribute("DefaultJumpPower")
 	else
 		goalJumpPower = 50
 	end
 
-	Humanoid.WalkSpeed = goalWalkSpeed * workspace.Configuration.SpeedMult.Value
+	Humanoid.WalkSpeed = goalWalkSpeed
 	if Humanoid.WalkSpeed > 0 and Character:HasTag("Awakened") and goalWalkSpeed > 0 then
-		Humanoid.WalkSpeed = Humanoid.WalkSpeed + 7
+		Humanoid.WalkSpeed += 7
 	end
 
 	Humanoid.JumpPower = goalJumpPower
@@ -196,7 +178,6 @@ local function CheckWalkDirection()
 	if Stun then
 		Humanoid.WalkSpeed = Stun:GetAttribute("WalkSpeed")
 		Humanoid.JumpPower = Stun:GetAttribute("JumpPower")
-
 		if RunTrack.IsPlaying then
 			RunTrack:Stop(0.15)
 		end
@@ -216,12 +197,10 @@ local function CheckWalkDirection()
 
 	if Humanoid.MoveDirection ~= Vector3.zero and math.abs(RightVector) < 0.85 and LookVector >= -0.1 then
 		if ConfigFolder["Auto Run"].Value == false then
-			RunningPhase = RunningPhase + 1
-
+			RunningPhase += 1
 			task.delay(0.25, function()
 				RunningPhase = 0
 			end)
-
 			if RunningPhase == 2 then
 				isRunning()
 			end
@@ -231,20 +210,9 @@ local function CheckWalkDirection()
 	else
 		Character:SetAttribute("Running", false)
 
-		local goalWalkSpeed
+		local goalWalkSpeed = (Character:GetAttribute("DefaultWalkSpeed") or 16)
 
-		if Character:GetAttribute("DefaultWalkSpeed") ~= nil then
-			goalWalkSpeed = Character:GetAttribute("DefaultWalkSpeed")
-		else
-			goalWalkSpeed = 16
-		end
-
-		local goalJumpPower
-		if Character:GetAttribute("DefaultJumpPower") ~= nil then
-			goalJumpPower = Character:GetAttribute("DefaultJumpPower")
-		else
-			goalJumpPower = 50
-		end
+		local goalJumpPower = (Character:GetAttribute("DefaultJumpPower") or 50)
 
 		Humanoid.WalkSpeed = goalWalkSpeed
 		Humanoid.JumpPower = goalJumpPower
@@ -467,13 +435,11 @@ Heartbeat = RNS.RenderStepped:Connect(function(deltaTime)
 
 			Character:SetAttribute("Running", false)
 		elseif Character:HasTag("Blocking") then
-			if workspace.Configuration.NoStun.Value ~= true or ConfigFolder.NoStun.Value ~= true then
-				if RunTrack.IsPlaying then
-					RunTrack:Stop(0.15)
-				end
-
-				Character:SetAttribute("Running", false)
+			if RunTrack.IsPlaying then
+				RunTrack:Stop(0.15)
 			end
+
+			Character:SetAttribute("Running", false)
 		elseif Character:FindFirstChild("dashingForward") and Character:FindFirstChild("Stunned") then
 			if RunTrack.IsPlaying then
 				RunTrack:Stop(0.15)
@@ -609,14 +575,14 @@ Humanoid.Jumping:Connect(function(Active)
 		end
 
 		LastJump = tick()
-		JumpFatigue = JumpFatigue + 1.5
+		JumpFatigue += 1.5
 
 		local GoalJumpPower = 50
 		if Character:FindFirstChild("DamagerLog") and Character.DamagerLog.TimeRemaining.Value > 20 then
 			JumpFatigue = 0
 		end
 
-		if JumpFatigue > 0 and not Player.Commands.NoFatigue.Value and not workspace.Configuration.NoFatigue.Value then
+		if JumpFatigue > 0 then
 			GoalJumpPower = math.max(GoalJumpPower - JumpFatigue * 1, 27)
 		end
 
@@ -906,25 +872,16 @@ require(RS.Shared.Modules.CameraTableAnims):StopAnimations()
 require(RS.Shared.Modules.CameraHandler):StopAnims()
 
 Animator.AnimationPlayed:Connect(function(AnimationTrack)
-	if
-		AnimationTrack.Animation.AnimationId == "rbxassetid://128818585458282"
-		or AnimationTrack.Animation.AnimationId == "rbxassetid://104633820379399"
-	then
+	if AnimationTrack.Animation.AnimationId == "rbxassetid://98691909912183" then
 		AnimationTrack:AdjustSpeed(Humanoid.WalkSpeed / 16)
 	end
 end)
 
 Humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
 	for _, AnimationTrack in Animator:GetPlayingAnimationTracks() do
-		if
-			AnimationTrack.Animation.AnimationId == "rbxassetid://128818585458282"
-			or AnimationTrack.Animation.AnimationId == "rbxassetid://104633820379399"
-		then
+		if AnimationTrack.Animation.AnimationId == "rbxassetid://98691909912183" then
 			AnimationTrack:AdjustSpeed(Humanoid.WalkSpeed / 16)
-		elseif
-			AnimationTrack.Animation.AnimationId == "rbxassetid://126118716093878"
-			or AnimationTrack.Animation.AnimationId == "rbxassetid://87215031228753"
-		then
+		elseif AnimationTrack.Animation.AnimationId == "rbxassetid://115733546570440" then
 			AnimationTrack:AdjustSpeed(Humanoid.WalkSpeed / 25)
 		end
 	end

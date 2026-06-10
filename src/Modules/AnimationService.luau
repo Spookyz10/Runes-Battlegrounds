@@ -12,7 +12,7 @@ local AnimationsContainers = {
 local AnimationService = {}
 AnimationService.Loaded = {}
 
-function AnimationService:getAnimationTrack(Character, Animation): AnimationTrack
+function AnimationService:getAnimationTrack(Character, Animation)
 	if not Character or not Character.Parent then
 		return
 	end
@@ -21,19 +21,14 @@ function AnimationService:getAnimationTrack(Character, Animation): AnimationTrac
 	return AnimationTable[1], AnimationTable[2]
 end
 
-function AnimationService:playAnimation(
-	Character: Model,
-	Animation: Animation,
-	Speed: number?,
-	TimePosition: number?,
-	FadeInTime: number?
-)
+function AnimationService:playAnimation(Character, Animation, Speed, TimePosition, FadeInTime)
 	if not Character or not Character.Parent or Character:HasTag("Ragdolled") then
 		return
 	end
 
 	local loadedAnims = AnimationService:getLoadedAnimations(Character)
-	local anim: AnimationTrack = loadedAnims[Animation][1]
+
+	local anim = loadedAnims[Animation][1]
 
 	if Animation.Parent.Name ~= "Spawn Animations" then
 		for _, Anim in AnimationsContainers[1]["Spawn Animations"]:GetDescendants() do
@@ -50,7 +45,7 @@ function AnimationService:playAnimation(
 			end
 		end
 	else
-		for _, Track: AnimationTrack in loadedAnims do
+		for _, Track in loadedAnims do
 			if Track[1].IsPlaying == true and Track[1].Animation.Parent.Name == "Emotes" then
 				AnimationService:stopAnimation(Character, Track[1].Animation)
 			end
@@ -131,14 +126,14 @@ function AnimationService:getLoadedAnimations(Character)
 	return AnimationService.Loaded[Character]
 end
 
-function AnimationService:loadAnimations(Character: Model)
+function AnimationService:loadAnimations(Character)
 	if not Character or not Character.Parent then
 		return
 	end
 	game:GetService("AnimationClipProvider")
 	self.Loaded[Character] = {}
 
-	local Animator: Animator = Character.Humanoid.Animator
+	local Animator = Character.Humanoid.Animator
 
 	for _, Container in AnimationsContainers do
 		for _, animation in pairs(Container:GetDescendants()) do

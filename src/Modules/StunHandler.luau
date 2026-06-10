@@ -2,7 +2,6 @@ local Debris = game:GetService("Debris")
 local SvSt = game:GetService("ServerStorage")
 
 local Assets = SvSt.Assets
-local Animations = Assets.Animations
 
 local module = {}
 module.Cache = {}
@@ -63,11 +62,9 @@ function module:Stun(Character, Duration, IgnoreImmunity, WalkSpeed, JumpPower, 
 	if not Character or not Character.Parent then
 		return
 	end
-	local Player = game.Players:GetPlayerFromCharacter(Character)
 
 	if
-		(Player and Player.Commands.NoStun.Value == true)
-		or (workspace.Configuration.NoStun.Value == true)
+		(workspace.Configuration.NoStun.Value == true)
 		or (not IgnoreImmunity and Character:HasTag("StunImmunity"))
 		or (Duration ~= -1 and Duration < 0)
 	then
@@ -78,7 +75,6 @@ function module:Stun(Character, Duration, IgnoreImmunity, WalkSpeed, JumpPower, 
 		pcall(function()
 			task.cancel(module.Cache[Character])
 		end)
-
 		module.Cache[Character] = nil
 	end
 
@@ -91,32 +87,6 @@ function module:Stun(Character, Duration, IgnoreImmunity, WalkSpeed, JumpPower, 
 	end)
 
 	local Humanoid = Character.Humanoid
-
-	if Character:FindFirstChild("ThrowablePart") and not IgnoreThrowable then
-		local ThrowablePart = Character.ThrowablePart
-
-		if not ThrowablePart:GetAttribute("BeingThrowed") then
-			local ThrowableWeld = ThrowablePart:FindFirstChildOfClass("Weld")
-
-			if ThrowableWeld then
-				ThrowableWeld:Destroy()
-			end
-
-			ThrowablePart.CanCollide = true
-			ThrowablePart.Parent = workspace.Thrown
-			Debris:AddItem(ThrowablePart, 5)
-
-			for _, v in Humanoid.Animator:GetPlayingAnimationTracks() do
-				if
-					v.Animation == Animations.Throwables.Pickup
-					or v.Animation == Animations.Throwables.Idle
-					or v.Animation == Animations.Throwables.Throw
-				then
-					v:Stop()
-				end
-			end
-		end
-	end
 
 	Character:AddTag("Stunned")
 	Character:SetAttribute("Stunned", true)
@@ -131,7 +101,6 @@ function module:Stun(Character, Duration, IgnoreImmunity, WalkSpeed, JumpPower, 
 		Character:SetAttribute("Stunned", false)
 		Character:SetAttribute("Stunned", nil)
 		Character:RemoveTag("Stunned")
-
 		TriggerTags(Character, false)
 	end)
 
@@ -145,13 +114,11 @@ function module:Stun(Character, Duration, IgnoreImmunity, WalkSpeed, JumpPower, 
 		local Handle = task.delay(Duration, function()
 			Unstun(Character)
 		end)
-
 		module.Cache[Character] = Handle
 	else
 		local Thread = coroutine.create(function()
 			Unstun(Character)
 		end)
-
 		module.Cache[Character] = Thread
 	end
 
@@ -162,7 +129,6 @@ function module:RemoveAllStuns(Character, IgnoreImmunity)
 	for _, Stunned in Character:GetChildren() do
 		if Stunned.Name == "Stunned" and (IgnoreImmunity == true or not Stunned:HasTag("DestroyImmunity")) then
 			Stunned:Destroy()
-
 			Unstun(Character)
 		end
 	end

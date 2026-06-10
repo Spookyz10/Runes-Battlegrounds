@@ -1,9 +1,9 @@
-local TS = game:GetService('TweenService')
+local TS = game:GetService("TweenService")
 local RNS = game["Run Service"]
 
 local Player = game.Players.LocalPlayer
 local Character = Player.Character or Player.CharacterAdded:Wait()
-Player:GetPropertyChangedSignal('Character'):Connect(function()
+Player:GetPropertyChangedSignal("Character"):Connect(function()
 	Character = Player.Character
 end)
 
@@ -13,10 +13,9 @@ local CamAnims = script.Animations
 local RS = game:GetService("ReplicatedStorage")
 
 local rad = math.rad
-workspace:GetPropertyChangedSignal('CurrentCamera'):Connect(function()
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
 	Camera = workspace.CurrentCamera
 end)
-
 
 local getCframe = {
 	["Instance"] = function(point)
@@ -28,39 +27,37 @@ local getCframe = {
 	end,
 }
 
-
 local camRigs = {
-	[1] = RS.Assets.CameraRigs.CameraRig,
-	[2] = RS.Assets.CameraRigs.CameraRig2,
-	[3] = RS.Assets.CameraRigs.CameraRig3,
+	[1] = RS.Resources.CameraRigs.CameraRig,
+	[2] = RS.Resources.CameraRigs.CameraRig2,
+	[3] = RS.Resources.CameraRigs.CameraRig3,
 }
 
 local AnimTracks = {
 	[1] = {},
 	[2] = {},
-	[3] = {}
+	[3] = {},
 }
-
 
 local module = {}
 module.__index = module
 
-
 local function CameraSmoothOut()
 	local CamCF = Camera.CFrame
 	local startClock = os.clock()
-	local bindName = 'CutsceneCameraSmoothOut'..startClock..Player.UserId
+	local bindName = "CutsceneCameraSmoothOut" .. startClock .. Player.UserId
 
 	local easeStyle = Enum.EasingStyle.Exponential
 	local easeDirection = Enum.EasingDirection.Out
 
 	RNS:BindToRenderStep(bindName, Enum.RenderPriority.Camera.Value + 1, function()
-		Camera.CFrame = CamCF:Lerp(Camera.CFrame, TS:GetValue((os.clock() - startClock) / .6, easeStyle, easeDirection))
+		Camera.CFrame =
+			CamCF:Lerp(Camera.CFrame, TS:GetValue((os.clock() - startClock) / 0.6, easeStyle, easeDirection))
 	end)
 
-	TS:Create(Camera, TweenInfo.new(.6, easeStyle, easeDirection), { FieldOfView = 70; }):Play()
+	TS:Create(Camera, TweenInfo.new(0.6, easeStyle, easeDirection), { FieldOfView = 70 }):Play()
 
-	task.delay(.6, function()
+	task.delay(0.6, function()
 		RNS:UnbindFromRenderStep(bindName)
 	end)
 end
@@ -68,7 +65,6 @@ end
 local function finalCameraPart(isNMG, MainPart, doSmoothOut)
 	module:StopAnims()
 	CameraTableAnims:StopAnimations()
-
 
 	if isNMG == true then
 		local CF = MainPart
@@ -81,7 +77,6 @@ local function finalCameraPart(isNMG, MainPart, doSmoothOut)
 
 	Camera.CameraType = Enum.CameraType.Custom
 
-
 	shared.triggerTopbar(true)
 	shared.triggerAwkbar(true)
 	shared.triggerHotbar(true)
@@ -91,20 +86,24 @@ local function finalCameraPart(isNMG, MainPart, doSmoothOut)
 	end
 end
 
-
-function module:PlayCameraAnimation(AnimationName: string, MainPart: Part, smoothInTime: number, doSmoothOut: boolean, changeToScriptable: boolean): (AnimationTrack, Model)
-	if not Character or (Character and Character:FindFirstChild('CameraRig')) then return end
-
+function module:PlayCameraAnimation(
+	AnimationName: string,
+	MainPart: Part,
+	smoothInTime: number,
+	doSmoothOut: boolean,
+	changeToScriptable: boolean
+): (AnimationTrack, Model)
+	if not Character or (Character and Character:FindFirstChild("CameraRig")) then
+		return
+	end
 
 	local Animation = CamAnims:FindFirstChild(AnimationName)
 	if Animation then
 		local Offset = Animation:GetAttribute("Offset") or CFrame.new(0, 0, 0)
 
-
 		shared.triggerTopbar(false)
 		shared.triggerAwkbar(false)
 		shared.triggerHotbar(false)
-
 
 		local currentRig, currentAnimsTable
 		local customRigNumber = Animation:GetAttribute("CustomRig")
@@ -116,26 +115,20 @@ function module:PlayCameraAnimation(AnimationName: string, MainPart: Part, smoot
 			currentAnimsTable = AnimTracks[customRigNumber]
 		end
 
-
-		if typeof(MainPart) == 'CFrame' then
+		if typeof(MainPart) == "CFrame" then
 			currentRig.RootPart.Anchored = true
 
 			currentRig:PivotTo(MainPart * Offset)
-
 		else
 			currentRig.RootPart.Anchored = false
-
 
 			if currentRig.RootPart.Weld.ClassName == "WeldConstraint" then
 				currentRig.RootPart:PivotTo(MainPart.CFrame * Offset)
 				currentRig.RootPart.Weld.Part0 = MainPart
-
 			else
 				currentRig.RootPart.Weld.Part0 = MainPart
 				currentRig.RootPart.Weld.C0 = Offset
-
 			end
-
 		end
 
 		currentRig.Parent = workspace.Thrown
@@ -144,8 +137,7 @@ function module:PlayCameraAnimation(AnimationName: string, MainPart: Part, smoot
 			Camera.CameraType = Enum.CameraType.Scriptable
 		end
 
-
-		smoothInTime = smoothInTime or .5
+		smoothInTime = smoothInTime or 0.5
 		local AnimTrack: AnimationTrack = currentAnimsTable[Animation]
 		local startTick = tick()
 		AnimTrack:Play()
@@ -155,7 +147,7 @@ function module:PlayCameraAnimation(AnimationName: string, MainPart: Part, smoot
 			if AnimTrack.IsPlaying == true and Character.Parent then
 				if not Camera:GetAttribute("Paused") and Camera.CameraType == Enum.CameraType.Scriptable then
 					if tick() - startTick < smoothInTime then
-						Camera.CFrame = Camera.CFrame:Lerp(currentRig.Cam.CFrame, (1 - smoothInTime)/2)
+						Camera.CFrame = Camera.CFrame:Lerp(currentRig.Cam.CFrame, (1 - smoothInTime) / 2)
 					else
 						Camera.CFrame = Camera.CFrame:Lerp(currentRig.Cam.CFrame, 0.9)
 					end
@@ -164,15 +156,15 @@ function module:PlayCameraAnimation(AnimationName: string, MainPart: Part, smoot
 				AnimC:Disconnect()
 
 				currentRig.RootPart.Weld.Part0 = nil
-				currentRig.RootPart.CFrame = CFrame.new(0,0,0) * CFrame.Angles(0,0,0)
-				if AnimationName ~= 'NMG' then
+				currentRig.RootPart.CFrame = CFrame.new(0, 0, 0) * CFrame.Angles(0, 0, 0)
+				if AnimationName ~= "NMG" then
 					Camera.CameraType = Enum.CameraType.Custom
 				end
 				currentRig.Parent = script
 			end
 		end)
 
-		if AnimationName == 'NMG' then
+		if AnimationName == "NMG" then
 			task.delay(15.583, function()
 				finalCameraPart(true, MainPart, doSmoothOut)
 			end)
@@ -187,22 +179,22 @@ function module:PlayCameraAnimation(AnimationName: string, MainPart: Part, smoot
 end
 
 function module:StopAnims()
-	for _,v in AnimTracks do
-		for _,vv in v do
+	for _, v in AnimTracks do
+		for _, vv in v do
 			vv:Stop()
 		end
 	end
 
 	for _, CameraRig in camRigs do
 		CameraRig.RootPart.Weld.Part0 = nil
-		CameraRig:PivotTo(CFrame.new(0,0,0) * CFrame.Angles(0,0,0))
+		CameraRig:PivotTo(CFrame.new(0, 0, 0) * CFrame.Angles(0, 0, 0))
 		CameraRig.Parent = script
 	end
 
 	if shared.triggerTopbar then
 		shared.triggerTopbar(true)
 	end
-	
+
 	if shared.triggerAwkbar then
 		shared.triggerAwkbar(true)
 	end
@@ -213,8 +205,8 @@ function module:StopAnims()
 end
 
 function module:StopAnim(AnimName)
-	for _,v in AnimTracks do
-		for _,vv in v do
+	for _, v in AnimTracks do
+		for _, vv in v do
 			if vv.Animation.Name == AnimName then
 				vv:Stop()
 
@@ -223,22 +215,32 @@ function module:StopAnim(AnimName)
 		end
 	end
 
-	for _,v in AnimTracks do
-		for _,vv: AnimationTrack in v do
+	for _, v in AnimTracks do
+		for _, vv: AnimationTrack in v do
 			if vv.IsPlaying then
 				return
 			end
 		end
 	end
-	
+
 	shared.triggerTopbar(true)
 	shared.triggerAwkbar(true)
 	shared.triggerHotbar(true)
 end
 
-function module:StartCustomCutscene(CutsceneName, Framerate, AnimationId, MainPart, Offset, LerpingInfo, TweeningInfo, AnimationFadeIn)
-	if not CutsceneName or not MainPart or not MainPart.Parent or not MainPart:IsA("BasePart") then return end
-
+function module:StartCustomCutscene(
+	CutsceneName,
+	Framerate,
+	AnimationId,
+	MainPart,
+	Offset,
+	LerpingInfo,
+	TweeningInfo,
+	AnimationFadeIn
+)
+	if not CutsceneName or not MainPart or not MainPart.Parent or not MainPart:IsA("BasePart") then
+		return
+	end
 
 	if not Framerate then
 		Framerate = 60
@@ -250,17 +252,17 @@ function module:StartCustomCutscene(CutsceneName, Framerate, AnimationId, MainPa
 
 	if typeof(LerpingInfo) ~= "table" then
 		LerpingInfo = {
-			Time = 0.8, 
-			EasingStyle = Enum.EasingStyle.Exponential, 
-			EasingDirection = Enum.EasingDirection.Out
+			Time = 0.8,
+			EasingStyle = Enum.EasingStyle.Exponential,
+			EasingDirection = Enum.EasingDirection.Out,
 		}
 	end
 
 	if typeof(TweeningInfo) ~= "table" then
 		TweeningInfo = {
-			Time = 0.6, 
-			EasingStyle = Enum.EasingStyle.Exponential, 
-			EasingDirection = Enum.EasingDirection.Out
+			Time = 0.6,
+			EasingStyle = Enum.EasingStyle.Exponential,
+			EasingDirection = Enum.EasingDirection.Out,
 		}
 	end
 
@@ -292,13 +294,15 @@ function module:StartCustomCutscene(CutsceneName, Framerate, AnimationId, MainPa
 		AnimationFadeIn = -1
 	end
 
-
 	local CutsceneFolder = script.Cutscenes:FindFirstChild(CutsceneName)
-	if CutsceneFolder == nil or CutsceneFolder.Parent == nil then return end
+	if CutsceneFolder == nil or CutsceneFolder.Parent == nil then
+		return
+	end
 
 	local FovFolder = CutsceneFolder:FindFirstChild("FOV")
-	if FovFolder == nil or FovFolder.Parent == nil then return end
-
+	if FovFolder == nil or FovFolder.Parent == nil then
+		return
+	end
 
 	Camera.CameraType = Enum.CameraType.Scriptable
 
@@ -351,7 +355,6 @@ function module:StartCustomCutscene(CutsceneName, Framerate, AnimationId, MainPa
 	Motor6D.Part0 = CameraRoot
 	Motor6D.Part1 = CameraPart
 
-
 	if workspace.Thrown:FindFirstChild("CutsceneBind") then
 		workspace.Thrown.CutsceneBind:Destroy()
 	end
@@ -359,7 +362,6 @@ function module:StartCustomCutscene(CutsceneName, Framerate, AnimationId, MainPa
 	local CutsceneBind = Instance.new("Folder")
 	CutsceneBind.Name = "CutsceneBind"
 	CutsceneBind.Parent = workspace.Thrown
-
 
 	local function EndCutscene()
 		local LastFrame
@@ -375,33 +377,39 @@ function module:StartCustomCutscene(CutsceneName, Framerate, AnimationId, MainPa
 			LastFrame = Camera.CFrame
 
 			RNS:BindToRenderStep("CutsceneCameraSmoothOut" .. EndStartTime, Enum.RenderPriority.Camera.Value, function()
-				Camera.CFrame = LastFrame:Lerp(Camera.CFrame, TS:GetValue((os.clock() - EndStartTime) / TweeningInfo.Time, TweeningInfo.EasingStyle, TweeningInfo.EasingDirection))
+				Camera.CFrame = LastFrame:Lerp(
+					Camera.CFrame,
+					TS:GetValue(
+						(os.clock() - EndStartTime) / TweeningInfo.Time,
+						TweeningInfo.EasingStyle,
+						TweeningInfo.EasingDirection
+					)
+				)
 			end)
 
 			if Camera.FieldOfView ~= 70 then
-				TS:Create(Camera, TweenInfo.new(TweeningInfo.Time, TweeningInfo.EasingStyle, TweeningInfo.EasingDirection), {
-					FieldOfView = 70
-				}):Play()
+				TS:Create(
+					Camera,
+					TweenInfo.new(TweeningInfo.Time, TweeningInfo.EasingStyle, TweeningInfo.EasingDirection),
+					{
+						FieldOfView = 70,
+					}
+				):Play()
 			end
 
 			Camera.CameraType = Enum.CameraType.Custom
 
-
 			task.delay(TweeningInfo.Time, function()
 				RNS:UnbindFromRenderStep("CutsceneCameraSmoothOut" .. EndStartTime)
 			end)
-
 		else
 			LastFrame = Camera.CFrame
 			Camera.CameraType = Enum.CameraType.Custom
 			Camera.FieldOfView = 70
-
 		end
 	end
 
-
 	CutsceneBind.Destroying:Once(EndCutscene)
-
 
 	if AnimationId then
 		local Humanoid = Instance.new("Humanoid")
@@ -417,7 +425,6 @@ function module:StartCustomCutscene(CutsceneName, Framerate, AnimationId, MainPa
 		Animation:Destroy()
 		AnimationTrack.Priority = Enum.AnimationPriority.Action4
 		AnimationTrack:Play(AnimationFadeIn)
-
 
 		local FrameCount = 0
 		if LerpingInfo.Time > 0 then
@@ -439,13 +446,21 @@ function module:StartCustomCutscene(CutsceneName, Framerate, AnimationId, MainPa
 			RNS:BindToRenderStep("CutsceneCamera" .. StartTime, Enum.RenderPriority.Camera.Value, function(DeltaTime)
 				FrameCount += DeltaTime
 
-				if MainPart ~= nil and MainPart.Parent ~= nil and MainPart.Parent.Parent ~= nil and CameraPart ~= nil and CameraPart.Parent ~= nil and FollowPart ~= nil and FollowPart.Parent ~= nil then
+				if
+					MainPart ~= nil
+					and MainPart.Parent ~= nil
+					and MainPart.Parent.Parent ~= nil
+					and CameraPart ~= nil
+					and CameraPart.Parent ~= nil
+					and FollowPart ~= nil
+					and FollowPart.Parent ~= nil
+				then
 					local GoalCF = CameraPart.CFrame
-					local Alpha = TS:GetValue(FrameCount / LerpingInfo.Time, LerpingInfo.EasingStyle, LerpingInfo.EasingDirection)
+					local Alpha =
+						TS:GetValue(FrameCount / LerpingInfo.Time, LerpingInfo.EasingStyle, LerpingInfo.EasingDirection)
 
 					FollowPart.CFrame = StartCamCF:Lerp(GoalCF, Alpha)
 					Camera.CFrame = FollowPart.CFrame
-
 
 					local PastFrames = FrameCount * Framerate
 					local MaxFrames = math.floor(PastFrames)
@@ -467,43 +482,56 @@ function module:StartCustomCutscene(CutsceneName, Framerate, AnimationId, MainPa
 						else
 							Camera.FieldOfView = FovFolder[CurrentFrameName].Value
 						end
-
 					else
 						local FirstFov = FovFolder["0"].Value
 						local MinFov = math.min(FirstFov, StartCamFOV)
 						local MaxFov = math.max(FirstFov, StartCamFOV)
 						Camera.FieldOfView = Alpha * (MinFov - MaxFov) + MaxFov
-
 					end
 
 					if Alpha >= 1 then
 						RNS:UnbindFromRenderStep("CutsceneCamera" .. StartTime)
-						RNS:BindToRenderStep("CutsceneCamera" .. StartTime, Enum.RenderPriority.Camera.Value, function(DeltaTime)
-							FrameCount += DeltaTime
-							if MainPart ~= nil and MainPart.Parent ~= nil and MainPart.Parent.Parent ~= nil and CameraPart ~= nil and CameraPart.Parent ~= nil then
-								Camera.CFrame = CameraPart.CFrame
-								local GoalFov = tostring(math.round(FrameCount * Framerate))
-								if FovFolder:FindFirstChild(GoalFov) then
-									Camera.FieldOfView = FovFolder[GoalFov].Value
+						RNS:BindToRenderStep(
+							"CutsceneCamera" .. StartTime,
+							Enum.RenderPriority.Camera.Value,
+							function(DeltaTime)
+								FrameCount += DeltaTime
+								if
+									MainPart ~= nil
+									and MainPart.Parent ~= nil
+									and MainPart.Parent.Parent ~= nil
+									and CameraPart ~= nil
+									and CameraPart.Parent ~= nil
+								then
+									Camera.CFrame = CameraPart.CFrame
+									local GoalFov = tostring(math.round(FrameCount * Framerate))
+									if FovFolder:FindFirstChild(GoalFov) then
+										Camera.FieldOfView = FovFolder[GoalFov].Value
 
-									return
+										return
+									end
+								else
+									CutsceneBind:Destroy()
 								end
-							else
-								CutsceneBind:Destroy()
 							end
-						end)
+						)
 						return
 					end
 				else
 					CutsceneBind:Destroy()
 				end
 			end)
-
 		else
 			RNS:BindToRenderStep("CutsceneCamera" .. StartTime, Enum.RenderPriority.Camera.Value, function(DeltaTime)
 				FrameCount += DeltaTime
 
-				if MainPart ~= nil and MainPart.Parent ~= nil and MainPart.Parent.Parent ~= nil and CameraPart ~= nil and CameraPart.Parent ~= nil then
+				if
+					MainPart ~= nil
+					and MainPart.Parent ~= nil
+					and MainPart.Parent.Parent ~= nil
+					and CameraPart ~= nil
+					and CameraPart.Parent ~= nil
+				then
 					Camera.CFrame = CameraPart.CFrame
 
 					local GoalFov = tostring(math.round(FrameCount * Framerate))
@@ -511,7 +539,6 @@ function module:StartCustomCutscene(CutsceneName, Framerate, AnimationId, MainPa
 						Camera.FieldOfView = FovFolder[GoalFov].Value
 						return
 					end
-
 				else
 					CutsceneBind:Destroy()
 				end
@@ -523,7 +550,6 @@ function module:StartCustomCutscene(CutsceneName, Framerate, AnimationId, MainPa
 		end)
 
 		return CameraRig, AnimationTrack
-
 	else
 		local FramesFolder = CutsceneFolder:FindFirstChild("Frames")
 
@@ -546,88 +572,120 @@ function module:StartCustomCutscene(CutsceneName, Framerate, AnimationId, MainPa
 			FollowPart.Parent = CameraRig
 			FollowPart.CFrame = StartCamCF
 
-			RNS:BindToRenderStep("CutsceneCamera" .. StartTime, Enum.RenderPriority.Camera.Value, function(DeltaTime) --[[ Line: 2634 ]]
-				FrameCount += DeltaTime
+			RNS:BindToRenderStep(
+				"CutsceneCamera" .. StartTime,
+				Enum.RenderPriority.Camera.Value,
+				function(DeltaTime) --[[ Line: 2634 ]]
+					FrameCount += DeltaTime
 
-				if MainPart ~= nil and MainPart.Parent ~= nil and MainPart.Parent.Parent ~= nil and CameraPart ~= nil and CameraPart.Parent ~= nil and FollowPart ~= nil and FollowPart.Parent ~= nil and Motor6D ~= nil and Motor6D.Parent ~= nil then
-					local CurrentFrame = FrameCount * Framerate
-					local MaxFrame = math.floor(CurrentFrame)
-					local CurrentFrame = math.round(FrameCount * Framerate)
-					local CurrentFrameName = tostring(CurrentFrame)
-					local Alpha = TS:GetValue(FrameCount / LerpingInfo.Time, LerpingInfo.EasingStyle, LerpingInfo.EasingDirection)
+					if
+						MainPart ~= nil
+						and MainPart.Parent ~= nil
+						and MainPart.Parent.Parent ~= nil
+						and CameraPart ~= nil
+						and CameraPart.Parent ~= nil
+						and FollowPart ~= nil
+						and FollowPart.Parent ~= nil
+						and Motor6D ~= nil
+						and Motor6D.Parent ~= nil
+					then
+						local CurrentFrame = FrameCount * Framerate
+						local MaxFrame = math.floor(CurrentFrame)
+						local CurrentFrame = math.round(FrameCount * Framerate)
+						local CurrentFrameName = tostring(CurrentFrame)
+						local Alpha = TS:GetValue(
+							FrameCount / LerpingInfo.Time,
+							LerpingInfo.EasingStyle,
+							LerpingInfo.EasingDirection
+						)
 
-					if FramesFolder:FindFirstChild(CurrentFrameName) then
-						Motor6D.C0 = FramesFolder[CurrentFrameName].Value
-					end
-
-					local GoalCF = CameraPart.CFrame
-					Camera.CFrame = StartCamCF:Lerp(GoalCF, Alpha)
-
-					local NextFrameName = tostring(CurrentFrame + 1)
-					if FovFolder:FindFirstChild(CurrentFrameName) then
-						if FovFolder:FindFirstChild(NextFrameName) then
-							local GoalFov = FovFolder[CurrentFrameName].Value
-							local NextFov = FovFolder[NextFrameName].Value
-							local MaxFov = math.max(NextFov, GoalFov)
-							local FinalFov = (CurrentFrame - MaxFrame) * (GoalFov - MaxFov) + MaxFov
-
-							if FinalFov < StartCamFOV then
-								Camera.FieldOfView = Alpha * (FinalFov - StartCamFOV) + StartCamFOV
-							else
-								Camera.FieldOfView = StartCamFOV + Alpha * (FinalFov - StartCamFOV)
-							end
-						else
-							Camera.FieldOfView = FovFolder[CurrentFrameName].Value
+						if FramesFolder:FindFirstChild(CurrentFrameName) then
+							Motor6D.C0 = FramesFolder[CurrentFrameName].Value
 						end
 
-					else
-						local FirstFov = FovFolder["0"].Value
-						local MinFov = math.min(FirstFov, StartCamFOV)
-						local MaxFov = math.max(FirstFov, StartCamFOV)
+						local GoalCF = CameraPart.CFrame
+						Camera.CFrame = StartCamCF:Lerp(GoalCF, Alpha)
 
-						Camera.FieldOfView = Alpha * (MinFov - MaxFov) + MaxFov
-					end
+						local NextFrameName = tostring(CurrentFrame + 1)
+						if FovFolder:FindFirstChild(CurrentFrameName) then
+							if FovFolder:FindFirstChild(NextFrameName) then
+								local GoalFov = FovFolder[CurrentFrameName].Value
+								local NextFov = FovFolder[NextFrameName].Value
+								local MaxFov = math.max(NextFov, GoalFov)
+								local FinalFov = (CurrentFrame - MaxFrame) * (GoalFov - MaxFov) + MaxFov
 
-					CameraRig:SetAttribute("Frame", CurrentFrame)
-
-					if Alpha >= 1 then
-						RNS:UnbindFromRenderStep("CutsceneCamera" .. StartTime)
-						RNS:BindToRenderStep("CutsceneCamera" .. StartTime, Enum.RenderPriority.Camera.Value, function(DeltaTime)
-							FrameCount += DeltaTime
-
-							if MainPart ~= nil and MainPart.Parent ~= nil and MainPart.Parent.Parent ~= nil and CameraPart ~= nil and CameraPart.Parent ~= nil then
-								local FrameNumber = math.round(FrameCount * Framerate)
-								local FrameName = tostring(FrameNumber)
-								if FramesFolder:FindFirstChild(FrameName) then
-									Motor6D.C0 = FramesFolder[FrameName].Value
+								if FinalFov < StartCamFOV then
+									Camera.FieldOfView = Alpha * (FinalFov - StartCamFOV) + StartCamFOV
+								else
+									Camera.FieldOfView = StartCamFOV + Alpha * (FinalFov - StartCamFOV)
 								end
-
-								Camera.CFrame = CameraPart.CFrame
-
-								if FovFolder:FindFirstChild(FrameName) then
-									Camera.FieldOfView = FovFolder[FrameName].Value
-								end
-
-								CameraRig:SetAttribute("Frame", FrameNumber)
-								return
-
 							else
-								CutsceneBind:Destroy()
-								return
+								Camera.FieldOfView = FovFolder[CurrentFrameName].Value
 							end
-						end)
+						else
+							local FirstFov = FovFolder["0"].Value
+							local MinFov = math.min(FirstFov, StartCamFOV)
+							local MaxFov = math.max(FirstFov, StartCamFOV)
 
-						return
+							Camera.FieldOfView = Alpha * (MinFov - MaxFov) + MaxFov
+						end
+
+						CameraRig:SetAttribute("Frame", CurrentFrame)
+
+						if Alpha >= 1 then
+							RNS:UnbindFromRenderStep("CutsceneCamera" .. StartTime)
+							RNS:BindToRenderStep(
+								"CutsceneCamera" .. StartTime,
+								Enum.RenderPriority.Camera.Value,
+								function(DeltaTime)
+									FrameCount += DeltaTime
+
+									if
+										MainPart ~= nil
+										and MainPart.Parent ~= nil
+										and MainPart.Parent.Parent ~= nil
+										and CameraPart ~= nil
+										and CameraPart.Parent ~= nil
+									then
+										local FrameNumber = math.round(FrameCount * Framerate)
+										local FrameName = tostring(FrameNumber)
+										if FramesFolder:FindFirstChild(FrameName) then
+											Motor6D.C0 = FramesFolder[FrameName].Value
+										end
+
+										Camera.CFrame = CameraPart.CFrame
+
+										if FovFolder:FindFirstChild(FrameName) then
+											Camera.FieldOfView = FovFolder[FrameName].Value
+										end
+
+										CameraRig:SetAttribute("Frame", FrameNumber)
+										return
+									else
+										CutsceneBind:Destroy()
+										return
+									end
+								end
+							)
+
+							return
+						end
+					else
+						CutsceneBind:Destroy()
 					end
-				else
-					CutsceneBind:Destroy()
 				end
-			end)
+			)
 		else
 			RNS:BindToRenderStep("CutsceneCamera" .. StartTime, Enum.RenderPriority.Camera.Value, function(DeltaTime)
 				FrameCount += DeltaTime
 
-				if MainPart ~= nil and MainPart.Parent ~= nil and MainPart.Parent.Parent ~= nil and CameraPart ~= nil and CameraPart.Parent ~= nil then
+				if
+					MainPart ~= nil
+					and MainPart.Parent ~= nil
+					and MainPart.Parent.Parent ~= nil
+					and CameraPart ~= nil
+					and CameraPart.Parent ~= nil
+				then
 					local FrameNumber = math.round(FrameCount * Framerate)
 					local FrameName = tostring(FrameNumber)
 					if FramesFolder:FindFirstChild(FrameName) then
@@ -656,7 +714,7 @@ end
 task.spawn(function()
 	for Index, CameraRig in camRigs do
 		for _, Animation: Animation in CamAnims:GetChildren() do
-			if Animation:IsA('Animation') then
+			if Animation:IsA("Animation") then
 				AnimTracks[Index][Animation] = CameraRig.AnimationController.Animator:LoadAnimation(Animation)
 			end
 		end
