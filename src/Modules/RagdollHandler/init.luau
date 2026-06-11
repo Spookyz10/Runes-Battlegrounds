@@ -266,9 +266,7 @@ function Ragdoll.ragdoll(Humanoid, Duration, HardRagdoll, Ragdoller, _, _, check
 	local Character = Humanoid.Parent
 	local Player = Players:GetPlayerFromCharacter(Character)
 	local RagdollerPlayer = Players:GetPlayerFromCharacter(Ragdoller)
-	if workspace.Configuration.NoRagdoll.Value == true or (Player and Player.Commands.NoRagdoll.Value == true) then
-		return
-	end
+
 	local HumRP = Character.HumanoidRootPart
 	local WasRagdolled = Character:HasTag("Ragdolled")
 

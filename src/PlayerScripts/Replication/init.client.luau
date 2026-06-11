@@ -886,7 +886,7 @@ local function ComunicationFunction(func, params)
 			if not Button:IsA("Frame") then
 				continue
 			end
-			if Button.Base.ToolName.Text == params.ToolName then
+			if Button.Base.SkillName.Text == params.ToolName then
 				local property = Button.Base[params.Property]
 				if params.Visible ~= nil then
 					property.Visible = params.Visible
