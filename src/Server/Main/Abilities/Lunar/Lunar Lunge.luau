@@ -27,13 +27,10 @@ return {
 		-- Captura a direção da câmera ANTES de travar a rotação
 		local DashCFrame = HumRP.CFrame
 
-		Character:AddTag("CantRotate")
-		Humanoid.AutoRotate = false
-
 		-- Impulso inicial imediato
 		local DashVelocity = Instance.new("BodyVelocity")
 		DashVelocity.MaxForce = Vector3.new(math.huge, 0, math.huge)
-		DashVelocity.Velocity = DashCFrame.LookVector * 110
+		DashVelocity.Velocity = DashCFrame.LookVector * 20
 		DashVelocity.P = math.huge
 		DashVelocity.Parent = HumRP
 
@@ -201,8 +198,7 @@ return {
 			end
 
 			destroyVelocity()
-			Character:RemoveTag("CantRotate")
-			Humanoid.AutoRotate = true
+
 			iFramesService:RemoveAlliFrames(Character)
 			StunHandler:Unstun(Character, Stun)
 		end)
