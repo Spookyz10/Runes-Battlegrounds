@@ -317,11 +317,11 @@ local function M1(Player)
 							})
 							SvSt.Bindables.AirDetector:Fire(EnemyCharacter, nil, true, nil, 6.2)
 						else
-							local FinalKnockback = Vector3.new(200, 99, 200)
+							local FinalKnockback = Vector3.new(30, 0, 30)
 							NewKnockback:Knockback(EnemyCharacter, {
 								KnockbackType = "Velocity",
-								MaxForce = Vector3.new(100000, 100000, 100000),
-								Velocity = HumRP.CFrame.LookVector * FinalKnockback + Vector3.new(0, 20, 0),
+								MaxForce = Vector3.new(10000, 10000, 10000),
+								Velocity = HumRP.CFrame.LookVector * FinalKnockback + Vector3.new(110, 20, 110),
 							})
 							SvSt.Bindables.AirDetector:Fire(EnemyCharacter, nil, true, nil, 6.2)
 						end
