@@ -153,6 +153,7 @@ local function AddTool(Tool)
 		end
 
 		Base.SkillName.Text = Tool.Name
+		Base.Number.Text = Tool:GetAttribute("Index")
 
 		HotbarSlot.Visible = true
 

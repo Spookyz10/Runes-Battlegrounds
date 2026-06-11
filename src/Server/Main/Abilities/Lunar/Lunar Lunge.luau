@@ -19,15 +19,21 @@ return {
 	Start = function(Player, Tool)
 		local Character = Player.Character
 		local HumRP = Character.HumanoidRootPart
+		local Humanoid = Character.Humanoid
 
 		local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true)
 		iFramesService:AddAlliFrames(Character)
+
+		-- Captura a direção da câmera ANTES de travar a rotação
+		local DashCFrame = HumRP.CFrame
+
 		Character:AddTag("CantRotate")
+		Humanoid.AutoRotate = false
 
 		-- Impulso inicial imediato
 		local DashVelocity = Instance.new("BodyVelocity")
 		DashVelocity.MaxForce = Vector3.new(math.huge, 0, math.huge)
-		DashVelocity.Velocity = HumRP.CFrame.LookVector * 110
+		DashVelocity.Velocity = DashCFrame.LookVector * 110
 		DashVelocity.P = math.huge
 		DashVelocity.Parent = HumRP
 
@@ -196,6 +202,7 @@ return {
 
 			destroyVelocity()
 			Character:RemoveTag("CantRotate")
+			Humanoid.AutoRotate = true
 			iFramesService:RemoveAlliFrames(Character)
 			StunHandler:Unstun(Character, Stun)
 		end)
