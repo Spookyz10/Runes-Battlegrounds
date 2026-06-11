@@ -23,104 +23,24 @@ return {
 		local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true)
 		iFramesService:AddAlliFrames(Character)
 
-		local DashCFrame = HumRP.CFrame
-
-		local DashVelocity = Instance.new("BodyVelocity")
-		DashVelocity.MaxForce = Vector3.new(math.huge, 0, math.huge)
-		DashVelocity.Velocity = DashCFrame.LookVector * 20
-		DashVelocity.P = math.huge
-		DashVelocity.Parent = HumRP
-
 		local UserAnimation = MoveAnims.Lunar:FindFirstChild("Lunar Lunge")
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
 
-		local DetectedEnemy = nil
 		local DetectHitbox = nil
 
-		local function destroyVelocity()
-			if DashVelocity and DashVelocity.Parent then
-				DashVelocity:Destroy()
-			end
-		end
-
-		local function unfreeze()
-			UserTrack:AdjustSpeed(1)
-		end
-
 		table.insert(
 			UserEvents,
-			UserTrack:GetMarkerReachedSignal("freeze"):Once(function()
-				destroyVelocity()
-				UserTrack:AdjustSpeed(0)
-
-				-- Hitbox de detecção contínua 360°, ligeiramente menor que a do slash
-				DetectHitbox = HitboxHandler.new()
-				DetectHitbox.Instance = HumRP
-				DetectHitbox.Size = Vector3.new(20, 20, 20)
-				DetectHitbox.Offset = CFrame.new(0, 0, 0)
-				DetectHitbox.Ignore = { Character }
-				DetectHitbox.onTouch = function(EnemyCharacter)
-					local EnemyHumanoid = EnemyCharacter.Humanoid
-					local Ragdolled = EnemyCharacter:HasTag("Ragdolled")
-					local inAir = EnemyCharacter:FindFirstChild("inAir")
-						or (
-							EnemyCharacter:GetAttribute("TouchedGround")
-							and tick() - EnemyCharacter:GetAttribute("TouchedGround") <= 0.25
-						)
-
-					if
-						iFramesService:HasiFrame(EnemyCharacter, "M1")
-						or EnemyHumanoid.Health <= 0
-						or EnemyHumanoid:GetState() == Enum.HumanoidStateType.Dead
-						or (Ragdolled and not inAir)
-					then
-						return
-					end
-
-					-- Primeiro inimigo encontrado: confirma e solta
-					if not DetectedEnemy then
-						DetectedEnemy = EnemyCharacter
-						DetectHitbox:Destroy()
-						DetectHitbox = nil
-						unfreeze()
-					end
-				end
-
-				DetectHitbox:Start()
-
-				-- Timeout de 0.7s: se ninguém foi encontrado, segue em frente normalmente
-				task.delay(0.7, function()
-					if not DetectedEnemy then
-						if DetectHitbox then
-							DetectHitbox:Destroy()
-							DetectHitbox = nil
-						end
-						unfreeze()
-					end
-				end)
-			end)
-		)
-
-		-- ─── marker: slash ─────────────────────────────────────────────────────────
-		table.insert(
-			UserEvents,
-			UserTrack:GetMarkerReachedSignal("slash"):Once(function()
-				destroyVelocity()
-
+			UserTrack:GetMarkerReachedSignal("hit"):Once(function()
 				local SlashCF = HumRP.CFrame
-
-				-- VFX (reusa o evento do DashSlash; troca por um efeito lunar se tiver)
-				ReplicateSet:FireAllClients("DashSlash", { Char = Character, CFrame = SlashCF })
-				ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 3, Last = 0.3 })
 
 				local HitList = {}
 
 				HitboxHandler:SimpleOnce(
 					SlashCF,
-					Vector3.new(25, 25, 25),
-					CFrame.new(0, 0, 0),
+					Vector3.new(10, 10, 10),
+					CFrame.new(0, 0, -2),
 					{ Character },
-					"Sphere", -- 360°
+					"Box",
 					nil,
 					function(EnemyCharacter)
 						local EnemyPlayer = Players:GetPlayerFromCharacter(EnemyCharacter)
@@ -191,8 +111,6 @@ return {
 				DetectHitbox:Destroy()
 				DetectHitbox = nil
 			end
-
-			destroyVelocity()
 
 			iFramesService:RemoveAlliFrames(Character)
 			StunHandler:Unstun(Character, Stun)
