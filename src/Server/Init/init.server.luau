@@ -492,25 +492,6 @@ local ComunicatorFunctions = {
 					CollectionService:AddTag(SmallDebris, "SmallDebris")
 					SmallDebris.Parent = Character
 
-					task.delay(0.1, function()
-						ReplicateSet:FireAllClients("Ring", {
-							FirstProps = {
-								Size = Vector3.new(2.589, 0.896, 2.589),
-								Transparency = 0.25,
-							},
-							CF = HumRP.CFrame * CFrame.Angles(1.5707963267948966, 0, 0),
-							TN_Info = {
-								Time = 0.3,
-								Style = "Quad",
-								Direction = "Out",
-							},
-							FinalProps = {
-								Size = Vector3.new(9.874, 0.1, 9.874),
-								Transparency = 1,
-							},
-						})
-					end)
-
 					local DashStart = CombatAnims.Dashes.DashFront
 					local AnimTrack = AnimationService:getAnimationTrack(Character, DashStart)
 					local HitEvents = {}
@@ -671,23 +652,6 @@ local ComunicatorFunctions = {
 								}, Character)
 
 								Knockback:makeEnemyFaceCharacter(EnemyCharacter, Character)
-
-								ReplicateSet:FireAllClients("Ring", {
-									FirstProps = {
-										Size = Vector3.new(2.589, 0.896, 2.589),
-										Transparency = 0.25,
-									},
-									CF = EnemyHumRP.CFrame * CFrame.new(0, 0, -3.5) * CFrame.Angles(math.rad(90), 0, 0),
-									TN_Info = {
-										Time = 0.3,
-										Style = "Quad",
-										Direction = "Out",
-									},
-									FinalProps = {
-										Size = Vector3.new(9.874, 0.1, 9.874),
-										Transparency = 1,
-									},
-								})
 							end
 						end
 

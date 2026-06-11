@@ -117,9 +117,6 @@ shared.addshake = function(Shake, fadeOutTime)
 	if ConfigFolder:FindFirstChild("Camera Shake") and ConfigFolder["Camera Shake"].Value == false then
 		return
 	end
-	if ConfigFolder:FindFirstChild("Reduce Camera Shake") and ConfigFolder["Reduce Camera Shake"].Value == true then
-		Shake = Shake / 2
-	end
 
 	fadeOutTime = fadeOutTime or 0.5
 

@@ -12,11 +12,12 @@ local ClientTasks = tick()
 
 local Debris = game:GetService("Debris")
 local RS = game:GetService("ReplicatedStorage")
-local TS = game:GetService("TweenService")
 
 local Resources = RS:WaitForChild("Resources")
 
 local LocalPlayer = game:GetService("Players").LocalPlayer
+
+local CamShakePresets = require(RS.Shared.Modules.CamShakePresets)
 
 local MapRayParams = RaycastParams.new()
 MapRayParams.FilterType = Enum.RaycastFilterType.Include
@@ -85,23 +86,6 @@ local ReplicationEffects = {
 		Debris:AddItem(PreloadRig, 5)
 	end,
 
-	Ring = function(Params)
-		local Ring = Resources.Misc.Ring:Clone()
-		Ring.Parent = workspace.Thrown
-		Ring.CFrame = Params.CF
-
-		for Prop, Value in Params.FirstProps do
-			if Ring[Prop] then
-				Ring[Prop] = Value
-			end
-		end
-
-		local easeStyle = Enum.EasingStyle[Params.TN_Info.Style] :: any
-		local easeDirection = Enum.EasingDirection[Params.TN_Info.Direction] :: any
-		TS:Create(Ring, TweenInfo.new(Params.TN_Info.Time, easeStyle, easeDirection), Params.FinalProps):Play()
-		Debris:AddItem(Ring, Params.LF or Params.TN_Info.Time)
-	end,
-
 	Hitbox = function(Params)
 		for _, v in workspace.Thrown:GetChildren() do
 			if v.Name == LocalPlayer.UserId .. " Hitbox" then
@@ -129,6 +113,37 @@ local ReplicationEffects = {
 				BodyMover:Destroy()
 			end
 		end
+	end,
+
+	ShakeCamera = function(params)
+		task.spawn(function()
+			if params["Intensity"] ~= nil then
+				if params.Last then
+					local Intensity = params.Intensity
+
+					for i = 1, params.Last / 0.03 do
+						shared.addshake(Intensity)
+
+						Intensity *= 0.9
+
+						task.wait(0.03)
+					end
+				else
+					shared.addshake(params.Intensity)
+				end
+			elseif params.Instance then
+				shared.sustainshake(params.Instance, params.shakeTime, params.fadeOutTime)
+			else
+				if params.Preset then
+					local Preset = CamShakePresets[params.Preset]
+					assert(Preset, "The specified preset does not exist.")
+
+					shared.addshake(Preset.Magnitude, Preset.Roughness, Preset.FadeInTime, Preset.FadeOutTime)
+				else
+					shared.addshake(params.Magnitude, params.Roughness, params.FadeInTime, params.FadeOutTime)
+				end
+			end
+		end)
 	end,
 }
 

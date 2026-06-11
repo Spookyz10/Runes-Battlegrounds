@@ -210,99 +210,10 @@ local function M1(Player)
 
 					Character:SetAttribute("LastM1Hit", EnemyCharacter.Name)
 
-					local HitsFolder = CombatSounds.Hits:FindFirstChild(Player:GetAttribute("Moveset"))
-						or CombatSounds.Hits.Default
-
-					if CurrentType == "Uppercut" then
-						SoundsModule:PlaySound(Sounds.Combat.Hits.Uppercut, EnemyHumRP)
-					elseif CurrentType == "Downslam" then
-						SoundsModule:PlaySound(Sounds.Combat.Hits.Downslam, EnemyHumRP)
-					else
-						SoundsModule:PlaySound(HitsFolder[tostring(CurrentCombo)], EnemyHumRP)
-					end
-
 					if CurrentCombo >= MaxCombo then
-						local FirstProps = { Size = Vector3.new(0.6, 0.6, 0.6), Transparency = 0 }
-						local FinalProps = { Size = Vector3.new(12, 0.6, 12), Transparency = 1 }
-						local TN_Info = { Time = 0.25, Style = "Quad", Direction = "Out" }
-
 						if CurrentType == "Downslam" then
-							ReplicateSet:FireAllClients("Ring", {
-								FirstProps = FirstProps,
-								CF = EnemyHumRP.CFrame,
-								TN_Info = TN_Info,
-								FinalProps = FinalProps,
-							})
-							ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 2 })
-
 							EnemyHumRP.CFrame *= CFrame.Angles(math.pi / 2, 0, 0)
-
-							if HitInfo.Finisher then
-								local Stun = StunHandler:Stun(Character, nil, true)
-								Humanoid.AutoRotate = false
-								iFramesService:AddAlliFrames(Character)
-								Character:AddTag("CantRotate")
-
-								task.delay(0.084, function()
-									local Unstunned = false
-
-									local FinisherAnim = CombatAnims.Punches.DownslamFinishers["Variation" .. tostring(
-										math.random(1, 4)
-									)]
-									local FinisherTrack, FinisherEvents =
-										AnimationService:getAnimationTrack(Character, FinisherAnim)
-
-									table.insert(
-										FinisherEvents,
-										FinisherTrack:GetMarkerReachedSignal("hit"):Once(function()
-											local KnockbackHitbox = HitboxHandler.new()
-											KnockbackHitbox.Instance = HumRP.CFrame
-											KnockbackHitbox.Size = Vector3.new(1, 1, 1) * 14
-											KnockbackHitbox.onTouch = function(EChar)
-												if EChar == Character or iFramesService:HasiFrame(EChar, "M1") then
-													return
-												end
-												NewKnockback:Knockback(EChar, {
-													KnockbackType = "Velocity",
-													MaxForce = Vector3.new(1, 1, 1) * 40000,
-													Velocity = Vector3.new(0, 100, 0),
-												})
-												RagdollHandler.ragdoll(EChar.Humanoid, 2, false, nil, nil)
-											end
-											KnockbackHitbox:Once()
-											KnockbackHitbox:Destroy()
-
-											ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 8 })
-											Unstunned = true
-											Humanoid.AutoRotate = true
-											iFramesService:RemoveAlliFrames(Character)
-											StunHandler:Unstun(Character, Stun)
-											Character:RemoveTag("CantRotate")
-										end)
-									)
-
-									FinisherTrack.Stopped:Once(function()
-										if not Unstunned then
-											Humanoid.AutoRotate = true
-											iFramesService:RemoveAlliFrames(Character)
-											StunHandler:Unstun(Character, Stun)
-											Character:RemoveTag("CantRotate")
-										end
-									end)
-
-									AnimationService:stopAll(Character)
-									AnimationService:playAnimation(Character, FinisherAnim, 1.25)
-								end)
-							end
 						elseif CurrentType == "Uppercut" then
-							ReplicateSet:FireAllClients("Ring", {
-								FirstProps = FirstProps,
-								CF = EnemyHumRP.CFrame,
-								TN_Info = TN_Info,
-								FinalProps = FinalProps,
-							})
-							ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 3 })
-
 							local BodyAngularVelocity = Instance.new("BodyAngularVelocity")
 							BodyAngularVelocity.MaxTorque = Vector3.new(50000, 50000, 50000)
 							BodyAngularVelocity.AngularVelocity =

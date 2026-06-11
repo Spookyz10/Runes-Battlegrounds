@@ -1,7 +1,13 @@
 -- humanoidAnimatePlayEmote.lua
 
 local Figure = script.Parent
-local Torso = Figure:WaitForChild("Torso")
+
+local Torso
+repeat
+	Torso = Figure:FindFirstChild("Torso")
+	task.wait()
+until Torso
+
 local RightShoulder = Torso:WaitForChild("Right Shoulder")
 local LeftShoulder = Torso:WaitForChild("Left Shoulder")
 local RightHip = Torso:WaitForChild("Right Hip")

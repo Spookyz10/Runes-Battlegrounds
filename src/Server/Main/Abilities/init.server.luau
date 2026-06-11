@@ -62,11 +62,6 @@ local function addToolCDS(Player, Tool)
 	else
 		Tool:SetAttribute("Cooldowns", toolCooldowns + 1)
 	end
-	if Tool.Name == "Thorny Release" and Player.Configuration.Mod.Value == 3 then
-		Tool:SetAttribute("CDS", 28.5)
-	elseif Tool.Name == "Thorny Release" and Player.Configuration.Mod.Value ~= 3 then
-		Tool:SetAttribute("CDS", 1)
-	end
 
 	Tool:SetAttribute("onCDS", true)
 	if Tool:GetAttribute("CDS") > -1 then

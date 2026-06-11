@@ -1,7 +1,5 @@
 local module = {}
 
-local CollectionService = game:GetService("CollectionService")
-
 local ModulesFolder = script.Parent
 
 local StunHandler = require(ModulesFolder.StunHandler)
@@ -60,47 +58,46 @@ function module:Knockback(
 
 						AnimTrack:AdjustSpeed(1)
 
-						ReplicateSet:FireAllClients(
-							"RockTrail",
-							{
-								parent = HumRP,
-								size = 0.5,
-								side = 2.5,
-								t = 5,
-								height = 5,
-								spawnrate = 0.15,
-								duration = 0.533,
-							}
-						)
+						ReplicateSet:FireAllClients("RockTrail", {
+							parent = HumRP,
+							size = 0.5,
+							side = 2.5,
+							t = 5,
+							height = 5,
+							spawnrate = 0.15,
+							duration = 0.533,
+						})
 
 						if waitForFloor ~= false and typeof(Velocity) == "Vector3" then
-							Bodymover:Knockback(
-								Character,
-								{
-									KnockbackType = "VelocityTweenDown",
-									MaxForce = Vector3.new(1, 0, 1) * 100000,
-									Velocity = Velocity,
-									Time = customTime or tweenTime,
-								}
-							)
+							Bodymover:Knockback(Character, {
+								KnockbackType = "VelocityTweenDown",
+								MaxForce = Vector3.new(1, 0, 1) * 100000,
+								Velocity = Velocity,
+								Time = customTime or tweenTime,
+							})
 						end
 					end)
 				else
 					ReplicateSet:FireAllClients(
 						"RockTrail",
-						{ parent = HumRP, size = 0.5, side = 2.5, t = 5, height = 5, spawnrate = 0.15, duration = 0.533 }
+						{
+							parent = HumRP,
+							size = 0.5,
+							side = 2.5,
+							t = 5,
+							height = 5,
+							spawnrate = 0.15,
+							duration = 0.533,
+						}
 					)
 
 					if waitForFloor ~= false then
-						Bodymover:Knockback(
-							Character,
-							{
-								KnockbackType = "VelocityTweenDown",
-								MaxForce = Vector3.new(1, 0, 1) * 100000,
-								Velocity = Velocity,
-								Time = customTime or tweenTime,
-							}
-						)
+						Bodymover:Knockback(Character, {
+							KnockbackType = "VelocityTweenDown",
+							MaxForce = Vector3.new(1, 0, 1) * 100000,
+							Velocity = Velocity,
+							Time = customTime or tweenTime,
+						})
 					end
 				end
 			end)
@@ -130,15 +127,12 @@ function module:Knockback(
 					{ KnockbackType = "Velocity", MaxForce = Vector3.new(1, 1, 1) * 100000, Velocity = Velocity }
 				)
 			else
-				Bodymover:Knockback(
-					Character,
-					{
-						KnockbackType = "VelocityTweenDown",
-						MaxForce = Vector3.new(1, 1, 1) * 100000,
-						Velocity = Velocity,
-						Time = customTime or tweenTime,
-					}
-				)
+				Bodymover:Knockback(Character, {
+					KnockbackType = "VelocityTweenDown",
+					MaxForce = Vector3.new(1, 1, 1) * 100000,
+					Velocity = Velocity,
+					Time = customTime or tweenTime,
+				})
 			end
 		end
 		AnimationService:stopAll(Character)
@@ -152,31 +146,6 @@ function module:Knockback(
 			Character,
 			{ KnockbackType = "Velocity", MaxForce = Vector3.new(1, 1, 1) * 100000, Velocity = Velocity }
 		)
-	end
-
-	if ringFX ~= false then
-		ReplicateSet:FireAllClients("Ring", {
-			CF = CFrame.lookAlong(
-				HumRP.Position,
-				(if typeof(Velocity) == "Vector3" then Velocity else HumRP.CFrame.LookVector)
-			) * CFrame.Angles(math.rad(90), 0, 0),
-
-			FirstProps = {
-				Size = Vector3.new(0.6, 0.6, 0.6),
-				Transparency = 0,
-			},
-
-			TN_Info = {
-				Time = 0.5,
-				Style = "Quad",
-				Direction = "Out",
-			},
-
-			FinalProps = {
-				Size = Vector3.new(12, 0.6, 12),
-				Transparency = 1,
-			},
-		})
 	end
 
 	Character:AddTag("Knockbacked")
