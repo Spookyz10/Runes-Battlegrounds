@@ -94,8 +94,6 @@ function HB:_Cast(dt)
 		self.Characters = {}
 	end
 
-	shared.VoxelDestruction(detectFunction, params, self.DestroyAmbient, self.Voxels)
-
 	local closestCharacter = nil
 	local touchedCharacters = {}
 	local touchingParts = detectFunction(params)
@@ -208,45 +206,22 @@ function HB:Once()
 end
 
 function HB:SimpleOnce(Object, Size, Offset, Ignore, Method, HitType, onTouch, DestroyParams, Voxels)
-	print("[DEBUG SimpleOnce] ====== START =====")
-	print("[DEBUG SimpleOnce] Object:", Object, typeof(Object))
-	print("[DEBUG SimpleOnce] Size:", Size)
-	print("[DEBUG SimpleOnce] Offset:", Offset)
-	print("[DEBUG SimpleOnce] Ignore:", Ignore)
-	print("[DEBUG SimpleOnce] Method:", Method)
-	print("[DEBUG SimpleOnce] HitType:", HitType)
-	print("[DEBUG SimpleOnce] onTouch:", onTouch)
-	print("[DEBUG SimpleOnce] DestroyParams:", DestroyParams)
-	print("[DEBUG SimpleOnce] Voxels:", Voxels)
-
 	assert(Object, "No instance set for simple-once hitbox")
-	print("[DEBUG SimpleOnce] assert Object passed")
 	assert(Size, "No size set for simple-once hitbox")
-	print("[DEBUG SimpleOnce] assert Size passed")
 	assert(onTouch, "No onTouch set for simple-once hitbox")
-	print("[DEBUG SimpleOnce] assert onTouch passed")
 
 	Offset = Offset or CFrame.new(0, 0, 0)
 	Ignore = Ignore or {}
 	Method = Method or "Box"
-	print("[DEBUG SimpleOnce] defaults applied — Offset:", Offset, "Method:", Method)
 
 	local cframeFunc = getCframe[typeof(Object)]
-	print("[DEBUG SimpleOnce] cframeFunc:", cframeFunc, "typeof(Object):", typeof(Object))
-
 	if not cframeFunc then
-		warn("[DEBUG SimpleOnce] NO CFrame function found for type:", typeof(Object))
 		return
 	end
 
-	local HitboxBase = cframeFunc(Object)
-	print("[DEBUG SimpleOnce] HitboxBase:", HitboxBase)
-
-	local HitboxCFrame = HitboxBase * Offset
-	print("[DEBUG SimpleOnce] HitboxCFrame:", HitboxCFrame)
+	local HitboxCFrame = cframeFunc(Object) * Offset
 
 	if RNS:IsStudio() and DebugHitboxes then
-		print("[DEBUG SimpleOnce] firing debug hitbox visual")
 		task.spawn(function()
 			ReplicateSet:FireAllClients("Hitbox", { Method = Method, Size = Size, CFrame = HitboxCFrame })
 		end)
@@ -258,116 +233,62 @@ function HB:SimpleOnce(Object, Size, Offset, Ignore, Method, HitType, onTouch, D
 	if Method == "Box" then
 		detectFunction = GetPartBoundsInBox
 		params = { cf = HitboxCFrame, size = Size }
-		print("[DEBUG SimpleOnce] Using Box method — params:", params)
 	else
 		detectFunction = GetPartBoundsInRadius
 		params = { pos = HitboxCFrame.Position, radius = Size }
-		print("[DEBUG SimpleOnce] Using Radius method — params:", params)
 	end
 
 	local closestCharacter = nil
 	local touchedCharacters = {}
 	local touchingParts = detectFunction(params)
-	print("[DEBUG SimpleOnce] touchingParts count:", #touchingParts)
 
-	for i, v in touchingParts do
-		print("[DEBUG SimpleOnce] touchingParts[" .. i .. "]:", v, v and v.Parent)
-
+	for _, v in touchingParts do
 		if not v or not v.Parent then
-			print("[DEBUG SimpleOnce] skipping — v or parent nil")
 			continue
 		end
 
 		local Character = v.Parent
-		print("[DEBUG SimpleOnce] Character:", Character)
-
 		if not Character then
-			print("[DEBUG SimpleOnce] skipping — Character nil")
 			continue
 		end
 
 		local Player = Players:GetPlayerFromCharacter(Character)
-		print("[DEBUG SimpleOnce] Player:", Player)
-
 		if Player and not Player:FindFirstChild("LoadedData") then
-			print("[DEBUG SimpleOnce] skipping — Player has no LoadedData")
 			continue
 		end
 
 		local Humanoid = Character:FindFirstChild("Humanoid")
-		print("[DEBUG SimpleOnce] Humanoid:", Humanoid)
 
-		local alreadyTouched = table.find(touchedCharacters, Character)
-		local inIgnore = table.find(Ignore, Character)
-		print("[DEBUG SimpleOnce] alreadyTouched:", alreadyTouched, "inIgnore:", inIgnore)
-
-		if Humanoid and not alreadyTouched and not inIgnore then
+		if Humanoid and not table.find(touchedCharacters, Character) and not table.find(Ignore, Character) then
 			table.insert(touchedCharacters, Character)
-			print("[DEBUG SimpleOnce] added to touchedCharacters, count now:", #touchedCharacters)
 
 			if Humanoid.Health > 0 and Humanoid:GetState() ~= Enum.HumanoidStateType.Dead then
-				print("[DEBUG SimpleOnce] Humanoid alive, Health:", Humanoid.Health)
-
-				local dist = (Character.HumanoidRootPart.Position - HitboxCFrame.Position).Magnitude
-				print("[DEBUG SimpleOnce] distance:", dist)
-
 				if closestCharacter ~= nil then
-					local closestDist = (closestCharacter.HumanoidRootPart.Position - HitboxCFrame.Position).Magnitude
-					print("[DEBUG SimpleOnce] comparing — current closest dist:", closestDist)
-
-					if dist < closestDist then
-						print("[DEBUG SimpleOnce] new closestCharacter")
+					if
+						(Character.HumanoidRootPart.Position - HitboxCFrame.Position).Magnitude
+						< (closestCharacter.HumanoidRootPart.Position - HitboxCFrame.Position).Magnitude
+					then
 						closestCharacter = Character
 					end
 				else
-					print("[DEBUG SimpleOnce] first alive character, setting as closest")
 					closestCharacter = Character
 				end
-			else
-				print(
-					"[DEBUG SimpleOnce] Humanoid dead or dying — Health:",
-					Humanoid and Humanoid.Health,
-					"State:",
-					Humanoid and Humanoid:GetState()
-				)
 			end
-		else
-			print(
-				"[DEBUG SimpleOnce] condition failed — Humanoid:",
-				Humanoid,
-				"alreadyTouched:",
-				alreadyTouched,
-				"inIgnore:",
-				inIgnore
-			)
 		end
 	end
 
-	print("[DEBUG SimpleOnce] final touchedCharacters:", #touchedCharacters)
-	print("[DEBUG SimpleOnce] closestCharacter:", closestCharacter)
-
 	if #touchedCharacters > 0 and closestCharacter ~= nil then
-		print("[DEBUG SimpleOnce] calling onTouch(closestCharacter)")
 		onTouch(closestCharacter)
 
 		if HitType ~= "Single" then
-			print("[DEBUG SimpleOnce] HitType not Single, iterating remaining")
 			for _, Character in touchedCharacters do
 				if Character == closestCharacter then
 					continue
 				end
-				print("[DEBUG SimpleOnce] calling onTouch(remaining):", Character)
 				onTouch(Character)
 			end
-		else
-			print("[DEBUG SimpleOnce] HitType is Single, only called on closest")
 		end
-	else
-		print("[DEBUG SimpleOnce] NO TouchedCharacters — nothing was hit")
 	end
-
-	shared.VoxelDestruction(detectFunction, params, DestroyParams, Voxels)
-	print("[DEBUG SimpleOnce] ====== END =====")
 end
 
 return HB

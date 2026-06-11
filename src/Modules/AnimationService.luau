@@ -28,6 +28,11 @@ function AnimationService:playAnimation(Character, Animation, Speed, TimePositio
 
 	local loadedAnims = AnimationService:getLoadedAnimations(Character)
 
+	if not loadedAnims[Animation] then
+		print("[AnimSvc] playAnimation ABORTOU - Animation is nil")
+		return
+	end
+
 	local anim = loadedAnims[Animation][1]
 
 	if Animation.Parent.Name ~= "Spawn Animations" then

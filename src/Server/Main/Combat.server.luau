@@ -97,10 +97,14 @@ end
 
 local function M1(Player)
 	local Character = Player.Character
-	if not Character or Character:GetAttribute("doPunch") ~= true then return end
+	if not Character or Character:GetAttribute("doPunch") ~= true then
+		return
+	end
 
 	local HumRP = Character:FindFirstChild("HumanoidRootPart")
-	if not HumRP then return end
+	if not HumRP then
+		return
+	end
 
 	local Humanoid = Character.Humanoid
 
@@ -156,148 +160,207 @@ local function M1(Player)
 	local PunchAnim, PreviousAnimation = GetPunchAnim(Character, Params.Uppercut, Params.Downslam)
 	local PunchAnimTrack, PunchEvents = AnimationService:getAnimationTrack(Character, PunchAnim)
 
-	table.insert(PunchEvents, PunchAnimTrack:GetMarkerReachedSignal("hit"):Connect(function()
-		HitboxHandler:SimpleOnce(HumRP, Size, Offset, { Character }, nil, nil, function(EnemyCharacter)
-			local EnemyPlayer = Players:GetPlayerFromCharacter(EnemyCharacter)
-			local EnemyHumanoid = EnemyCharacter.Humanoid
-			local EnemyHumRP = EnemyCharacter.HumanoidRootPart
+	table.insert(
+		PunchEvents,
+		PunchAnimTrack:GetMarkerReachedSignal("hit"):Connect(function()
+			HitboxHandler:SimpleOnce(HumRP, Size, Offset, { Character }, nil, nil, function(EnemyCharacter)
+				local EnemyPlayer = Players:GetPlayerFromCharacter(EnemyCharacter)
+				local EnemyHumanoid = EnemyCharacter.Humanoid
+				local EnemyHumRP = EnemyCharacter.HumanoidRootPart
 
-			if EnemyCharacter == Character
-				or (CurrentType ~= "Downslam" and (EnemyHumanoid.Health <= 0 or EnemyCharacter:HasTag("Ragdolled")))
-				or iFramesService:HasiFrame(EnemyCharacter, "M1")
-			then
-				return
-			end
-
-			local Blockable = CurrentType ~= "Downslam"
-			local Dmg = M1Damage[CurrentCombo] or 4
-
-			local HitInfo = DamageHandler:TakeDamage(
-				Character, EnemyHumanoid, Dmg, 1,
-				Assets.Animations.Combat.Hits[tostring(CurrentCombo)],
-				Blockable, true, false, true, true, "M1"
-			)
-
-			if HitInfo.Countered then return end
-
-			if HitInfo.Blocked then
-				SoundsModule:PlaySound(CombatSounds.Blocking.Hits:GetChildren()[math.random(1, #CombatSounds.Blocking.Hits:GetChildren())], EnemyHumRP)
-			else
-				Hit = true
-
-				Character:SetAttribute("LastM1Hit", EnemyCharacter.Name)
-
-				local HitsFolder = CombatSounds.Hits:FindFirstChild(Player:GetAttribute("Moveset")) or CombatSounds.Hits.Default
-
-				if CurrentType == "Uppercut" then
-					SoundsModule:PlaySound(Sounds.Combat.Hits.Uppercut, EnemyHumRP)
-				elseif CurrentType == "Downslam" then
-					SoundsModule:PlaySound(Sounds.Combat.Hits.Downslam, EnemyHumRP)
-				else
-					SoundsModule:PlaySound(HitsFolder[tostring(CurrentCombo)], EnemyHumRP)
+				if
+					EnemyCharacter == Character
+					or (CurrentType ~= "Downslam" and (EnemyHumanoid.Health <= 0 or EnemyCharacter:HasTag("Ragdolled")))
+					or iFramesService:HasiFrame(EnemyCharacter, "M1")
+				then
+					return
 				end
 
-				if CurrentCombo >= MaxCombo then
-					local FirstProps = { Size = Vector3.new(0.6, 0.6, 0.6), Transparency = 0 }
-					local FinalProps = { Size = Vector3.new(12, 0.6, 12), Transparency = 1 }
-					local TN_Info = { Time = 0.25, Style = "Quad", Direction = "Out" }
+				local Blockable = CurrentType ~= "Downslam"
+				local Dmg = M1Damage[CurrentCombo] or 4
 
-					if CurrentType == "Downslam" then
-						ReplicateSet:FireAllClients("Ring", { FirstProps = FirstProps, CF = EnemyHumRP.CFrame, TN_Info = TN_Info, FinalProps = FinalProps })
-						ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 2 })
+				local HitInfo = DamageHandler:TakeDamage(
+					Character,
+					EnemyHumanoid,
+					Dmg,
+					1,
+					Assets.Animations.Combat.Hits[tostring(CurrentCombo)],
+					Blockable,
+					true,
+					false,
+					true,
+					true,
+					"M1"
+				)
 
-						EnemyHumRP.CFrame *= CFrame.Angles(math.pi / 2, 0, 0)
+				if HitInfo.Countered then
+					return
+				end
 
-						if HitInfo.Finisher then
-							local Stun = StunHandler:Stun(Character, nil, true)
-							Humanoid.AutoRotate = false
-							iFramesService:AddAlliFrames(Character)
-							Character:AddTag("CantRotate")
+				if HitInfo.Blocked then
+					SoundsModule:PlaySound(
+						CombatSounds.Blocking.Hits:GetChildren()[math.random(
+							1,
+							#CombatSounds.Blocking.Hits:GetChildren()
+						)],
+						EnemyHumRP
+					)
+				else
+					Hit = true
 
-							task.delay(0.084, function()
-								local Unstunned = false
+					Character:SetAttribute("LastM1Hit", EnemyCharacter.Name)
 
-								local FinisherAnim = CombatAnims.Punches.DownslamFinishers["Variation" .. tostring(math.random(1, 4))]
-								local FinisherTrack, FinisherEvents = AnimationService:getAnimationTrack(Character, FinisherAnim)
+					local HitsFolder = CombatSounds.Hits:FindFirstChild(Player:GetAttribute("Moveset"))
+						or CombatSounds.Hits.Default
 
-								table.insert(FinisherEvents, FinisherTrack:GetMarkerReachedSignal("hit"):Once(function()
-									local KnockbackHitbox = HitboxHandler.new()
-									KnockbackHitbox.Instance = HumRP.CFrame
-									KnockbackHitbox.Size = Vector3.new(1, 1, 1) * 14
-									KnockbackHitbox.onTouch = function(EChar)
-										if EChar == Character or iFramesService:HasiFrame(EChar, "M1") then return end
-										NewKnockback:Knockback(EChar, { KnockbackType = "Velocity", MaxForce = Vector3.new(1, 1, 1) * 40000, Velocity = Vector3.new(0, 100, 0) })
-										RagdollHandler.ragdoll(EChar.Humanoid, 2, false, nil, nil)
-									end
-									KnockbackHitbox:Once()
-									KnockbackHitbox:Destroy()
+					if CurrentType == "Uppercut" then
+						SoundsModule:PlaySound(Sounds.Combat.Hits.Uppercut, EnemyHumRP)
+					elseif CurrentType == "Downslam" then
+						SoundsModule:PlaySound(Sounds.Combat.Hits.Downslam, EnemyHumRP)
+					else
+						SoundsModule:PlaySound(HitsFolder[tostring(CurrentCombo)], EnemyHumRP)
+					end
 
-									ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 8 })
-									Unstunned = true
-									Humanoid.AutoRotate = true
-									iFramesService:RemoveAlliFrames(Character)
-									StunHandler:Unstun(Character, Stun)
-									Character:RemoveTag("CantRotate")
-								end))
+					if CurrentCombo >= MaxCombo then
+						local FirstProps = { Size = Vector3.new(0.6, 0.6, 0.6), Transparency = 0 }
+						local FinalProps = { Size = Vector3.new(12, 0.6, 12), Transparency = 1 }
+						local TN_Info = { Time = 0.25, Style = "Quad", Direction = "Out" }
 
-								FinisherTrack.Stopped:Once(function()
-									if not Unstunned then
-										Humanoid.AutoRotate = true
-										iFramesService:RemoveAlliFrames(Character)
-										StunHandler:Unstun(Character, Stun)
-										Character:RemoveTag("CantRotate")
-									end
+						if CurrentType == "Downslam" then
+							ReplicateSet:FireAllClients("Ring", {
+								FirstProps = FirstProps,
+								CF = EnemyHumRP.CFrame,
+								TN_Info = TN_Info,
+								FinalProps = FinalProps,
+							})
+							ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 2 })
+
+							EnemyHumRP.CFrame *= CFrame.Angles(math.pi / 2, 0, 0)
+
+							if HitInfo.Finisher then
+								local Stun = StunHandler:Stun(Character, nil, true)
+								Humanoid.AutoRotate = false
+								iFramesService:AddAlliFrames(Character)
+								Character:AddTag("CantRotate")
+
+								task.delay(0.084, function()
+									local Unstunned = false
+
+									local FinisherAnim = CombatAnims.Punches.DownslamFinishers["Variation" .. tostring(
+										math.random(1, 4)
+									)]
+									local FinisherTrack, FinisherEvents =
+										AnimationService:getAnimationTrack(Character, FinisherAnim)
+
+									table.insert(
+										FinisherEvents,
+										FinisherTrack:GetMarkerReachedSignal("hit"):Once(function()
+											local KnockbackHitbox = HitboxHandler.new()
+											KnockbackHitbox.Instance = HumRP.CFrame
+											KnockbackHitbox.Size = Vector3.new(1, 1, 1) * 14
+											KnockbackHitbox.onTouch = function(EChar)
+												if EChar == Character or iFramesService:HasiFrame(EChar, "M1") then
+													return
+												end
+												NewKnockback:Knockback(EChar, {
+													KnockbackType = "Velocity",
+													MaxForce = Vector3.new(1, 1, 1) * 40000,
+													Velocity = Vector3.new(0, 100, 0),
+												})
+												RagdollHandler.ragdoll(EChar.Humanoid, 2, false, nil, nil)
+											end
+											KnockbackHitbox:Once()
+											KnockbackHitbox:Destroy()
+
+											ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 8 })
+											Unstunned = true
+											Humanoid.AutoRotate = true
+											iFramesService:RemoveAlliFrames(Character)
+											StunHandler:Unstun(Character, Stun)
+											Character:RemoveTag("CantRotate")
+										end)
+									)
+
+									FinisherTrack.Stopped:Once(function()
+										if not Unstunned then
+											Humanoid.AutoRotate = true
+											iFramesService:RemoveAlliFrames(Character)
+											StunHandler:Unstun(Character, Stun)
+											Character:RemoveTag("CantRotate")
+										end
+									end)
+
+									AnimationService:stopAll(Character)
+									AnimationService:playAnimation(Character, FinisherAnim, 1.25)
 								end)
+							end
+						elseif CurrentType == "Uppercut" then
+							ReplicateSet:FireAllClients("Ring", {
+								FirstProps = FirstProps,
+								CF = EnemyHumRP.CFrame,
+								TN_Info = TN_Info,
+								FinalProps = FinalProps,
+							})
+							ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 3 })
 
-								AnimationService:stopAll(Character)
-								AnimationService:playAnimation(Character, FinisherAnim, 1.25)
-							end)
+							local BodyAngularVelocity = Instance.new("BodyAngularVelocity")
+							BodyAngularVelocity.MaxTorque = Vector3.new(50000, 50000, 50000)
+							BodyAngularVelocity.AngularVelocity =
+								Vector3.new(math.random(2.5, 5), math.random(2.5, 5), math.random(2.5, 5))
+							BodyAngularVelocity.Parent = EnemyHumRP
+							Debris:AddItem(BodyAngularVelocity, 0.1)
+
+							NewKnockback:Knockback(EnemyCharacter, {
+								KnockbackType = "Velocity",
+								MaxForce = Vector3.new(0, 1, 0) * 10000,
+								Velocity = Vector3.new(0, 1, 0) * 70,
+							})
+							SvSt.Bindables.AirDetector:Fire(EnemyCharacter, nil, true, nil, 6.2)
+						else
+							local FinalKnockback = Vector3.new(30, 0, 30)
+							NewKnockback:Knockback(EnemyCharacter, {
+								KnockbackType = "Velocity",
+								MaxForce = Vector3.new(10000, 10000, 10000),
+								Velocity = HumRP.CFrame.LookVector * FinalKnockback + Vector3.new(0, 20, 0),
+							})
+							SvSt.Bindables.AirDetector:Fire(EnemyCharacter, nil, true, nil, 6.2)
 						end
 
-					elseif CurrentType == "Uppercut" then
-						ReplicateSet:FireAllClients("Ring", { FirstProps = FirstProps, CF = EnemyHumRP.CFrame, TN_Info = TN_Info, FinalProps = FinalProps })
-						ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 3 })
-
-						local BodyAngularVelocity = Instance.new("BodyAngularVelocity")
-						BodyAngularVelocity.MaxTorque = Vector3.new(50000, 50000, 50000)
-						BodyAngularVelocity.AngularVelocity = Vector3.new(math.random(2.5, 5), math.random(2.5, 5), math.random(2.5, 5))
-						BodyAngularVelocity.Parent = EnemyHumRP
-						Debris:AddItem(BodyAngularVelocity, 0.1)
-
-						NewKnockback:Knockback(EnemyCharacter, { KnockbackType = "Velocity", MaxForce = Vector3.new(0, 1, 0) * 10000, Velocity = Vector3.new(0, 1, 0) * 70 })
-						SvSt.Bindables.AirDetector:Fire(EnemyCharacter, nil, true, nil, 6.2)
-
+						RagdollHandler.ragdoll(EnemyHumanoid, 2, nil, nil, nil, nil, true)
 					else
-						local FinalKnockback = Vector3.new(30, 0, 30)
-						NewKnockback:Knockback(EnemyCharacter, { KnockbackType = "Velocity", MaxForce = Vector3.new(10000, 10000, 10000), Velocity = HumRP.CFrame.LookVector * FinalKnockback + Vector3.new(0, 20, 0) })
-						SvSt.Bindables.AirDetector:Fire(EnemyCharacter, nil, true, nil, 6.2)
-					end
-
-					RagdollHandler.ragdoll(EnemyHumanoid, 2, nil, nil, nil, nil, true)
-
-				else
-					local Velocity = HumRP.CFrame.LookVector * 13
-					NewKnockback:Knockback(Character, { KnockbackType = "Velocity", MaxForce = Vector3.new(math.huge, 0, math.huge), Velocity = Velocity })
-					if not EnemyCharacter:HasTag("Knockbacked") then
-						NewKnockback:Knockback(EnemyHumRP, { KnockbackType = "Velocity", MaxForce = Vector3.new(math.huge, 0, math.huge), Velocity = Velocity })
+						local Velocity = HumRP.CFrame.LookVector * 13
+						NewKnockback:Knockback(Character, {
+							KnockbackType = "Velocity",
+							MaxForce = Vector3.new(math.huge, 0, math.huge),
+							Velocity = Velocity,
+						})
+						if not EnemyCharacter:HasTag("Knockbacked") then
+							NewKnockback:Knockback(EnemyHumRP, {
+								KnockbackType = "Velocity",
+								MaxForce = Vector3.new(math.huge, 0, math.huge),
+								Velocity = Velocity,
+							})
+						end
 					end
 				end
-			end
-		end, nil, VoxelParameters)
+			end, nil, VoxelParameters)
 
-		if Hit then
-		else
-			if CurrentCombo >= MaxCombo then
-				Character:SetAttribute("DefaultRunSpeed", 0)
-				Character:SetAttribute("DefaultWalkSpeed", 0)
-				Humanoid.WalkSpeed = 0
+			if Hit then
+			else
+				if CurrentCombo >= MaxCombo then
+					Character:SetAttribute("DefaultRunSpeed", 0)
+					Character:SetAttribute("DefaultWalkSpeed", 0)
+					Humanoid.WalkSpeed = 0
+				end
 			end
-		end
-	end))
+		end)
+	)
 
 	local ended = false
 	local function EndFunction()
-		if ended then return end
+		if ended then
+			return
+		end
 		ended = true
 
 		Character:RemoveTag("Punching")
@@ -351,7 +414,9 @@ local function M1(Player)
 		if CurrentType == "Downslam" then
 			SwingSFX = CombatSounds.Swings.Downslam
 		else
-			SwingSFX = (CombatSounds.Swings:FindFirstChild(Player:GetAttribute("Moveset")) or CombatSounds.Swings.Default)[tostring(CurrentCombo)]
+			SwingSFX = (
+				CombatSounds.Swings:FindFirstChild(Player:GetAttribute("Moveset")) or CombatSounds.Swings.Default
+			)[tostring(CurrentCombo)]
 		end
 		SoundsModule:PlaySound(SwingSFX, HumRP)
 	end)
@@ -359,13 +424,19 @@ end
 
 local function Block(Player)
 	local Character = Player.Character
-	if not Character or Character:GetAttribute("doBlock") ~= true then return end
+	if not Character or Character:GetAttribute("doBlock") ~= true then
+		return
+	end
 
 	local Humanoid = Character:FindFirstChild("Humanoid")
-	if not Humanoid then return end
+	if not Humanoid then
+		return
+	end
 
 	local HumRP = Character:FindFirstChild("HumanoidRootPart")
-	if not HumRP then return end
+	if not HumRP then
+		return
+	end
 
 	if Character:HasTag("CantBlock") or Character:HasTag("Stunned") or Character:HasTag("Punching") then
 		task.delay(0.1, function()
@@ -384,7 +455,9 @@ local function Block(Player)
 	SoundsModule:PlaySound(CombatSounds.Blocking.Start, HumRP)
 
 	local function stopBlock()
-		if Stopped then return end
+		if Stopped then
+			return
+		end
 		Stopped = true
 
 		for _, v in Connections do
@@ -430,7 +503,10 @@ local function Block(Player)
 	local PC
 	PC = Character.ChildAdded:Connect(function(Child)
 		if Child.Name == "DamagedLog" and Child:HasTag("IsM1") and Perfect then
-			if PC then PC:Disconnect() PC = nil end
+			if PC then
+				PC:Disconnect()
+				PC = nil
+			end
 			Character:AddTag("PerfectBlock")
 			task.delay(1, function()
 				Character:RemoveTag("PerfectBlock")
@@ -439,28 +515,35 @@ local function Block(Player)
 	end)
 
 	task.delay(0.25, function()
-		if PC then PC:Disconnect() PC = nil end
+		if PC then
+			PC:Disconnect()
+			PC = nil
+		end
 		Perfect = false
 	end)
 end
 
 CombatSetEvent:Connect(function(Player, Action, Params)
-	if not Player:FindFirstChild("LoadedData") then return end
+	if not Player:FindFirstChild("LoadedData") then
+		return
+	end
 
 	local Character = Player.Character
-	if not Character or not Character.Parent then return end
+	if not Character or not Character.Parent then
+		return
+	end
 
 	local HumRP = Character:FindFirstChild("HumanoidRootPart")
 	local Humanoid = Character:FindFirstChild("Humanoid")
-	if not HumRP or not Humanoid then return end
+	if not HumRP or not Humanoid then
+		return
+	end
 
 	if Action == "PunchStart" then
 		Character:SetAttribute("doPunch", true)
 		M1(Player)
-
 	elseif Action == "PunchEnd" then
 		Character:SetAttribute("doPunch", false)
-
 	elseif Action == "Block" then
 		if Params.Stage == true then
 			Character:SetAttribute("doBlock", true)

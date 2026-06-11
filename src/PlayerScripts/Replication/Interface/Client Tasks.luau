@@ -16,6 +16,8 @@ local TS = game:GetService("TweenService")
 
 local Resources = RS:WaitForChild("Resources")
 
+local LocalPlayer = game:GetService("Players").LocalPlayer
+
 local MapRayParams = RaycastParams.new()
 MapRayParams.FilterType = Enum.RaycastFilterType.Include
 MapRayParams.FilterDescendantsInstances = {
@@ -94,16 +96,39 @@ local ReplicationEffects = {
 			end
 		end
 
-		TS:Create(
-			Ring,
-			TweenInfo.new(
-				Params.TN_Info.Time,
-				Enum.EasingStyle[Params.TN_Info.Style],
-				Enum.EasingDirection[Params.TN_Info.Direction]
-			),
-			Params.FinalProps
-		):Play()
+		local easeStyle = Enum.EasingStyle[Params.TN_Info.Style] :: any
+		local easeDirection = Enum.EasingDirection[Params.TN_Info.Direction] :: any
+		TS:Create(Ring, TweenInfo.new(Params.TN_Info.Time, easeStyle, easeDirection), Params.FinalProps):Play()
 		Debris:AddItem(Ring, Params.LF or Params.TN_Info.Time)
+	end,
+
+	Hitbox = function(Params)
+		for _, v in workspace.Thrown:GetChildren() do
+			if v.Name == LocalPlayer.UserId .. " Hitbox" then
+				v:Destroy()
+			end
+		end
+
+		local Visualizer = Resources.Effects.Hitbox:Clone()
+		Visualizer.CFrame = Params.CFrame * (Params.Offset or CFrame.new(0, 0, 0))
+
+		if Params.Method == "Box" then
+			Visualizer.Size = Params.Size
+		else
+			Visualizer.Shape = Enum.PartType.Ball
+			Visualizer.Size = Vector3.one * Params.Size
+		end
+
+		Visualizer.Parent = workspace.Thrown
+		Debris:AddItem(Visualizer, 0.1)
+	end,
+
+	RemoveAllBodyMovers = function(Character)
+		for _, BodyMover in Character:GetDescendants() do
+			if BodyMover:IsA("BodyVelocity") or BodyMover:IsA("LinearVelocity") or BodyMover:IsA("BodyPosition") then
+				BodyMover:Destroy()
+			end
+		end
 	end,
 }
 
