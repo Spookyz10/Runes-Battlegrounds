@@ -1,14 +1,11 @@
 local VoxBreaker = {}
 VoxBreaker.__index = VoxBreaker
 
-
-
-
 --Module by @Bartokens
 --@Bartokens on discord and  @bartoken on tiktok
 --Find information here: https://devforum.roblox.com/t/voxbreaker-an-oop-voxel-destruction-module/2935099
 
---.----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------. 
+--.----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------.  .----------------.
 --| .--------------. || .--------------. || .--------------. || .--------------. || .--------------. || .--------------. || .--------------. || .--------------. || .--------------. || .--------------. |
 --| | ____   ____  | || |     ____     | || |  ____  ____  | || |   ______     | || |  _______     | || |  _________   | || |      __      | || |  ___  ____   | || |  _________   | || |  _______     | |
 --| ||_  _| |_  _| | || |   .'    `.   | || | |_  _||_  _| | || |  |_   _ \    | || | |_   __ \    | || | |_   ___  |  | || |     /  \     | || | |_  ||_  _|  | || | |_   ___  |  | || | |_   __ \    | |
@@ -18,29 +15,26 @@ VoxBreaker.__index = VoxBreaker
 --| |     \_/      | || |   `.____.'   | || | |____||____| | || |  |_______/   | || | |____| |___| | || | |_________|  | || ||____|  |____|| || | |____||____| | || | |_________|  | || | |____| |___| | |
 --| |              | || |              | || |              | || |              | || |              | || |              | || |              | || |              | || |              | || |              | |
 --| '--------------' || '--------------' || '--------------' || '--------------' || '--------------' || '--------------' || '--------------' || '--------------' || '--------------' || '--------------' |
---'----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------' 
+--'----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------'  '----------------'
 
-
---[ DESCRIPTION ] ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 
+--[ DESCRIPTION ] ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 -- VoxBreaker is an OOP module for all your voxel destruction needs, or map building needs depending on how you want to use it.
-
 
 -----[ DOCUMENTATION ]---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ----------| HOW TO USE |
 --
---				1. Firstly, for any parts you want the module to work on, give them the attribute "Destroyable" and set it to true. 
+--				1. Firstly, for any parts you want the module to work on, give them the attribute "Destroyable" and set it to true.
 --					The attribute name can be changed in the module settings.
 
 --					-Make sure your parts are anchored.
 
 --				2. Then, place the module where you want. I recommend replicated storage, as the module works both on the client and on the server.
---				
+--
 --				3. On your script reference the module with: <local VoxBreaker = require(-wherever the module is stored-)>
 --
 --				4. Use the module however you want!
-
 
 --	|FUNCTIONS|
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -55,10 +49,10 @@ VoxBreaker.__index = VoxBreaker
 --					TimeToReset: Time it takes in seconds to reset voxels back to normal. Will not reset if this is less than zero. 50 by default.
 
 --				-Returns all voxels
---			
+--
 
 --			   -[EXAMPLE CODE] -- Prints all parts after voxelization
---				|	local VoxBreaker = require(game.ReplicatedStorage.VoxBreaker)						
+--				|	local VoxBreaker = require(game.ReplicatedStorage.VoxBreaker)
 --				|	local Part = workspace.Part
 --				|	local Voxels = VoxBreaker:VoxelizePart(Part)
 --				|	for i, v in pairs(Voxels) do
@@ -71,7 +65,6 @@ VoxBreaker.__index = VoxBreaker
 --		* CreateHitbox()
 --			Creates one hitbox which divides any applicable parts that are touching it.
 
-
 --      		-Parameters: (Size : Vector3, Cframe : CFrame , Shape : Enum.PartType , MinimumVoxelSize : number , TimeToReset : number,  Params : OverlapParams)
 --					Size: Size of the hitbox. (1,1,1) By default
 --					Cframe: CFrame of the hitbox. (0,0,0) By default
@@ -82,10 +75,10 @@ VoxBreaker.__index = VoxBreaker
 --				-Tip: the larger the hitbox is, the larger I reccommend setting the MinimumVoxelSize. This helps tremendously with performance.
 
 --				-Returns all voxels touching the hitbox
---			
+--
 
 --			   -[EXAMPLE CODE] --Destroys all voxels in hitbox.
---				|	local VoxBreaker = require(game.ReplicatedStorage.VoxBreaker)						
+--				|	local VoxBreaker = require(game.ReplicatedStorage.VoxBreaker)
 --				|	local Size = Vector3.new(10,10,10)
 --				| 	local Cframe = CFrame.new(5,5,5)
 --				| 	local Shape = Enum.PartType.Ball
@@ -98,7 +91,7 @@ VoxBreaker.__index = VoxBreaker
 --				|	end
 --				|
 --			   -[EXAMPLE CODE] -- Unanchors all voxels in hitbox.
---				|	local VoxBreaker = require(game.ReplicatedStorage.VoxBreaker)						
+--				|	local VoxBreaker = require(game.ReplicatedStorage.VoxBreaker)
 --				|
 --				|	local Voxels = VoxBreaker:CreateHitbox()
 --				|	for i, v in pairs(Voxels) do
@@ -118,7 +111,6 @@ VoxBreaker.__index = VoxBreaker
 --					Shape: Shape of the hitbox. Block by default.
 
 --Note, you can set the minimum voxel size to 'Relative', and the minimum size will change depending on the size of the hitbox.
-
 
 --				-Returns hitbox object
 
@@ -140,10 +132,9 @@ VoxBreaker.__index = VoxBreaker
 --					:UnWeld()
 --						Unwelds the hitbox
 
-
 --			   -[EXAMPLE CODE] --Creates a hitbox that is welded to a part and prints whenever touched
 --				|
---				|	local VoxBreaker = require(game.ReplicatedStorage.VoxBreaker)						
+--				|	local VoxBreaker = require(game.ReplicatedStorage.VoxBreaker)
 --				|	local Size = Vector3.new(10,10,10)
 --				| 	local Cframe = CFrame.new(5,5,5)
 --				| 	local Shape = Enum.PartType.Ball
@@ -151,7 +142,7 @@ VoxBreaker.__index = VoxBreaker
 --				|	local Seconds = 20
 --				|	local Projectile = Instance.new("Part")
 --				| 	Projectile.Parent = workspace
---				|	
+--				|
 --				|	local Hitbox = VoxBreaker.CreateMoveableHitbox(MinimumSize,Seconds,Size,Cframe,Shape)
 --				|	Hitbox:Start()
 --				|	Hitbox:WeldTo(Projectile)
@@ -162,7 +153,7 @@ VoxBreaker.__index = VoxBreaker
 --				|
 --			   -[EXAMPLE CODE] -- Creates a hitbox that can be moved manually, and stops after 5 seconds
 --				|
---				|	local VoxBreaker = require(game.ReplicatedStorage.VoxBreaker)						
+--				|	local VoxBreaker = require(game.ReplicatedStorage.VoxBreaker)
 --				|	local Size = Vector3.new(10,10,10)
 --				| 	local Cframe = CFrame.new(5,5,5)
 --				| 	local Shape = Enum.PartType.Ball
@@ -177,14 +168,13 @@ VoxBreaker.__index = VoxBreaker
 --				|	task.wait(2)
 --				|	print(Hitbox:GetTouchingParts())
 --				|	task.wait(3)
---				|	
+--				|
 --				|	Hitbox:Stop()
 --				|
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
---		* CutInHalf() 
+--		* CutInHalf()
 --			Cuts a specified part into two equal halves.
 
 --      		-Parameters: (Part : Part)
@@ -194,31 +184,21 @@ VoxBreaker.__index = VoxBreaker
 
 --			   -[EXAMPLE CODE] --Split a part in two
 --				|
---				|	local VoxBreaker = require(game.ReplicatedStorage.VoxBreaker)	
+--				|	local VoxBreaker = require(game.ReplicatedStorage.VoxBreaker)
 --				|	local Part = workspace.Part
 --				|	VoxBreaker:CutInHalf(Part)
 --				|
 --				|
 
-
-
-
-
-
-
-
-
-
 -----[ SETTINGS ]-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 local TagName = "Destroyable" --Name of Attribute that module will check parts for
-local RandomColors = false  -- Will make every part a random color. Set this to true if you want a visual representation of how the parts are being divided.
+local RandomColors = false -- Will make every part a random color. Set this to true if you want a visual representation of how the parts are being divided.
 local Visualizer = false -- Will make hitboxes visible when set to true
 local miniumCubeSize = 2 --Default Minimum possible size that divided cubes can be.
 local voxelFolder = workspace --Where the voxels are stored. Workspace by default.
 local AutoStartMoveable = false --Toggle this to true if you want your moveable hitboxes to activate automatically without having to use :Start()
-local PartCacheEnabled = true --Enables PartCache. This significantly improves performance so I reccommend keeping it on. 
-
+local PartCacheEnabled = true --Enables PartCache. This significantly improves performance so I reccommend keeping it on.
 
 ----[ RESOURCES ]------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -236,20 +216,16 @@ if PartCacheEnabled then
 
 	local TemplatePart = Instance.new("Part")
 	TemplatePart.Anchored = true
-	cache = PC.new(TemplatePart,3000,PartFolder)
+	cache = PC.new(TemplatePart, 3000, PartFolder)
 	cache.ExpansionSize = 30
-	TemplatePart:Destroy()	
+	TemplatePart:Destroy()
 end
-
-
 
 -----[ LOCAL FUNCTIONS ]--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
 local destructionSchedule = {} -- Keeps track of parts and their destruction timers
 
-local function Destroy(part:Instance, timeToDestroy)
-
+local function Destroy(part, timeToDestroy)
 	-- If the part is already scheduled for destruction, cancel the previous timer
 	if destructionSchedule[part] then
 		task.cancel(destructionSchedule[part])
@@ -258,13 +234,11 @@ local function Destroy(part:Instance, timeToDestroy)
 	-- Schedule a new destruction timer
 	destructionSchedule[part] = task.delay(timeToDestroy, function()
 		if part and part.Parent then
-
-
 			if PartCacheEnabled then
 				if part:IsA("Model") then
 					for i, v in pairs(part:GetChildren()) do
-						if table.find(cache.InUse,v) then
-							for i,child in pairs(v:GetChildren()) do
+						if table.find(cache.InUse, v) then
+							for i, child in pairs(v:GetChildren()) do
 								child:Destroy()
 							end
 							cache:ReturnPart(v)
@@ -277,14 +251,13 @@ local function Destroy(part:Instance, timeToDestroy)
 				part:AddTag("Destroying")
 				task.wait(0.1)
 				part:Destroy()
-
 			end)
 		end
 		destructionSchedule[part] = nil -- Remove the part from the schedule once it's destroyed
 	end)
 end
 
-local function CopyProperties(PartOne:Part,PartTwo:Part)
+local function CopyProperties(PartOne, PartTwo)
 	PartTwo.Anchored = PartOne.Anchored
 	PartTwo.Transparency = PartOne.Transparency
 	PartTwo.CanCollide = PartOne.CanCollide
@@ -306,26 +279,21 @@ local function CopyProperties(PartOne:Part,PartTwo:Part)
 	PartTwo.BackSurface = PartOne.BackSurface
 	PartTwo.FrontSurface = PartOne.FrontSurface
 
+	PartTwo:SetAttribute(TagName, PartOne:GetAttribute(TagName))
 
-	PartTwo:SetAttribute(TagName,PartOne:GetAttribute(TagName))
-
-
-	for i,v in PartOne:GetChildren() do
+	for i, v in PartOne:GetChildren() do
 		local clone = v:Clone()
 		clone.Parent = PartTwo
 	end
-
-
 end
 
-local function partCanSubdivide(part : Part) --Checks if part is rectangular.
-
-	local Threshold = 1.5  -- How much of a difference there can be between the largest axis and the smallest axis 
+local function partCanSubdivide(part) --Checks if part is rectangular.
+	local Threshold = 1.5 -- How much of a difference there can be between the largest axis and the smallest axis
 
 	local largest = math.max(part.Size.X, part.Size.Y, part.Size.Z) --Largest Axis
-	local smallest = math.min(part.Size.X,part.Size.Y, part.Size.Z) -- Smallest Axis
+	local smallest = math.min(part.Size.X, part.Size.Y, part.Size.Z) -- Smallest Axis
 
-	if smallest == part.Size.X then 
+	if smallest == part.Size.X then
 		smallest = math.min(part.Size.Y, part.Size.Z)
 	elseif smallest == part.Size.Y then
 		smallest = math.min(part.Size.X, part.Size.Z)
@@ -333,20 +301,18 @@ local function partCanSubdivide(part : Part) --Checks if part is rectangular.
 		smallest = math.min(part.Size.X, part.Size.Y)
 	end
 
-	return largest >= Threshold * smallest 
-	--Returns true if part is rectangular. 
+	return largest >= Threshold * smallest
+	--Returns true if part is rectangular.
 	--Part is rectangular if the largest axis is at least 1.5x bigger than the smallest axis
-
 end
 
-local function getLargestAxis(part : Part)  --Returns Largest Axis of Part size
+local function getLargestAxis(part) --Returns Largest Axis of Part size
 	return math.max(part.Size.X, part.Size.Y, part.Size.Z)
 end
 
-local function CutPartinHalf(block : Part, TimeToReset : number) --Cuts part into two evenly shaped pieces.
-	local partTable:{Part} = {} --Table of parts to be returned
+local function CutPartinHalf(block, TimeToReset) --Cuts part into two evenly shaped pieces.
+	local partTable: { Part } = {} --Table of parts to be returned
 	local bipolarVectorSet = {} --Offset on where to place halves
-
 
 	local X = block.Size.X
 	local Y = block.Size.Y
@@ -356,29 +322,26 @@ local function CutPartinHalf(block : Part, TimeToReset : number) --Cuts part int
 		X /= 2
 
 		bipolarVectorSet = {
-			Vector3.new(1,0,0),
-			Vector3.new(-1,0,0),
+			Vector3.new(1, 0, 0),
+			Vector3.new(-1, 0, 0),
 		}
-
-	elseif getLargestAxis(block) == Y then 
-		Y/=2
+	elseif getLargestAxis(block) == Y then
+		Y /= 2
 
 		bipolarVectorSet = {
-			Vector3.new(0,1,0),
-			Vector3.new(0,-1,0),
+			Vector3.new(0, 1, 0),
+			Vector3.new(0, -1, 0),
 		}
-
 	elseif getLargestAxis(block) == Z then
-		Z/=2
+		Z /= 2
 
 		bipolarVectorSet = {
-			Vector3.new(0,0,1),
-			Vector3.new(0,0,-1),
+			Vector3.new(0, 0, 1),
+			Vector3.new(0, 0, -1),
 		}
-
 	end
 
-	local model 
+	local model
 
 	if block.Parent:IsA("Model") and block.Parent:GetAttribute("VoxelHolder") then
 		model = block.Parent
@@ -386,86 +349,79 @@ local function CutPartinHalf(block : Part, TimeToReset : number) --Cuts part int
 		model = Instance.new("Model")
 		model.Name = "VoxelHolder"
 		model.Parent = voxelFolder
-		model:SetAttribute("VoxelHolder",true)
+		model:SetAttribute("VoxelHolder", true)
 	end
 
 	if TimeToReset and TimeToReset >= 0 then
-		Destroy(model,TimeToReset)
+		Destroy(model, TimeToReset)
 	end
 
-
-	local halfSize = Vector3.new(X,Y,Z)
+	local halfSize = Vector3.new(X, Y, Z)
 
 	for _, offsetVector in pairs(bipolarVectorSet) do
-
-
 		local clone
 		if PartCacheEnabled then
 			clone = cache:GetPart()
-			CopyProperties(block,clone)
+			CopyProperties(block, clone)
 		else
 			clone = block:Clone()
 		end
 
-
-
 		if RandomColors then
-			clone.Color = Color3.fromRGB(math.random(1,255),math.random(1,255),math.random(1,255))
+			clone.Color = Color3.fromRGB(math.random(1, 255), math.random(1, 255), math.random(1, 255))
 		end
-
 
 		clone.Parent = model
 		clone.Size = halfSize
 		clone.CFrame += block.CFrame:VectorToWorldSpace((halfSize / 2.0) * offsetVector)
-		table.insert(partTable,clone)
+		table.insert(partTable, clone)
 	end
 
-
-
-
 	if block:GetAttribute("Transparency") == nil then
-		block:SetAttribute("Transparency",block.Transparency)
-		block:SetAttribute("Collide",block.CanCollide)
-		block:SetAttribute("Query",block.CanQuery)
+		block:SetAttribute("Transparency", block.Transparency)
+		block:SetAttribute("Collide", block.CanCollide)
+		block:SetAttribute("Query", block.CanQuery)
 	end
 
 	block.Transparency = 1
 	block.CanCollide = false
 	block.CanQuery = false
-	block:SetAttribute(TagName,false)
+	block:SetAttribute(TagName, false)
 
-
-
-	for i,v in block:GetChildren() do
+	for i, v in block:GetChildren() do
 		task.spawn(function()
 			if v:IsA("SurfaceGui") then
 				local enabled = v.Enabled
 				v.Enabled = false
-				repeat rs.Heartbeat:Wait()
+				repeat
+					rs.Heartbeat:Wait()
 
 				until model:HasTag("Destroying")
 				v.Enabled = enabled
 			elseif v:IsA("Decal") then
 				local transparency = v.Transparency
 				v.Transparency = 1
-				repeat rs.Heartbeat:Wait()
+				repeat
+					rs.Heartbeat:Wait()
 
 				until model:HasTag("Destroying")
 				v.Transparency = transparency
 			elseif v:IsA("Texture") then
 				local transparency = v.Transparency
 				v.Transparency = 1
-				repeat rs.Heartbeat:Wait()
+				repeat
+					rs.Heartbeat:Wait()
 
 				until model:HasTag("Destroying")
-				v.Transparency = transparency					
+				v.Transparency = transparency
 			end
 		end)
 	end
 
 	task.spawn(function()
 		if TimeToReset >= 0 then
-			repeat rs.Heartbeat:Wait()
+			repeat
+				rs.Heartbeat:Wait()
 
 			until model:HasTag("Destroying")
 
@@ -473,28 +429,23 @@ local function CutPartinHalf(block : Part, TimeToReset : number) --Cuts part int
 				block.Transparency = block:GetAttribute("Transparency")
 			end
 			if block:GetAttribute("CanQuery") then
-				block.CanQuery =  block:GetAttribute("Query")
+				block.CanQuery = block:GetAttribute("Query")
 			end
 			if block:GetAttribute("Collide") then
 				block.CanCollide = block:GetAttribute("Collide")
 			end
 
-			block:SetAttribute(TagName,true)
+			block:SetAttribute(TagName, true)
 		end
 	end)
 
-
-
-
-
-
 	if block.Parent and block.Parent:IsA("Model") and block.Parent:GetAttribute("VoxelHolder") then
 		if PartCacheEnabled then
-			for i,v in pairs(block:GetChildren()) do
+			for i, v in pairs(block:GetChildren()) do
 				v:Destroy()
 			end
-			for name,value in block:GetAttributes() do
-				block:SetAttribute(name,nil)
+			for name, value in block:GetAttributes() do
+				block:SetAttribute(name, nil)
 			end
 			cache:ReturnPart(block)
 			block.Parent = PartFolder
@@ -503,13 +454,10 @@ local function CutPartinHalf(block : Part, TimeToReset : number) --Cuts part int
 		end
 	end
 
-
-
-
 	return partTable -- Returns a table containing the two halves
 end
 
-local function GetTableMode(Table:{Part})
+local function GetTableMode(Table: { Part })
 	if #Table >= 1 then
 		local Dictionary = {}
 		for _, V in ipairs(Table) do
@@ -518,60 +466,48 @@ local function GetTableMode(Table:{Part})
 		end
 		local Array = {}
 		for Key, Value in pairs(Dictionary) do
-			table.insert(Array, {Key, Value})
+			table.insert(Array, { Key, Value })
 		end
-		table.sort(Array, function(Left, Right) return Left[2] > Right[2] end)
+		table.sort(Array, function(Left, Right)
+			return Left[2] > Right[2]
+		end)
 		return Array[1][1]
 	end
+
+	return nil
 end
 
-
-local function DivideBlock(block : Part, MinimumVoxelSize : number, Parent : Instance, TimeToReset : number) --Divides part into evenly shaped cubes.
+local function DivideBlock(block, MinimumVoxelSize, Parent, TimeToReset) --Divides part into evenly shaped cubes.
 	--MinimumvVoxelSize Parameter is used to describe the minimum possible size that the parts can be divided. To avoid confusion, this is not the size that the parts will be divided into, but rather the minimum allowed
 	--You CANNOT change the size of the resulting parts. They are dependent on the size of the original part.
 
-	local partTable:{Part} = {} -- Table of parts to be returned
+	local partTable: { Part } = {} -- Table of parts to be returned
 	local minimum = MinimumVoxelSize or miniumCubeSize
-
 
 	if block.Size.X > minimum or block.Size.Y > minimum or block.Size.Z > minimum then
 		if partCanSubdivide(block) then --If part is rectangular then it is cut in half, otherwise it is divided into cubes.
-			partTable = CutPartinHalf(block,TimeToReset)
-
+			partTable = CutPartinHalf(block, TimeToReset)
 		else
-			local model 
+			local model
 			if block.Parent and block.Parent:IsA("Model") and block.Parent:GetAttribute("VoxelHolder") then
 				model = block.Parent
 			else
 				model = Instance.new("Model")
 				model.Name = "VoxelHolder"
 				model.Parent = voxelFolder
-				model:SetAttribute("VoxelHolder",true)
+				model:SetAttribute("VoxelHolder", true)
 			end
-
 
 			if TimeToReset and TimeToReset >= 0 then
-				Destroy(model,TimeToReset)
+				Destroy(model, TimeToReset)
 			end
 
-
-
-			local Threshold = 1.5  -- How much of a difference there can be between the largest axis and the smallest axis 
+			local Threshold = 1.5 -- How much of a difference there can be between the largest axis and the smallest axis
 
 			local largest = math.max(block.Size.X, block.Size.Y, block.Size.Z) --Largest Axis
-			local smallest = math.min(block.Size.X,block.Size.Y, block.Size.Z) -- Smallest Axis
-
-
-
+			local smallest = math.min(block.Size.X, block.Size.Y, block.Size.Z) -- Smallest Axis
 
 			if smallest == block.Size.Y and smallest * Threshold <= largest then
-
-
-
-
-
-
-
 				local bipolarVectorSet = {}
 
 				local X = block.Size.X
@@ -581,49 +517,33 @@ local function DivideBlock(block : Part, MinimumVoxelSize : number, Parent : Ins
 				X /= 2
 				Z /= 2
 				bipolarVectorSet = { --Offset Vectors
-					Vector3.new(-1,0,1),
-					Vector3.new(1,0,-1),
-					Vector3.new(1,0,1),
-					Vector3.new(-1,0,-1),
-
+					Vector3.new(-1, 0, 1),
+					Vector3.new(1, 0, -1),
+					Vector3.new(1, 0, 1),
+					Vector3.new(-1, 0, -1),
 				}
 
-
-				local halfSize = Vector3.new(X,Y,Z)
-
-
+				local halfSize = Vector3.new(X, Y, Z)
 
 				for _, offsetVector in pairs(bipolarVectorSet) do
-
 					local clone
 					if PartCacheEnabled then
 						clone = cache:GetPart()
-						CopyProperties(block,clone)
+						CopyProperties(block, clone)
 					else
 						clone = block:Clone()
 					end
-					clone:SetAttribute("Voxel",true)
+					clone:SetAttribute("Voxel", true)
 					if RandomColors then
-						clone.Color = Color3.fromRGB(math.random(1,255),math.random(1,255),math.random(1,255))
+						clone.Color = Color3.fromRGB(math.random(1, 255), math.random(1, 255), math.random(1, 255))
 					end
 
 					clone.Parent = Parent or model
 					clone.Size = halfSize
 					clone.CFrame += block.CFrame:VectorToWorldSpace((halfSize / 2.0) * offsetVector)
-					table.insert(partTable,clone)
+					table.insert(partTable, clone)
 				end
-
-
-
-
 			elseif smallest == block.Size.X and smallest * Threshold <= largest then
-
-
-
-
-
-
-
 				local bipolarVectorSet = {}
 
 				local X = block.Size.X
@@ -633,49 +553,33 @@ local function DivideBlock(block : Part, MinimumVoxelSize : number, Parent : Ins
 				Y /= 2
 				Z /= 2
 				bipolarVectorSet = { --Offset Vectors
-					Vector3.new(0,-1,1),
-					Vector3.new(0,1,1),
-					Vector3.new(0,-1,-1),
-					Vector3.new(0,1,-1),
-
+					Vector3.new(0, -1, 1),
+					Vector3.new(0, 1, 1),
+					Vector3.new(0, -1, -1),
+					Vector3.new(0, 1, -1),
 				}
 
-
-				local halfSize = Vector3.new(X,Y,Z)
-
-
+				local halfSize = Vector3.new(X, Y, Z)
 
 				for _, offsetVector in pairs(bipolarVectorSet) do
-
 					local clone
 					if PartCacheEnabled then
 						clone = cache:GetPart()
-						CopyProperties(block,clone)
+						CopyProperties(block, clone)
 					else
 						clone = block:Clone()
 					end
-					clone:SetAttribute("Voxel",true)
+					clone:SetAttribute("Voxel", true)
 					if RandomColors then
-						clone.Color = Color3.fromRGB(math.random(1,255),math.random(1,255),math.random(1,255))
+						clone.Color = Color3.fromRGB(math.random(1, 255), math.random(1, 255), math.random(1, 255))
 					end
 
 					clone.Parent = Parent or model
 					clone.Size = halfSize
 					clone.CFrame += block.CFrame:VectorToWorldSpace((halfSize / 2.0) * offsetVector)
-					table.insert(partTable,clone)
-
-
-
-				end 
+					table.insert(partTable, clone)
+				end
 			elseif smallest == block.Size.Z and smallest * Threshold <= largest then
-
-
-
-
-
-
-
-
 				local bipolarVectorSet = {}
 
 				local X = block.Size.X
@@ -685,92 +589,71 @@ local function DivideBlock(block : Part, MinimumVoxelSize : number, Parent : Ins
 				X /= 2
 				Y /= 2
 				bipolarVectorSet = { --Offset Vectors
-					Vector3.new(1,-1,0),
-					Vector3.new(1,1,0),
-					Vector3.new(-1,-1,0),
-					Vector3.new(-1,1,0),
-
+					Vector3.new(1, -1, 0),
+					Vector3.new(1, 1, 0),
+					Vector3.new(-1, -1, 0),
+					Vector3.new(-1, 1, 0),
 				}
 
-
-				local halfSize = Vector3.new(X,Y,Z)
-
-
+				local halfSize = Vector3.new(X, Y, Z)
 
 				for _, offsetVector in pairs(bipolarVectorSet) do
-
 					local clone
 					if PartCacheEnabled then
 						clone = cache:GetPart()
-						CopyProperties(block,clone)
+						CopyProperties(block, clone)
 					else
 						clone = block:Clone()
 					end
-					clone:SetAttribute("Voxel",true)
+					clone:SetAttribute("Voxel", true)
 					if RandomColors then
-						clone.Color = Color3.fromRGB(math.random(1,255),math.random(1,255),math.random(1,255))
+						clone.Color = Color3.fromRGB(math.random(1, 255), math.random(1, 255), math.random(1, 255))
 					end
 
 					clone.Parent = Parent or model
 					clone.Size = halfSize
 					clone.CFrame += block.CFrame:VectorToWorldSpace((halfSize / 2.0) * offsetVector)
-					table.insert(partTable,clone)
+					table.insert(partTable, clone)
 				end
-
-
-
-
-
 			else
-
-
-
-
 				local bipolarVectorSet = { --Offset Vectors
-					Vector3.new(1,1,1),
-					Vector3.new(1,1,-1),
-					Vector3.new(1,-1,1),
-					Vector3.new(1,-1,-1),
-					Vector3.new(-1,1,1),
-					Vector3.new(-1,1,-1),
-					Vector3.new(-1,-1,1),
-					Vector3.new(-1,-1,-1),
+					Vector3.new(1, 1, 1),
+					Vector3.new(1, 1, -1),
+					Vector3.new(1, -1, 1),
+					Vector3.new(1, -1, -1),
+					Vector3.new(-1, 1, 1),
+					Vector3.new(-1, 1, -1),
+					Vector3.new(-1, -1, 1),
+					Vector3.new(-1, -1, -1),
 				}
 
 				local halfSize = block.Size / 2.0
 
 				for _, offsetVector in pairs(bipolarVectorSet) do
-
 					local clone
 					if PartCacheEnabled then
 						clone = cache:GetPart()
-						CopyProperties(block,clone)
+						CopyProperties(block, clone)
 					else
 						clone = block:Clone()
 					end
 					if RandomColors then
-						clone.Color = Color3.fromRGB(math.random(1,255),math.random(1,255),math.random(1,255))
+						clone.Color = Color3.fromRGB(math.random(1, 255), math.random(1, 255), math.random(1, 255))
 					end
 					clone.Parent = Parent or model
 					clone.Size = halfSize
 					clone.CFrame += block.CFrame:VectorToWorldSpace((halfSize / 2.0) * offsetVector)
-					table.insert(partTable,clone)
+					table.insert(partTable, clone)
 				end
-
-
-
-
 			end
-
-
 
 			if block.Parent and block.Parent:IsA("Model") and block.Parent:GetAttribute("VoxelHolder") then
 				if PartCacheEnabled then
-					for i,v in pairs(block:GetChildren()) do
+					for i, v in pairs(block:GetChildren()) do
 						v:Destroy()
 					end
-					for name,value in block:GetAttributes() do
-						block:SetAttribute(name,nil)
+					for name, value in block:GetAttributes() do
+						block:SetAttribute(name, nil)
 					end
 					cache:ReturnPart(block)
 					block.Parent = PartFolder
@@ -778,89 +661,75 @@ local function DivideBlock(block : Part, MinimumVoxelSize : number, Parent : Ins
 					block:Destroy()
 				end
 			else
-
-
-
 				if block:GetAttribute("Transparency") == nil then
-					block:SetAttribute("Transparency",block.Transparency)
-					block:SetAttribute("Collide",block.CanCollide)
-					block:SetAttribute("Query",block.CanQuery)
+					block:SetAttribute("Transparency", block.Transparency)
+					block:SetAttribute("Collide", block.CanCollide)
+					block:SetAttribute("Query", block.CanQuery)
 				end
-
 
 				block.Transparency = 1
 				block.CanCollide = false
 				block.CanQuery = false
-				block:SetAttribute(TagName,false)
+				block:SetAttribute(TagName, false)
 
-				for i,v in block:GetChildren() do
+				for i, v in block:GetChildren() do
 					task.spawn(function()
 						if v:IsA("SurfaceGui") then
 							local enabled = v.Enabled
 							v.Enabled = false
-							repeat rs.Heartbeat:Wait()
+							repeat
+								rs.Heartbeat:Wait()
 
 							until model:HasTag("Destroying")
 							v.Enabled = enabled
 						elseif v:IsA("Decal") then
 							local transparency = v.Transparency
 							v.Transparency = 1
-							repeat rs.Heartbeat:Wait()
+							repeat
+								rs.Heartbeat:Wait()
 
 							until model:HasTag("Destroying")
 							v.Transparency = transparency
 						elseif v:IsA("Texture") then
 							local transparency = v.Transparency
 							v.Transparency = 1
-							repeat task.wait()
+							repeat
+								task.wait()
 
 							until model:HasTag("Destroying")
-							v.Transparency = transparency					
+							v.Transparency = transparency
 						end
 					end)
 				end
 
 				task.spawn(function()
 					if TimeToReset >= 0 then
-						repeat rs.Heartbeat:Wait()
+						repeat
+							rs.Heartbeat:Wait()
 
 						until model:HasTag("Destroying")
-
-
 
 						if block:GetAttribute("Transparency") then
 							block.Transparency = block:GetAttribute("Transparency")
 						end
 						if block:GetAttribute("CanQuery") then
-							block.CanQuery =  block:GetAttribute("Query")
+							block.CanQuery = block:GetAttribute("Query")
 						end
 						if block:GetAttribute("Collide") then
 							block.CanCollide = block:GetAttribute("Collide")
 						end
 
-
-						block:SetAttribute(TagName,true)
+						block:SetAttribute(TagName, true)
 					end
 				end)
-
-
-
-
 			end
-
-
-
 		end
-
-
-
 	elseif block.Parent:GetAttribute("VoxelHolder") == nil and block:GetAttribute("Voxel") == nil then
-
 		if block:GetAttribute("Transparency") then
 			block.Transparency = block:GetAttribute("Transparency")
 		end
 		if block:GetAttribute("CanQuery") then
-			block.CanQuery =  block:GetAttribute("Query")
+			block.CanQuery = block:GetAttribute("Query")
 		end
 		if block:GetAttribute("Collide") then
 			block.CanCollide = block:GetAttribute("Collide")
@@ -869,31 +738,21 @@ local function DivideBlock(block : Part, MinimumVoxelSize : number, Parent : Ins
 		local clone
 		if PartCacheEnabled then
 			clone = cache:GetPart()
-			CopyProperties(block,clone)
+			CopyProperties(block, clone)
 		else
 			clone = block:Clone()
 		end
-		clone.Parent = block.Parent	
+		clone.Parent = block.Parent
 		if TimeToReset and TimeToReset >= 0 then
-			Destroy(clone,TimeToReset)
+			Destroy(clone, TimeToReset)
 		end
-
-
-
-
-
-
-
-
-
 
 		block.Transparency = 1
 		block.CanCollide = false
 		block.CanQuery = false
-		block:SetAttribute(TagName,false)
+		block:SetAttribute(TagName, false)
 
-
-		for i,v in block:GetChildren() do
+		for i, v in block:GetChildren() do
 			task.spawn(function()
 				if v:IsA("SurfaceGui") then
 					local enabled = v.Enabled
@@ -909,78 +768,65 @@ local function DivideBlock(block : Part, MinimumVoxelSize : number, Parent : Ins
 					local transparency = v.Transparency
 					v.Transparency = 1
 					task.wait(TimeToReset)
-					v.Transparency = transparency					
+					v.Transparency = transparency
 				end
 			end)
 		end
 
-
 		task.spawn(function()
 			task.wait(TimeToReset)
-
 
 			if block:GetAttribute("Transparency") then
 				block.Transparency = block:GetAttribute("Transparency")
 			end
 			if block:GetAttribute("CanQuery") then
-				block.CanQuery =  block:GetAttribute("Query")
+				block.CanQuery = block:GetAttribute("Query")
 			end
 			if block:GetAttribute("Collide") then
 				block.CanCollide = block:GetAttribute("Collide")
 			end
 
-			block:SetAttribute(TagName,true)
+			block:SetAttribute(TagName, true)
 		end)
-
-
-
-
-
 	end
-
-
-
 
 	return partTable --Returns resulting parts
 end
 
-local function GetTouchingParts(part : BasePart, Params : OverlapParams) --Used to get all the parts within a part.
+local function GetTouchingParts(part, Params) --Used to get all the parts within a part.
 	local results = {}
 	local touching
 	if Params then
-		touching = workspace:GetPartsInPart(part,Params)
+		touching = workspace:GetPartsInPart(part, Params)
 	else
 		touching = workspace:GetPartsInPart(part)
 	end
 
-	for i,v in pairs(touching) do
+	for i, v in pairs(touching) do
 		if v:IsA("Part") then
 			if v:GetAttribute(TagName) == true then
-				table.insert(results,v)
+				table.insert(results, v)
 			end
 		end
 	end
 	return results --Returns a table of all eligible parts touching the specified part
 end
 
-
-
 -----[ MODULE FUNCTIONS ]----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-function VoxBreaker:VoxelizePart(Part : Part, MinimumVoxelSize : number, TimeToReset : number) --Repeatedly voxelizes a part until it meets the specified voxel size
+function VoxBreaker:VoxelizePart(Part: Part, MinimumVoxelSize: number, TimeToReset: number) --Repeatedly voxelizes a part until it meets the specified voxel size
 	local minimum = MinimumVoxelSize or 2
 
-	local parts = DivideBlock(Part,minimum,nil,TimeToReset)
+	local parts = DivideBlock(Part, minimum, nil, TimeToReset)
 	repeat
-
 		for i, v in pairs(parts) do
 			if v:IsDescendantOf(workspace) then
-				local parts2 = DivideBlock(v,minimum)
-				for _, p in  pairs(parts2) do
-					table.insert(parts,p)
+				local parts2 = DivideBlock(v, minimum)
+				for _, p in pairs(parts2) do
+					table.insert(parts, p)
 				end
 			else
-				table.remove(parts,i)
+				table.remove(parts, i)
 			end
 		end
 
@@ -994,39 +840,33 @@ function VoxBreaker:VoxelizePart(Part : Part, MinimumVoxelSize : number, TimeToR
 	return parts
 end
 
-function VoxBreaker:CreateHitbox(Size : Vector3 | string, Cframe : CFrame , Shape : Enum.PartType|MeshPart , MinimumVoxelSize : number , TimeToReset : number, Params : OverlapParams) --Creates one hitbox which divides any applicable parts that are touching it. 
+function VoxBreaker:CreateHitbox(Size, Cframe, Shape, MinimumVoxelSize, TimeToReset, Params) --Creates one hitbox which divides any applicable parts that are touching it.
 	--If the TimeToReset parameter is less than 0, then the parts will not reset.
 
+	local DefaultSize = Vector3.new(1, 1, 1) -- Default Hitbox Size
 
-	local DefaultSize = Vector3.new(1,1,1) -- Default Hitbox Size
-	local DefaultShape = Enum.PartType.Block -- Default Shape of hitbox
-	local DefaultTimeToReset = 50 --Default time in seconds it takes for divided parts to reset	
+	local DefaultTimeToReset = 50 --Default time in seconds it takes for divided parts to reset
 
-
-	local size = Size or DefaultSize
-	local shape = Shape or DefaultShape
 	local minimum = MinimumVoxelSize or miniumCubeSize
 	local timetoreset = TimeToReset or DefaultTimeToReset
 
-
-
-	local partTable:{Part} = {} --Table of parts to be returned
+	local partTable: { Part } = {} --Table of parts to be returned
 
 	local part
 
 	if typeof(Shape) == "Instance" then
-		part = Shape:Clone()		
+		part = Shape:Clone()
 	else
 		part = Instance.new("Part") --Creating the hitbox
 	end
 
-	Destroy(part,0.5) --Destroys hitbox in 0.5 seconds
+	Destroy(part, 0.5) --Destroys hitbox in 0.5 seconds
 
-	part.Size = Size or DefaultSize 
-	part.CFrame = Cframe or CFrame.new(0,0,0)
+	part.Size = Size or DefaultSize
+	part.CFrame = Cframe or CFrame.new(0, 0, 0)
 	part.Anchored = true
 	part.Transparency = 0.6
-	if Shape and typeof(Shape) ~= "Instance"  then
+	if Shape and typeof(Shape) ~= "Instance" then
 		part.Shape = Shape
 	end
 	part.CanCollide = false
@@ -1034,7 +874,7 @@ function VoxBreaker:CreateHitbox(Size : Vector3 | string, Cframe : CFrame , Shap
 	part.Color = Color3.fromRGB(255, 0, 0)
 
 	if MinimumVoxelSize == "Relative" then
-		local ratio = 1/3
+		local ratio = 1 / 3
 		local largest = getLargestAxis(part)
 		minimum = largest * ratio
 	end
@@ -1044,92 +884,84 @@ function VoxBreaker:CreateHitbox(Size : Vector3 | string, Cframe : CFrame , Shap
 	end
 
 	repeat
-
-
 		local check = true
 
-
-
-
-
-		partTable = GetTouchingParts(part,Params)
+		partTable = GetTouchingParts(part, Params)
 
 		for i, v in pairs(partTable) do
-			if v:IsA("Part") and v:GetAttribute(TagName) then			
-				if math.floor(v.Size.X) > minimum or math.floor(v.Size.Y) > minimum or math.floor(v.Size.Z) > minimum then
+			if v:IsA("Part") and v:GetAttribute(TagName) then
+				if
+					math.floor(v.Size.X) > minimum
+					or math.floor(v.Size.Y) > minimum
+					or math.floor(v.Size.Z) > minimum
+				then
 					check = false
 				end
 			else
-				table.remove(partTable,i)
+				table.remove(partTable, i)
 			end
 		end
 
 		if check == false then
 			for i, v in pairs(partTable) do
 				if v:IsA("Part") and v:GetAttribute(TagName) then
-
-					DivideBlock( v , minimum , nil , timetoreset)
-
+					DivideBlock(v, minimum, nil, timetoreset)
 				end
 			end
 		end
 
 	until check == true
 
-
 	if PartCacheEnabled then
 		local mode = GetTableMode(partTable)
-		for i,v in pairs(partTable) do
+		for i, v in pairs(partTable) do
 			v.Size = mode
 		end
 	end
 
-
 	return partTable --Returns all parts touching the hitbox
-
-
-
 end
 
-function VoxBreaker.CreateMoveableHitbox(MinimumVoxelSize : number | string, TimeToReset : number, Size : Vector3, Cframe : CFrame , Shape : Enum.PartType|MeshPart, Params : OverlapParams) --Creates a hitbox that can be moved or moves along with a specified part
+function VoxBreaker.CreateMoveableHitbox(
+	MinimumVoxelSize: number | string,
+	TimeToReset: number,
+	Size: Vector3,
+	Cframe: CFrame,
+	Shape: Enum.PartType | MeshPart,
+	Params: OverlapParams
+) --Creates a hitbox that can be moved or moves along with a specified part
 	local self = {}
 
 	--If WeldTo is specified, hitbox will move with specified part
 
-	self.TouchEvent = Instance.new("BindableEvent") 
+	self.TouchEvent = Instance.new("BindableEvent")
 	self.Touched = self.TouchEvent.Event
 
+	local DefaultSize = Vector3.new(1, 1, 1) -- Default Hitbox Size
 
-	local DefaultSize = Vector3.new(1,1,1) -- Default Hitbox Size
-	local DefaultShape = Enum.PartType.Block -- Default Shape of hitbox
-	local DefaultTimeToReset = 50 --Default time in seconds it takes for divided parts to reset	
+	local DefaultTimeToReset = 50 --Default time in seconds it takes for divided parts to reset
 
-
-
-	local size = Size or DefaultSize
-	local shape = Shape or  DefaultShape
 	local minimum = MinimumVoxelSize or miniumCubeSize
 	local timetoreset = TimeToReset or DefaultTimeToReset
 
 	local part
 
 	if typeof(Shape) == "Instance" then
-		part = Shape:Clone()		
+		part = Shape:Clone()
 	else
 		part = Instance.new("Part") --Creating the hitbox
 	end
 
 	if AutoStartMoveable then
-		part:SetAttribute("Active",true)
+		part:SetAttribute("Active", true)
 	else
-		part:SetAttribute("Active",false)		
+		part:SetAttribute("Active", false)
 	end
 
 	self.Part = part
 
-
-	part.Size = Size or DefaultSize 
-	part.CFrame = Cframe or CFrame.new(0,0,0)
+	part.Size = Size or DefaultSize
+	part.CFrame = Cframe or CFrame.new(0, 0, 0)
 	part.Anchored = true
 	part.Transparency = 0.6
 	if Shape and typeof(Shape) ~= "Instance" then
@@ -1148,190 +980,172 @@ function VoxBreaker.CreateMoveableHitbox(MinimumVoxelSize : number | string, Tim
 			local lastTouching = {}
 			local connection = rs.RenderStepped:Connect(function()
 				if MinimumVoxelSize == "Relative" then
-					local ratio = 1/3
+					local ratio = 1 / 3
 					local largest = getLargestAxis(part)
 					minimum = largest * ratio
 				end
 				if part:GetAttribute("Active") == true then
-					local touching =  GetTouchingParts(part,Params)
+					local touching = GetTouchingParts(part, Params)
 					if touching[1] ~= nil then
-
-						local partTable:{Part} = {}
+						local partTable: { Part } = {}
 						repeat
-							local touching = GetTouchingParts(part,Params) --Initial check
+							local touching = GetTouchingParts(part, Params) --Initial check
 
 							local check = true
 
-
-
 							for i, v in pairs(touching) do
-
 								if v:IsA("Part") and v:GetAttribute(TagName) then
-
-									DivideBlock( v , minimum , nil , timetoreset)
-
+									DivideBlock(v, minimum, nil, timetoreset)
 								end
 							end
 
-							partTable = GetTouchingParts(part,Params)
+							partTable = GetTouchingParts(part, Params)
 
-
-							for i,v in pairs(lastTouching) do
-								if table.find(partTable,v)  then
-									table.remove(partTable,table.find(partTable,v))
+							for i, v in pairs(lastTouching) do
+								if table.find(partTable, v) then
+									table.remove(partTable, table.find(partTable, v))
 								else
-									table.remove(lastTouching,table.find(lastTouching,v))
+									table.remove(lastTouching, table.find(lastTouching, v))
 								end
 							end
 
 							for i, v in pairs(partTable) do
-								if v:IsA("Part") and v:GetAttribute(TagName) then			
-									if math.floor(v.Size.X) > minimum or math.floor(v.Size.Y) > minimum or math.floor(v.Size.Z) > minimum then
+								if v:IsA("Part") and v:GetAttribute(TagName) then
+									if
+										math.floor(v.Size.X) > minimum
+										or math.floor(v.Size.Y) > minimum
+										or math.floor(v.Size.Z) > minimum
+									then
 										check = false
 									end
 								else
-									table.remove(partTable,i)
+									table.remove(partTable, i)
 								end
 							end
 
-
 						until check == true
 
-						for i,v in partTable do
-							if table.find(lastTouching,v) == nil then
-								table.insert(lastTouching,v)
+						for i, v in partTable do
+							if table.find(lastTouching, v) == nil then
+								table.insert(lastTouching, v)
 							else
-								table.remove(partTable,table.find(partTable,v))
+								table.remove(partTable, table.find(partTable, v))
 							end
 						end
-
-
-
 
 						if #partTable >= 1 then
 							self.TouchEvent:Fire(partTable)
 						end
-
-					end					
+					end
 				end
 			end)
-			local connection2 
+			local connection2
 			connection2 = part.AttributeChanged:Connect(function(attribute)
 				if part:GetAttribute("Active") == false and part.Parent == nil then
 					connection:Disconnect()
 					connection2:Disconnect()
 				end
-			end)	
+			end)
 		else --If running on server, than a while loop is used.
 			local connection = true
 			local lastTouching = {}
 			while connection do
 				if MinimumVoxelSize == "Relative" then
-					local ratio = 1/3
+					local ratio = 1 / 3
 					local largest = getLargestAxis(part)
 					minimum = largest * ratio
 				end
 				if part:GetAttribute("Active") == true then
-					local touching =  GetTouchingParts(part,Params)
+					local touching = GetTouchingParts(part, Params)
 					if touching[1] ~= nil then
-
-						local partTable:{Part} = {}
+						local partTable: { Part } = {}
 						repeat
-							local touching = GetTouchingParts(part,Params) --Initial check
+							local touching = GetTouchingParts(part, Params) --Initial check
 
 							local check = true
 
-
-
 							for i, v in pairs(touching) do
-
 								if v:IsA("Part") and v:GetAttribute(TagName) then
-
-									DivideBlock( v , minimum , nil , timetoreset)
-
+									DivideBlock(v, minimum, nil, timetoreset)
 								end
 							end
 
-							partTable = GetTouchingParts(part,Params)
+							partTable = GetTouchingParts(part, Params)
 
-
-							for i,v in pairs(lastTouching) do
-								if table.find(partTable,v)  then
-									table.remove(partTable,table.find(partTable,v))
+							for i, v in pairs(lastTouching) do
+								if table.find(partTable, v) then
+									table.remove(partTable, table.find(partTable, v))
 								else
-									table.remove(lastTouching,table.find(lastTouching,v))
+									table.remove(lastTouching, table.find(lastTouching, v))
 								end
 							end
 
 							for i, v in pairs(partTable) do
-								if v:IsA("Part") and v:GetAttribute(TagName) then			
-									if math.floor(v.Size.X) > minimum or math.floor(v.Size.Y) > minimum or math.floor(v.Size.Z) > minimum then
+								if v:IsA("Part") and v:GetAttribute(TagName) then
+									if
+										math.floor(v.Size.X) > minimum
+										or math.floor(v.Size.Y) > minimum
+										or math.floor(v.Size.Z) > minimum
+									then
 										check = false
 									end
 								else
-									table.remove(partTable,i)
+									table.remove(partTable, i)
 								end
 							end
 
-
 						until check == true
 
-						for i,v in partTable do
-							if table.find(lastTouching,v) == nil then
-								table.insert(lastTouching,v)
+						for i, v in partTable do
+							if table.find(lastTouching, v) == nil then
+								table.insert(lastTouching, v)
 							else
-								table.remove(partTable,table.find(partTable,v))
+								table.remove(partTable, table.find(partTable, v))
 							end
 						end
-
-
-
 
 						if #partTable >= 1 then
 							self.TouchEvent:Fire(partTable)
 						end
-
 					end
 				end
 				task.wait()
 			end
-			local connection2 
+			local connection2
 			connection2 = part.AttributeChanged:Connect(function(attribute)
 				if part:GetAttribute("Active") == false and part.Parent == nil then
 					connection = false
 					connection2:Disconnect()
 				end
 			end)
-
-		end				
+		end
 	end)
 
-	return setmetatable(self,VoxBreaker)
+	return setmetatable(self, VoxBreaker)
 end
 
 function VoxBreaker:Start() -- Use to start moveable hitbox.
-	self.Part:SetAttribute("Active",true)
+	self.Part:SetAttribute("Active", true)
 end
 
 function VoxBreaker:Stop() -- Use to stop moveable hitbox
-	self.Part:SetAttribute("Active",false)
+	self.Part:SetAttribute("Active", false)
 end
 
 function VoxBreaker:Destroy() -- Use to destroy moveable hitbox
-	self.Part:SetAttribute("Active",false)
+	self.Part:SetAttribute("Active", false)
 	self.Part:Destroy()
 end
 
-function VoxBreaker:WeldTo(Part : Part) --welds the hitbox to a specified part
+function VoxBreaker:WeldTo(Part: Part) --welds the hitbox to a specified part
 	task.spawn(function()
 		if rs:IsClient() then
 			local connection = rs.RenderStepped:Connect(function()
 				if Part then
 					self.Part.CFrame = Part.CFrame
 				end
-
 			end)
-			local connection2 
+			local connection2
 			connection2 = self.Part.AttributeChanged:Connect(function(attribute)
 				if self.Part:GetAttribute("Active") == false then
 					connection:Disconnect()
@@ -1340,9 +1154,8 @@ function VoxBreaker:WeldTo(Part : Part) --welds the hitbox to a specified part
 					connection:Disconnect()
 					connection2:Disconnect()
 				end
-			end)	
+			end)
 		else
-
 			local canRun = true
 
 			local connection
@@ -1362,22 +1175,19 @@ function VoxBreaker:WeldTo(Part : Part) --welds the hitbox to a specified part
 				end
 				task.wait()
 			end
-
 		end
-
 	end)
 end
 
 function VoxBreaker:UnWeld() -- Unwelds the hitbox
-	self.Part:SetAttribute("Unweld",true)
+	self.Part:SetAttribute("Unweld", true)
 	task.spawn(function()
 		task.wait(0.1)
-		self.Part:SetAttribute("Unweld",nil)
+		self.Part:SetAttribute("Unweld", nil)
 	end)
-
 end
 
-function VoxBreaker:GetTouchingParts(part : Part) -- Returns all parts touching moveable hitbox OR specified part
+function VoxBreaker:GetTouchingParts(part) -- Returns all parts touching moveable hitbox OR specified part
 	if part then
 		return GetTouchingParts(part)
 	else
@@ -1385,20 +1195,20 @@ function VoxBreaker:GetTouchingParts(part : Part) -- Returns all parts touching 
 	end
 end
 
-function VoxBreaker:CutInHalf(Part : Part, TimeToReset : number) -- Cuts a specified part into two pieces. Include parent if you want to change the parent of the parts.
-	return CutPartinHalf(Part,TimeToReset) -- Returns halves
+function VoxBreaker:CutInHalf(Part, TimeToReset) -- Cuts a specified part into two pieces. Include parent if you want to change the parent of the parts.
+	return CutPartinHalf(Part, TimeToReset) -- Returns halves
 end
 
-function VoxBreaker:Divide(part:Part,minimumVoxelSize:number,parent:Instance,timeToReset:number) -- Divides a part down once, into four pieces. Will not divide past minimum.
-	return DivideBlock(part,minimumVoxelSize,parent,timeToReset)
+function VoxBreaker:Divide(part, minimumVoxelSize, parent, timeToReset) -- Divides a part down once, into four pieces. Will not divide past minimum.
+	return DivideBlock(part, minimumVoxelSize, parent, timeToReset)
 end
 
-function VoxBreaker:ReturnPart(Part:Part) --Returns Part to PartCache
-	if cache and table.find(cache.InUse,Part) then
-		cache:ReturnPart(Part)	
+function VoxBreaker:ReturnPart(Part) --Returns Part to PartCache
+	if cache and table.find(cache.InUse, Part) then
+		cache:ReturnPart(Part)
 	else
-		Part:Destroy()		
-	end	
+		Part:Destroy()
+	end
 end
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

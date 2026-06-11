@@ -386,9 +386,9 @@ local function DashCheck()
 
 		local dashAnim = Instance.new("Animation")
 		if currDirection == "Left" then
-			dashAnim.AnimationId = "rbxassetid://111152249832869"
+			dashAnim.AnimationId = "rbxassetid://126297608126614"
 		else
-			dashAnim.AnimationId = "rbxassetid://126902199131109"
+			dashAnim.AnimationId = "rbxassetid://126297608126614"
 		end
 
 		local AnimationTrack = Animator:LoadAnimation(dashAnim)
@@ -462,14 +462,13 @@ local function DashCheck()
 		end)
 
 		local dashAnim = Instance.new("Animation")
-		dashAnim.AnimationId = "rbxassetid://107423595546619"
+		dashAnim.AnimationId = "rbxassetid://71344244817527"
 		local AnimationTrack = Animator:LoadAnimation(dashAnim)
 		dashAnim:Destroy()
 
 		gameSettings.RotationType = Enum.RotationType.CameraRelative
 
-		local Speed = 160
-		local BackSpeed = 160
+		local Speed = 260
 
 		local DashVelocity = Instance.new("BodyVelocity")
 		DashVelocity.MaxForce = Character:HasTag("Slowed") and Vector3.new(10000, 0, 10000)
@@ -491,12 +490,7 @@ local function DashCheck()
 			if DashVelocity and DashVelocity.Parent then
 				Speed *= 0.91
 				if Speed <= 10 then
-					if BackSpeed then
-						Speed = (BackSpeed or 0) * 0.75
-						BackSpeed = nil
-					else
-						DashVelocity:Destroy()
-					end
+					DashVelocity:Destroy()
 				end
 				HumRP.CFrame = CFrame.lookAlong(HumRP.Position, Camera.CFrame.LookVector * Vector3.new(1, 0, 1))
 				DashVelocity.Velocity = -HumRP.CFrame.LookVector * Speed

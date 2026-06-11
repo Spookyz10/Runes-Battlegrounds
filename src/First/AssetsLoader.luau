@@ -85,11 +85,6 @@ function AssetsLoader:LoadAssets(Containers)
 
 			if tableCount(ToPreload) > 0 then
 				PreloadContainer[Container.Name] = ToPreload
-			else
-				warn(
-					tostring(Container) .. " already loaded!",
-					RunService:IsClient() and "On Client side." or "On Server side."
-				)
 			end
 		end
 	end
