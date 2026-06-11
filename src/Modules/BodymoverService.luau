@@ -13,10 +13,12 @@ function BMS:Knockback(Character, Data)
 
 	Data.MaxForce = Data.MaxForce or Vector3.new(math.huge, math.huge, math.huge)
 
-	ReplicatedStorage.Remotes.Replicate.Set:FireAllClients("RemoveAllBodyMovers", Character)
-	for _, BodyMover: BodyVelocity in Character:GetDescendants() do
-		if BodyMover:IsA("BodyVelocity") or BodyMover:IsA("LinearVelocity") or BodyMover:IsA("BodyPosition") then
-			BodyMover:Destroy()
+	if not Character:HasTag("Ragdolled") then
+		ReplicatedStorage.Remotes.Replicate.Set:FireAllClients("RemoveAllBodyMovers", Character)
+		for _, BodyMover: BodyVelocity in Character:GetDescendants() do
+			if BodyMover:IsA("BodyVelocity") or BodyMover:IsA("LinearVelocity") or BodyMover:IsA("BodyPosition") then
+				BodyMover:Destroy()
+			end
 		end
 	end
 

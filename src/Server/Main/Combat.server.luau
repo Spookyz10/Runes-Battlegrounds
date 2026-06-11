@@ -145,7 +145,7 @@ local function M1(Player)
 			Size, Offset = Vector3.new(7, 14, 7), CFrame.new(0, -7, -3.5)
 		elseif Params.Uppercut then
 			CurrentType = "Uppercut"
-			Size, Offset = Vector3.new(7, 14, 7), CFrame.new(0, -7, -3.5)
+			Size, Offset = Vector3.new(7, 14, 7), CFrame.new(0, -3, -3.5)
 		else
 			CurrentType = tostring(CurrentCombo)
 		end
@@ -211,6 +211,7 @@ local function M1(Player)
 					Character:SetAttribute("LastM1Hit", EnemyCharacter.Name)
 
 					if CurrentCombo >= MaxCombo then
+						RagdollHandler.ragdoll(EnemyHumanoid, 2, nil, nil, nil, nil, true)
 						if CurrentType == "Downslam" then
 							EnemyHumRP.CFrame *= CFrame.Angles(math.pi / 2, 0, 0)
 						elseif CurrentType == "Uppercut" then
@@ -232,12 +233,10 @@ local function M1(Player)
 							NewKnockback:Knockback(EnemyCharacter, {
 								KnockbackType = "Velocity",
 								MaxForce = Vector3.new(10000, 10000, 10000),
-								Velocity = HumRP.CFrame.LookVector * FinalKnockback + Vector3.new(110, 20, 110),
+								Velocity = HumRP.CFrame.LookVector * FinalKnockback + Vector3.new(0, 20, 0),
 							})
 							SvSt.Bindables.AirDetector:Fire(EnemyCharacter, nil, true, nil, 6.2)
 						end
-
-						RagdollHandler.ragdoll(EnemyHumanoid, 2, nil, nil, nil, nil, true)
 					else
 						local Velocity = HumRP.CFrame.LookVector * 13
 						NewKnockback:Knockback(Character, {
@@ -319,18 +318,6 @@ local function M1(Player)
 
 	AnimationService:stopAnimation(Character, PreviousAnimation)
 	AnimationService:playAnimation(Character, PunchAnim)
-
-	task.spawn(function()
-		local SwingSFX
-		if CurrentType == "Downslam" then
-			SwingSFX = CombatSounds.Swings.Downslam
-		else
-			SwingSFX = (
-				CombatSounds.Swings:FindFirstChild(Player:GetAttribute("Moveset")) or CombatSounds.Swings.Default
-			)[tostring(CurrentCombo)]
-		end
-		SoundsModule:PlaySound(SwingSFX, HumRP)
-	end)
 end
 
 local function Block(Player)

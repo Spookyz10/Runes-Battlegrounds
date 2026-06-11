@@ -18,7 +18,6 @@ local StunHandler = require(SvModules.StunHandler)
 local MovesetHandlerModule = require(SvModules.MovesetHandler)
 local RagdollHandler = require(SvModules.RagdollHandler)
 local CollisionsModule = require(SvModules.CollisionsModule)
-local SoundsModule = require(SvModules.SoundsModule)
 
 local DamageHandler = require(SvModules.DamageHandler)
 local AnimationService = require(SvModules.AnimationService)
@@ -32,9 +31,7 @@ local DataStore = DataService:GetDataStore("DataStore")
 
 local Assets = SvSt.Assets
 local Animations = Assets.Animations
-local Sounds = Assets.Sounds
 local CombatAnims = Animations.Combat
-local CombatSounds = Sounds.Combat
 
 local Remotes = RS.Remotes
 local ComunicatorComms = Remotes.Comunicator
@@ -277,7 +274,6 @@ local function SaveData(userId, playerClass)
 	end
 
 	local Data = playerClass or table.clone(shared.playerClasses[userId])
-	local PlayerKills = Kills[userId]
 
 	shared.playerClasses[userId] = nil
 	Kills[userId] = nil
@@ -392,7 +388,6 @@ local ComunicatorFunctions = {
 								RagdollHandler.cancelRagdoll(Humanoid, nil, false, nil, true, true)
 
 								ReplicateSet:FireAllClients("Evasive", { Char = Character })
-								SoundsModule:PlaySound(CombatSounds.Dashing.Evasive, Character.HumanoidRootPart)
 
 								Character:SetAttribute("RagdollCancel", false)
 								task.delay(30, function()
@@ -414,8 +409,6 @@ local ComunicatorFunctions = {
 					AnimationService:stopAnimation(Character, Animations.Other.Knockback)
 
 					StunHandler:Stun(Character, 1.017, true, 0, 0, true)
-					SoundsModule:PlaySound(CombatSounds.Dashing.BackDash, HumRP)
-					SoundsModule:PlaySound(CombatSounds.Dashing["Back First Woosh"], HumRP)
 
 					task.delay(0.05, function()
 						iFramesService:AddBaseiFrames(Character)
@@ -428,7 +421,6 @@ local ComunicatorFunctions = {
 						SmallDebris.Parent = Character
 
 						ReplicateSet:FireAllClients("smokeEffect", { time = 0.2, char = Character })
-						SoundsModule:PlaySound(CombatSounds.Dashing["Back Second Woosh"], HumRP)
 					end)
 
 					task.delay(0.5, function()
@@ -437,8 +429,6 @@ local ComunicatorFunctions = {
 						local SmallDebris = Jantior:Add(shared.cfolder({ Name = "SmallDebris" }, 0.4))
 						SmallDebris:AddTag("SmallDebris")
 						SmallDebris.Parent = Character
-
-						SoundsModule:PlaySound(CombatSounds.Dashing["Back Second Woosh"], HumRP)
 					end)
 
 					task.delay(1.2, function()
@@ -510,8 +500,6 @@ local ComunicatorFunctions = {
 
 					local function endDash()
 						Ended = true
-
-						SoundsModule:PlaySound(CombatSounds.Dashing.FrontDashSwing, HumRP)
 
 						Character:SetAttribute("Dashing", false)
 
@@ -588,16 +576,7 @@ local ComunicatorFunctions = {
 								true,
 								true
 							)
-							if HitInfo.Blocked == true then
-								SoundsModule:PlaySound(
-									CombatSounds.Blocking.Hits:GetChildren()[math.random(
-										1,
-										#CombatSounds.Blocking.Hits:GetChildren()
-									)],
-									EnemyHumRP
-								)
-								return
-							elseif HitInfo.Countered == true then
+							if HitInfo.Countered == true then
 								return
 							end
 
@@ -612,7 +591,6 @@ local ComunicatorFunctions = {
 								RootPart = EnemyHumRP,
 								LookVector = HumRP.CFrame.LookVector,
 							})
-							SoundsModule:PlaySound(CombatSounds.Dashing.FrontDashHit, EnemyHumRP)
 
 							if dashingForward then
 								Debris:AddItem(dashingForward, 0.1)
@@ -672,15 +650,12 @@ local ComunicatorFunctions = {
 						dashVelocity.Parent = HumRP
 						Debris:AddItem(dashVelocity, 0.85)
 
-						SoundsModule:PlaySound(Assets.Sounds.Combat.Dashing.FrontDash, HumRP)
-
 						local DetectHitbox = ReplicatedHitboxes.new(Player)
 						DetectHitbox.Size = Vector3.new(8, 8, 8)
 						DetectHitbox.Offset = CFrame.new(0, 1, -4)
 						DetectHitbox.Instance = HumRP
 						DetectHitbox.Ignore = { Character }
 						DetectHitbox.onTouch = function(EnemyCharacter)
-							local EnemyHumRP = EnemyCharacter.HumanoidRootPart
 							local EnemyHumanoid = EnemyCharacter.Humanoid
 							local Ragdolled = EnemyCharacter:HasTag("Ragdolled")
 							local inAir = EnemyCharacter:FindFirstChild("inAir")
@@ -778,7 +753,6 @@ local ComunicatorFunctions = {
 							RagdollHandler.cancelRagdoll(Humanoid, nil, false, nil, true, true)
 
 							ReplicateSet:FireAllClients("Evasive", { Char = Character })
-							SoundsModule:PlaySound(CombatSounds.Dashing.Evasive, Character.HumanoidRootPart)
 
 							Character:SetAttribute("RagdollCancel", false)
 							task.delay(30, function()
@@ -793,9 +767,6 @@ local ComunicatorFunctions = {
 				local Jantior = Trove.new()
 
 				AnimationService:stopAnimation(Character, Animations.Other.Knockback)
-
-				SoundsModule:PlaySound(CombatSounds.Dashing.SideDash, HumRP)
-				SoundsModule:PlaySound(CombatSounds.Dashing[Direction .. "Woosh"], HumRP)
 
 				if Character:GetAttribute("TpDash") then
 					Character:SetAttribute("Invisible", true)
@@ -1127,9 +1098,6 @@ function CharacterAdded(Character)
 		end
 		return
 	end
-
-	local userId = Player.UserId
-	local playerClass = shared.playerClasses[userId]
 
 	local Humanoid = Character:FindFirstChild("Humanoid") or Character:WaitForChild("Humanoid", 10)
 	local HumRP = Character:FindFirstChild("HumanoidRootPart") or Character:WaitForChild("HumanoidRootPart", 10)
