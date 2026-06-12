@@ -9,15 +9,15 @@ local HitboxHandler = require(ServerModules.HitboxHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
 local AnimationService = require(ServerModules.AnimationService)
 local iFramesService = require(ServerModules.iFramesService)
-local BodymoverService = require(ServerModules.BodymoverService)
-local RagdollHandler = require(ServerModules.RagdollHandler)
+local KnockbackModules = require(ServerModules.KnockbackModule)
+
 local ReplicatedHitboxes = require(ServerModules.ReplicatedHitboxes)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
 local DASH_SPEED = 90
-local FREEZE_TIMEOUT = 4
+local FREEZE_TIMEOUT = 1
 
 return {
 	Start = function(Player, Tool)
@@ -70,8 +70,7 @@ return {
 			local SlashCF = HumRP.CFrame
 			local HitList = { EnemyCharacter }
 
-			ReplicateSet:FireAllClients("DashSlash", { Char = Character, CFrame = SlashCF })
-			ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 3, Last = 0.3 })
+			ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 1, Last = 0.3 })
 
 			-- damage + knockback no alvo principal
 			local HitInfo =
@@ -86,13 +85,15 @@ return {
 					PushDir = HumRP.CFrame.LookVector
 				end
 
-				BodymoverService:Knockback(EnemyCharacter, {
-					KnockbackType = "Velocity",
-					MaxForce = Vector3.new(1, 1, 1) * 80000,
-					Velocity = PushDir * 50 + Vector3.new(0, 18, 0),
-				})
-
-				RagdollHandler.ragdoll(EnemyHumanoid, 2)
+				KnockbackModules:Knockback(
+					EnemyCharacter, -- Character
+					PushDir * 100 + Vector3.new(0, 18, 0), -- Velocity
+					nil, -- LookAtCharacter
+					nil, -- CustomAnimation
+					nil, -- customTime
+					nil, -- to
+					false -- ringFX = false
+				)
 
 				if EnemyPlayer then
 					ReplicateSet:FireClient(EnemyPlayer, "ShakeCamera", { Intensity = 2, Last = 0.3 })
@@ -152,13 +153,15 @@ return {
 						PushDir = HumRP.CFrame.LookVector
 					end
 
-					BodymoverService:Knockback(OtherCharacter, {
-						KnockbackType = "Velocity",
-						MaxForce = Vector3.new(1, 1, 1) * 80000,
-						Velocity = PushDir * 50 + Vector3.new(0, 18, 0),
-					})
-
-					RagdollHandler.ragdoll(OtherHumanoid, 2)
+					KnockbackModules:Knockback(
+						OtherCharacter,
+						PushDir * 100 + Vector3.new(0, 18, 0),
+						nil,
+						nil,
+						nil,
+						nil,
+						false
+					)
 
 					if OtherPlayer then
 						ReplicateSet:FireClient(OtherPlayer, "ShakeCamera", { Intensity = 2, Last = 0.3 })
@@ -220,7 +223,7 @@ return {
 				task.delay(FREEZE_TIMEOUT, function()
 					if not Hit then
 						Frozen = false
-						destroyHitbox()
+
 						UserTrack:AdjustSpeed(1)
 					end
 				end)
@@ -229,8 +232,7 @@ return {
 
 		table.insert(
 			UserEvents,
-			UserTrack:GetMarkerReachedSignal("slash"):Once(function()
-				-- slash roda quando a animação despausa após o freeze + hit
+			UserTrack:GetMarkerReachedSignal("hit"):Once(function()
 				if not Hit or not HitCharacter then
 					return
 				end

@@ -42,84 +42,83 @@ function module:Knockback(
 				{ parent = HumRP, size = 0.5, side = 2.5, t = 5, height = 5, spawnrate = 0.15, duration = tweenTime }
 			)
 		else
-			local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true)
-			AnimTrack = AnimationService:getAnimationTrack(Character, knockAnim)
+			-- local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true)
+			-- AnimTrack = AnimationService:getAnimationTrack(Character, knockAnim)
 
 			tweenTime = 0.6
-			AnimTrack:GetMarkerReachedSignal("freeze"):Once(function()
-				local inAir = Character:FindFirstChild("inAir")
-				if inAir and checkAir ~= false then
-					AnimTrack:AdjustSpeed(0)
+			-- AnimTrack:GetMarkerReachedSignal("freeze"):Once(function()
+			-- 	local inAir = Character:FindFirstChild("inAir")
+			-- 	if inAir and checkAir ~= false then
+			-- 		AnimTrack:AdjustSpeed(0)
 
-					inAir.Destroying:Once(function()
-						if AnimTrack.IsPlaying == false then
-							return
-						end
+			-- 		inAir.Destroying:Once(function()
+			-- 			if AnimTrack.IsPlaying == false then
+			-- 				return
+			-- 			end
 
-						AnimTrack:AdjustSpeed(1)
+			-- 			AnimTrack:AdjustSpeed(1)
 
-						ReplicateSet:FireAllClients("RockTrail", {
-							parent = HumRP,
-							size = 0.5,
-							side = 2.5,
-							t = 5,
-							height = 5,
-							spawnrate = 0.15,
-							duration = 0.533,
-						})
+			-- 			ReplicateSet:FireAllClients("RockTrail", {
+			-- 				parent = HumRP,
+			-- 				size = 0.5,
+			-- 				side = 2.5,
+			-- 				t = 5,
+			-- 				height = 5,
+			-- 				spawnrate = 0.15,
+			-- 				duration = 0.533,
+			-- 			})
 
-						if waitForFloor ~= false and typeof(Velocity) == "Vector3" then
-							Bodymover:Knockback(Character, {
-								KnockbackType = "VelocityTweenDown",
-								MaxForce = Vector3.new(1, 0, 1) * 100000,
-								Velocity = Velocity,
-								Time = customTime or tweenTime,
-							})
-						end
-					end)
-				else
-					ReplicateSet:FireAllClients(
-						"RockTrail",
-						{
-							parent = HumRP,
-							size = 0.5,
-							side = 2.5,
-							t = 5,
-							height = 5,
-							spawnrate = 0.15,
-							duration = 0.533,
-						}
-					)
+			-- 			if waitForFloor ~= false and typeof(Velocity) == "Vector3" then
+			-- 				Bodymover:Knockback(Character, {
+			-- 					KnockbackType = "VelocityTweenDown",
+			-- 					MaxForce = Vector3.new(1, 0, 1) * 100000,
+			-- 					Velocity = Velocity,
+			-- 					Time = customTime or tweenTime,
+			-- 				})
+			-- 			end
+			-- 		end)
+			-- 	else
+			-- 		ReplicateSet:FireAllClients("RockTrail", {
+			-- 			parent = HumRP,
+			-- 			size = 0.5,
+			-- 			side = 2.5,
+			-- 			t = 5,
+			-- 			height = 5,
+			-- 			spawnrate = 0.15,
+			-- 			duration = 0.533,
+			-- 		})
 
-					if waitForFloor ~= false then
-						Bodymover:Knockback(Character, {
-							KnockbackType = "VelocityTweenDown",
-							MaxForce = Vector3.new(1, 0, 1) * 100000,
-							Velocity = Velocity,
-							Time = customTime or tweenTime,
-						})
-					end
-				end
-			end)
+			-- 		if waitForFloor ~= false then
+			-- 			Bodymover:Knockback(Character, {
+			-- 				KnockbackType = "VelocityTweenDown",
+			-- 				MaxForce = Vector3.new(1, 0, 1) * 100000,
+			-- 				Velocity = Velocity,
+			-- 				Time = customTime or tweenTime,
+			-- 			})
+			-- 		end
+			-- 	end
+			-- end)
 
-			AnimTrack.Stopped:Once(function()
-				Character:RemoveTag("Knockbacked")
-				Character:RemoveTag("CantRotate")
+			-- AnimTrack.Stopped:Once(function()
+			-- 	Character:RemoveTag("Knockbacked")
+			-- 	Character:RemoveTag("CantRotate")
 
-				if Stun then
-					StunHandler:Unstun(Character, Stun)
-					Stun = nil
-				end
+			-- 	if Stun then
+			-- 		StunHandler:Unstun(Character, Stun)
+			-- 		Stun = nil
+			-- 	end
 
-				for _, v in HumRP:GetChildren() do
-					if v:IsA("BodyVelocity") then
-						v:Destroy()
-					end
-				end
-			end)
+			-- 	for _, v in HumRP:GetChildren() do
+			-- 		if v:IsA("BodyVelocity") then
+			-- 			v:Destroy()
+			-- 		end
+			-- 	end
+			-- end)
 		end
 
-		Bodymover:makeEnemyFaceCharacter(Character, LookAtCharacter, to)
+		if LookAtCharacter then
+			Bodymover:makeEnemyFaceCharacter(Character, LookAtCharacter, to)
+		end
 		if typeof(Velocity) == "Vector3" then
 			if waitForFloor ~= false then
 				Bodymover:Knockback(
@@ -135,8 +134,8 @@ function module:Knockback(
 				})
 			end
 		end
-		AnimationService:stopAll(Character)
-		AnimationService:playAnimation(Character, AnimTrack.Animation)
+		-- AnimationService:stopAll(Character)
+		-- AnimationService:playAnimation(Character, AnimTrack.Animation)
 
 		if not CustomAnimation and checkAir ~= false then
 			ModulesFolder.Parent.Bindables.AirDetector:Fire(Character, nil, nil, -3)

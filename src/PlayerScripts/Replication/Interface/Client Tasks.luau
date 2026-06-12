@@ -939,6 +939,7 @@ local ReplicationEffects = {
 	end,
 
 	LunarDash = function(Params)
+		print("ASD")
 		local char = Params.char
 		local HumRP = char.PrimaryPart
 		local DashSmoke = Resources.Effects.Lunar.DashSmoke:Clone()
@@ -953,8 +954,8 @@ local ReplicationEffects = {
 		ParticlesModule.Emit(DashSmoke)
 		ParticlesModule.Emit(Circle)
 
-		Debris:AddItem(DashSmoke, 3)
-		Debris:AddItem(Circle, 3)
+		Debris:AddItem(DashSmoke, 1)
+		Debris:AddItem(Circle, 1)
 	end,
 
 	createLungeVelocity = function(Params)
@@ -977,34 +978,45 @@ local ReplicationEffects = {
 		bv.P = math.huge
 		bv.Parent = HumRP
 
-		local conn
-		conn = game:GetService("RunService").Heartbeat:Connect(function()
-			if bv and bv.Parent then
-				bv.Velocity = HumRP.CFrame.LookVector * speed
-			else
-				conn:Disconnect()
-			end
-		end)
-		shared._lungeConn = conn
+		local slowdownStart = duration * 0.3
+		local startTime = tick()
+		local slowingDown = false
+		local slowStartTime = nil
 
-		local slowdownStart = duration * 0.4
-		task.delay(slowdownStart, function()
+		local conn
+		conn = game:GetService("RunService").Heartbeat:Connect(function(dt)
 			if not (bv and bv.Parent) then
+				conn:Disconnect()
 				return
 			end
 
-			-- desconecta o heartbeat pra o tween ter controle
-			if shared._lungeConn then
-				shared._lungeConn:Disconnect()
-				shared._lungeConn = nil
+			local elapsed = tick() - startTime
+
+			if elapsed >= slowdownStart and not slowingDown then
+				slowingDown = true
+				slowStartTime = tick()
 			end
 
-			local slowDuration = duration - slowdownStart
+			if slowingDown then
+				local slowElapsed = tick() - slowStartTime
+				local slowDuration = duration - slowdownStart
+				local t = math.clamp(slowElapsed / slowDuration, 0, 1)
+				-- ease out
+				local easedT = 1 - (1 - t) ^ 2
+				speed = (Params.Speed or 60) * (1 - easedT)
 
-			TS:Create(bv, TweenInfo.new(slowDuration, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
-				Velocity = Vector3.zero,
-			}):Play()
+				if speed <= 0.5 then
+					bv:Destroy()
+					conn:Disconnect()
+					shared._lungeConn = nil
+					return
+				end
+			end
+
+			bv.Velocity = HumRP.CFrame.LookVector * speed
 		end)
+
+		shared._lungeConn = conn
 	end,
 
 	deleteLungeVelocity = function(_Params)
