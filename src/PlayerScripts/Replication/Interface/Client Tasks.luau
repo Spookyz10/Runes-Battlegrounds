@@ -62,6 +62,93 @@ local ClientTasksLoadTime = tick() - ClientTasks
 local DestroyedParts = {}
 shared.DestroyedParts = DestroyedParts
 
+local dataTable = {}
+local startTime = tick()
+
+local function calculateCFrameBetweenVectors(vectorA, vectorB, axis)
+	local dotProduct = vectorA:Dot(vectorB)
+	local crossProduct = vectorA:Cross(vectorB)
+
+	if dotProduct < -0.99999 then
+		return CFrame.fromAxisAngle(axis, math.pi)
+	else
+		return CFrame.new(0, 0, 0, crossProduct.x, crossProduct.y, crossProduct.z, 1 + dotProduct)
+	end
+end
+
+local function getTouchingPartsExceptIgnored(object)
+	if not object then
+		return
+	elseif object.ClassName == "Model" then
+		return
+	else
+		local touchConnection = object.Touched:Connect(function() end)
+
+		local touchingParts = object:GetTouchingParts()
+		touchConnection:Disconnect()
+
+		local validParts = {}
+		for _, part in pairs(touchingParts) do
+			if part.Name ~= "InvisibleBorder" and part.Name ~= "InfBall" then
+				table.insert(validParts, part)
+			end
+		end
+
+		return validParts
+	end
+end
+
+local DefaultFilter = { workspace.Live, workspace.Thrown }
+
+local function performRaycast(rayData)
+	local orig = rayData.orig
+	local dir = rayData.dir
+	local raycastParams = RaycastParams.new()
+
+	raycastParams.FilterDescendantsInstances = rayData.Whitelist or rayData.Ignore or DefaultFilter
+	if rayData.Whitelist then
+		raycastParams.FilterType = Enum.RaycastFilterType.Include
+	else
+		raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+	end
+
+	if rayData.Blockcast then
+		local result = workspace:Blockcast(orig, rayData.Blockcast, dir, raycastParams)
+		if result then
+			return result.Instance, result.Position, result.Material, result.Normal
+		else
+			return
+		end
+	else
+		local result = workspace:Raycast(orig, dir, raycastParams)
+		if result then
+			return result.Instance, result.Position, result.Material, result.Normal
+		else
+			return
+		end
+	end
+end
+
+local function getRandomValue(min, max, isInteger, randomGenerator)
+	local generator = randomGenerator or RandomSeed
+
+	if not max and min then
+		max = min
+		min = 1
+	end
+
+	if not max and not min then
+		min = 0
+		max = 1
+	end
+
+	if not isInteger then
+		return generator:NextNumber(min, max)
+	else
+		return generator:NextInteger(min, max)
+	end
+end
+
 local function raycast(Origin, Direction, rayParams, isWhitelist, returnIsolated)
 	local localRayParams
 	if typeof(rayParams) == "table" then
@@ -82,6 +169,367 @@ local function raycast(Origin, Direction, rayParams, isWhitelist, returnIsolated
 	else
 		return ray.Instance, ray.Position, ray.Material, ray.Normal
 	end
+end
+
+local function cleanupThrownObjects()
+	if tick() - startTime > 300 then
+		startTime = tick()
+		local destroyedCount = 0
+
+		for _, object in pairs(workspace.Thrown:GetChildren()) do
+			if
+				object:IsA("Part")
+				and object:GetAttribute("Spawn")
+				and not table.find(dataTable, object)
+				and not object:GetAttribute("DeletionImmunity")
+				and tick() - object:GetAttribute("Spawn") > 60
+			then
+				object:Destroy()
+				destroyedCount = destroyedCount + 1
+			end
+		end
+
+		return
+	else
+		local firstEntry = rawget(dataTable, 1)
+
+		if #dataTable > 100 then
+			for _ = 101, #dataTable do
+				local excessEntry = rawget(dataTable, 101)
+				table.remove(dataTable, 101)
+
+				if excessEntry then
+					excessEntry:Destroy()
+				end
+			end
+		end
+
+		if firstEntry and not firstEntry.Parent then
+			table.remove(dataTable, 1)
+		end
+
+		if firstEntry and firstEntry.Parent then
+			table.remove(dataTable, 1)
+
+			if firstEntry.Name == "starterdeb" then
+				firstEntry.Name = "aa"
+			end
+
+			firstEntry.CollisionGroup = "NonPColDebri"
+			firstEntry:SetAttribute("Spawn", tick())
+
+			return firstEntry
+		else
+			return
+		end
+	end
+end
+
+local function debrisSpawner(config)
+	if not config.add then
+		config.add = {}
+	end
+
+	local sizeMult = config.sizemult or 1
+	local addConfig = config.add
+	local rng = Random.new(config.Seed or tick())
+
+	local function randomRange(min, max)
+		return getRandomValue(min, max, nil, rng)
+	end
+
+	if config.amount then
+		config.amount = math.floor(config.amount)
+	end
+
+	local lessDivisor = addConfig.less and 2.5 or 1
+
+	-- Spawna debris grandes (chunks)
+	local largeDebrisCount = rng:NextNumber(3, 5)
+	if config.nodebris then
+		largeDebrisCount = 0
+	end
+
+	for _ = 1, largeDebrisCount do
+		if addConfig.less then
+			break
+		end
+
+		local chunkSize = rng:NextNumber(1, 3)
+		local chunk = cleanupThrownObjects() or Instance.new("Part")
+		chunk.CollisionGroup = "NonPColDebri"
+
+		chunk.CFrame = config.cframe
+			* CFrame.Angles(
+				math.rad(rng:NextNumber(-360, 360)),
+				math.rad(rng:NextNumber(-360, 360)),
+				math.rad(rng:NextNumber(-360, 360))
+			)
+
+		chunk.Size = Vector3.new(chunkSize, chunkSize, chunkSize)
+		chunk.Color = config.ground.Color
+		chunk.CanCollide = true
+		chunk.Anchored = false
+		chunk.Material = config.ground.Material
+		chunk.Transparency = config.ground.Transparency
+		chunk:SetAttribute("CanGoThroughCamera", true)
+		chunk.Parent = workspace.Thrown
+
+		local bv = Instance.new("BodyVelocity")
+		bv.MaxForce = Vector3.new(2e9, 2e9, 2e9)
+		bv.Velocity = Vector3.new(rng:NextNumber(-25, 25), rng:NextNumber(5, 25), randomRange(-25, 25)) * 2
+		bv.Parent = chunk
+		game:GetService("Debris"):AddItem(bv, 0.15)
+
+		task.delay(3 + rng:NextNumber(0, 1), function()
+			TS:Create(chunk, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Transparency = 1,
+				Size = chunk.Size / 1.5,
+			}):Play()
+
+			task.delay(0.3, function()
+				chunk.Anchored = true
+				chunk.CanCollide = false
+				chunk.CFrame = CFrame.new(1e8, 1e8, 1e8)
+				table.insert(dataTable, chunk)
+			end)
+		end)
+	end
+
+	-- Spawna debris pequenos
+	local smallDebrisCount = rng:NextNumber(4, 7) / lessDivisor
+	if config.nodebris then
+		smallDebrisCount = 0
+	end
+
+	for _ = 1, smallDebrisCount do
+		local smallSize = rng:NextNumber(0.6, 0.8)
+		local piece = cleanupThrownObjects() or Instance.new("Part")
+		piece.CFrame = config.cframe
+
+		local alignCFrame = calculateCFrameBetweenVectors(piece.CFrame.UpVector, config.normal, Vector3.new(0, 1, 0))
+		piece.CFrame = piece.CFrame * (alignCFrame * CFrame.Angles(math.pi / 2, 0, 0))
+
+		piece.CollisionGroup = "NonPColDebri"
+		piece.Size = Vector3.new(smallSize, smallSize, smallSize)
+		piece.Color = config.ground.Color
+		piece.CanCollide = true
+		piece.Name = "SmallDebris"
+		piece.Anchored = false
+		piece.Material = config.ground.Material
+		piece.Transparency = config.ground.Transparency
+		piece:SetAttribute("CanGoThroughCamera", true)
+		piece.Parent = workspace.Thrown
+
+		local bv = Instance.new("BodyVelocity")
+		bv.MaxForce = Vector3.new(2e9, 2e9, 2e9)
+		bv.Velocity = Vector3.new(rng:NextNumber(-25, 25), rng:NextNumber(5, 25), randomRange(-25, 25)) * 2
+		bv.Parent = piece
+		game:GetService("Debris"):AddItem(bv, 0.15)
+
+		local bav = Instance.new("BodyAngularVelocity")
+		bav.Parent = piece
+		game:GetService("Debris"):AddItem(bav, 0.5)
+
+		task.delay(3 + rng:NextNumber(0, 1), function()
+			TS:Create(piece, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Transparency = 1,
+				Size = piece.Size / 1.5,
+			}):Play()
+
+			task.delay(0.3, function()
+				bav:Destroy()
+				piece.Anchored = true
+				piece.CanCollide = false
+				piece.CFrame = CFrame.new(1e8, 1e8, 1e8)
+				table.insert(dataTable, piece)
+			end)
+		end)
+	end
+
+	-- Spawna as lascas principais (em anel ao redor do impacto)
+	local spawnedPieces = {}
+	local ringInner = 5
+	local ringOuter = 7
+
+	if config.new then
+		ringInner = config.new[1]
+		ringOuter = config.new[2]
+	end
+
+	local ringRadius = (ringInner + ringOuter) / 2
+	local pieceCount = config.amount or 16
+
+	-- Monta o CFrame base alinhado com a normal da superfície
+	local baseCFrame = CFrame.new(config.cframe.p)
+	baseCFrame = baseCFrame * calculateCFrameBetweenVectors(baseCFrame.UpVector, config.normal, Vector3.new(0, 1, 0))
+	baseCFrame = baseCFrame * CFrame.Angles(0, math.rad(rng:NextNumber(-360, 360)), 0)
+
+	local offsetCFrame = baseCFrame * CFrame.Angles(0, math.rad(rng:NextNumber(-16, 16)), 0)
+
+	if ringInner ~= 5 or ringOuter ~= 7 then
+		config.Double = 2
+	end
+
+	for i = 1, pieceCount do
+		for ring = 1, config.Double or 1 do
+			local activeCFrame = (ring > 1) and offsetCFrame or baseCFrame
+			local currentRadius = (ring > 1) and ringRadius + 1 or ringRadius
+
+			local angle = (360 / pieceCount + 360 / pieceCount * i) / 57.296
+			local offsetX = currentRadius * math.sin(angle)
+			local offsetZ = currentRadius * math.cos(angle)
+
+			local spread = config.Double and 0.35 or 0.2
+			local pieceCFrame = activeCFrame * CFrame.new(offsetX, 0, offsetZ)
+			pieceCFrame = pieceCFrame + pieceCFrame.LookVector * rng:NextNumber(-spread, spread)
+
+			local slab = cleanupThrownObjects() or Instance.new("Part")
+			slab.Anchored = true
+			slab.CanCollide = false
+			slab.CanTouch = true
+			slab.Material = config.ground.Material
+			slab.Color = config.ground.Color
+			slab.CFrame = pieceCFrame * CFrame.fromEulerAnglesXYZ(0, angle, 0)
+
+			local originalCFrame = slab.CFrame
+			slab.CFrame = originalCFrame * CFrame.Angles(math.rad(-rng:NextNumber(6, 42)), 0, 0)
+
+			local slabWidth = rng:NextNumber(2, 5) * (ring > 1 and 1.8 or config.Double and 1.35 or 1)
+			slab.Size = Vector3.new(slabWidth, rng:NextNumber(1.9, 2.4), randomRange(2, 6)) * sizeMult
+
+			slab.CFrame = slab.CFrame * CFrame.new(0, -(slab.Size.Y / 3 + slab.Size.Z / 3) / 3, 0)
+			slab.Transparency = 1
+			slab.Parent = workspace.Thrown
+
+			-- Verifica colisões para decidir se a lasca fica visível
+			local savedCFrame = slab.CFrame
+			local touching = getTouchingPartsExceptIgnored(slab)
+			local touchingParts = {}
+			local differentMaterialPart = nil
+			local touchingGround = nil
+			local touchingTile = nil
+
+			for _, part in pairs(touching) do
+				if
+					not part:IsDescendantOf(workspace.Live)
+					and part.Name ~= "invis"
+					and part.Parent ~= workspace.Thrown
+				then
+					if part.Material ~= config.ground.Material then
+						differentMaterialPart = part
+					end
+					table.insert(touchingParts, part)
+				end
+
+				if part == config.ground then
+					touchingGround = config.ground
+				end
+				if part.Name == "Tile" then
+					touchingTile = true
+				end
+			end
+
+			-- Reposiciona com rotação aleatória pequena
+			slab.CFrame = savedCFrame
+				* (
+					CFrame.new(0, -3, -1.5)
+					* CFrame.Angles(
+						math.rad(rng:NextNumber(-11, 11)),
+						math.rad(rng:NextNumber(-11, 11)),
+						math.rad(rng:NextNumber(-11, 11))
+					)
+				)
+			slab.Transparency = 0
+			table.insert(spawnedPieces, slab)
+
+			-- Determina se deve esconder a lasca
+			local shouldHide = true
+			if #touchingParts ~= 0 then
+				shouldHide = config.ground:GetAttribute("Breakable") or not config.ground.Anchored
+			end
+
+			local inAngle = false
+			if config.angle then
+				local pos = originalCFrame.Position
+				inAngle = math.deg(
+					math.acos(
+						config.anglecfr.LookVector:Dot(
+							(Vector3.new(pos.X, config.anglecfr.p.Y, pos.Z) - config.anglecfr.p).unit
+						)
+					)
+				) <= config.angle
+			end
+
+			if shouldHide or inAngle then
+				slab.Transparency = 1
+			else
+				-- Adapta cor/material se estiver em contato com superfície diferente
+				if
+					differentMaterialPart
+					and (not touchingGround or touchingGround.Name ~= "Tile")
+					and (not touchingTile or config.ground.Name ~= "Tile")
+				then
+					if config.ground.Material == Enum.Material.Grass and touchingGround then
+						differentMaterialPart = workspace.Preloaded.Dirt
+					end
+					slab.Color = differentMaterialPart.Color
+					slab.Material = differentMaterialPart.Material
+				end
+				slab.Transparency = config.ground.Transparency
+			end
+
+			-- Ajusta colisão baseado na visibilidade
+			if slab.Transparency >= 1 then
+				slab.CanCollide = false
+				slab.CanTouch = false
+				slab.CanQuery = false
+			else
+				slab.CanCollide = true
+			end
+
+			-- Zera velocidade residual
+			if slab.Velocity.Magnitude > 0 then
+				slab.AssemblyLinearVelocity = Vector3.zero
+				slab.AssemblyAngularVelocity = Vector3.zero
+			end
+
+			-- Anima a lasca voltando para a posição original e depois some
+			slab:SetAttribute("OGCframe", originalCFrame)
+
+			TS:Create(slab, TweenInfo.new(rng:NextNumber(0.2, 0.3), Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				CFrame = originalCFrame,
+			}):Play()
+
+			local keepDuration = addConfig.keep
+			if not keepDuration then
+				keepDuration = rng:NextNumber(5, 7)
+			end
+
+			task.delay(keepDuration, function()
+				if addConfig.keep then
+					TS:Create(slab, TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+						CFrame = originalCFrame,
+						Size = slab.Size,
+					}):Play()
+					task.wait(2)
+				end
+
+				TS:Create(slab, TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+					CFrame = slab.CFrame * CFrame.new(0, -7, 0),
+					Size = slab.Size / 1.5,
+				}):Play()
+
+				task.wait(2)
+				slab:SetAttribute("OGCframe", nil)
+				slab.Anchored = true
+				slab.CFrame = CFrame.new(1e8, 1e8, 1e8)
+				table.insert(dataTable, slab)
+			end)
+		end
+	end
+
+	return spawnedPieces
 end
 
 local ReplicationEffects = {
@@ -487,6 +935,215 @@ local ReplicationEffects = {
 					end
 				end
 			end
+		end
+	end,
+
+	LunarDash = function(Params)
+		local char = Params.char
+		local HumRP = char.PrimaryPart
+		local DashSmoke = Resources.Effects.Lunar.DashSmoke:Clone()
+		local Circle = Resources.Effects.Lunar.Circle:Clone()
+
+		DashSmoke.Parent = char
+		Circle.Parent = char
+
+		DashSmoke.CFrame = HumRP.CFrame + Vector3.new(0, -2, -4)
+		Circle.CFrame = HumRP.CFrame + Vector3.new(0, -3, 0)
+
+		ParticlesModule.Emit(DashSmoke)
+		ParticlesModule.Emit(Circle)
+
+		Debris:AddItem(DashSmoke, 3)
+		Debris:AddItem(Circle, 3)
+	end,
+
+	createLungeVelocity = function(Params)
+		local Character = LocalPlayer.Character
+		if not Character then
+			return
+		end
+		local HumRP = Character:FindFirstChild("HumanoidRootPart")
+		if not HumRP then
+			return
+		end
+
+		local bv = Instance.new("BodyVelocity")
+		bv.Name = "LungeVelocity"
+		bv.MaxForce = Vector3.new(math.huge, 0, math.huge)
+		bv.Velocity = HumRP.CFrame.LookVector * (Params.Speed or 60)
+		bv.P = math.huge
+		bv.Parent = HumRP
+
+		local conn
+		conn = game:GetService("RunService").Heartbeat:Connect(function()
+			if bv and bv.Parent then
+				bv.Velocity = HumRP.CFrame.LookVector * (Params.Speed or 60)
+			else
+				conn:Disconnect()
+			end
+		end)
+
+		-- guarda a conexão para poder desconectar no delete
+		HumRP:SetAttribute("_lungeConn", true)
+		shared._lungeConn = conn
+	end,
+
+	deleteLungeVelocity = function(_Params)
+		if shared._lungeConn then
+			shared._lungeConn:Disconnect()
+			shared._lungeConn = nil
+		end
+
+		local Character = LocalPlayer.Character
+		if not Character then
+			return
+		end
+		local HumRP = Character:FindFirstChild("HumanoidRootPart")
+		if not HumRP then
+			return
+		end
+
+		local bv = HumRP:FindFirstChild("LungeVelocity")
+		if bv then
+			bv:Destroy()
+		end
+	end,
+
+	["Ground Crater"] = function(config)
+		-- Normaliza o ponto de origem para Vector3
+
+		if typeof(config.start) == "Instance" then
+			if config.start:IsA("Attachment") then
+				config.start = config.start.WorldPosition
+			elseif config.start:IsA("BasePart") then
+				config.start = config.start.Position
+			end
+		elseif typeof(config.start) == "Vector3" then
+		-- já é Vector3, não faz nada
+		else
+			config.start = config.start.Position
+		end
+
+		local rng = Random.new(config.Seed)
+
+		-- Raycast do ponto de origem até o destino
+		local hitPart, hitPosition, _, hitNormal = performRaycast({
+			orig = config.start,
+			dir = config["end"],
+		})
+
+		-- Toca o som no ponto de impacto, se fornecido
+		if config.Sound then
+			config.Sound.CFrame = CFrame.new(hitPosition)
+			shared.sfx(config.Sound):Play()
+		end
+
+		if not hitPart then
+			return
+		end
+
+		-- Alinha um attachment com a normal da superfície atingida
+		local surfaceAlignment =
+			calculateCFrameBetweenVectors(CFrame.new(hitPosition).UpVector, hitNormal, Vector3.new(0, 1, 0))
+
+		local attachment = Instance.new("Attachment")
+		attachment.Parent = hitPart.Anchored and hitPart or workspace.Terrain
+		attachment.WorldCFrame = CFrame.new(hitPosition) * surfaceAlignment
+
+		-- Spawna fumaça lateral e vertical
+		if not config.nosmoke then
+			local smokeCount = 8
+
+			local zJitter = rng:NextNumber(-0.001, 0.001)
+
+			-- Fumaça lateral (Smoke)
+			local smoke = game.ReplicatedStorage.Resources.Effects.Smoke:Clone()
+			smoke.Parent = attachment
+			smoke.ZOffset = smoke.ZOffset + zJitter
+			smoke.Color = ColorSequence.new(hitPart.Color)
+
+			if config.stronger then
+				shared.resizeparticle(smoke, config.stronger.size1 or 4.2)
+				local speedMult = 4.5 - (config.stronger.minus or 0)
+				smoke.Speed = NumberRange.new(smoke.Speed.Min * speedMult, smoke.Speed.Max * speedMult)
+				smoke.Lifetime = NumberRange.new(smoke.Lifetime.Min * 2, smoke.Lifetime.Max * 2)
+				smoke.RotSpeed = NumberRange.new(smoke.RotSpeed.Min * 0.35, smoke.RotSpeed.Max * 0.35)
+			else
+				shared.resizeparticle(smoke, 1.25)
+				if config.CloserCircle then
+					smoke.Speed = NumberRange.new(25, 50)
+					shared.resizeparticle(smoke, 0.7)
+					smokeCount = smokeCount / 1.5
+				end
+				if config.Closerr then
+					shared.resizeparticle(smoke, 0.55)
+					smoke.Speed = NumberRange.new(7, 25)
+				end
+			end
+
+			if not config.NoCircleSmoke then
+				smoke:Emit(smokeCount)
+			end
+
+			-- Fumaça vertical (UpSmoke)
+			local upSmokeCount = 8
+
+			local upSmoke = game.ReplicatedStorage.Resources.Effects.UpSmoke:Clone()
+			upSmoke.Parent = attachment
+			upSmoke.ZOffset = upSmoke.ZOffset + zJitter
+			upSmoke.Color = ColorSequence.new(hitPart.Color)
+
+			if config.stronger then
+				shared.resizeparticle(upSmoke, config.stronger.size2 or 4.2)
+				local speedMult = 4.5 - (config.stronger.minus or 0)
+				upSmoke.Speed = config.speed1
+					or NumberRange.new(upSmoke.Speed.Min * speedMult, upSmoke.Speed.Max * speedMult)
+				upSmoke.Lifetime = NumberRange.new(upSmoke.Lifetime.Min * 2, upSmoke.Lifetime.Max * 2)
+				upSmoke.RotSpeed = NumberRange.new(upSmoke.RotSpeed.Min * 0.35, upSmoke.RotSpeed.Max * 0.35)
+			else
+				shared.resizeparticle(upSmoke, 1.25)
+				if config.Closerr then
+					shared.resizeparticle(upSmoke, 0.3)
+					upSmokeCount = upSmokeCount / 1.5
+					upSmoke.Speed = NumberRange.new(20, 35)
+				end
+			end
+
+			shared.resizeparticle(upSmoke, 1.25)
+
+			if not config.NoUpSmoke then
+				upSmoke:Emit(upSmokeCount)
+			end
+		end
+
+		game:GetService("Debris"):AddItem(attachment, 9)
+
+		-- Materiais como areia e neve geram menos lascas
+		local isSoftGround = hitPart.Material == Enum.Material.Sand or hitPart.Material == Enum.Material.Snow
+
+		-- Spawna as lascas do chão
+		if not config.NoCrater2 then
+			local baseAmount = config.amount or (isSoftGround and 7 or 10)
+
+			debrisSpawner({
+				ground = hitPart,
+				cframe = CFrame.new(hitPosition),
+				amount = baseAmount / 1.25,
+				normal = hitNormal,
+				sand = isSoftGround or nil,
+				add = { sounds = true },
+				sizemult = config.sizemult,
+				new = {
+					5 * (config.size or 1),
+					5.5 * (config.size or 1),
+				},
+				nosound = config.nosound,
+				angle = config.angle,
+				anglecfr = config.anglecfr,
+				nodebris = config.nodebris,
+				notiles = config.notiles,
+				Seed = config.Seed,
+			})
 		end
 	end,
 }

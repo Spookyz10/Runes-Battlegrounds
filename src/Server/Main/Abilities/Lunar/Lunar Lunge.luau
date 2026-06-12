@@ -1,6 +1,5 @@
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 
 local ServerModules = ServerStorage.Modules
@@ -17,7 +16,7 @@ local ReplicatedHitboxes = require(ServerModules.ReplicatedHitboxes)
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
-local DASH_SPEED = 60
+local DASH_SPEED = 90
 local FREEZE_TIMEOUT = 0.7
 
 return {
@@ -31,23 +30,18 @@ return {
 		local Hit = false
 		local Frozen = false
 
-		local DashVelocity = Instance.new("BodyVelocity")
-		DashVelocity.MaxForce = Vector3.new(math.huge, 0, math.huge)
-		DashVelocity.Velocity = HumRP.CFrame.LookVector * DASH_SPEED
-		DashVelocity.P = math.huge
-		DashVelocity.Parent = HumRP
-
-		local DirectionLoop = RunService.Heartbeat:Connect(function()
-			if DashVelocity and DashVelocity.Parent then
-				DashVelocity.Velocity = HumRP.CFrame.LookVector * DASH_SPEED
-			end
-		end)
+		ReplicateSet:FireAllClients("LunarDash", { char = Character })
+		ReplicateSet:FireAllClients("Ground Crater", {
+			start = Character.PrimaryPart,
+			Seed = math.random(1, 2147483647),
+			["end"] = Vector3.new(0, -7, 0),
+			nosound = true,
+		})
+		ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 1, Last = 0.3 })
+		ReplicateSet:FireClient(Player, "createLungeVelocity", { Speed = DASH_SPEED })
 
 		local function destroyVelocity()
-			DirectionLoop:Disconnect()
-			if DashVelocity and DashVelocity.Parent then
-				DashVelocity:Destroy()
-			end
+			ReplicateSet:FireClient(Player, "deleteLungeVelocity", {})
 		end
 
 		local UserAnimation = MoveAnims.Lunar:FindFirstChild("Lunar Lunge")
@@ -58,6 +52,15 @@ return {
 		Hitbox.Size = Vector3.new(10, 10, 14)
 		Hitbox.Offset = CFrame.new(0, 0, -7)
 		Hitbox.Ignore = { Character }
+
+		local function destroyHitbox()
+			if Hitbox and type(Hitbox.Destroy) == "function" then
+				Hitbox:Destroy()
+			elseif Hitbox and type(Hitbox.Stop) == "function" then
+				Hitbox:Stop()
+			end
+		end
+
 		Hitbox.onTouch = function(EnemyCharacter)
 			if Hit then
 				return
@@ -81,36 +84,34 @@ return {
 			end
 
 			Hit = true
-			Hitbox:Destroy()
+			destroyHitbox()
 			destroyVelocity()
 
-			-- Se a animação estiver congelada no freeze, despausa para o soco continuar
 			if Frozen then
+				Frozen = false
 				UserTrack:AdjustSpeed(1)
 			end
 		end
 
 		Hitbox:Start()
 
-		-- Marker freeze: pausa visual enquanto aguarda hitbox detectar alguém
 		table.insert(
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("freeze"):Once(function()
+				destroyVelocity()
 				Frozen = true
 				UserTrack:AdjustSpeed(0)
 
-				-- Timeout: se ninguém for detectado, continua a animação e encerra
 				task.delay(FREEZE_TIMEOUT, function()
 					if not Hit then
 						Frozen = false
-						Hitbox:Destroy()
+						destroyHitbox()
 						UserTrack:AdjustSpeed(1)
 					end
 				end)
 			end)
 		)
 
-		-- Marker slash: a animação chegou no soco, aplica dano
 		table.insert(
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("slash"):Once(function()
@@ -124,6 +125,7 @@ return {
 				local HitList = {}
 
 				ReplicateSet:FireAllClients("DashSlash", { Char = Character, CFrame = SlashCF })
+				ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 3, Last = 0.3 })
 
 				HitboxHandler:SimpleOnce(
 					SlashCF,
@@ -194,6 +196,10 @@ return {
 			end
 
 			destroyVelocity()
+
+			if not Hit then
+				destroyHitbox()
+			end
 
 			iFramesService:RemoveAlliFrames(Character)
 			StunHandler:Unstun(Character, Stun)

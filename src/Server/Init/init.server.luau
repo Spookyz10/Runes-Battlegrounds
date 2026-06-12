@@ -8,6 +8,7 @@ local Http = game:GetService("HttpService")
 local RNS = game:GetService("RunService")
 local Debris = game:GetService("Debris")
 local CollectionService = game:GetService("CollectionService")
+local PhysicsService = game:GetService("PhysicsService")
 
 local Shared = RS.Shared.Modules
 local SvModules = SvSt.Modules
@@ -45,6 +46,14 @@ shared.playerClasses = {}
 local DefaultData = PlayerClass.defaultData
 local AnimationsTable = {}
 local Kills = {}
+
+pcall(function()
+	PhysicsService:RegisterCollisionGroup("NonPColDebri")
+end)
+pcall(function()
+	PhysicsService:RegisterCollisionGroup("Players")
+end)
+PhysicsService:CollisionGroupSetCollidable("NonPColDebri", "Players", false)
 
 for _, Animation in Assets.Animations:GetDescendants() do
 	if Animation:IsA("Animation") then
