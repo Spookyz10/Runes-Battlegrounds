@@ -20,6 +20,12 @@ local CollectionService = game:GetService("CollectionService")
 local Resources = RS:WaitForChild("Resources")
 
 local LocalPlayer = game:GetService("Players").LocalPlayer
+
+local LocalCharacter = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+LocalPlayer:GetPropertyChangedSignal("Character"):Connect(function()
+	LocalCharacter = LocalPlayer.Character
+end)
+
 local RS_Modules = RS.Shared:WaitForChild("Modules")
 
 local Utility = require(RS_Modules:WaitForChild("Utility"))
@@ -29,6 +35,8 @@ local CamShakePresets = require(RS_Modules.CamShakePresets)
 
 local BoatTween = require(RS_Modules.BoatTween)
 local VoxBreaker = require(RS_Modules.VoxBreaker)
+local Trove = require(RS_Modules.Trove)
+local MeshFlipbooks = require(RS_Modules.MeshFlipbooks)
 
 local MapRayParams = RaycastParams.new()
 MapRayParams.FilterType = Enum.RaycastFilterType.Include
@@ -532,6 +540,153 @@ local function debrisSpawner(config)
 	return spawnedPieces
 end
 
+local function PlayMesh(MeshContainer)
+	task.spawn(function()
+		local Model = MeshContainer.Model
+		local TweenInformation = MeshContainer.Info or TweenInfo.new(1, Enum.EasingStyle.Sine)
+		local StartPart = Model:FindFirstChild("Start")
+		local EndPart = Model:FindFirstChild("End")
+		local NoDelete = MeshContainer.Stay
+		local GoalCFrame = MeshContainer.Anchor
+		local GoalTransparency = MeshContainer.EndT or 1
+		local ExtraLifetime = MeshContainer.Del
+		local Skip = MeshContainer.Skip
+
+		Model.PrimaryPart = StartPart
+
+		if not Skip then
+			for _, eyes in pairs(Model:GetChildren()) do
+				if eyes:IsA("BasePart") then
+					eyes.CanCollide = false
+					eyes.Anchored = true
+				end
+			end
+		end
+
+		if GoalCFrame then
+			Model:PivotTo(GoalCFrame)
+		end
+
+		if MeshContainer.T then
+			StartPart.Transparency = MeshContainer.T
+		end
+
+		EndPart.Transparency = 1
+		Model.Parent = workspace.Thrown
+
+		local StartDecal = StartPart:FindFirstChildOfClass("Decal")
+		local StartMesh = StartPart:FindFirstChildOfClass("SpecialMesh")
+		local EndMesh = EndPart:FindFirstChildOfClass("SpecialMesh")
+		local EndDecal = EndPart:FindFirstChildOfClass("Decal")
+
+		if EndDecal and not Skip then
+			EndDecal.Transparency = 1
+		end
+
+		local Tween = nil
+
+		if ExtraLifetime then
+			TS:Create(StartPart, TweenInformation, {
+				Size = EndPart.Size,
+				CFrame = EndPart.CFrame,
+			}):Play()
+
+			task.delay(ExtraLifetime, function()
+				Tween = TS:Create(StartPart, TweenInformation, {
+					Transparency = GoalTransparency,
+				})
+
+				Tween:Play()
+
+				if StartDecal then
+					for _, Decal in pairs(StartPart:GetChildren()) do
+						if Decal:IsA("Decal") then
+							TS:Create(Decal, TweenInformation, {
+								Transparency = GoalTransparency,
+							}):Play()
+						end
+					end
+				end
+
+				if StartMesh then
+					Tween = TS:Create(StartMesh, TweenInformation, {
+						Scale = EndMesh.Scale,
+					}):Play()
+				end
+			end)
+		else
+			if StartMesh then
+				TS:Create(StartMesh, TweenInformation, {
+					Scale = EndMesh.Scale,
+				}):Play()
+			end
+
+			if StartDecal then
+				for _, randomVFX in pairs(StartPart:GetChildren()) do
+					if randomVFX:IsA("Decal") then
+						TS:Create(randomVFX, TweenInformation, {
+							Transparency = GoalTransparency,
+						}):Play()
+					end
+				end
+
+				Tween = TS:Create(StartPart, TweenInformation, {
+					Size = EndPart.Size,
+					CFrame = EndPart.CFrame,
+				})
+
+				Tween:Play()
+			else
+				Tween = TS:Create(StartPart, TweenInformation, {
+					Size = EndPart.Size,
+					Transparency = GoalTransparency,
+					CFrame = EndPart.CFrame,
+				})
+
+				Tween:Play()
+			end
+		end
+
+		if not NoDelete then
+			if ExtraLifetime then
+				task.wait(ExtraLifetime + 0.1)
+			end
+
+			Tween.Completed:Connect(function()
+				Model:Destroy()
+			end)
+		end
+	end)
+end
+
+local function QuickFX(Parameters)
+	local FX = Parameters.FX
+	local AnchorPoint = Parameters.Anchor
+	local Maid = Parameters.Maid
+
+	FX = FX:Clone()
+
+	if FX:IsA("Model") then
+		FX:PivotTo(AnchorPoint)
+	elseif FX:IsA("BasePart") then
+		FX.CFrame = AnchorPoint
+	end
+
+	if FX:IsA("Attachment") then
+		FX.Parent = AnchorPoint
+	else
+		FX.Parent = workspace.Thrown
+	end
+
+	if Maid then
+		Maid:Add(FX)
+	else
+		Debris:AddItem(FX, 30)
+	end
+
+	return FX
+end
+
 local ReplicationEffects = {
 	preloadanims = function(AnimationsList)
 		local PreloadRig = workspace:WaitForChild("Preloader")
@@ -939,11 +1094,10 @@ local ReplicationEffects = {
 	end,
 
 	LunarDash = function(Params)
-		print("ASD")
 		local char = Params.char
 		local HumRP = char.PrimaryPart
-		local DashSmoke = Resources.Effects.Lunar.DashSmoke:Clone()
-		local Circle = Resources.Effects.Lunar.Circle:Clone()
+		local DashSmoke = Resources.CharacterAssets.Lunar.DashSmoke:Clone()
+		local Circle = Resources.CharacterAssets.Lunar.Circle:Clone()
 
 		DashSmoke.Parent = char
 		Circle.Parent = char
@@ -1184,7 +1338,7 @@ local ReplicationEffects = {
 			return
 		end
 
-		local LunarEffects = Resources.Effects.Lunar
+		local LunarEffects = Resources.CharacterAssets.Lunar
 
 		local RightArm = Character:FindFirstChild("Right Arm")
 		local LeftArm = Character:FindFirstChild("Left Arm")
@@ -1228,6 +1382,508 @@ local ReplicationEffects = {
 		end
 	end,
 
+	twinfangs = function(Params)
+		local Character = Params.Char
+		local HumRP = Character.HumanoidRootPart
+		local AnimationTrack: AnimationTrack = nil
+		local AssetsFolder = Resources.Suiryu.TwinFangs
+		local Janitor = Trove.new()
+
+		for _, CurrentTrack in pairs(Character.Humanoid.Animator:GetPlayingAnimationTracks()) do
+			if CurrentTrack.Animation.AnimationId == Params.AnimationId then
+				AnimationTrack = CurrentTrack
+
+				break
+			end
+		end
+
+		local Offsets = {
+			CFrame.new(
+				-0.681274414,
+				-0.00341796875,
+				-5.6879425,
+				-0.0565820038,
+				-1.90045348E-8,
+				-0.998397946,
+				-5.32785194E-9,
+				1,
+				-1.87330862E-8,
+				0.998397946,
+				4.25936131E-9,
+				-0.0565820038
+			),
+			CFrame.new(
+				-0.681274414,
+				-0.00341796875,
+				-5.6879425,
+				-0.0565820038,
+				-1.90045348E-8,
+				-0.998397946,
+				-5.32785194E-9,
+				1,
+				-1.87330862E-8,
+				0.998397946,
+				4.25936131E-9,
+				-0.0565820038
+			),
+			CFrame.new(
+				-0.123588562,
+				-0.57019043,
+				-5.10148621,
+				-1,
+				-1.04749795E-7,
+				-1.07288361E-6,
+				-1.04749816E-7,
+				1,
+				2.30172112E-8,
+				1.07288361E-6,
+				2.30173303E-8,
+				-1
+			),
+			CFrame.new(
+				-0.520149231,
+				0.283294678,
+				-6.25305176,
+				-1,
+				-9.97793208E-8,
+				-5.96046448E-7,
+				-9.97793279E-8,
+				1,
+				2.19046328E-8,
+				5.96046448E-7,
+				2.19046932E-8,
+				-1
+			),
+			CFrame.new(
+				-0.52015686,
+				-0.740966797,
+				-5.22492218,
+				-1,
+				-8.23651618E-8,
+				-5.96046448E-7,
+				-8.23651689E-8,
+				1,
+				1.80769337E-8,
+				5.96046448E-7,
+				1.80769817E-8,
+				-1
+			),
+			CFrame.new(
+				-0.752059937,
+				-0.608215332,
+				-6.43431854,
+				-1,
+				-5.26426298E-8,
+				-5.96046448E-7,
+				-5.26426369E-8,
+				1,
+				1.15525634E-8,
+				5.96046448E-7,
+				1.15525935E-8,
+				-1
+			),
+			CFrame.new(
+				-0.752059937,
+				-0.608215332,
+				-6.43431854,
+				-1,
+				-5.26426298E-8,
+				-5.96046448E-7,
+				-5.26426369E-8,
+				1,
+				1.15525634E-8,
+				5.96046448E-7,
+				1.15525935E-8,
+				-1
+			),
+			CFrame.new(
+				-0.752059937,
+				-0.608215332,
+				-6.43431854,
+				-1,
+				-5.26426298E-8,
+				-5.96046448E-7,
+				-5.26426369E-8,
+				1,
+				1.15525634E-8,
+				5.96046448E-7,
+				1.15525935E-8,
+				-1
+			),
+			CFrame.new(
+				-0.135482788,
+				-0.372070312,
+				-5.458992,
+				-1,
+				-2.45717118E-8,
+				-5.96046448E-7,
+				-2.45717153E-8,
+				1,
+				5.39214451E-9,
+				5.96046448E-7,
+				5.39215783E-9,
+				-1
+			),
+			CFrame.new(
+				0.0779037476,
+				-1.07763672,
+				-4.82855225,
+				-1,
+				-9.72527481E-9,
+				-5.96046448E-7,
+				-9.72527658E-9,
+				1,
+				2.13410378E-9,
+				5.96046448E-7,
+				2.13410933E-9,
+				-1
+			),
+			CFrame.new(
+				0.181610107,
+				-0.127929688,
+				-5.86321259,
+				-1,
+				2.32240644E-8,
+				-5.96046448E-7,
+				2.3224068E-8,
+				1,
+				-5.09642906E-9,
+				5.96046448E-7,
+				-5.09644327E-9,
+				-1
+			),
+			CFrame.new(
+				0.181549072,
+				-0.659301758,
+				-5.72239685,
+				-1,
+				5.92318479E-8,
+				-5.96046448E-7,
+				5.92318585E-8,
+				1,
+				-1.29980577E-8,
+				5.96046448E-7,
+				-1.29980959E-8,
+				-1
+			),
+			CFrame.new(
+				0.181556702,
+				-0.467529297,
+				-5.35212708,
+				-1,
+				1.05984128E-7,
+				-5.96046448E-7,
+				1.05984135E-7,
+				1,
+				-2.32573605E-8,
+				5.96046448E-7,
+				-2.32574191E-8,
+				-1
+			),
+			CFrame.new(
+				0.181549072,
+				-0.61895752,
+				-5.49699402,
+				-1,
+				5.10067331E-8,
+				-5.96046448E-7,
+				5.10067366E-8,
+				1,
+				-1.11928955E-8,
+				5.96046448E-7,
+				-1.11929248E-8,
+				-1
+			),
+			CFrame.new(
+				0.181556702,
+				-0.293670654,
+				-5.82006073,
+				-1,
+				-1.1433837E-8,
+				-5.96046448E-7,
+				-1.14338379E-8,
+				1,
+				2.50907473E-9,
+				5.96046448E-7,
+				2.50908161E-9,
+				-1
+			),
+		}
+
+		local ClawCount = 0
+		local BodyVelocity = nil
+		local AddSpeed = nil
+
+		if not Params.second then
+			BodyVelocity = Instance.new("BodyVelocity")
+			BodyVelocity.Name = "moveme"
+			BodyVelocity.MaxForce = Vector3.new(40000, 0, 40000)
+			BodyVelocity:SetAttribute("Speed", 200)
+			BodyVelocity:SetAttribute("Goto", 5)
+			BodyVelocity:SetAttribute("End", 1)
+			BodyVelocity:SetAttribute("Fallout", 0.9)
+			Debris:AddItem(BodyVelocity, 3.2)
+
+			AddSpeed = function(Speed)
+				if Character ~= LocalCharacter then
+					return
+				end
+
+				BodyVelocity:SetAttribute("Speed", Speed or 60)
+			end
+
+			shared.clearVelocities(HumRP)
+
+			BodyVelocity.Parent = HumRP
+		end
+
+		local function createSlash(Offset, GoalColor, TweenTime, GoalVector)
+			local GoalCF = HumRP.CFrame * Offset * CFrame.new(0, 0, 0) * CFrame.Angles(0, 1.5707963267948966, 0)
+			local Flipbook = MeshFlipbooks.new("Cone", MeshFlipbooks.SlashWind0, HumRP, GoalCF, GoalVector, GoalColor)
+
+			Flipbook:Play(TweenTime)
+			Flipbook:TweenCFrame(GoalCF * CFrame.Angles(0, math.rad(76), 0), TweenInfo.new(TweenTime))
+		end
+
+		local function TripleLine()
+			local _, YOrientation = HumRP.CFrame:ToOrientation()
+			local MainCF = CFrame.new(Character.Torso.Position)
+				* CFrame.Angles(0, YOrientation, 0)
+				* CFrame.new(RandomSeed:NextNumber(-2, 2), 0, RandomSeed:NextNumber(-2, 2))
+				* CFrame.new(1, 0, -1)
+			ClawCount += 1
+			local MainCF2 = HumRP.CFrame
+				* Offsets[ClawCount]
+				* CFrame.new(RandomSeed:NextNumber(-2, 2), 0, RandomSeed:NextNumber(-2, 2))
+				* CFrame.new(1, 0, -1)
+
+			local _, YOrientation = HumRP.CFrame:ToOrientation()
+			ParticlesModule.Emit(QuickFX({
+				FX = AssetsFolder.Slashes,
+				Anchor = CFrame.new(Character.Torso.Position)
+					* CFrame.Angles(0, YOrientation, 0)
+					* CFrame.new(0, RandomSeed:NextNumber(-7, -5), RandomSeed:NextNumber(-3, 1)),
+				Maid = Janitor,
+			}))
+
+			for i = 1, 3 do
+				local MainPos = MainCF * CFrame.new(0, i, 0).Position
+				local YZSize = RandomSeed:NextNumber(0.5, 0.7) * 2
+				local LookVector = MainCF2 * CFrame.new(0, i, 0).Position
+				local ShardSphere = Janitor:Add(AssetsFolder.ShardSphere:Clone())
+				ShardSphere.CFrame = CFrame.new(MainPos, LookVector) * CFrame.Angles(0, 0, 0)
+				ShardSphere.Parent = workspace.Thrown
+				ShardSphere.Color = Color3.fromRGB(100, 87, 171)
+
+				ShardSphere.Size = Vector3.new(0.2, YZSize, YZSize)
+
+				TS:Create(ShardSphere, TweenInfo.new(0.2, Enum.EasingStyle.Sine), {
+					Size = Vector3.new((MainPos - LookVector).Magnitude * 5, 0, 0),
+				}):Play()
+				Debris:AddItem(ShardSphere, 0.2)
+			end
+		end
+
+		local function createTripleSlash(MainCF, VectorModifier, TweenTimeModifier, ExtraSlash)
+			if AddSpeed then
+				AddSpeed(65)
+			end
+
+			if not ExtraSlash then
+				local _, YOrientation = HumRP.CFrame:ToOrientation()
+
+				createTripleSlash(
+					MainCF * CFrame.new(0, 0, -0) * CFrame.Angles(math.rad((RandomSeed:NextNumber(-15, 15))), 0, 0),
+					VectorModifier * RandomSeed:NextNumber(1.5, 2),
+					TweenTimeModifier * 1.1,
+					true
+				)
+				TripleLine()
+
+				local ForwardWave = AssetsFolder.ForwardWave:Clone()
+				ForwardWave:ScaleTo(RandomSeed:NextNumber(0.15, 0.25))
+				PlayMesh({
+					Model = ForwardWave,
+					EndT = 1,
+					Anchor = HumRP.CFrame * MainCF * CFrame.Angles(0, -1.5707963267948966, 0),
+					Info = TweenInfo.new(0.07, Enum.EasingStyle.Sine),
+				})
+
+				local TestWind3 = AssetsFolder.TestWind3:Clone()
+				TestWind3:ScaleTo(RandomSeed:NextNumber(0.35, 0.45))
+				PlayMesh({
+					Model = TestWind3,
+					EndT = 1,
+					Anchor = CFrame.new(Character.Torso.Position)
+						* CFrame.Angles(0, YOrientation, 0)
+						* CFrame.new(0, 0, -4)
+						* CFrame.Angles(0, -1.5707963267948966, 0)
+						* CFrame.Angles(math.rad((math.random(0, 360))), 0, 0),
+					Info = TweenInfo.new(0.2, Enum.EasingStyle.Sine),
+				})
+
+				local TestWind3_2 = AssetsFolder.TestWind3:Clone()
+				TestWind3_2:ScaleTo(RandomSeed:NextNumber(0.35, 0.45))
+				PlayMesh({
+					Model = TestWind3_2,
+					EndT = 1,
+					Anchor = CFrame.new(Character.Torso.Position)
+						* CFrame.Angles(0, YOrientation, 0)
+						* CFrame.new(0, 0, -4)
+						* CFrame.Angles(0, -1.5707963267948966, 0)
+						* CFrame.Angles(math.rad((math.random(0, 360))), 0, 0),
+					Info = TweenInfo.new(0.7, Enum.EasingStyle.Exponential),
+				})
+
+				local Floor = AssetsFolder.Floor:Clone()
+				Floor:ScaleTo(RandomSeed:NextNumber(0.45, 0.55))
+				PlayMesh({
+					Model = Floor,
+					EndT = 1,
+					Anchor = CFrame.new(Character.Torso.Position)
+						* CFrame.Angles(0, YOrientation, 0)
+						* CFrame.new(0, -HumRP.Size.Y * 1.1, -1)
+						* CFrame.Angles(0, -1.5707963267948966, 0),
+					Info = TweenInfo.new(0.7, Enum.EasingStyle.Exponential),
+				})
+
+				local FPurp = AssetsFolder.FPurp:Clone()
+				FPurp:ScaleTo(RandomSeed:NextNumber(0.65, 0.75))
+				PlayMesh({
+					Model = FPurp,
+					EndT = 1,
+					Anchor = CFrame.new(Character.Torso.Position)
+						* CFrame.Angles(0, YOrientation, 0)
+						* CFrame.new(0, -HumRP.Size.Y * 1.1, -1)
+						* CFrame.Angles(0, -1.5707963267948966, 0),
+					Info = TweenInfo.new(0.7, Enum.EasingStyle.Exponential),
+				})
+			end
+
+			createSlash(
+				MainCF * CFrame.new(0, 0, 0.4),
+				Color3.fromRGB(223, 122, 8455),
+				0.5 * TweenTimeModifier,
+				VectorModifier * 1
+			)
+			createSlash(
+				MainCF * CFrame.new(0, 0, 0.1),
+				Color3.fromRGB(223, 122, 8455),
+				1 * TweenTimeModifier,
+				VectorModifier * 0.95
+			)
+			createSlash(MainCF, Color3.fromRGB(57, 54, 150), 1 * TweenTimeModifier, VectorModifier * 1)
+		end
+
+		local function SlashSequence(ShortWait)
+			if not AnimationTrack.IsPlaying then
+				return
+			end
+
+			createTripleSlash(
+				CFrame.new(1, 0.4, -0.5) * CFrame.Angles(3.141592653589793, 0, 1.1344640137963142),
+				Vector3.new(4, 17, 8),
+				0.2
+			)
+			createTripleSlash(
+				CFrame.new(1, 0.4, -0.5) * CFrame.Angles(3.141592653589793, 0, 1.1344640137963142),
+				Vector3.new(4, 17, 4),
+				0.15
+			)
+
+			if ShortWait then
+				task.wait(0.2)
+			else
+				task.wait(0.4)
+			end
+
+			if not AnimationTrack.IsPlaying then
+				return
+			end
+
+			createTripleSlash(
+				CFrame.new(1, 0.4, -1) * CFrame.Angles(3.141592653589793, 0, -1.1344640137963142),
+				Vector3.new(4, 17, 8),
+				0.2
+			)
+
+			task.wait(0.2)
+
+			if not AnimationTrack.IsPlaying then
+				return
+			end
+
+			createTripleSlash(
+				CFrame.new(1, 0.8, -2.5) * CFrame.Angles(3.141592653589793, 0, 2.530727415391778),
+				Vector3.new(4, 17, 8),
+				0.2
+			)
+
+			task.wait(0.2)
+
+			if not AnimationTrack.IsPlaying then
+				return
+			end
+
+			createTripleSlash(
+				CFrame.new(1, 0.4, -3) * CFrame.Angles(3.141592653589793, 0, 1.1344640137963142),
+				Vector3.new(4, 17, 8),
+				0.2
+			)
+
+			task.wait(0.2)
+
+			if not AnimationTrack.IsPlaying then
+				return
+			end
+
+			createTripleSlash(
+				CFrame.new(1, 1, -3.5) * CFrame.Angles(3.141592653589793, 0, 2.181661564992912),
+				Vector3.new(4, 17, 8),
+				0.2
+			)
+		end
+
+		SlashSequence()
+		SlashSequence(true)
+
+		task.wait(0.2)
+
+		if not AnimationTrack.IsPlaying then
+			return
+		end
+
+		createTripleSlash(
+			CFrame.new(1, 0.4, -3.5) * CFrame.Angles(3.141592653589793, 0, 1.1344640137963142),
+			Vector3.new(4, 17, 8),
+			0.2
+		)
+
+		task.wait(0.2)
+
+		if not AnimationTrack.IsPlaying then
+			return
+		end
+
+		createTripleSlash(
+			CFrame.new(1, 0.5, -3.5) * CFrame.Angles(3.141592653589793, 0, 2.181661564992912),
+			Vector3.new(4, 17, 8),
+			0.2
+		)
+
+		task.wait(0.2)
+
+		if not AnimationTrack.IsPlaying then
+			return
+		end
+
+		createTripleSlash(
+			CFrame.new(1, 0.4, -3.5) * CFrame.Angles(3.141592653589793, 0, -1.1344640137963142),
+			Vector3.new(4, 17, 8),
+			0.2
+		)
+	end,
+
 	EclipseHit = function(Params)
 		local EnemyCharacter = Params.EChar
 		if not EnemyCharacter or not EnemyCharacter.Parent then
@@ -1239,7 +1895,7 @@ local ReplicationEffects = {
 			return
 		end
 
-		local EclipseClone = Resources.Effects.Lunar.Eclipse:Clone()
+		local EclipseClone = Resources.CharacterAssets.Lunar.Eclipse:Clone()
 		EclipseClone.Name = "Eclipse_FX"
 		EclipseClone.Parent = Head
 
