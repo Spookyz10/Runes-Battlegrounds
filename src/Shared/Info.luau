@@ -121,6 +121,27 @@ return {
 			UltimateTime = 42.5,
 			UltimateName = "DRAGON'S DESCENT",
 		},
+
+		["Lunar"] = {
+			Base = {
+				"Lunar Lunge",
+				"Eclipse",
+				"Moon Cutters",
+			},
+			Ultimate = {
+				"Crater Impact",
+				"Supernova Slash",
+			},
+			Indicator = {
+				Sound = "rbxassetid://113229409180409",
+				Volume = 0.75,
+			},
+			Glow = Color3.new(0.8, 0.8, 0.8),
+			Order = 2,
+			Icon = 15124465440,
+			UltimateTime = 45,
+			UltimateName = "LUNAR RADIANCE",
+		},
 	},
 
 	Titles = {

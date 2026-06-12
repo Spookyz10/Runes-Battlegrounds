@@ -27,7 +27,7 @@ return {
 
 		local DashVelocity = Instance.new("BodyVelocity")
 		DashVelocity.MaxForce = Vector3.new(math.huge, 0, math.huge)
-		DashVelocity.Velocity = DashCFrame.LookVector * 20
+		DashVelocity.Velocity = DashCFrame.LookVector * 90
 		DashVelocity.P = math.huge
 		DashVelocity.Parent = HumRP
 

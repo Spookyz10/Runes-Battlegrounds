@@ -277,11 +277,9 @@ return {
 						v:Disconnect()
 					end
 
-					-- Libera rotação do user
 					Character:RemoveTag("CantRotate")
 					Humanoid.AutoRotate = true
 
-					-- Cleanup do inimigo caso o "final" marker não tenha disparado
 					if EnemyCharacter and EnemyCharacter.Parent then
 						if EnemyStun then
 							StunHandler:Unstun(EnemyCharacter, EnemyStun)
