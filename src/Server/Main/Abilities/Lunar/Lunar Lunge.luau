@@ -1,5 +1,6 @@
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 
 local ServerModules = ServerStorage.Modules
@@ -11,9 +12,13 @@ local AnimationService = require(ServerModules.AnimationService)
 local iFramesService = require(ServerModules.iFramesService)
 local BodymoverService = require(ServerModules.BodymoverService)
 local RagdollHandler = require(ServerModules.RagdollHandler)
+local ReplicatedHitboxes = require(ServerModules.ReplicatedHitboxes)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
+
+local DASH_SPEED = 60
+local FREEZE_TIMEOUT = 0.7
 
 return {
 	Start = function(Player, Tool)
@@ -23,120 +28,123 @@ return {
 		local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true)
 		iFramesService:AddAlliFrames(Character)
 
-		local DashCFrame = HumRP.CFrame
+		local Hit = false
+		local Frozen = false
 
 		local DashVelocity = Instance.new("BodyVelocity")
 		DashVelocity.MaxForce = Vector3.new(math.huge, 0, math.huge)
-		DashVelocity.Velocity = DashCFrame.LookVector * 90
+		DashVelocity.Velocity = HumRP.CFrame.LookVector * DASH_SPEED
 		DashVelocity.P = math.huge
 		DashVelocity.Parent = HumRP
 
-		local UserAnimation = MoveAnims.Lunar:FindFirstChild("Lunar Lunge")
-		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
-
-		local DetectedEnemy = nil
-		local DetectHitbox = nil
+		local DirectionLoop = RunService.Heartbeat:Connect(function()
+			if DashVelocity and DashVelocity.Parent then
+				DashVelocity.Velocity = HumRP.CFrame.LookVector * DASH_SPEED
+			end
+		end)
 
 		local function destroyVelocity()
+			DirectionLoop:Disconnect()
 			if DashVelocity and DashVelocity.Parent then
 				DashVelocity:Destroy()
 			end
 		end
 
-		local function unfreeze()
-			UserTrack:AdjustSpeed(1)
+		local UserAnimation = MoveAnims.Lunar:FindFirstChild("Lunar Lunge")
+		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
+
+		local Hitbox = ReplicatedHitboxes.new(Player)
+		Hitbox.Instance = HumRP
+		Hitbox.Size = Vector3.new(10, 10, 14)
+		Hitbox.Offset = CFrame.new(0, 0, -7)
+		Hitbox.Ignore = { Character }
+		Hitbox.onTouch = function(EnemyCharacter)
+			if Hit then
+				return
+			end
+
+			local EnemyHumanoid = EnemyCharacter.Humanoid
+			local Ragdolled = EnemyCharacter:HasTag("Ragdolled")
+			local inAir = EnemyCharacter:FindFirstChild("inAir")
+				or (
+					EnemyCharacter:GetAttribute("TouchedGround")
+					and tick() - EnemyCharacter:GetAttribute("TouchedGround") <= 0.25
+				)
+
+			if
+				iFramesService:HasiFrame(EnemyCharacter, Tool.Name)
+				or EnemyHumanoid.Health <= 0
+				or EnemyHumanoid:GetState() == Enum.HumanoidStateType.Dead
+				or (Ragdolled and not inAir)
+			then
+				return
+			end
+
+			Hit = true
+			Hitbox:Destroy()
+			destroyVelocity()
+
+			-- Se a animação estiver congelada no freeze, despausa para o soco continuar
+			if Frozen then
+				UserTrack:AdjustSpeed(1)
+			end
 		end
 
+		Hitbox:Start()
+
+		-- Marker freeze: pausa visual enquanto aguarda hitbox detectar alguém
 		table.insert(
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("freeze"):Once(function()
-				destroyVelocity()
+				Frozen = true
 				UserTrack:AdjustSpeed(0)
 
-				-- Hitbox de detecção contínua 360°, ligeiramente menor que a do slash
-				DetectHitbox = HitboxHandler.new()
-				DetectHitbox.Instance = HumRP
-				DetectHitbox.Size = Vector3.new(20, 20, 20)
-				DetectHitbox.Offset = CFrame.new(0, 0, 0)
-				DetectHitbox.Ignore = { Character }
-				DetectHitbox.onTouch = function(EnemyCharacter)
-					local EnemyHumanoid = EnemyCharacter.Humanoid
-					local Ragdolled = EnemyCharacter:HasTag("Ragdolled")
-					local inAir = EnemyCharacter:FindFirstChild("inAir")
-						or (
-							EnemyCharacter:GetAttribute("TouchedGround")
-							and tick() - EnemyCharacter:GetAttribute("TouchedGround") <= 0.25
-						)
-
-					if
-						iFramesService:HasiFrame(EnemyCharacter, "M1")
-						or EnemyHumanoid.Health <= 0
-						or EnemyHumanoid:GetState() == Enum.HumanoidStateType.Dead
-						or (Ragdolled and not inAir)
-					then
-						return
-					end
-
-					-- Primeiro inimigo encontrado: confirma e solta
-					if not DetectedEnemy then
-						DetectedEnemy = EnemyCharacter
-						DetectHitbox:Destroy()
-						DetectHitbox = nil
-						unfreeze()
-					end
-				end
-
-				DetectHitbox:Start()
-
-				-- Timeout de 0.7s: se ninguém foi encontrado, segue em frente normalmente
-				task.delay(0.7, function()
-					if not DetectedEnemy then
-						if DetectHitbox then
-							DetectHitbox:Destroy()
-							DetectHitbox = nil
-						end
-						unfreeze()
+				-- Timeout: se ninguém for detectado, continua a animação e encerra
+				task.delay(FREEZE_TIMEOUT, function()
+					if not Hit then
+						Frozen = false
+						Hitbox:Destroy()
+						UserTrack:AdjustSpeed(1)
 					end
 				end)
 			end)
 		)
 
-		-- ─── marker: slash ─────────────────────────────────────────────────────────
+		-- Marker slash: a animação chegou no soco, aplica dano
 		table.insert(
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("slash"):Once(function()
+				if not Hit then
+					return
+				end
+
 				destroyVelocity()
 
 				local SlashCF = HumRP.CFrame
-
-				-- VFX (reusa o evento do DashSlash; troca por um efeito lunar se tiver)
-				ReplicateSet:FireAllClients("DashSlash", { Char = Character, CFrame = SlashCF })
-				ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 3, Last = 0.3 })
-
 				local HitList = {}
+
+				ReplicateSet:FireAllClients("DashSlash", { Char = Character, CFrame = SlashCF })
 
 				HitboxHandler:SimpleOnce(
 					SlashCF,
 					Vector3.new(25, 25, 25),
 					CFrame.new(0, 0, 0),
 					{ Character },
-					"Sphere", -- 360°
+					"Sphere",
 					nil,
 					function(EnemyCharacter)
-						local EnemyPlayer = Players:GetPlayerFromCharacter(EnemyCharacter)
-						local EnemyHumanoid = EnemyCharacter.Humanoid
-						local EnemyHumRP = EnemyCharacter.HumanoidRootPart
-
 						if table.find(HitList, EnemyCharacter) then
 							return
 						end
 						if iFramesService:HasiFrame(EnemyCharacter, Tool.Name) then
 							return
 						end
-						if EnemyHumanoid.Health <= 0 then
-							return
-						end
-						if EnemyCharacter:HasTag("Ragdolled") then
+
+						local EnemyPlayer = Players:GetPlayerFromCharacter(EnemyCharacter)
+						local EnemyHumanoid = EnemyCharacter.Humanoid
+						local EnemyHumRP = EnemyCharacter.HumanoidRootPart
+
+						if EnemyHumanoid.Health <= 0 or EnemyCharacter:HasTag("Ragdolled") then
 							return
 						end
 
@@ -161,7 +169,6 @@ return {
 							return
 						end
 
-						-- Knockback radial a partir do centro do slash
 						local PushDir = (EnemyHumRP.Position - SlashCF.Position).Unit
 						PushDir = Vector3.new(PushDir.X, 0, PushDir.Z).Unit
 
@@ -181,15 +188,9 @@ return {
 			end)
 		)
 
-		-- ─── cleanup ───────────────────────────────────────────────────────────────
 		UserTrack.Stopped:Once(function()
 			for _, v in UserEvents do
 				v:Disconnect()
-			end
-
-			if DetectHitbox then
-				DetectHitbox:Destroy()
-				DetectHitbox = nil
 			end
 
 			destroyVelocity()
