@@ -1,26 +1,8 @@
---Services
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ContentProvider = game:GetService("ContentProvider")
-local RunService = game:GetService("RunService")
 
---Module
 local AssetsLoader = {}
 
---Runtime
-local function tableCount(Table)
-	local Count = 0
-
-	for _ in pairs(Table) do
-		Count = Count + 1
-	end
-
-	return Count
-end
-
-function AssetsLoader:LoadAssets(Containers)
-	tick()
-	RunService:IsStudio()
-
+function AssetsLoader:LoadAssets(Containers, onProgress)
 	local AssetClasses = {
 		"ImageLabel",
 		"ParticleEmitter",
@@ -34,6 +16,7 @@ function AssetsLoader:LoadAssets(Containers)
 
 	local SeenAssets = {}
 	local PreloadContainer = {}
+	local totalAssets = 0
 
 	for _, Container in ipairs(Containers) do
 		if #Container:GetChildren() > 0 then
@@ -43,65 +26,52 @@ function AssetsLoader:LoadAssets(Containers)
 				if table.find(AssetClasses, Desc.ClassName) then
 					local AssetID = ""
 
-					if Desc:IsA("ImageLabel") and Desc.Image and Desc.Image ~= "" then
+					if Desc:IsA("ImageLabel") and Desc.Image ~= "" then
 						AssetID = Desc.Image
 					elseif
 						(Desc:IsA("Decal") or Desc:IsA("ParticleEmitter") or Desc:IsA("Beam") or Desc:IsA("Trail"))
-						and Desc.Texture
 						and Desc.Texture ~= ""
 					then
 						AssetID = Desc.Texture
-					elseif (Desc:IsA("MeshPart") or Desc:IsA("SpecialMesh")) and Desc.MeshId and Desc.MeshId ~= "" then
+					elseif (Desc:IsA("MeshPart") or Desc:IsA("SpecialMesh")) and Desc.MeshId ~= "" then
 						AssetID = Desc.MeshId
-					elseif Desc:IsA("Sound") and Desc.SoundId and Desc.SoundId ~= "" then
+					elseif Desc:IsA("Sound") and Desc.SoundId ~= "" then
 						AssetID = Desc.SoundId
 					end
 
-					if AssetID == "" then
-						RunService:IsStudio()
-					else
-						if not SeenAssets[AssetID] then
-							local IsOk, Status = pcall(function()
-								return ContentProvider:GetAssetFetchStatus(AssetID)
-							end)
+					if AssetID ~= "" and not SeenAssets[AssetID] then
+						local ok, status = pcall(ContentProvider.GetAssetFetchStatus, ContentProvider, AssetID)
 
-							if IsOk then
-								if Status == Enum.AssetFetchStatus.None or Status == Enum.AssetFetchStatus.TimedOut then
-									table.insert(ToPreload, Desc)
-
-									RunService:IsStudio()
-								end
-							else
-								RunService:IsStudio()
-							end
-
-							SeenAssets[AssetID] = true
-						else
-							RunService:IsStudio()
+						if
+							ok and (status == Enum.AssetFetchStatus.None or status == Enum.AssetFetchStatus.TimedOut)
+						then
+							table.insert(ToPreload, Desc)
+							totalAssets += 1
 						end
+
+						SeenAssets[AssetID] = true
 					end
 				end
 			end
 
-			if tableCount(ToPreload) > 0 then
+			if #ToPreload > 0 then
 				PreloadContainer[Container.Name] = ToPreload
 			end
 		end
 	end
 
-	local function progressCallback()
-		RunService:IsStudio()
+	local loaded = 0
+
+	for _, items in pairs(PreloadContainer) do
+		ContentProvider:PreloadAsync(items, function(_, status)
+			if status ~= Enum.AssetFetchStatus.Loading then
+				loaded += 1
+				if onProgress then
+					onProgress(loaded, totalAssets)
+				end
+			end
+		end)
 	end
-
-	for name, items in pairs(PreloadContainer) do
-		tick()
-
-		ContentProvider:PreloadAsync(items, progressCallback)
-		PreloadContainer[name] = nil
-		RunService:IsStudio()
-	end
-
-	RunService:IsStudio()
 end
 
 return AssetsLoader

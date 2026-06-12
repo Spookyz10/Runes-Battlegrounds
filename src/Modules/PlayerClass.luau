@@ -4,87 +4,17 @@ playerClass.__index = playerClass
 local playerClasses = {}
 
 local defaultData = {
-	Moveset = "Lunar",
-
-	--Booleans
-	Update_2_SawLog = false,
-	DidMonthlyReset = false,
-	CompletedQuest = false,
-
-	--Emotes
-	Emotes = {
-		["1"] = "Crush",
-		["2"] = "Crush",
-		["3"] = "Crush",
-		["4"] = "Crush",
-		["5"] = "Crush",
-		["6"] = "Crush",
-		["7"] = "Crush",
-		["8"] = "Crush",
-	},
-	Emotes2 = {
-		["1"] = "Crush",
-		["2"] = "Crush",
-		["3"] = "Crush",
-		["4"] = "Crush",
-		["5"] = "Crush",
-		["6"] = "Crush",
-		["7"] = "Crush",
-		["8"] = "Crush",
-	},
-
-	--Settings
-	ButtonsInfo = {
-		Dash = {
-			ScaleX = 0,
-			OffsetX = 0,
-			ScaleY = 0,
-			OffsetY = 0,
-			SizeMultiplier = 1,
-		},
-		M1 = {
-			ScaleX = 0,
-			OffsetX = 0,
-			ScaleY = 0,
-			OffsetY = 0,
-			SizeMultiplier = 1,
-		},
-		Block = {
-			ScaleX = 0,
-			OffsetX = 0,
-			ScaleY = 0,
-			OffsetY = 0,
-			SizeMultiplier = 1,
-		},
-		Shiftlock = {
-			ScaleX = 0,
-			OffsetX = 0,
-			ScaleY = 0,
-			OffsetY = 0,
-			SizeMultiplier = 1,
-		},
-	},
-
-	--Statistics
-	KillsForEmote = 50,
-
-	--Owneds
+	Inventory = {},
 	OwnedPasses = {},
-	OwnedEmotes = {
-		"Crush",
-	},
 
-	--Configuration
-	---Booleaned Configs
-	["Auto Run"] = true,
-	["Camera Shake"] = true,
-	["Awakening Music"] = true,
-	["Shiftlock"] = false,
+	Settings = {
+		["Camera Shake"] = true,
+	},
 }
 
 playerClass.defaultData = defaultData
 
-function playerClass.new(Player: Player, PlayerData)
+function playerClass.new(Player, PlayerData)
 	if PlayerData == nil then
 		PlayerData = defaultData
 	else
@@ -107,7 +37,7 @@ function playerClass.new(Player: Player, PlayerData)
 	return PlayerData
 end
 
-function playerClass:RemoveClass(userId: number)
+function playerClass:RemoveClass(userId)
 	return table.remove(playerClasses, userId)
 end
 
