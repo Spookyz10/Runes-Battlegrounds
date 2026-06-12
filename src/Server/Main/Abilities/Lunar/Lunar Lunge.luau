@@ -17,7 +17,7 @@ local MoveAnims = ServerStorage.Assets.Animations.Moves
 local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
 local DASH_SPEED = 90
-local FREEZE_TIMEOUT = 0.7
+local FREEZE_TIMEOUT = 4
 
 return {
 	Start = function(Player, Tool)
@@ -29,6 +29,7 @@ return {
 
 		local Hit = false
 		local Frozen = false
+		local HitCharacter = nil
 
 		ReplicateSet:FireAllClients("LunarDash", { char = Character })
 		ReplicateSet:FireAllClients("Ground Crater", {
@@ -38,7 +39,7 @@ return {
 			nosound = true,
 		})
 		ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 1, Last = 0.3 })
-		ReplicateSet:FireClient(Player, "createLungeVelocity", { Speed = DASH_SPEED })
+		ReplicateSet:FireClient(Player, "createLungeVelocity", { Speed = DASH_SPEED, DashDuration = FREEZE_TIMEOUT })
 
 		local function destroyVelocity()
 			ReplicateSet:FireClient(Player, "deleteLungeVelocity", {})
@@ -59,6 +60,111 @@ return {
 			elseif Hitbox and type(Hitbox.Stop) == "function" then
 				Hitbox:Stop()
 			end
+		end
+
+		local function applyHit(EnemyCharacter)
+			local EnemyHumanoid = EnemyCharacter.Humanoid
+			local EnemyHumRP = EnemyCharacter.HumanoidRootPart
+			local EnemyPlayer = Players:GetPlayerFromCharacter(EnemyCharacter)
+
+			local SlashCF = HumRP.CFrame
+			local HitList = { EnemyCharacter }
+
+			ReplicateSet:FireAllClients("DashSlash", { Char = Character, CFrame = SlashCF })
+			ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 3, Last = 0.3 })
+
+			-- damage + knockback no alvo principal
+			local HitInfo =
+				DamageHandler:TakeDamage(Character, EnemyHumanoid, 18, 1.5, nil, true, true, true, true, true, nil, nil)
+
+			if not HitInfo.Countered and not HitInfo.Blocked then
+				local PushDir = (EnemyHumRP.Position - SlashCF.Position)
+				PushDir = Vector3.new(PushDir.X, 0, PushDir.Z)
+				if PushDir.Magnitude > 0 then
+					PushDir = PushDir.Unit
+				else
+					PushDir = HumRP.CFrame.LookVector
+				end
+
+				BodymoverService:Knockback(EnemyCharacter, {
+					KnockbackType = "Velocity",
+					MaxForce = Vector3.new(1, 1, 1) * 80000,
+					Velocity = PushDir * 50 + Vector3.new(0, 18, 0),
+				})
+
+				RagdollHandler.ragdoll(EnemyHumanoid, 2)
+
+				if EnemyPlayer then
+					ReplicateSet:FireClient(EnemyPlayer, "ShakeCamera", { Intensity = 2, Last = 0.3 })
+				end
+			end
+
+			-- splash nos demais perto
+			HitboxHandler:SimpleOnce(
+				SlashCF,
+				25,
+				CFrame.new(0, 0, 0),
+				{ Character },
+				"Sphere",
+				nil,
+				function(OtherCharacter)
+					if table.find(HitList, OtherCharacter) then
+						return
+					end
+					if iFramesService:HasiFrame(OtherCharacter, Tool.Name) then
+						return
+					end
+
+					local OtherHumanoid = OtherCharacter.Humanoid
+					local OtherHumRP = OtherCharacter.HumanoidRootPart
+					local OtherPlayer = Players:GetPlayerFromCharacter(OtherCharacter)
+
+					if OtherHumanoid.Health <= 0 or OtherCharacter:HasTag("Ragdolled") then
+						return
+					end
+
+					table.insert(HitList, OtherCharacter)
+
+					local OtherHitInfo = DamageHandler:TakeDamage(
+						Character,
+						OtherHumanoid,
+						18,
+						1.5,
+						nil,
+						true,
+						true,
+						true,
+						true,
+						true,
+						nil,
+						nil
+					)
+
+					if OtherHitInfo.Countered or OtherHitInfo.Blocked then
+						return
+					end
+
+					local PushDir = (OtherHumRP.Position - SlashCF.Position)
+					PushDir = Vector3.new(PushDir.X, 0, PushDir.Z)
+					if PushDir.Magnitude > 0 then
+						PushDir = PushDir.Unit
+					else
+						PushDir = HumRP.CFrame.LookVector
+					end
+
+					BodymoverService:Knockback(OtherCharacter, {
+						KnockbackType = "Velocity",
+						MaxForce = Vector3.new(1, 1, 1) * 80000,
+						Velocity = PushDir * 50 + Vector3.new(0, 18, 0),
+					})
+
+					RagdollHandler.ragdoll(OtherHumanoid, 2)
+
+					if OtherPlayer then
+						ReplicateSet:FireClient(OtherPlayer, "ShakeCamera", { Intensity = 2, Last = 0.3 })
+					end
+				end
+			)
 		end
 
 		Hitbox.onTouch = function(EnemyCharacter)
@@ -84,12 +190,17 @@ return {
 			end
 
 			Hit = true
+			HitCharacter = EnemyCharacter
 			destroyHitbox()
 			destroyVelocity()
 
 			if Frozen then
+				-- animação estava pausada no freeze, despausa para ir até o marker slash
 				Frozen = false
 				UserTrack:AdjustSpeed(1)
+			else
+				-- hit antes do freeze: aplica agora direto
+				applyHit(EnemyCharacter)
 			end
 		end
 
@@ -98,7 +209,11 @@ return {
 		table.insert(
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("freeze"):Once(function()
-				destroyVelocity()
+				if Hit then
+					-- já houve hit antes do freeze, nada a fazer
+					return
+				end
+
 				Frozen = true
 				UserTrack:AdjustSpeed(0)
 
@@ -115,78 +230,13 @@ return {
 		table.insert(
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("slash"):Once(function()
-				if not Hit then
+				-- slash roda quando a animação despausa após o freeze + hit
+				if not Hit or not HitCharacter then
 					return
 				end
 
 				destroyVelocity()
-
-				local SlashCF = HumRP.CFrame
-				local HitList = {}
-
-				ReplicateSet:FireAllClients("DashSlash", { Char = Character, CFrame = SlashCF })
-				ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 3, Last = 0.3 })
-
-				HitboxHandler:SimpleOnce(
-					SlashCF,
-					Vector3.new(25, 25, 25),
-					CFrame.new(0, 0, 0),
-					{ Character },
-					"Sphere",
-					nil,
-					function(EnemyCharacter)
-						if table.find(HitList, EnemyCharacter) then
-							return
-						end
-						if iFramesService:HasiFrame(EnemyCharacter, Tool.Name) then
-							return
-						end
-
-						local EnemyPlayer = Players:GetPlayerFromCharacter(EnemyCharacter)
-						local EnemyHumanoid = EnemyCharacter.Humanoid
-						local EnemyHumRP = EnemyCharacter.HumanoidRootPart
-
-						if EnemyHumanoid.Health <= 0 or EnemyCharacter:HasTag("Ragdolled") then
-							return
-						end
-
-						table.insert(HitList, EnemyCharacter)
-
-						local HitInfo = DamageHandler:TakeDamage(
-							Character,
-							EnemyHumanoid,
-							18,
-							1.5,
-							nil,
-							true,
-							true,
-							true,
-							true,
-							true,
-							nil,
-							nil
-						)
-
-						if HitInfo.Countered or HitInfo.Blocked then
-							return
-						end
-
-						local PushDir = (EnemyHumRP.Position - SlashCF.Position).Unit
-						PushDir = Vector3.new(PushDir.X, 0, PushDir.Z).Unit
-
-						BodymoverService:Knockback(EnemyCharacter, {
-							KnockbackType = "Velocity",
-							MaxForce = Vector3.new(1, 1, 1) * 80000,
-							Velocity = PushDir * 50 + Vector3.new(0, 18, 0),
-						})
-
-						RagdollHandler.ragdoll(EnemyHumanoid, 2)
-
-						if EnemyPlayer then
-							ReplicateSet:FireClient(EnemyPlayer, "ShakeCamera", { Intensity = 2, Last = 0.3 })
-						end
-					end
-				)
+				applyHit(HitCharacter)
 			end)
 		)
 

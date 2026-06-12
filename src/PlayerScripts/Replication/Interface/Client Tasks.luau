@@ -967,25 +967,44 @@ local ReplicationEffects = {
 			return
 		end
 
+		local speed = Params.Speed or 60
+		local duration = Params.DashDuration or 5
+
 		local bv = Instance.new("BodyVelocity")
 		bv.Name = "LungeVelocity"
 		bv.MaxForce = Vector3.new(math.huge, 0, math.huge)
-		bv.Velocity = HumRP.CFrame.LookVector * (Params.Speed or 60)
+		bv.Velocity = HumRP.CFrame.LookVector * speed
 		bv.P = math.huge
 		bv.Parent = HumRP
 
 		local conn
 		conn = game:GetService("RunService").Heartbeat:Connect(function()
 			if bv and bv.Parent then
-				bv.Velocity = HumRP.CFrame.LookVector * (Params.Speed or 60)
+				bv.Velocity = HumRP.CFrame.LookVector * speed
 			else
 				conn:Disconnect()
 			end
 		end)
-
-		-- guarda a conexão para poder desconectar no delete
-		HumRP:SetAttribute("_lungeConn", true)
 		shared._lungeConn = conn
+
+		local slowdownStart = duration * 0.4
+		task.delay(slowdownStart, function()
+			if not (bv and bv.Parent) then
+				return
+			end
+
+			-- desconecta o heartbeat pra o tween ter controle
+			if shared._lungeConn then
+				shared._lungeConn:Disconnect()
+				shared._lungeConn = nil
+			end
+
+			local slowDuration = duration - slowdownStart
+
+			TS:Create(bv, TweenInfo.new(slowDuration, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+				Velocity = Vector3.zero,
+			}):Play()
+		end)
 	end,
 
 	deleteLungeVelocity = function(_Params)
