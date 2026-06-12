@@ -23,17 +23,34 @@ return {
 		local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true)
 		iFramesService:AddAlliFrames(Character)
 
-		local UserAnimation = MoveAnims.Lunar:FindFirstChild("Lunar Lunge")
+		local UserAnimation = MoveAnims.Lunar:FindFirstChild("Eclipse")
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
 
-		local DetectHitbox = nil
+		local ChargeDestroyed = false
+
+		local function destroyChargeEffects()
+			if ChargeDestroyed then
+				return
+			end
+			ChargeDestroyed = true
+
+			ReplicateSet:FireAllClients("EclipseChargeDestroy", { Char = Character })
+		end
+
+		table.insert(
+			UserEvents,
+			UserTrack:GetMarkerReachedSignal("charge"):Once(function()
+				ReplicateSet:FireAllClients("EclipseCharge", { Char = Character })
+			end)
+		)
 
 		table.insert(
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("hit"):Once(function()
 				local SlashCF = HumRP.CFrame
-
 				local HitList = {}
+
+				destroyChargeEffects()
 
 				HitboxHandler:SimpleOnce(
 					SlashCF,
@@ -61,6 +78,7 @@ return {
 						end
 
 						table.insert(HitList, EnemyCharacter)
+						ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 1, Last = 0.3 })
 
 						local HitInfo = DamageHandler:TakeDamage(
 							Character,
@@ -81,7 +99,6 @@ return {
 							return
 						end
 
-						-- Knockback radial a partir do centro do slash
 						local PushDir = (EnemyHumRP.Position - SlashCF.Position).Unit
 						PushDir = Vector3.new(PushDir.X, 0, PushDir.Z).Unit
 
@@ -93,6 +110,8 @@ return {
 
 						RagdollHandler.ragdoll(EnemyHumanoid, 2)
 
+						ReplicateSet:FireAllClients("EclipseHit", { EChar = EnemyCharacter })
+
 						if EnemyPlayer then
 							ReplicateSet:FireClient(EnemyPlayer, "ShakeCamera", { Intensity = 2, Last = 0.3 })
 						end
@@ -101,16 +120,12 @@ return {
 			end)
 		)
 
-		-- ─── cleanup ───────────────────────────────────────────────────────────────
 		UserTrack.Stopped:Once(function()
 			for _, v in UserEvents do
 				v:Disconnect()
 			end
 
-			if DetectHitbox then
-				DetectHitbox:Destroy()
-				DetectHitbox = nil
-			end
+			destroyChargeEffects()
 
 			iFramesService:RemoveAlliFrames(Character)
 			StunHandler:Unstun(Character, Stun)

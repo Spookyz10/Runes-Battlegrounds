@@ -1177,6 +1177,76 @@ local ReplicationEffects = {
 			})
 		end
 	end,
+
+	EclipseCharge = function(Params)
+		local Character = Params.Char
+		if not Character or not Character.Parent then
+			return
+		end
+
+		local LunarEffects = Resources.Effects.Lunar
+
+		local RightArm = Character:FindFirstChild("Right Arm")
+		local LeftArm = Character:FindFirstChild("Left Arm")
+
+		if RightArm then
+			local SunClone = LunarEffects.EclipseSun:Clone()
+			SunClone.Name = "EclipseSun_FX"
+			SunClone.Parent = RightArm
+			SunClone.WorldCFrame = RightArm.CFrame * CFrame.new(0, -1, 0)
+		end
+
+		if LeftArm then
+			local MoonClone = LunarEffects.EclipseMoon:Clone()
+			MoonClone.Name = "EclipseMoon_FX"
+			MoonClone.Parent = LeftArm
+			MoonClone.WorldCFrame = LeftArm.CFrame * CFrame.new(0, -1, 0)
+		end
+	end,
+
+	EclipseChargeDestroy = function(Params)
+		local Character = Params.Char
+		if not Character or not Character.Parent then
+			return
+		end
+
+		local RightArm = Character:FindFirstChild("Right Arm")
+		local LeftArm = Character:FindFirstChild("Left Arm")
+
+		if RightArm then
+			local Sun = RightArm:FindFirstChild("EclipseSun_FX")
+			if Sun then
+				Sun:Destroy()
+			end
+		end
+
+		if LeftArm then
+			local Moon = LeftArm:FindFirstChild("EclipseMoon_FX")
+			if Moon then
+				Moon:Destroy()
+			end
+		end
+	end,
+
+	EclipseHit = function(Params)
+		local EnemyCharacter = Params.EChar
+		if not EnemyCharacter or not EnemyCharacter.Parent then
+			return
+		end
+
+		local Head = EnemyCharacter:FindFirstChild("Head")
+		if not Head then
+			return
+		end
+
+		local EclipseClone = Resources.Effects.Lunar.Eclipse:Clone()
+		EclipseClone.Name = "Eclipse_FX"
+		EclipseClone.Parent = Head
+
+		ParticlesModule.Emit(EclipseClone)
+
+		Debris:AddItem(EclipseClone, 3)
+	end,
 }
 
 shared.clearVelocities = function(Part: Part, Ignore: BodyVelocity?)

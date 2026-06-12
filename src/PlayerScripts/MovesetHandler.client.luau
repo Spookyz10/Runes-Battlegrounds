@@ -140,7 +140,7 @@ local function AddTool(Tool)
 		HotbarSlot:SetAttribute("Active", true)
 
 		if PreviousState ~= true and Base.SkillName.Text ~= Tool.Name then
-			Base:TweenPosition(UDim2.fromOffset(0, 125), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.5, true)
+			Base:TweenPosition(UDim2.new(0.5, 0, 0.5, 125), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.5, true)
 
 			task.wait(0.5)
 		end
@@ -153,11 +153,12 @@ local function AddTool(Tool)
 		end
 
 		Base.SkillName.Text = Tool.Name
+		Base.Icon.Image = Tool:GetAttribute("Icon") or "rbxassetid://0"
 		Base.Number.Text = Tool:GetAttribute("Index")
 
 		HotbarSlot.Visible = true
 
-		Base:TweenPosition(UDim2.fromOffset(0, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.5, true)
+		Base:TweenPosition(UDim2.new(0.5, 0, 0.5, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.5, true)
 	end
 end
 
@@ -271,12 +272,12 @@ Backpack.ChildRemoved:Connect(function(Tool: Tool)
 		if HotbarSlot then
 			local Base = HotbarSlot.Base
 
-			Base:TweenPosition(UDim2.fromOffset(0, 125), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.5, true)
+			Base:TweenPosition(UDim2.new(0.5, 0, 0.5, 125), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.5, true)
 
 			if wasReplaced == true then
 				task.delay(0.5, function()
 					Base:TweenPosition(
-						UDim2.fromOffset(0, 0),
+						UDim2.new(0.5, 0, 0.5, 0),
 						Enum.EasingDirection.Out,
 						Enum.EasingStyle.Quad,
 						0.5,
