@@ -1,7 +1,6 @@
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
-local Debris = game:GetService("Debris")
 
 local ServerModules = ServerStorage.Modules
 
@@ -13,7 +12,7 @@ local HitboxHandler = require(ServerModules.HitboxHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
 local AnimationService = require(ServerModules.AnimationService)
 local iFramesService = require(ServerModules.iFramesService)
-local BodymoverService = require(ServerModules.BodymoverService)
+local KnockbackModule = require(ServerModules.KnockbackModule)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local CollisionsModule = require(ServerModules.CollisionsModule)
 
@@ -21,6 +20,18 @@ local WeldSystem = require(ReplicatedModules.WeldSystem)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 local ReplicateSet = RemotesContainer.Replicate.Set
+
+local HIT_DAMAGE = { 8, 8, 10 }
+local FINAL_DAMAGE = 30
+local AOE_DAMAGE = 15
+
+local HIT_SIZE = Vector3.new(8, 8, 9)
+local HIT_OFFSET = CFrame.new(0, 0, -4.5)
+
+local GRAB_SIZE = Vector3.new(10, 10, 10)
+local GRAB_OFFSET = CFrame.new(0, 0, -4)
+
+local WELD_OFFSET = CFrame.new(0, 0, -3) * CFrame.Angles(0, math.pi, 0)
 
 return {
 	Start = function(Player, Tool)
@@ -31,101 +42,188 @@ return {
 		local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true)
 		iFramesService:AddAlliFrames(Character)
 
-		local StartAnimation = MoveAnims.Lunar["Moon Cutters Start"]
-		local StartTrack, StartEvents = AnimationService:getAnimationTrack(Character, StartAnimation)
+		local UserAnimation = MoveAnims.Lunar["Moon Cutters"]
+		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
 
-		local Hit = false
-		local EnemyCharacter = nil
+		local GrabbedEnemy = nil
 		local EnemyStun = nil
 		local Weld = nil
 
+		-- ────────────────────────────────────────────────
+		-- hit1 / hit2 / hit3
+		-- ────────────────────────────────────────────────
+		for i = 1, 3 do
+			local markerName = "hit" .. i
+			table.insert(
+				UserEvents,
+				UserTrack:GetMarkerReachedSignal(markerName):Once(function()
+					local localHitList = {}
+
+					HitboxHandler:SimpleOnce(
+						HumRP,
+						HIT_SIZE,
+						HIT_OFFSET,
+						{ Character },
+						nil,
+						nil,
+						function(EnemyCharacter)
+							if table.find(localHitList, EnemyCharacter) then
+								return
+							end
+
+							local EnemyHumanoid = EnemyCharacter.Humanoid
+							if iFramesService:HasiFrame(EnemyCharacter, Tool.Name) then
+								return
+							end
+							if EnemyHumanoid.Health <= 0 or EnemyHumanoid:GetState() == Enum.HumanoidStateType.Dead then
+								return
+							end
+							if EnemyCharacter:HasTag("Ragdolled") then
+								return
+							end
+
+							table.insert(localHitList, EnemyCharacter)
+
+							local HitInfo = DamageHandler:TakeDamage(
+								Character,
+								EnemyHumanoid,
+								HIT_DAMAGE[i] or 8,
+								nil,
+								nil,
+								true,
+								true,
+								true,
+								true,
+								false,
+								nil,
+								nil
+							)
+
+							if HitInfo.Countered or HitInfo.Blocked then
+								return
+							end
+
+							local EnemyPlayer = Players:GetPlayerFromCharacter(EnemyCharacter)
+							if EnemyPlayer then
+								ReplicateSet:FireClient(EnemyPlayer, "ShakeCamera", { Intensity = 1.5 })
+							end
+
+							ReplicateSet:FireAllClients("MoonCuttersHit", {
+								Index = i,
+								Char = Character,
+							})
+						end
+					)
+				end)
+			)
+		end
+
+		-- ────────────────────────────────────────────────
+		-- finalstart — pega o inimigo mais próximo e welda
+		-- ────────────────────────────────────────────────
 		table.insert(
-			StartEvents,
-			StartTrack:GetMarkerReachedSignal("grab"):Once(function()
-				HitboxHandler:SimpleOnce(
-					HumRP,
-					Vector3.new(8, 10, 8),
-					CFrame.new(0, 0, -4),
-					{ Character },
-					nil,
-					nil,
-					function(HitCharacter)
-						local EnemyPlayer = Players:GetPlayerFromCharacter(HitCharacter)
-						local EnemyHumanoid = HitCharacter.Humanoid
-						local EnemyHumRP = HitCharacter.HumanoidRootPart
+			UserEvents,
+			UserTrack:GetMarkerReachedSignal("finalstart"):Once(function()
+				local overlapParams = OverlapParams.new()
+				overlapParams.FilterType = Enum.RaycastFilterType.Include
+				overlapParams.FilterDescendantsInstances = { workspace.Live }
 
-						if
-							Hit
-							or iFramesService:HasiFrame(HitCharacter, Tool.Name)
-							or EnemyHumanoid.Health <= 0
-							or EnemyHumanoid:GetState() == Enum.HumanoidStateType.Dead
-						then
-							return
-						end
+				local parts = workspace:GetPartBoundsInBox(HumRP.CFrame * GRAB_OFFSET, GRAB_SIZE, overlapParams)
 
-						local HitInfo = DamageHandler:TakeDamage(
-							Character,
-							EnemyHumanoid,
-							4,
-							nil,
-							nil,
-							true,
-							true,
-							true,
-							false,
-							false,
-							nil,
-							nil
-						)
+				local closestEnemy = nil
+				local closestDist = math.huge
 
-						if HitInfo.Countered or HitInfo.Blocked then
-							return
-						end
-
-						Hit = true
-						EnemyCharacter = HitCharacter
-
-						if EnemyCharacter:HasTag("Ragdolled") then
-							RagdollHandler.cancelRagdoll(EnemyHumanoid, nil, false, nil, nil, true)
-						end
-
-						EnemyStun = StunHandler:Stun(EnemyCharacter, nil, true, 0, 0, true)
-						EnemyCharacter:AddTag("CantRotate")
-
-						iFramesService:AddAlliFrames(EnemyCharacter)
-						CollisionsModule:SetCollisionGroup(EnemyCharacter, "GrabbedPlayers")
-						CollisionsModule:SetCollisionGroup(Character, "GrabbedPlayers")
-
-						Weld =
-							WeldSystem.new(HumRP, EnemyHumRP, CFrame.new(0, 0, -3) * CFrame.Angles(0, math.pi, 0), -1)
-						Weld:Start(nil, EnemyPlayer, Player)
-
-						AnimationService:stopAll(EnemyCharacter)
-						AnimationService:playAnimation(EnemyCharacter, MoveAnims.Lunar["Moon Cutters Victim Hold"])
-
-						ReplicateSet:FireAllClients("MoonCutters", {
-							Stage = "Grab",
-							Char = Character,
-							EChar = EnemyCharacter,
-						})
-
-						if EnemyPlayer then
-							ReplicateSet:FireClient(EnemyPlayer, "ShakeCamera", { Intensity = 3 })
-						end
+				for _, part in parts do
+					local char = part.Parent
+					if not char or char == Character then
+						continue
 					end
-				)
-			end)
-		)
+					local hum = char:FindFirstChild("Humanoid")
+					local hrp = char:FindFirstChild("HumanoidRootPart")
+					if not hum or not hrp then
+						continue
+					end
+					if hum.Health <= 0 or hum:GetState() == Enum.HumanoidStateType.Dead then
+						continue
+					end
+					if char:HasTag("Ragdolled") then
+						continue
+					end
+					if iFramesService:HasiFrame(char, Tool.Name) then
+						continue
+					end
+					local dist = (hrp.Position - HumRP.Position).Magnitude
+					if dist < closestDist then
+						closestDist = dist
+						closestEnemy = char
+					end
+				end
 
-		table.insert(
-			StartEvents,
-			StartTrack:GetMarkerReachedSignal("launch"):Once(function()
-				if not Hit or not EnemyCharacter or not EnemyCharacter.Parent then
+				if not closestEnemy then
 					return
 				end
 
-				local EnemyHumRP = EnemyCharacter.HumanoidRootPart
+				GrabbedEnemy = closestEnemy
+				local EnemyHumanoid = GrabbedEnemy.Humanoid
+				local EnemyHumRP = GrabbedEnemy.HumanoidRootPart
+				local EnemyPlayer = Players:GetPlayerFromCharacter(GrabbedEnemy)
 
+				-- initial grab damage
+				DamageHandler:TakeDamage(
+					Character,
+					EnemyHumanoid,
+					4,
+					nil,
+					nil,
+					true,
+					true,
+					true,
+					false,
+					false,
+					nil,
+					nil
+				)
+
+				if EnemyHumanoid.Health <= 0 then
+					GrabbedEnemy = nil
+					return
+				end
+
+				if GrabbedEnemy:HasTag("Ragdolled") then
+					RagdollHandler.cancelRagdoll(EnemyHumanoid, nil, false, nil, nil, true)
+				end
+
+				EnemyStun = StunHandler:Stun(GrabbedEnemy, nil, true, 0, 0, true)
+				GrabbedEnemy:AddTag("CantRotate")
+
+				iFramesService:AddAlliFrames(GrabbedEnemy)
+				CollisionsModule:SetCollisionGroup(GrabbedEnemy, "GrabbedPlayers")
+				CollisionsModule:SetCollisionGroup(Character, "GrabbedPlayers")
+
+				AnimationService:stopAll(GrabbedEnemy)
+
+				Weld = WeldSystem.new(HumRP, EnemyHumRP, WELD_OFFSET, -1)
+				Weld:Start(nil, EnemyPlayer, Player)
+
+				if EnemyPlayer then
+					ReplicateSet:FireClient(EnemyPlayer, "ShakeCamera", { Intensity = 3 })
+				end
+				ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 2 })
+
+				ReplicateSet:FireAllClients("MoonCuttersFinalStart", {
+					Char = Character,
+					EChar = GrabbedEnemy,
+				})
+			end)
+		)
+
+		-- ────────────────────────────────────────────────
+		-- finalend — socão + AOE
+		-- ────────────────────────────────────────────────
+		table.insert(
+			UserEvents,
+			UserTrack:GetMarkerReachedSignal("finalend"):Once(function()
+				-- destrói weld antes do voo
 				if Weld then
 					pcall(function()
 						Weld:Stop()
@@ -133,105 +231,80 @@ return {
 					Weld = nil
 				end
 
-				Character:AddTag("CantRotate")
-				Humanoid.AutoRotate = false
+				local slammedEnemy = GrabbedEnemy
+				GrabbedEnemy = nil
 
-				local LaunchDirection = HumRP.CFrame.LookVector
+				-- ── dano + knockback absurdo no alvo principal ──
+				if slammedEnemy and slammedEnemy.Parent then
+					local EnemyHumanoid = slammedEnemy.Humanoid
+					local EnemyHumRP = slammedEnemy.HumanoidRootPart
+					local EnemyPlayer = Players:GetPlayerFromCharacter(slammedEnemy)
 
-				EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
-
-				BodymoverService:Knockback(EnemyCharacter, {
-					KnockbackType = "VelocityTweenDown",
-					MaxForce = Vector3.new(math.huge, math.huge, math.huge),
-					Velocity = LaunchDirection * 65 + Vector3.new(0, 30, 0),
-					Time = 1.8,
-					Style = "Sine",
-					Direction = "Out",
-				})
-
-				AnimationService:stopAll(EnemyCharacter)
-				AnimationService:playAnimation(EnemyCharacter, MoveAnims.Lunar["Moon Cutters Victim Air"])
-
-				ReplicateSet:FireAllClients("MoonCutters", {
-					Stage = "Launch",
-					Char = Character,
-					EChar = EnemyCharacter,
-					Direction = LaunchDirection,
-				})
-
-				-- Inicia sequência de moon cutters com a animação do user
-				local UserAnimation = MoveAnims.Lunar["Moon Cutters User"]
-				local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
-
-				local CutterDamages = { 8, 8, 10 }
-
-				local function fireCutter(index)
-					if not EnemyCharacter or not EnemyCharacter.Parent then
-						return
+					if EnemyStun then
+						StunHandler:Unstun(slammedEnemy, EnemyStun)
+						EnemyStun = nil
 					end
+					slammedEnemy:RemoveTag("CantRotate")
+					iFramesService:RemoveAlliFrames(slammedEnemy)
+					CollisionsModule:SetCollisionGroup(slammedEnemy, "Players")
 
-					local EnemyHum = EnemyCharacter.Humanoid
-					if EnemyHum.Health <= 0 then
-						return
-					end
+					EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
 
 					DamageHandler:TakeDamage(
 						Character,
-						EnemyHum,
-						CutterDamages[index] or 8,
+						EnemyHumanoid,
+						FINAL_DAMAGE,
 						nil,
 						nil,
 						false,
 						false,
 						true,
 						true,
-						false,
+						true,
 						nil,
 						nil
 					)
 
-					ReplicateSet:FireAllClients("MoonCutters", {
-						Stage = "Cutter",
-						Index = index,
-						Char = Character,
-						EChar = EnemyCharacter,
-						UserHumRP = HumRP,
-					})
-
-					local EnemyPlr = Players:GetPlayerFromCharacter(EnemyCharacter)
-					if EnemyPlr then
-						ReplicateSet:FireClient(EnemyPlr, "ShakeCamera", { Intensity = 2 })
-					end
-					ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 1.5 })
-				end
-
-				for i = 1, 3 do
-					local markerName = "cutter" .. tostring(i)
-					table.insert(
-						UserEvents,
-						UserTrack:GetMarkerReachedSignal(markerName):Once(function()
-							fireCutter(i)
-						end)
+					KnockbackModule:Knockback(
+						slammedEnemy,
+						HumRP.CFrame.LookVector * 220 + Vector3.new(0, 80, 0),
+						nil,
+						nil,
+						nil,
+						nil,
+						false
 					)
+
+					RagdollHandler.ragdoll(EnemyHumanoid, 3)
+
+					if EnemyPlayer then
+						ReplicateSet:FireClient(EnemyPlayer, "ShakeCamera", { Intensity = 10, Last = 0.6 })
+					end
 				end
 
-				table.insert(
-					UserEvents,
-					UserTrack:GetMarkerReachedSignal("final"):Once(function()
-						if not EnemyCharacter or not EnemyCharacter.Parent then
+				-- ── AOE em geral na área (exceto o alvo principal e o próprio user) ──
+				local aoeIgnore = slammedEnemy and { Character, slammedEnemy } or { Character }
+
+				HitboxHandler:SimpleOnce(
+					HumRP,
+					Vector3.new(22, 18, 22),
+					CFrame.new(0, 0, -6),
+					aoeIgnore,
+					nil,
+					nil,
+					function(OtherCharacter)
+						local OtherHumanoid = OtherCharacter.Humanoid
+						if OtherHumanoid.Health <= 0 or OtherCharacter:HasTag("Ragdolled") then
+							return
+						end
+						if iFramesService:HasiFrame(OtherCharacter, Tool.Name) then
 							return
 						end
 
-						local EnemyHum = EnemyCharacter.Humanoid
-						local EnemyHumRP2 = EnemyCharacter.HumanoidRootPart
-						local EnemyPlr = Players:GetPlayerFromCharacter(EnemyCharacter)
-
-						EnemyHumRP2.AssemblyLinearVelocity = Vector3.zero
-
 						DamageHandler:TakeDamage(
 							Character,
-							EnemyHum,
-							14,
+							OtherHumanoid,
+							AOE_DAMAGE,
 							nil,
 							nil,
 							false,
@@ -243,65 +316,49 @@ return {
 							nil
 						)
 
-						BodymoverService:Knockback(EnemyCharacter, {
-							KnockbackType = "Velocity",
-							MaxForce = Vector3.new(math.huge, math.huge, math.huge),
-							Velocity = HumRP.CFrame.LookVector * 80 + Vector3.new(0, 25, 0),
-						})
-
-						RagdollHandler.ragdoll(EnemyHum, 2.5)
-
-						if EnemyStun then
-							StunHandler:Unstun(EnemyCharacter, EnemyStun)
-							EnemyStun = nil
+						local OtherHumRP = OtherCharacter.HumanoidRootPart
+						local pushDir = (OtherHumRP.Position - HumRP.Position)
+						pushDir = Vector3.new(pushDir.X, 0, pushDir.Z)
+						if pushDir.Magnitude > 0 then
+							pushDir = pushDir.Unit
+						else
+							pushDir = HumRP.CFrame.LookVector
 						end
-						EnemyCharacter:RemoveTag("CantRotate")
-						iFramesService:RemoveAlliFrames(EnemyCharacter)
-						CollisionsModule:SetCollisionGroup(EnemyCharacter, "Players")
 
-						ReplicateSet:FireAllClients("MoonCutters", {
-							Stage = "Final",
-							Char = Character,
-							EChar = EnemyCharacter,
-						})
+						RagdollHandler.ragdoll(OtherHumanoid, 2)
 
-						if EnemyPlr then
-							ReplicateSet:FireClient(EnemyPlr, "ShakeCamera", { Intensity = 7 })
+						KnockbackModule:Knockback(
+							OtherCharacter,
+							pushDir * 1000 + Vector3.new(0, 45, 0),
+							nil,
+							nil,
+							nil,
+							nil,
+							false
+						)
+
+						local OtherPlayer = Players:GetPlayerFromCharacter(OtherCharacter)
+						if OtherPlayer then
+							ReplicateSet:FireClient(OtherPlayer, "ShakeCamera", { Intensity = 7, Last = 0.35 })
 						end
-						ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 5 })
-					end)
+					end
 				)
 
-				UserTrack.Stopped:Once(function()
-					for _, v in UserEvents do
-						v:Disconnect()
-					end
+				ReplicateSet:FireAllClients("MoonCuttersFinalEnd", {
+					Char = Character,
+					EChar = slammedEnemy,
+				})
 
-					Character:RemoveTag("CantRotate")
-					Humanoid.AutoRotate = true
-
-					if EnemyCharacter and EnemyCharacter.Parent then
-						if EnemyStun then
-							StunHandler:Unstun(EnemyCharacter, EnemyStun)
-							EnemyStun = nil
-						end
-						EnemyCharacter:RemoveTag("CantRotate")
-						iFramesService:RemoveAlliFrames(EnemyCharacter)
-						CollisionsModule:SetCollisionGroup(EnemyCharacter, "Players")
-					end
-
-					iFramesService:RemoveAlliFrames(Character)
-					CollisionsModule:SetCollisionGroup(Character, "Players")
-					StunHandler:Unstun(Character, Stun)
-				end)
-
-				AnimationService:stopAll(Character)
-				AnimationService:playAnimation(Character, UserAnimation)
+				ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 8, Last = 0.5 })
+				CollisionsModule:SetCollisionGroup(Character, "Players")
 			end)
 		)
 
-		StartTrack.Stopped:Once(function()
-			for _, v in StartEvents do
+		-- ────────────────────────────────────────────────
+		-- cleanup geral ao parar a animação
+		-- ────────────────────────────────────────────────
+		UserTrack.Stopped:Once(function()
+			for _, v in UserEvents do
 				v:Disconnect()
 			end
 
@@ -312,16 +369,23 @@ return {
 				Weld = nil
 			end
 
-			if not Hit then
-				Character:RemoveTag("CantRotate")
-				Humanoid.AutoRotate = true
-				iFramesService:RemoveAlliFrames(Character)
-				CollisionsModule:SetCollisionGroup(Character, "Players")
-				StunHandler:Unstun(Character, Stun)
+			if GrabbedEnemy and GrabbedEnemy.Parent then
+				if EnemyStun then
+					StunHandler:Unstun(GrabbedEnemy, EnemyStun)
+					EnemyStun = nil
+				end
+				GrabbedEnemy:RemoveTag("CantRotate")
+				iFramesService:RemoveAlliFrames(GrabbedEnemy)
+				CollisionsModule:SetCollisionGroup(GrabbedEnemy, "Players")
+				GrabbedEnemy = nil
 			end
+
+			iFramesService:RemoveAlliFrames(Character)
+			CollisionsModule:SetCollisionGroup(Character, "Players")
+			StunHandler:Unstun(Character, Stun)
 		end)
 
 		AnimationService:stopAll(Character)
-		AnimationService:playAnimation(Character, StartAnimation)
+		AnimationService:playAnimation(Character, UserAnimation)
 	end,
 }
