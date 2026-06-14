@@ -7,27 +7,21 @@ local ServerModules = ServerStorage.Modules
 local StunHandler = require(ServerModules.StunHandler)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
-local AnimationService = require(ServerModules.AnimationService)
 local iFramesService = require(ServerModules.iFramesService)
-local KnockbackModule = require(ServerModules.KnockbackModule)
-
-local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
+local PerfectKnockback = require(ServerModules.PerfectKnockback)
 
 local PILLAR_SEARCH_RADIUS = 60
 local PILLAR_DAMAGE = 35
 local PILLAR_STUN = 1.5
 
-local EMPOWERED_DAMAGE = 18
-local EMPOWERED_KNOCKBACK = 40
-local EMPOWERED_KNOCKUP = 30
+local EMPOWERED_DAMAGE = 22
 local EMPOWERED_STUN = 0.35
 
 local INFERNO_DURATION = 3
 
-local function applyInferno(Character, EnemyCharacter)
+local function applyInferno(EnemyCharacter)
 	local existing = EnemyCharacter:GetAttribute("Inferno")
 	EnemyCharacter:SetAttribute("Inferno", true)
-
 	if existing then
 		return
 	end
@@ -39,20 +33,16 @@ local function applyInferno(Character, EnemyCharacter)
 
 	task.spawn(function()
 		while EnemyCharacter and EnemyCharacter.Parent and EnemyCharacter:GetAttribute("Inferno") do
-			local elapsed = tick() - tickStart
-			if elapsed >= duration then
+			if tick() - tickStart >= duration then
 				break
 			end
-
 			local Hum = EnemyCharacter:FindFirstChild("Humanoid")
 			if not Hum or Hum.Health <= 0 then
 				break
 			end
-
 			Hum:TakeDamage(dotDamage)
 			task.wait(dotInterval)
 		end
-
 		if EnemyCharacter and EnemyCharacter.Parent then
 			EnemyCharacter:SetAttribute("Inferno", nil)
 		end
@@ -65,77 +55,10 @@ local function applyInferno(Character, EnemyCharacter)
 	end)
 end
 
-local function handleEmpoweredHit(Character, EnemyCharacter, Tool)
-	local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
-	local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
-	local EnemyPlayer = Players:GetPlayerFromCharacter(EnemyCharacter)
-
-	if not EnemyHumanoid or not EnemyHumRP then
-		return
-	end
-	if EnemyHumanoid.Health <= 0 or EnemyCharacter:HasTag("Ragdolled") then
-		return
-	end
-	if iFramesService:HasiFrame(EnemyCharacter, Tool.Name) then
-		return
-	end
-
-	local HumRP = Character:FindFirstChild("HumanoidRootPart")
-	if not HumRP then
-		return
-	end
-
-	local HitInfo = DamageHandler:TakeDamage(
-		Character,
-		EnemyHumanoid,
-		EMPOWERED_DAMAGE,
-		EMPOWERED_STUN,
-		nil,
-		true,
-		true,
-		true,
-		true,
-		false,
-		"M1",
-		nil
-	)
-
-	if HitInfo.Countered or HitInfo.Blocked then
-		return
-	end
-
-	EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
-
-	local pushDir = HumRP.CFrame.LookVector
-	KnockbackModule:Knockback(
-		EnemyCharacter,
-		pushDir * EMPOWERED_KNOCKBACK + Vector3.new(0, EMPOWERED_KNOCKUP, 0),
-		nil,
-		nil,
-		nil,
-		nil,
-		false
-	)
-
-	ServerStorage.Bindables.AirDetector:Fire(EnemyCharacter, nil, true)
-
-	applyInferno(Character, EnemyCharacter)
-
-	if EnemyPlayer then
-		ReplicateSet:FireClient(EnemyPlayer, "ShakeCamera", { Intensity = 3, Last = 0.3 })
-	end
-
-	ReplicateSet:FireAllClients("UndawnEmpoweredHit", {
-		Char = Character,
-		EChar = EnemyCharacter,
-	})
-end
-
 local function setupEmpoweredM1s(Character, Tool, chargesLeft)
 	if chargesLeft <= 0 then
 		Character:SetAttribute("UndawnEmpowered", nil)
 		Character:SetAttribute("UndawnCharges", nil)
-		ReplicateSet:FireAllClients("UndawnEmpoweredEnd", { Char = Character })
 		return
 	end
 
@@ -155,37 +78,81 @@ local function setupEmpoweredM1s(Character, Tool, chargesLeft)
 			return
 		end
 
-		local overlapParams = OverlapParams.new()
-		overlapParams.FilterType = Enum.RaycastFilterType.Include
-		overlapParams.FilterDescendantsInstances = { workspace.Live }
+		local hitboxCF = HumRP.CFrame * CFrame.new(0, 0, -3.5)
+		local hitSize = Vector3.new(7, 5, 7)
+		local hitOnce = false
 
-		local parts =
-			workspace:GetPartBoundsInBox(HumRP.CFrame * CFrame.new(0, 0, -3.5), Vector3.new(7, 5, 7), overlapParams)
+		HitboxHandler:SimpleOnce(
+			hitboxCF,
+			hitSize,
+			CFrame.new(0, 0, 0),
+			{ Character },
+			"Box",
+			nil,
+			function(EnemyCharacter)
+				if hitOnce then
+					return
+				end
 
-		for _, part in parts do
-			local char = part.Parent
-			if not char or char == Character then
-				continue
+				local hum = EnemyCharacter:FindFirstChild("Humanoid")
+				local hrp = EnemyCharacter:FindFirstChild("HumanoidRootPart")
+				if not hum or not hrp then
+					return
+				end
+				if hum.Health <= 0 then
+					return
+				end
+
+				hitOnce = true
+
+				local newRemaining = (Character:GetAttribute("UndawnCharges") or 0) - 1
+				Character:SetAttribute("UndawnCharges", newRemaining)
+
+				local HitInfo = DamageHandler:TakeDamage(
+					Character,
+					hum,
+					EMPOWERED_DAMAGE,
+					EMPOWERED_STUN,
+					nil,
+					true,
+					true,
+					true,
+					true,
+					false,
+					"M1",
+					nil
+				)
+
+				if not HitInfo.Countered and not HitInfo.Blocked then
+					hrp.AssemblyLinearVelocity = Vector3.zero
+
+					local pushDir = HumRP.CFrame.LookVector
+					local lookFlat = Vector3.new(pushDir.X, 0, pushDir.Z).Unit
+					local lookCF = CFrame.lookAt(hrp.Position, hrp.Position + lookFlat)
+
+					PerfectKnockback:KnockBack(nil, EnemyCharacter, {
+						LookVector = lookFlat,
+						LookForce = 52,
+						LookFinalForce = 48,
+						LookAt = lookCF,
+						UpVelocity = Vector3.new(0, 35, 0),
+						UpVelocityTime = 0.12,
+						GroundStunTime = 0.9,
+						FallingDetectDelay = 0.4,
+						Dot = 1,
+						DontFreeze = false,
+					}, Character)
+
+					applyInferno(EnemyCharacter)
+				end
+
+				if newRemaining <= 0 then
+					connection:Disconnect()
+					Character:SetAttribute("UndawnEmpowered", nil)
+					Character:SetAttribute("UndawnCharges", nil)
+				end
 			end
-			local hum = char:FindFirstChild("Humanoid")
-			if not hum or hum.Health <= 0 then
-				continue
-			end
-
-			local newRemaining = (Character:GetAttribute("UndawnCharges") or 0) - 1
-			Character:SetAttribute("UndawnCharges", newRemaining)
-
-			handleEmpoweredHit(Character, char, Tool)
-
-			if newRemaining <= 0 then
-				connection:Disconnect()
-				Character:SetAttribute("UndawnEmpowered", nil)
-				Character:SetAttribute("UndawnCharges", nil)
-				ReplicateSet:FireAllClients("UndawnEmpoweredEnd", { Char = Character })
-			end
-
-			break
-		end
+		)
 	end)
 
 	local toolCDS = Tool:GetAttribute("CDS") or 15
@@ -194,7 +161,6 @@ local function setupEmpoweredM1s(Character, Tool, chargesLeft)
 			connection:Disconnect()
 			Character:SetAttribute("UndawnEmpowered", nil)
 			Character:SetAttribute("UndawnCharges", nil)
-			ReplicateSet:FireAllClients("UndawnEmpoweredEnd", { Char = Character })
 		end
 	end)
 end
@@ -217,82 +183,72 @@ return {
 
 		task.wait(0.4)
 
-		local overlapParams = OverlapParams.new()
-		overlapParams.FilterType = Enum.RaycastFilterType.Include
-		overlapParams.FilterDescendantsInstances = { workspace.Live }
+		HitboxHandler:SimpleOnce(
+			HumRP,
+			PILLAR_SEARCH_RADIUS,
+			CFrame.new(0, 0, 0),
+			{ Character },
+			"Sphere",
+			nil,
+			function(EnemyCharacter)
+				if not EnemyCharacter:GetAttribute("Inferno") then
+					return
+				end
+				if iFramesService:HasiFrame(EnemyCharacter, Tool.Name) then
+					return
+				end
 
-		local parts = workspace:GetPartBoundsInRadius(HumRP.Position, PILLAR_SEARCH_RADIUS, overlapParams)
+				local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
+				local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
+				if not EnemyHumanoid or not EnemyHumRP then
+					return
+				end
 
-		local pillarTargets = {}
-		for _, part in parts do
-			local char = part.Parent
-			if not char or char == Character then
-				continue
-			end
-			if table.find(pillarTargets, char) then
-				continue
-			end
+				EnemyCharacter:SetAttribute("Inferno", nil)
 
-			if not char:GetAttribute("Inferno") then
-				continue
-			end
+				local HitInfo = DamageHandler:TakeDamage(
+					Character,
+					EnemyHumanoid,
+					PILLAR_DAMAGE,
+					PILLAR_STUN,
+					nil,
+					false,
+					false,
+					true,
+					true,
+					false,
+					nil,
+					nil
+				)
 
-			local hum = char:FindFirstChild("Humanoid")
-			if not hum or hum.Health <= 0 then
-				continue
-			end
-			if iFramesService:HasiFrame(char, Tool.Name) then
-				continue
-			end
+				if not HitInfo.Countered and not HitInfo.Blocked then
+					EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
 
-			table.insert(pillarTargets, char)
-		end
+					local pushDir = (EnemyHumRP.Position - HumRP.Position)
+					pushDir = Vector3.new(pushDir.X, 0, pushDir.Z)
+					if pushDir.Magnitude > 0 then
+						pushDir = pushDir.Unit
+					else
+						pushDir = HumRP.CFrame.LookVector
+					end
 
-		for _, EnemyCharacter in pillarTargets do
-			local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
-			local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
-			local EnemyPlayer = Players:GetPlayerFromCharacter(EnemyCharacter)
+					local lookCF = CFrame.lookAt(EnemyHumRP.Position, EnemyHumRP.Position + pushDir)
 
-			if not EnemyHumanoid or not EnemyHumRP then
-				continue
-			end
-
-			EnemyCharacter:SetAttribute("Inferno", nil)
-
-			local HitInfo = DamageHandler:TakeDamage(
-				Character,
-				EnemyHumanoid,
-				PILLAR_DAMAGE,
-				PILLAR_STUN,
-				nil,
-				false,
-				false,
-				true,
-				true,
-				false,
-				nil,
-				nil
-			)
-
-			if not HitInfo.Countered and not HitInfo.Blocked then
-				EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
-
-				KnockbackModule:Knockback(EnemyCharacter, Vector3.new(0, 50, 0), nil, nil, nil, nil, false)
-
-				if EnemyPlayer then
-					ReplicateSet:FireClient(EnemyPlayer, "ShakeCamera", { Intensity = 5, Last = 0.5 })
+					PerfectKnockback:KnockBack(nil, EnemyCharacter, {
+						LookVector = pushDir,
+						LookForce = 40,
+						LookFinalForce = 35,
+						LookAt = lookCF,
+						UpVelocity = Vector3.new(0, 60, 0),
+						UpVelocityTime = 0.2,
+						GroundStunTime = 1.2,
+						FallingDetectDelay = 0.6,
+						Dot = 1,
+						DontFreeze = false,
+					}, Character)
 				end
 			end
-
-			ReplicateSet:FireAllClients("UndawnPillar", {
-				Char = Character,
-				EChar = EnemyCharacter,
-				HumRP = EnemyHumRP,
-			})
-		end
-
-		ReplicateSet:FireAllClients("UndawnCast", { Char = Character })
-		ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 2, Last = 0.4 })
+		)
 
 		task.wait(0.3)
 

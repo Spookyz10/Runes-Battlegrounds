@@ -20,6 +20,55 @@ local ReplicateSet = Remotes.Replicate.Set
 
 local StartAirDetect = ServerStorage.Bindables.AirDetector
 
+Perfect.Active = {}
+
+function Perfect:Cancel(EnemyCharacter)
+	local Data = Perfect.Active[EnemyCharacter]
+	if not Data then
+		return
+	end
+
+	Perfect.Active[EnemyCharacter] = nil
+
+	if Data.Collision then
+		Data.Collision:Disconnect()
+		Data.Collision = nil
+	end
+
+	if Data.KnockbackEvents then
+		for _, conn in Data.KnockbackEvents do
+			conn:Disconnect()
+		end
+	end
+
+	if Data.StoppedConnection then
+		Data.StoppedConnection:Disconnect()
+		Data.StoppedConnection = nil
+	end
+
+	if Data.KnockbackTrack then
+		Data.KnockbackTrack:AdjustSpeed(1)
+		Data.KnockbackTrack:Stop(0)
+	end
+
+	AnimationService:stopAll(EnemyCharacter)
+
+	if Data.BodyVelocity and Data.BodyVelocity.Parent then
+		Data.BodyVelocity:Destroy()
+	end
+
+	if Data.BodyGyro and Data.BodyGyro.Parent then
+		Data.BodyGyro:Destroy()
+	end
+
+	if Data.EnemyStun then
+		StunHandler:Unstun(EnemyCharacter, Data.EnemyStun)
+	end
+
+	EnemyCharacter:RemoveTag("CantRotate")
+	EnemyCharacter:RemoveTag("Knockbacked")
+end
+
 function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 	if not EnemyCharacter then
 		warn("[PerfectKB] EnemyCharacter is nil")
@@ -35,6 +84,8 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 		warn("[PerfectKB] No HumanoidRootPart on", EnemyCharacter.Name)
 		return
 	end
+
+	Perfect:Cancel(EnemyCharacter)
 
 	if Params.DontFreeze == nil then
 		Params.DontFreeze = false
@@ -134,7 +185,28 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 		BodyVelocity.Velocity = (Params.LookVector * (Params.LookForce * Params.Dot)) + Params.UpVelocity
 	end
 
-	KnockbackTrack.Stopped:Once(function()
+	local ActiveData = {
+		KnockbackTrack = KnockbackTrack,
+		KnockbackEvents = KnockbackEvents,
+		BodyVelocity = BodyVelocity,
+		BodyGyro = BodyGyro,
+		EnemyStun = EnemyStun,
+		Collision = nil,
+		StoppedConnection = nil,
+	}
+	Perfect.Active[EnemyCharacter] = ActiveData
+
+	ActiveData.StoppedConnection = KnockbackTrack.Stopped:Connect(function()
+		if Perfect.Active[EnemyCharacter] ~= ActiveData then
+			return
+		end
+		Perfect.Active[EnemyCharacter] = nil
+
+		if ActiveData.StoppedConnection then
+			ActiveData.StoppedConnection:Disconnect()
+			ActiveData.StoppedConnection = nil
+		end
+
 		if BodyVelocity and BodyVelocity.Parent then
 			BodyVelocity:Destroy()
 		end
@@ -213,6 +285,14 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 			StunHandler:Unstun(EnemyCharacter, EnemyStun)
 			EnemyCharacter:RemoveTag("CantRotate")
 			EnemyCharacter:RemoveTag("Knockbacked")
+
+			if Perfect.Active[EnemyCharacter] == ActiveData then
+				Perfect.Active[EnemyCharacter] = nil
+				if ActiveData.StoppedConnection then
+					ActiveData.StoppedConnection:Disconnect()
+					ActiveData.StoppedConnection = nil
+				end
+			end
 		end)
 	)
 
@@ -264,6 +344,14 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 			StunHandler:Unstun(EnemyCharacter, EnemyStun)
 			EnemyCharacter:RemoveTag("CantRotate")
 			EnemyCharacter:RemoveTag("Knockbacked")
+
+			if Perfect.Active[EnemyCharacter] == ActiveData then
+				Perfect.Active[EnemyCharacter] = nil
+				if ActiveData.StoppedConnection then
+					ActiveData.StoppedConnection:Disconnect()
+					ActiveData.StoppedConnection = nil
+				end
+			end
 		end
 	end
 
@@ -301,6 +389,8 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 			end
 		end
 	end)
+
+	ActiveData.Collision = Collision
 
 	EnemyCharacter:AddTag("Knockbacked")
 	EnemyCharacter:AddTag("CantRotate")

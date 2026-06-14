@@ -66,6 +66,18 @@ MapRayParams.FilterDescendantsInstances = {
 	workspace.Map:WaitForChild("Destroyables"):WaitForChild("Buildings"),
 }
 
+local function setOwnershipAll(Character, Owner)
+	for _, v in Character:GetDescendants() do
+		if v:IsA("BasePart") then
+			pcall(function()
+				if v:CanSetNetworkOwnership() then
+					v:SetNetworkOwner(Owner)
+				end
+			end)
+		end
+	end
+end
+
 function Ragdoll.cancelRagdoll(Humanoid, _, DoKnockback, MainPart, isCancel, fullCancel, ignoreComunication)
 	if
 		not Humanoid
@@ -156,22 +168,10 @@ function Ragdoll.cancelRagdoll(Humanoid, _, DoKnockback, MainPart, isCancel, ful
 	end
 
 	if Character:FindFirstChild("Dummy") then
-		for _, v in pairs(Character:GetDescendants()) do
-			if v:IsA("BasePart") or v:IsA("Part") then
-				pcall(function()
-					v:SetNetworkOwner(nil)
-				end)
-			end
-		end
+		setOwnershipAll(Character, nil)
 	else
 		if Player then
-			for _, v in pairs(Character:GetDescendants()) do
-				if v:IsA("BasePart") or v:IsA("Part") then
-					pcall(function()
-						v:SetNetworkOwner(Player)
-					end)
-				end
-			end
+			setOwnershipAll(Character, Player)
 		end
 	end
 
@@ -280,11 +280,7 @@ function Ragdoll.ragdoll(Humanoid, Duration, HardRagdoll, Ragdoller, _, _, check
 
 	AnimationService:stopAll(Character)
 
-	if not Player then
-		if HumRP:CanSetNetworkOwnership() then
-			HumRP:SetNetworkOwner(nil)
-		end
-	end
+	setOwnershipAll(Character, nil)
 
 	for _, v in pairs(Character:GetChildren()) do
 		if v:IsA("Part") or v:IsA("BasePart") then

@@ -2,29 +2,23 @@ local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local SvSt = ServerStorage
-
 local ServerModules = ServerStorage.Modules
 
 local StunHandler = require(ServerModules.StunHandler)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
-local AnimationService = require(ServerModules.AnimationService)
 local iFramesService = require(ServerModules.iFramesService)
-local KnockbackModule = require(ServerModules.KnockbackModule)
+local PerfectKnockback = require(ServerModules.PerfectKnockback)
 
-local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
-
-local HITBOX_SIZE = Vector3.new(20, 4, 20)
-local HITBOX_OFFSET = CFrame.new(0, -2, -4)
-local KNOCKUP_VELOCITY = Vector3.new(0, 65, 0)
+local HITBOX_SIZE = Vector3.new(20, 10, 20)
+local HITBOX_OFFSET = CFrame.new(0, -2, 0)
 local DAMAGE = 22
 local STUN_TIME = 0.4
 local INFERNO_DURATION = 4
 
-local function applyInferno(Character, EnemyCharacter)
+local function applyInferno(EnemyCharacter)
 	local existing = EnemyCharacter:GetAttribute("Inferno")
 	EnemyCharacter:SetAttribute("Inferno", true)
-
 	if existing then
 		return
 	end
@@ -36,20 +30,16 @@ local function applyInferno(Character, EnemyCharacter)
 
 	task.spawn(function()
 		while EnemyCharacter and EnemyCharacter.Parent and EnemyCharacter:GetAttribute("Inferno") do
-			local elapsed = tick() - tickStart
-			if elapsed >= duration then
+			if tick() - tickStart >= duration then
 				break
 			end
-
 			local Hum = EnemyCharacter:FindFirstChild("Humanoid")
 			if not Hum or Hum.Health <= 0 then
 				break
 			end
-
 			Hum:TakeDamage(dotDamage)
 			task.wait(dotInterval)
 		end
-
 		if EnemyCharacter and EnemyCharacter.Parent then
 			EnemyCharacter:SetAttribute("Inferno", nil)
 		end
@@ -122,19 +112,32 @@ return {
 
 			EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
 
-			KnockbackModule:Knockback(EnemyCharacter, KNOCKUP_VELOCITY, nil, nil, nil, nil, false)
+			local pushDir = (EnemyHumRP.Position - HumRP.Position)
+			pushDir = Vector3.new(pushDir.X, 0, pushDir.Z)
+			if pushDir.Magnitude > 0 then
+				pushDir = pushDir.Unit
+			else
+				pushDir = HumRP.CFrame.LookVector
+			end
+
+			local lookCF = CFrame.lookAt(EnemyHumRP.Position, EnemyHumRP.Position + pushDir)
+
+			PerfectKnockback:KnockBack(nil, EnemyCharacter, {
+				LookVector = pushDir,
+				LookForce = 20,
+				LookFinalForce = 50,
+				LookAt = lookCF,
+				UpVelocity = Vector3.new(0, 45, 0),
+				UpVelocityTime = 0.15,
+				GroundStunTime = 1.0,
+				FallingDetectDelay = 0.5,
+				Dot = 1,
+				DontFreeze = false,
+			}, Character)
 
 			SvSt.Bindables.AirDetector:Fire(EnemyCharacter, nil, true)
-
-			applyInferno(Character, EnemyCharacter)
-
-			ReplicateSet:FireAllClients("SunquakeHit", {
-				Char = Character,
-				EChar = EnemyCharacter,
-			})
+			applyInferno(EnemyCharacter)
 		end)
-
-		ReplicateSet:FireAllClients("SunquakePunch", { Char = Character })
 
 		task.wait(0.5)
 

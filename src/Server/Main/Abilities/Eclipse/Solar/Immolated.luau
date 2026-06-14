@@ -8,17 +8,14 @@ local StunHandler = require(ServerModules.StunHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
 local iFramesService = require(ServerModules.iFramesService)
 
-local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
-
 local DURATION = 8
 local REFLECT_DAMAGE = 10
 local SLOW_MULT = 0.55
 local INFERNO_DURATION = 3
 
-local function applyInferno(Character, EnemyCharacter)
+local function applyInferno(EnemyCharacter)
 	local existing = EnemyCharacter:GetAttribute("Inferno")
 	EnemyCharacter:SetAttribute("Inferno", true)
-
 	if existing then
 		return
 	end
@@ -30,20 +27,16 @@ local function applyInferno(Character, EnemyCharacter)
 
 	task.spawn(function()
 		while EnemyCharacter and EnemyCharacter.Parent and EnemyCharacter:GetAttribute("Inferno") do
-			local elapsed = tick() - tickStart
-			if elapsed >= duration then
+			if tick() - tickStart >= duration then
 				break
 			end
-
 			local Hum = EnemyCharacter:FindFirstChild("Humanoid")
 			if not Hum or Hum.Health <= 0 then
 				break
 			end
-
 			Hum:TakeDamage(dotDamage)
 			task.wait(dotInterval)
 		end
-
 		if EnemyCharacter and EnemyCharacter.Parent then
 			EnemyCharacter:SetAttribute("Inferno", nil)
 		end
@@ -54,6 +47,22 @@ local function applyInferno(Character, EnemyCharacter)
 			EnemyCharacter:SetAttribute("Inferno", nil)
 		end
 	end)
+end
+
+local function cleanUp(Character, Humanoid, baseWalkSpeed, damageLogConnection, diedConnection)
+	if damageLogConnection then
+		damageLogConnection:Disconnect()
+	end
+	if diedConnection then
+		diedConnection:Disconnect()
+	end
+
+	Character:SetAttribute("Immolated", nil)
+	iFramesService:RemoveiFrames(Character, "Strong")
+
+	if Humanoid and Humanoid.Parent then
+		Humanoid.WalkSpeed = baseWalkSpeed
+	end
 end
 
 return {
@@ -73,20 +82,20 @@ return {
 			return
 		end
 
+		local baseWalkSpeed = Humanoid.WalkSpeed
+
 		Character:SetAttribute("Immolated", true)
 		iFramesService:AddStrongiFrames(Character)
-
-		local baseWalkSpeed = Humanoid.WalkSpeed
 		Humanoid.WalkSpeed = baseWalkSpeed * SLOW_MULT
 
-		ReplicateSet:FireAllClients("ImmolatedStart", { Char = Character })
-		ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 1.5, Last = 0.3 })
+		local damageLogConnection
+		local diedConnection
 
-		local damageLogConnection = Character.ChildAdded:Connect(function(Child)
-			if not Child:IsA("ObjectValue") then
+		damageLogConnection = Character.ChildAdded:Connect(function(Child)
+			if Child.Name ~= "DamagedLog" then
 				return
 			end
-			if Child.Name ~= "DamagedLog" then
+			if not Child:IsA("ObjectValue") then
 				return
 			end
 			if not Character:GetAttribute("Immolated") then
@@ -111,8 +120,6 @@ return {
 				return
 			end
 
-			local AttackerPlayer = Players:GetPlayerFromCharacter(Attacker)
-
 			DamageHandler:TakeDamage(
 				Character,
 				AttackerHumanoid,
@@ -128,23 +135,11 @@ return {
 				nil
 			)
 
-			applyInferno(Character, Attacker)
-
-			if AttackerPlayer then
-				ReplicateSet:FireClient(AttackerPlayer, "ShakeCamera", { Intensity = 2, Last = 0.25 })
-			end
-
-			ReplicateSet:FireAllClients("ImmolatedReflect", {
-				Char = Character,
-				EChar = Attacker,
-			})
+			applyInferno(Attacker)
 		end)
 
-		local died = Humanoid.Died:Once(function()
-			damageLogConnection:Disconnect()
-			Character:SetAttribute("Immolated", nil)
-			Humanoid.WalkSpeed = baseWalkSpeed
-			iFramesService:RemoveiFrames(Character, "Strong")
+		diedConnection = Humanoid.Died:Once(function()
+			cleanUp(Character, Humanoid, baseWalkSpeed, damageLogConnection, diedConnection)
 		end)
 
 		task.delay(DURATION, function()
@@ -154,18 +149,7 @@ return {
 			if not Character:GetAttribute("Immolated") then
 				return
 			end
-
-			damageLogConnection:Disconnect()
-			died:Disconnect()
-
-			Character:SetAttribute("Immolated", nil)
-			iFramesService:RemoveiFrames(Character, "Strong")
-
-			if Humanoid and Humanoid.Parent then
-				Humanoid.WalkSpeed = baseWalkSpeed
-			end
-
-			ReplicateSet:FireAllClients("ImmolatedEnd", { Char = Character })
+			cleanUp(Character, Humanoid, baseWalkSpeed, damageLogConnection, diedConnection)
 		end)
 	end,
 }

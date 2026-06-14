@@ -35,6 +35,8 @@ function AnimationService:playAnimation(Character, Animation, Speed, TimePositio
 
 	local anim = loadedAnims[Animation][1]
 
+	anim:AdjustSpeed(1)
+
 	if Animation.Parent.Name ~= "Spawn Animations" then
 		for _, Anim in AnimationsContainers[1]["Spawn Animations"]:GetDescendants() do
 			if Anim:IsA("Animation") then
@@ -100,6 +102,7 @@ function AnimationService:stopAnimation(Character, Animation, FadeTime)
 	local anim = playingAnims[Animation][1]
 
 	if anim then
+		anim:AdjustSpeed(1)
 		if anim.IsPlaying == true then
 			anim:Stop(FadeTime)
 		end
@@ -117,6 +120,7 @@ function AnimationService:stopAll(Character, FadeTime)
 	end
 
 	for _, animation in pairs(Character.Humanoid.Animator:GetPlayingAnimationTracks()) do
+		animation:AdjustSpeed(1)
 		animation:Stop(FadeTime)
 	end
 end
@@ -156,6 +160,8 @@ function AnimationService:loadAnimations(Character)
 			self.Loaded[Character][animation][2] = {}
 
 			self.Loaded[Character][animation][1].Stopped:Connect(function()
+				self.Loaded[Character][animation][1]:AdjustSpeed(1)
+
 				for i, v in self.Loaded[Character][animation][2] do
 					if typeof(v) ~= "RBXScriptConnection" then
 						continue

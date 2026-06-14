@@ -4,6 +4,36 @@ local TS = game:GetService("TweenService")
 
 local BMS = {}
 
+local function getRagdollParts(Character)
+	local parts = {}
+	for _, v in Character:GetDescendants() do
+		if v:IsA("BasePart") and not v.Name:find("Hitbox_") then
+			table.insert(parts, v)
+		end
+	end
+	return parts
+end
+
+local function applyRagdollVelocity(Character, Velocity, MaxForce, Time)
+	pcall(function()
+		Character.HumanoidRootPart:SetNetworkOwner(nil)
+	end)
+
+	for _, part in getRagdollParts(Character) do
+		pcall(function()
+			part:SetNetworkOwner(nil)
+		end)
+
+		local bv = Instance.new("BodyVelocity")
+		bv.MaxForce = MaxForce
+		bv.Velocity = Velocity
+		bv.P = 10000
+		bv.Parent = part
+
+		Debris:AddItem(bv, Time or 0.15)
+	end
+end
+
 function BMS:Knockback(Character, Data)
 	if not Data.Velocity and not Data.Position then
 		return
@@ -12,6 +42,16 @@ function BMS:Knockback(Character, Data)
 	local Bodymover
 
 	Data.MaxForce = Data.MaxForce or Vector3.new(math.huge, math.huge, math.huge)
+
+	if Character:HasTag("Ragdolled") then
+		if Data.KnockbackType == "Velocity" or not Data.KnockbackType then
+			applyRagdollVelocity(Character, Data.Velocity, Data.MaxForce, Data.Time)
+			return
+		elseif Data.KnockbackType == "VelocityTweenDown" then
+			applyRagdollVelocity(Character, Data.Velocity, Data.MaxForce, Data.Time)
+			return
+		end
+	end
 
 	if not Character:HasTag("Ragdolled") then
 		ReplicatedStorage.Remotes.Replicate.Set:FireAllClients("RemoveAllBodyMovers", Character)
