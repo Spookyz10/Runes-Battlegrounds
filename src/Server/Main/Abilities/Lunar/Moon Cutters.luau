@@ -103,6 +103,8 @@ return {
 								return
 							end
 
+							StunHandler:Stun(EnemyCharacter, 1, true, 0, 0, true)
+
 							local EnemyPlayer = Players:GetPlayerFromCharacter(EnemyCharacter)
 							if EnemyPlayer then
 								ReplicateSet:FireClient(EnemyPlayer, "ShakeCamera", { Intensity = 1.5 })
@@ -214,6 +216,14 @@ return {
 					Char = Character,
 					EChar = GrabbedEnemy,
 				})
+
+				UserTrack:AdjustSpeed(0)
+
+				task.delay(1, function()
+					if UserTrack.IsPlaying then
+						UserTrack:AdjustSpeed(1)
+					end
+				end)
 			end)
 		)
 
@@ -265,17 +275,17 @@ return {
 						nil
 					)
 
+					RagdollHandler.ragdoll(EnemyHumanoid, 3)
+
 					KnockbackModule:Knockback(
 						slammedEnemy,
-						HumRP.CFrame.LookVector * 220 + Vector3.new(0, 80, 0),
+						HumRP.CFrame.LookVector * 50 + Vector3.new(0, 10, 0),
 						nil,
 						nil,
 						nil,
 						nil,
 						false
 					)
-
-					RagdollHandler.ragdoll(EnemyHumanoid, 3)
 
 					if EnemyPlayer then
 						ReplicateSet:FireClient(EnemyPlayer, "ShakeCamera", { Intensity = 10, Last = 0.6 })
@@ -329,7 +339,7 @@ return {
 
 						KnockbackModule:Knockback(
 							OtherCharacter,
-							pushDir * 1000 + Vector3.new(0, 45, 0),
+							pushDir * 20 + Vector3.new(0, 45, 0),
 							nil,
 							nil,
 							nil,

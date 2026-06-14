@@ -1462,7 +1462,7 @@ local ReplicationEffects = {
 			end
 		end
 
-		Debris:AddItem(FinalImpact, 3)
+		Debris:AddItem(FinalImpact, 0.6)
 	end,
 
 	EclipseHit = function(Params)
