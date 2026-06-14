@@ -7,7 +7,7 @@ local StarterGUI = game:GetService("StarterGui")
 StarterGUI:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
 
 local Player = Players.LocalPlayer
-local Character = Player.Character or Player.CharacterAdded:Wait()
+
 local Backpack = Player:WaitForChild("Moveset")
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
@@ -39,9 +39,41 @@ local Keys = {
 	["DLeft+ButtonR1"] = "9",
 }
 
-local MoveSelected = nil
-
 local InfoModule = require(RS.Shared.Info)
+
+local processedTools = {}
+
+local TWEEN_SLIDE = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local POS_DOWN = UDim2.new(0.5, 0, 0.5, 125)
+local POS_UP = UDim2.new(0.5, 0, 0.5, 0)
+
+local activeBaseTweens: { [GuiObject]: Tween } = {}
+
+local function cancelTween(base: GuiObject)
+	if activeBaseTweens[base] then
+		activeBaseTweens[base]:Cancel()
+		activeBaseTweens[base] = nil
+	end
+end
+
+local function tweenBase(base: GuiObject, goal: UDim2, tweenInfo: TweenInfo?, onComplete: (() -> ())?)
+	cancelTween(base)
+	local tween = TS:Create(base, tweenInfo or TWEEN_SLIDE, { Position = goal })
+	activeBaseTweens[base] = tween
+	tween.Completed:Once(function(state)
+		if activeBaseTweens[base] == tween then
+			activeBaseTweens[base] = nil
+		end
+		if state == Enum.PlaybackState.Completed and onComplete then
+			onComplete()
+		end
+	end)
+	tween:Play()
+end
+
+local function getCharacter()
+	return Player.Character
+end
 
 local function getGradientName()
 	local moveset = Player:GetAttribute("Moveset")
@@ -52,94 +84,112 @@ local function getGradientName()
 	return moveset
 end
 
-local function tweenAllSlotsDown(onComplete)
+local function tweenAllSlotsDown(onComplete: (() -> ())?)
+	local total = 0
+	local done = 0
+
 	for _, slot in HotbarFrame:GetChildren() do
 		if slot:IsA("Frame") and slot:FindFirstChild("Base") then
-			slot.Base:TweenPosition(
-				UDim2.new(0.5, 0, 0.5, 125),
-				Enum.EasingDirection.Out,
-				Enum.EasingStyle.Quad,
-				0.35,
-				true
-			)
+			total += 1
 		end
 	end
-	task.delay(0.35, function()
+
+	if total == 0 then
 		if onComplete then
 			onComplete()
 		end
-	end)
+		return
+	end
+
+	for _, slot in HotbarFrame:GetChildren() do
+		if slot:IsA("Frame") and slot:FindFirstChild("Base") then
+			tweenBase(slot.Base, POS_DOWN, TWEEN_SLIDE, function()
+				done += 1
+				if done == total and onComplete then
+					onComplete()
+				end
+			end)
+		end
+	end
 end
 
-local function whiteGradientTween(Parent)
-	local moveUsed = CooldownFrame:Clone()
-	moveUsed.BackgroundColor3 = Color3.new(1, 1, 1)
-	moveUsed.Size = UDim2.fromScale(1, -1)
-	moveUsed.Parent = Parent
-	TS:Create(moveUsed, TweenInfo.new(0.5, Enum.EasingStyle.Linear), { BackgroundTransparency = 1 }):Play()
-	game.Debris:AddItem(moveUsed, 0.5)
+local function whiteGradientTween(parent)
+	local flash = CooldownFrame:Clone()
+	flash.BackgroundColor3 = Color3.new(1, 1, 1)
+	flash.Size = UDim2.fromScale(1, -1)
+	flash.Parent = parent
+	TS:Create(flash, TweenInfo.new(0.5, Enum.EasingStyle.Linear), { BackgroundTransparency = 1 }):Play()
+	game.Debris:AddItem(flash, 0.5)
 end
 
 local function Equip(HotbarSlot)
 	local Tool = AbilitieRemote_Get:InvokeServer(HotbarSlot.SkillName.Text)
-	if Tool then
-		Character:RemoveTag("Move Selected")
+	if not Tool then
+		return
+	end
 
-		if Tool:GetAttribute("CDS") ~= 0 then
-			local function addCooldown()
-				local PreviousCooldown = HotbarSlot:FindFirstChild("Cooldown")
-				if PreviousCooldown then
-					PreviousCooldown:Destroy()
-				end
+	local char = getCharacter()
+	if char then
+		char:RemoveTag("Move Selected")
+	end
 
-				local Cooldown: Frame = CooldownFrame:Clone()
+	local cds = Tool:GetAttribute("CDS")
 
-				if Tool:GetAttribute("CDS") ~= 0 then
-					Cooldown.Parent = HotbarSlot
-				end
-
-				if Tool:GetAttribute("CDS") > -1 and Tool:GetAttribute("CDS") ~= 0 then
-					game.Debris:AddItem(Cooldown, Tool:GetAttribute("CDS"))
-
-					local Tween = TS:Create(
-						Cooldown,
-						TweenInfo.new(Tool:GetAttribute("CDS"), Enum.EasingStyle.Linear),
-						{ Size = UDim2.fromScale(1, 0) }
-					)
-					Tween.Completed:Once(function()
-						if Tool.Name == HotbarSlot.SkillName.Text then
-							whiteGradientTween(HotbarSlot)
-						end
-					end)
-					Tween:Play()
-				elseif Tool:GetAttribute("CDS") == 0 then
-					whiteGradientTween(HotbarSlot)
-				end
+	if cds ~= 0 then
+		local function addCooldown()
+			local prev = HotbarSlot:FindFirstChild("Cooldown")
+			if prev then
+				prev:Destroy()
 			end
 
-			if Tool:GetAttribute("onCDS") ~= true then
-				local changedSignal
-				changedSignal = Tool:GetAttributeChangedSignal("onCDS"):Connect(function()
-					if Tool:GetAttribute("onCDS") == true or Tool:GetAttribute("CDS") == 0 then
-						changedSignal:Disconnect()
-						if Tool:GetAttribute("CDS") ~= 0 then
-							addCooldown()
-						end
+			local Cooldown = CooldownFrame:Clone()
+			Cooldown.Parent = HotbarSlot
+			if cds > 0 then
+				game.Debris:AddItem(Cooldown, cds)
+
+				local cdTween =
+					TS:Create(Cooldown, TweenInfo.new(cds, Enum.EasingStyle.Linear), { Size = UDim2.fromScale(1, 0) })
+				cdTween.Completed:Once(function()
+					if Tool.Name == HotbarSlot.SkillName.Text then
+						whiteGradientTween(HotbarSlot)
 					end
 				end)
-			else
-				addCooldown()
+				cdTween:Play()
 			end
-		else
-			whiteGradientTween(HotbarSlot)
 		end
+
+		if Tool:GetAttribute("onCDS") ~= true then
+			local changedSignal
+			changedSignal = Tool:GetAttributeChangedSignal("onCDS"):Connect(function()
+				if Tool:GetAttribute("onCDS") == true or Tool:GetAttribute("CDS") == 0 then
+					changedSignal:Disconnect()
+					if Tool:GetAttribute("CDS") ~= 0 then
+						addCooldown()
+					end
+				end
+			end)
+		else
+			addCooldown()
+		end
+	else
+		whiteGradientTween(HotbarSlot)
 	end
 end
 
-local function AddTool(Tool)
+local function getToolKey(tool: Tool): string
+	return tool.Name .. "_" .. tostring(tool:GetAttribute("Index"))
+end
+
+local function AddTool(Tool: Tool)
 	if not Tool:IsA("Tool") or not Tool:GetAttribute("Index") then
 		return
 	end
+
+	local key = getToolKey(Tool)
+	if processedTools[key] then
+		return
+	end
+	processedTools[key] = true
 
 	local HotbarSlot = HotbarFrame[tostring(Tool:GetAttribute("Index"))]
 	if not HotbarSlot then
@@ -147,27 +197,23 @@ local function AddTool(Tool)
 	end
 
 	local Base = HotbarSlot.Base
-	local PreviousState = HotbarSlot:GetAttribute("Active")
 	HotbarSlot:SetAttribute("Active", true)
 
-	if PreviousState ~= true then
-		Base:TweenPosition(UDim2.new(0.5, 0, 0.5, 125), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.35, true)
-		task.wait(0.35)
-	end
+	tweenBase(Base, POS_DOWN, TWEEN_SLIDE, function()
+		local existing = Base:FindFirstChild("Cooldown")
+		if existing then
+			existing:Destroy()
+			whiteGradientTween(Base)
+		end
 
-	local Cooldown = Base:FindFirstChild("Cooldown")
-	if Cooldown then
-		Cooldown:Destroy()
-		whiteGradientTween(Base)
-	end
+		Base.SkillName.Text = Tool.Name
+		Base.Icon.Image = Tool:GetAttribute("Icon") or "rbxassetid://0"
+		Base.Number.Text = tostring(Tool:GetAttribute("Index"))
 
-	Base.SkillName.Text = Tool.Name
-	Base.Icon.Image = Tool:GetAttribute("Icon") or "rbxassetid://0"
-	Base.Number.Text = Tool:GetAttribute("Index")
+		HotbarSlot.Visible = true
 
-	HotbarSlot.Visible = true
-
-	Base:TweenPosition(UDim2.new(0.5, 0, 0.5, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.35, true)
+		tweenBase(Base, POS_UP, TWEEN_SLIDE)
+	end)
 end
 
 local function updateHotbarGradients()
@@ -196,13 +242,14 @@ end
 
 updateHotbarGradients()
 
-UIS.InputBegan:Connect(function(input, gameProccessedEvent)
-	if gameProccessedEvent then
+UIS.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then
 		return
 	end
 
-	if Keys[input.KeyCode.Name] then
-		local HotbarSlot = HotbarFrame[Keys[input.KeyCode.Name]]
+	local slotKey = Keys[input.KeyCode.Name]
+	if slotKey then
+		local HotbarSlot = HotbarFrame[slotKey]
 		if HotbarSlot then
 			Equip(HotbarSlot.Base)
 		end
@@ -211,29 +258,37 @@ end)
 
 for _, HotbarSlot in HotbarFrame:GetChildren() do
 	if HotbarSlot:IsA("Frame") and HotbarSlot:FindFirstChild("Base") then
-		HotbarSlot = HotbarSlot.Base
-		HotbarSlot.Activated:Connect(function()
+		local Base = HotbarSlot.Base
+		Base.Activated:Connect(function()
+			local char = getCharacter()
+
 			if Player.Configuration["Auto Use"].Value == true then
-				Equip(HotbarSlot)
+				Equip(Base)
 			else
-				if HotbarSlot.SelectionObjectClipper.Visible == true then
-					MoveSelected.SelectionObjectClipper.Visible = false
-					MoveSelected = nil
-					Character:RemoveTag("Move Selected")
+				if Base.SelectionObjectClipper.Visible == true then
+					Base.SelectionObjectClipper.Visible = false
+
+					if char then
+						char:RemoveTag("Move Selected")
+					end
 				else
 					for _, Slot in HotbarFrame:GetChildren() do
 						if Slot:IsA("Frame") and Slot:FindFirstChild("Base") then
-							Slot = Slot.Base
-							if Slot ~= HotbarSlot and Slot.SelectionObjectClipper.Visible == true then
-								Slot.SelectionObjectClipper.Visible = false
-								Character:RemoveTag("Move Selected")
+							local SlotBase = Slot.Base
+							if SlotBase ~= Base and SlotBase.SelectionObjectClipper.Visible == true then
+								SlotBase.SelectionObjectClipper.Visible = false
+								if char then
+									char:RemoveTag("Move Selected")
+								end
 							end
 						end
 					end
 
-					HotbarSlot.SelectionObjectClipper.Visible = true
-					MoveSelected = HotbarSlot
-					Character:AddTag("Move Selected")
+					Base.SelectionObjectClipper.Visible = true
+
+					if char then
+						char:AddTag("Move Selected")
+					end
 				end
 			end
 		end)
@@ -245,6 +300,10 @@ MovesetHandler.OnClientEvent:Connect(function(Goal)
 		for _, Frame in HotbarFrame:GetChildren() do
 			if Frame:IsA("Frame") then
 				local Base = Frame:FindFirstChild("Base")
+				if not Base then
+					continue
+				end
+
 				local Cooldown = Base:FindFirstChild("Cooldown")
 				if Cooldown then
 					Cooldown:Destroy()
@@ -255,7 +314,7 @@ MovesetHandler.OnClientEvent:Connect(function(Goal)
 	end
 end)
 
-shared.triggerHotbar = function(State)
+shared.triggerHotbar = function(State: boolean)
 	if State == true then
 		HotbarFrame:TweenPosition(
 			UDim2.new(0.5, -327, 1, -70),
@@ -278,64 +337,49 @@ end
 Backpack.ChildAdded:Connect(AddTool)
 
 Backpack.ChildRemoved:Connect(function(Tool: Tool)
-	if Tool:IsA("Tool") and Tool:GetAttribute("Index") then
-		local wasReplaced = false
+	if not Tool:IsA("Tool") or not Tool:GetAttribute("Index") then
+		return
+	end
 
-		for _, v in Backpack:GetChildren() do
-			if v:GetAttribute("Index") == Tool:GetAttribute("Index") and v.Name ~= Tool.Name then
-				wasReplaced = true
-			end
+	local key = getToolKey(Tool)
+	processedTools[key] = nil
+
+	local wasReplaced = false
+	for _, v in Backpack:GetChildren() do
+		if v:GetAttribute("Index") == Tool:GetAttribute("Index") and v.Name ~= Tool.Name then
+			wasReplaced = true
+			break
 		end
+	end
 
-		local HotbarSlot = HotbarFrame[tostring(Tool:GetAttribute("Index"))]
-		if HotbarSlot then
-			local Base = HotbarSlot.Base
+	local HotbarSlot = HotbarFrame[tostring(Tool:GetAttribute("Index"))]
+	if not HotbarSlot then
+		return
+	end
 
-			Base:TweenPosition(UDim2.new(0.5, 0, 0.5, 125), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.5, true)
+	local Base = HotbarSlot.Base
 
-			if wasReplaced == true then
-				task.delay(0.5, function()
-					Base:TweenPosition(
-						UDim2.new(0.5, 0, 0.5, 0),
-						Enum.EasingDirection.Out,
-						Enum.EasingStyle.Quad,
-						0.5,
-						true
-					)
-				end)
-				return
-			end
-
+	if wasReplaced then
+		tweenBase(Base, POS_DOWN, TWEEN_SLIDE)
+	else
+		tweenBase(Base, POS_DOWN, TWEEN_SLIDE, function()
 			HotbarSlot:SetAttribute("Active", false)
-
-			task.delay(0.5, function()
-				if HotbarSlot:GetAttribute("Active") == false then
-					HotbarSlot.Visible = false
-					Base.SkillName.Text = "N/A"
-				end
-			end)
-		end
+			HotbarSlot.Visible = false
+			Base.SkillName.Text = "N/A"
+		end)
 	end
 end)
 
 for _, Tool in Backpack:GetChildren() do
-	task.spawn(function()
-		AddTool(Tool)
-	end)
+	task.spawn(AddTool, Tool)
 end
 
 Player:GetAttributeChangedSignal("Moveset"):Connect(function()
-	tweenAllSlotsDown()
-	task.delay(0.35, function()
-		updateHotbarGradients()
-	end)
+	tweenAllSlotsDown(updateHotbarGradients)
 end)
 
 Player.AttributeChanged:Connect(function(attr)
 	if attr:match("^MovesetMode_") then
-		tweenAllSlotsDown()
-		task.delay(0.35, function()
-			updateHotbarGradients()
-		end)
+		tweenAllSlotsDown(updateHotbarGradients)
 	end
 end)

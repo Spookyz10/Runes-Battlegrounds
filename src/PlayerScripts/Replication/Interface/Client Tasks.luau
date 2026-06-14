@@ -1265,8 +1265,7 @@ local ReplicationEffects = {
 		local FIClone = FinalImpact:Clone()
 		FIClone.Name = "FinalImpact"
 		FIClone.Anchored = false
-		FIClone.CFrame = CFrame.new(RightArm.Position)
-			* CFrame.Angles(math.rad(170.702), math.rad(-180), math.rad(-172.399))
+		FIClone.CFrame = RightArm.CFrame * CFrame.Angles(math.rad(170.702), math.rad(-180), math.rad(-172.399))
 		FIClone.Parent = RightArm
 
 		local Weld = Instance.new("WeldConstraint")

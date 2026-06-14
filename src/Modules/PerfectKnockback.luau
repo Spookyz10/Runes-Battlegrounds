@@ -9,7 +9,6 @@ local RunService = game:GetService("RunService")
 local SvModules = ServerStorage.Modules
 
 local StunHandler = require(SvModules.StunHandler)
-local SoundsModule = require(SvModules.SoundsModule)
 local AnimationService = require(SvModules.AnimationService)
 local KnockbackService = require(SvModules.BodymoverService)
 
@@ -17,21 +16,23 @@ local Assets = ServerStorage.Assets
 local Animations = Assets.Animations
 
 local Remotes = ReplicatedStorage.Remotes
-local Replication = Remotes.Replicate
-local ReplicateSet = Replication.Set
+local ReplicateSet = Remotes.Replicate.Set
 
 local StartAirDetect = ServerStorage.Bindables.AirDetector
 
 function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 	if not EnemyCharacter then
+		warn("[PerfectKB] EnemyCharacter is nil")
 		return
 	end
 	if not EnemyCharacter.Parent then
+		warn("[PerfectKB] EnemyCharacter has no Parent")
 		return
 	end
 
 	local HumanoidRootPart = EnemyCharacter:FindFirstChild("HumanoidRootPart")
 	if not HumanoidRootPart then
+		warn("[PerfectKB] No HumanoidRootPart on", EnemyCharacter.Name)
 		return
 	end
 
@@ -66,23 +67,8 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 	local EnemyHumRP = EnemyHumanoid.RootPart
 
 	if EnemyHumanoid.Health <= 0 then
+		warn("[PerfectKB] Enemy already dead, aborting")
 		return
-	end
-
-	local UppercutVFX
-	if Params.Saitama then
-		local VFX = ServerStorage.Assets.Models["Uppercut VFX"].Uppercut_Start:Clone()
-		VFX.Parent = EnemyCharacter
-
-		task.spawn(function()
-			for _, descendant in VFX:GetDescendants() do
-				if descendant:IsA("ParticleEmitter") then
-					descendant.Enabled = true
-				end
-			end
-		end)
-
-		UppercutVFX = VFX
 	end
 
 	local Touched = false
@@ -96,6 +82,12 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 
 	local KnockbackAnimation = Animations.Other.Knockback
 	local KnockbackTrack, KnockbackEvents = AnimationService:getAnimationTrack(EnemyCharacter, KnockbackAnimation)
+
+	if not KnockbackTrack then
+		warn("[PerfectKB] KnockbackTrack is nil for", EnemyCharacter.Name, "— animation not loaded?")
+		StunHandler:Unstun(EnemyCharacter, EnemyStun)
+		return
+	end
 
 	KnockbackService:makeEnemyFaceCharacter(EnemyCharacter, Character)
 
@@ -118,10 +110,6 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 	end
 
 	if Params.LookAt then
-		if Params.Ligma then
-			EnemyCharacter:PivotTo(Params.LookAt)
-		end
-
 		BodyGyro = Instance.new("BodyGyro")
 		BodyGyro.Parent = HumanoidRootPart
 		BodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
@@ -158,14 +146,6 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 		StunHandler:Unstun(EnemyCharacter, EnemyStun)
 		EnemyCharacter:RemoveTag("CantRotate")
 		EnemyCharacter:RemoveTag("Knockbacked")
-
-		if Params.Saitama then
-			if UppercutVFX then
-				UppercutVFX:Destroy()
-			end
-
-			SoundsModule:PlaySound(Assets.Sounds.Moves.Baldhero.Uppercut.Land, EnemyCharacter.Torso)
-		end
 	end)
 
 	table.insert(
@@ -190,15 +170,13 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 				BodyVelocity.Velocity = (Params.LookVector * ((Params.LookFinalForce * 1.1) * Params.Dot))
 			end
 
-			local GroundStun = StunHandler:Stun(EnemyCharacter, Params.GroundStunTime, true, 0, 0, true)
+			StunHandler:Stun(EnemyCharacter, Params.GroundStunTime, true, 0, 0, true)
 
 			local smallDebris = shared.cfolder({ Name = "SmallDebris" }, 0.75)
 			CollectionService:AddTag(smallDebris, "SmallDebris")
 			smallDebris.Parent = EnemyCharacter
 
 			ReplicateSet:FireAllClients("smokeEffect", { time = 0.75, char = EnemyCharacter })
-
-			SoundsModule:PlaySound(Assets.Sounds.Combat.Knockbacks.Impact, EnemyHumRP)
 		end)
 	)
 
@@ -239,70 +217,60 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 	)
 
 	task.delay(Params.UpVelocityTime, function()
-		if BodyVelocity.Parent then
-			if Params.StunFloatTime > 0 then
-				BodyVelocity.Velocity = (Params.LookVector * Params.LookForce) + Vector3.new(0, 0, 0)
+		if not BodyVelocity or not BodyVelocity.Parent then
+			return
+		end
 
-				task.delay(Params.StunFloatTime, function()
-					if BodyVelocity.Parent then
-						BodyVelocity.MaxForce = Vector3.new(math.huge, 0, math.huge)
-					end
-				end)
-			else
-				BodyVelocity.MaxForce = Vector3.new(math.huge, 0, math.huge)
-			end
+		if Params.StunFloatTime > 0 then
+			BodyVelocity.Velocity = (Params.LookVector * Params.LookForce) + Vector3.new(0, 0, 0)
+
+			task.delay(Params.StunFloatTime, function()
+				if BodyVelocity.Parent then
+					BodyVelocity.MaxForce = Vector3.new(math.huge, 0, math.huge)
+				end
+			end)
+		else
+			BodyVelocity.MaxForce = Vector3.new(math.huge, 0, math.huge)
 		end
 	end)
 
 	task.delay(Params.FallingDetectDelay + Params.StunFloatTime, function()
-		if BodyVelocity.Parent then
+		if BodyVelocity and BodyVelocity.Parent then
 			Falling = true
 		end
 	end)
 
 	local function impact(Time)
-		if Touched or not Time then
+		if Touched then
+			return
+		end
+		if not Time then
 			return
 		end
 
-		if not Touched then
-			Touched = true
+		Touched = true
 
-			if Time >= 0.1331675 then
-				local RandomValue = math.random(1, 2)
+		KnockbackTrack:AdjustSpeed(1)
 
-				if RandomValue == 1 then
-					SoundsModule:PlaySound(Assets.Sounds.Combat.Knockbacks.Sound1, EnemyHumRP)
-				else
-					SoundsModule:PlaySound(Assets.Sounds.Combat.Knockbacks.Sound2, EnemyHumRP)
-				end
+		if EnemyCharacter:GetAttribute("Ragdolled") == true then
+			if BodyVelocity and BodyVelocity.Parent then
+				BodyVelocity:Destroy()
 			end
 
-			KnockbackTrack:AdjustSpeed(1)
-
-			if Params.Saitama then
-				local LaunchLanded = shared.cfolder({ Name = "LaunchLanded" }, 2)
-				LaunchLanded.Parent = EnemyCharacter
+			if BodyGyro and BodyGyro.Parent then
+				BodyGyro:Destroy()
 			end
 
-			if EnemyCharacter:GetAttribute("Ragdolled") == true then
-				if BodyVelocity and BodyVelocity.Parent then
-					BodyVelocity:Destroy()
-				end
-
-				if BodyGyro and BodyGyro.Parent then
-					BodyGyro:Destroy()
-				end
-
-				StunHandler:Unstun(EnemyCharacter, EnemyStun)
-				EnemyCharacter:RemoveTag("CantRotate")
-				EnemyCharacter:RemoveTag("Knockbacked")
-			end
+			StunHandler:Unstun(EnemyCharacter, EnemyStun)
+			EnemyCharacter:RemoveTag("CantRotate")
+			EnemyCharacter:RemoveTag("Knockbacked")
 		end
 	end
 
 	local Collision
+	local frameCount = 0
 	Collision = RunService.Heartbeat:Connect(function()
+		frameCount += 1
 		local FinalTime = os.clock() - StartTime
 
 		if EnemyCharacter:GetAttribute("Stunned") == false or not EnemyCharacter.Parent then
@@ -315,27 +283,21 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 		RayParams.FilterType = Enum.RaycastFilterType.Include
 		RayParams.FilterDescendantsInstances = { workspace.Map }
 
+		local rayOrigin = HumanoidRootPart.Position
+		local rayDir
+
 		if FinalTime < 1.5 then
-			local Raycast = workspace:Raycast(HumanoidRootPart.Position, Vector3.new(0, -3.45, 0), RayParams)
-
-			if Raycast then
-				if Falling then
-					Collision:Disconnect()
-					impact(FinalTime)
-				end
-
-				return
-			end
+			rayDir = Vector3.new(0, -3.45, 0)
 		else
-			local Raycast = workspace:Raycast(HumanoidRootPart.Position, Vector3.new(0, -27.5, 0), RayParams)
+			rayDir = Vector3.new(0, -27.5, 0)
+		end
 
-			if Raycast then
-				if Falling then
-					Collision:Disconnect()
-					impact(FinalTime)
-				end
+		local Raycast = workspace:Raycast(rayOrigin, rayDir, RayParams)
 
-				return
+		if Raycast then
+			if Falling then
+				Collision:Disconnect()
+				impact(FinalTime)
 			end
 		end
 	end)
@@ -347,13 +309,6 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 
 	AnimationService:stopAll(EnemyCharacter)
 	AnimationService:playAnimation(EnemyCharacter, KnockbackAnimation)
-
-	if Params.Saitama then
-		ReplicateSet:FireAllClients(
-			"saitamaAirTrail",
-			{ Hit = EnemyCharacter, Root = EnemyHumRP, Uppercut = UppercutVFX }
-		)
-	end
 
 	return { KnockbackTrack }
 end

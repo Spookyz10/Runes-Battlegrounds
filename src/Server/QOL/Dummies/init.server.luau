@@ -1,6 +1,5 @@
 --Services
-local Players = game:GetService("Players")
-local RS = game:GetService("ReplicatedStorage")
+
 local SvSt = game:GetService("ServerStorage")
 local W = game:GetService("Workspace")
 local RNS = game:GetService("RunService")
@@ -16,9 +15,6 @@ local SpnDmy = Bindables.SpawnDummy
 local SvModules = SvSt.Modules
 
 local AnimationService = require(SvModules.AnimationService)
-
---Remotes
-local RemotesContainer = RS.Remotes
 
 --Variables
 local LiveFolder = W.Live
@@ -104,7 +100,7 @@ function spawnDummy(CF, InitialHp, ScriptName)
 
 	local DidDieFunction = false
 	local Dummy = ServerScriptService["Strongest Runester"]:Clone()
-	local HumRP = Dummy.HumanoidRootPart
+
 	local Humanoid = Dummy.Humanoid
 
 	if existingDummies > 0 then
@@ -115,8 +111,6 @@ function spawnDummy(CF, InitialHp, ScriptName)
 	Dummy.Name = dummyName
 	Dummy.Parent = LiveFolder
 	CollectionService:AddTag(Dummy, "Character")
-
-	wait()
 
 	if ScriptName and script.Scripts:FindFirstChild(ScriptName) then
 		local Script: Script = script.Scripts[ScriptName]:Clone()
@@ -163,11 +157,6 @@ function spawnDummy(CF, InitialHp, ScriptName)
 	task.spawn(function()
 		if ScriptName then
 			return
-		end
-
-		if workspace:GetAttribute("DummyDiedOnce") then
-			local DummyEmotes = require(script.DummyEmotes)
-			DummyEmotes.EmoteVariants[math.random(1, #DummyEmotes.EmoteVariants)](Dummy)
 		end
 	end)
 end

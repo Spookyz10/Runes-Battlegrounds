@@ -12,11 +12,15 @@ return {
 			Base = {
 				Lunar = {
 					"Lunar Lunge",
-					"Eclipse",
-					"Moon Cutters",
+					"Prowl",
+					"ShadeStep",
+					"Grasp",
 				},
 				Solar = {
-					-- moves solares aqui futuramente
+					"Sunquake",
+					"Undawn",
+					"Immolate",
+					"Flarewhip",
 				},
 			},
 			Ultimate = {
@@ -30,13 +34,13 @@ return {
 			},
 			Special = {
 				Cost = 0,
-				Cooldown = 10,
-				Action = "SwapMode", -- genérico, serve pra qualquer moveset com modos
+				Cooldown = 5,
+				Action = "SwapMode",
 			},
 			UltimateSpecial = {
-				Cost = 30,
-				Cooldown = 15,
-				Action = "SwapMode", -- mesma action, isUlt diferencia o comportamento
+				Cost = 5,
+				Cooldown = 5,
+				Action = "SwapMode",
 			},
 			Indicator = {
 				Sound = "rbxassetid://113229409180409",

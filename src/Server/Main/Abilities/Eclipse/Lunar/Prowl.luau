@@ -15,6 +15,7 @@ local iFramesService = require(ServerModules.iFramesService)
 local KnockbackModule = require(ServerModules.KnockbackModule)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local CollisionsModule = require(ServerModules.CollisionsModule)
+local PerfectKnockback = require(ServerModules.PerfectKnockback)
 
 local WeldSystem = require(ReplicatedModules.WeldSystem)
 
@@ -116,9 +117,6 @@ return {
 			)
 		end
 
-		-- ────────────────────────────────────────────────
-		-- finalstart — pega o inimigo mais próximo e welda
-		-- ────────────────────────────────────────────────
 		table.insert(
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("finalstart"):Once(function()
@@ -166,7 +164,6 @@ return {
 				local EnemyHumRP = GrabbedEnemy.HumanoidRootPart
 				local EnemyPlayer = Players:GetPlayerFromCharacter(GrabbedEnemy)
 
-				-- initial grab damage
 				DamageHandler:TakeDamage(
 					Character,
 					EnemyHumanoid,
@@ -223,13 +220,9 @@ return {
 			end)
 		)
 
-		-- ────────────────────────────────────────────────
-		-- finalend — socão + AOE
-		-- ────────────────────────────────────────────────
 		table.insert(
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("finalend"):Once(function()
-				-- destrói weld antes do voo
 				if Weld then
 					pcall(function()
 						Weld:Stop()
@@ -240,7 +233,6 @@ return {
 				local slammedEnemy = GrabbedEnemy
 				GrabbedEnemy = nil
 
-				-- ── dano + knockback absurdo no alvo principal ──
 				if slammedEnemy and slammedEnemy.Parent then
 					local EnemyHumanoid = slammedEnemy.Humanoid
 					local EnemyHumRP = slammedEnemy.HumanoidRootPart
@@ -256,7 +248,7 @@ return {
 
 					EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
 
-					DamageHandler:TakeDamage(
+					local HitInfo = DamageHandler:TakeDamage(
 						Character,
 						EnemyHumanoid,
 						FINAL_DAMAGE,
@@ -271,24 +263,29 @@ return {
 						nil
 					)
 
-					RagdollHandler.ragdoll(EnemyHumanoid, 3)
+					if not HitInfo.Countered and not HitInfo.Blocked then
+						local lookFlat = HumRP.CFrame.LookVector
+						lookFlat = Vector3.new(lookFlat.X, 0, lookFlat.Z).Unit
 
-					KnockbackModule:Knockback(
-						slammedEnemy,
-						HumRP.CFrame.LookVector * 50 + Vector3.new(0, 30, 0),
-						nil,
-						nil,
-						nil,
-						nil,
-						false
-					)
+						PerfectKnockback:KnockBack(nil, slammedEnemy, {
+							LookVector = lookFlat,
+							LookForce = 30,
+							LookFinalForce = 25,
+							LookAt = CFrame.lookAt(EnemyHumRP.Position, EnemyHumRP.Position + lookFlat),
+							UpVelocity = Vector3.new(0, 50, 0),
+							UpVelocityTime = 0.15,
+							GroundStunTime = 1.0,
+							FallingDetectDelay = 0.5,
+							Dot = 1,
+							DontFreeze = false,
+						}, Character)
 
-					if EnemyPlayer then
-						ReplicateSet:FireClient(EnemyPlayer, "ShakeCamera", { Intensity = 10, Last = 0.6 })
+						if EnemyPlayer then
+							ReplicateSet:FireClient(EnemyPlayer, "ShakeCamera", { Intensity = 10, Last = 0.6 })
+						end
 					end
 				end
 
-				-- ── AOE em geral na área (exceto o alvo principal e o próprio user) ──
 				local aoeIgnore = slammedEnemy and { Character, slammedEnemy } or { Character }
 
 				HitboxHandler:SimpleOnce(
