@@ -37,21 +37,17 @@ return {
 	Start = function(Player, Tool)
 		local Character = Player.Character
 		local HumRP = Character.HumanoidRootPart
-		local Humanoid = Character.Humanoid
 
 		local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true)
 		iFramesService:AddAlliFrames(Character)
 
-		local UserAnimation = MoveAnims.Lunar["Moon Cutters"]
+		local UserAnimation = MoveAnims.Lunar["Prowl"]
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
 
 		local GrabbedEnemy = nil
 		local EnemyStun = nil
 		local Weld = nil
 
-		-- ────────────────────────────────────────────────
-		-- hit1 / hit2 / hit3
-		-- ────────────────────────────────────────────────
 		for i = 1, 3 do
 			local markerName = "hit" .. i
 			table.insert(
