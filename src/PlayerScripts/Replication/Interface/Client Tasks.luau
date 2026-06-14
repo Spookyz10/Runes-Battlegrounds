@@ -10,8 +10,6 @@ type particlesModule = {
 
 local RandomSeed = Random.new()
 
-local ClientTasks = tick()
-
 local Debris = game:GetService("Debris")
 local RS = game:GetService("ReplicatedStorage")
 local TS = game:GetService("TweenService")
@@ -20,11 +18,6 @@ local CollectionService = game:GetService("CollectionService")
 local Resources = RS:WaitForChild("Resources")
 
 local LocalPlayer = game:GetService("Players").LocalPlayer
-
-local LocalCharacter = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-LocalPlayer:GetPropertyChangedSignal("Character"):Connect(function()
-	LocalCharacter = LocalPlayer.Character
-end)
 
 local RS_Modules = RS.Shared:WaitForChild("Modules")
 
@@ -35,8 +28,6 @@ local CamShakePresets = require(RS_Modules.CamShakePresets)
 
 local BoatTween = require(RS_Modules.BoatTween)
 local VoxBreaker = require(RS_Modules.VoxBreaker)
-local Trove = require(RS_Modules.Trove)
-local MeshFlipbooks = require(RS_Modules.MeshFlipbooks)
 
 local MapRayParams = RaycastParams.new()
 MapRayParams.FilterType = Enum.RaycastFilterType.Include
@@ -64,8 +55,6 @@ local MapOverlapParams = OverlapParams.new()
 MapOverlapParams.RespectCanCollide = true
 MapOverlapParams.FilterType = MapRayParams.FilterType
 MapOverlapParams.FilterDescendantsInstances = { workspace.Map }
-
-local ClientTasksLoadTime = tick() - ClientTasks
 
 local DestroyedParts = {}
 shared.DestroyedParts = DestroyedParts
@@ -535,153 +524,6 @@ local function debrisSpawner(config)
 	end
 
 	return spawnedPieces
-end
-
-local function PlayMesh(MeshContainer)
-	task.spawn(function()
-		local Model = MeshContainer.Model
-		local TweenInformation = MeshContainer.Info or TweenInfo.new(1, Enum.EasingStyle.Sine)
-		local StartPart = Model:FindFirstChild("Start")
-		local EndPart = Model:FindFirstChild("End")
-		local NoDelete = MeshContainer.Stay
-		local GoalCFrame = MeshContainer.Anchor
-		local GoalTransparency = MeshContainer.EndT or 1
-		local ExtraLifetime = MeshContainer.Del
-		local Skip = MeshContainer.Skip
-
-		Model.PrimaryPart = StartPart
-
-		if not Skip then
-			for _, eyes in pairs(Model:GetChildren()) do
-				if eyes:IsA("BasePart") then
-					eyes.CanCollide = false
-					eyes.Anchored = true
-				end
-			end
-		end
-
-		if GoalCFrame then
-			Model:PivotTo(GoalCFrame)
-		end
-
-		if MeshContainer.T then
-			StartPart.Transparency = MeshContainer.T
-		end
-
-		EndPart.Transparency = 1
-		Model.Parent = workspace.Thrown
-
-		local StartDecal = StartPart:FindFirstChildOfClass("Decal")
-		local StartMesh = StartPart:FindFirstChildOfClass("SpecialMesh")
-		local EndMesh = EndPart:FindFirstChildOfClass("SpecialMesh")
-		local EndDecal = EndPart:FindFirstChildOfClass("Decal")
-
-		if EndDecal and not Skip then
-			EndDecal.Transparency = 1
-		end
-
-		local Tween = nil
-
-		if ExtraLifetime then
-			TS:Create(StartPart, TweenInformation, {
-				Size = EndPart.Size,
-				CFrame = EndPart.CFrame,
-			}):Play()
-
-			task.delay(ExtraLifetime, function()
-				Tween = TS:Create(StartPart, TweenInformation, {
-					Transparency = GoalTransparency,
-				})
-
-				Tween:Play()
-
-				if StartDecal then
-					for _, Decal in pairs(StartPart:GetChildren()) do
-						if Decal:IsA("Decal") then
-							TS:Create(Decal, TweenInformation, {
-								Transparency = GoalTransparency,
-							}):Play()
-						end
-					end
-				end
-
-				if StartMesh then
-					Tween = TS:Create(StartMesh, TweenInformation, {
-						Scale = EndMesh.Scale,
-					}):Play()
-				end
-			end)
-		else
-			if StartMesh then
-				TS:Create(StartMesh, TweenInformation, {
-					Scale = EndMesh.Scale,
-				}):Play()
-			end
-
-			if StartDecal then
-				for _, randomVFX in pairs(StartPart:GetChildren()) do
-					if randomVFX:IsA("Decal") then
-						TS:Create(randomVFX, TweenInformation, {
-							Transparency = GoalTransparency,
-						}):Play()
-					end
-				end
-
-				Tween = TS:Create(StartPart, TweenInformation, {
-					Size = EndPart.Size,
-					CFrame = EndPart.CFrame,
-				})
-
-				Tween:Play()
-			else
-				Tween = TS:Create(StartPart, TweenInformation, {
-					Size = EndPart.Size,
-					Transparency = GoalTransparency,
-					CFrame = EndPart.CFrame,
-				})
-
-				Tween:Play()
-			end
-		end
-
-		if not NoDelete then
-			if ExtraLifetime then
-				task.wait(ExtraLifetime + 0.1)
-			end
-
-			Tween.Completed:Connect(function()
-				Model:Destroy()
-			end)
-		end
-	end)
-end
-
-local function QuickFX(Parameters)
-	local FX = Parameters.FX
-	local AnchorPoint = Parameters.Anchor
-	local Maid = Parameters.Maid
-
-	FX = FX:Clone()
-
-	if FX:IsA("Model") then
-		FX:PivotTo(AnchorPoint)
-	elseif FX:IsA("BasePart") then
-		FX.CFrame = AnchorPoint
-	end
-
-	if FX:IsA("Attachment") then
-		FX.Parent = AnchorPoint
-	else
-		FX.Parent = workspace.Thrown
-	end
-
-	if Maid then
-		Maid:Add(FX)
-	else
-		Debris:AddItem(FX, 30)
-	end
-
-	return FX
 end
 
 local ReplicationEffects = {
@@ -1506,9 +1348,6 @@ shared.clearVelocities = function(Part: Part, Ignore: BodyVelocity?)
 			Velocity:Destroy()
 		end
 	end
-end
-if ClientTasksLoadTime > 0 then
-	print("CLIENT TASKS LOADED IN: ", ClientTasksLoadTime)
 end
 
 return ReplicationEffects

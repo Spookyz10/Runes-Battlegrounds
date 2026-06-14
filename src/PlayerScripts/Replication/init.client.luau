@@ -1,10 +1,4 @@
--- ============================================================
--- PLAYER CLIENT SCRIPT (CLEANED)
--- Removido: Duels, Private Server, Gamepad/Console, Donations
--- ============================================================
-
 local TouchGui
-local loadStart = tick()
 
 local Player = game.Players.LocalPlayer
 
@@ -24,7 +18,6 @@ local StarterGui = game:GetService("StarterGui")
 local UIS = game:GetService("UserInputService")
 local RS = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
-local TS = game:GetService("TweenService")
 
 local TextChatService = game:GetService("TextChatService")
 
@@ -34,6 +27,7 @@ local Comunicator = ComRemotes.Set
 local Getter = ComRemotes.Get
 local CombatRemotes = Remotes.Combat
 local CombatSet = CombatRemotes.Set
+local SpecialsSet = Remotes.Specials.Set
 
 local RPModules = RS.Shared.Modules
 
@@ -1364,6 +1358,11 @@ UIS.InputBegan:Connect(function(input, gameProccessedEvent)
 		if shared.emotegui then
 			shared.emotegui()
 		end
+	elseif input.KeyCode == Enum.KeyCode.R then
+		if not gameProccessedEvent then
+			local isAwakened = Character:GetAttribute("Awakened") == true
+			SpecialsSet:FireServer(isAwakened and "ActivateUlt" or "ActivateBase", {})
+		end
 	end
 end)
 
@@ -1695,5 +1694,3 @@ TextChatService.OnIncomingMessage = function(message)
 		.. message.PrefixText
 	return overrideProperties
 end
-
-print("CLIENT LOADED " .. tick() - loadStart)

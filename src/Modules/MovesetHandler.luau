@@ -1,71 +1,83 @@
---// Services \\--
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SvSt = game:GetService("ServerStorage")
-
---// Movesets \\--
+local InfoModule = require(ReplicatedStorage.Shared.Info)
 
 local Movesets = SvSt.Movesets
-
---// Module \\--
-
 local module = {}
 module.__index = module
 
---// Local Functions \\--
+local function resolveFolder(Player, Moveset)
+	local movesetInfo = InfoModule.Movesets[Moveset]
 
-local function AddBaseMoveset(Player, Moveset)
-	Moveset = Moveset or Player:GetAttribute("Moveset")
+	-- Se o moveset tem modos, entra na sub-pasta do modo atual
+	if movesetInfo and movesetInfo.Modes then
+		local playerClass = shared.playerClasses[Player.UserId]
+		local currentMode = (playerClass and playerClass.MovesetModes[Moveset]) or movesetInfo.DefaultMode
 
-	local MovesetFolder: Folder = Movesets:FindFirstChild(Moveset) or Movesets["Lunar"]
+		local root = Movesets:FindFirstChild(Moveset)
+		return root and root:FindFirstChild(currentMode)
+	end
 
-	local StartIndex = #Player.Moveset:GetChildren()
-	for _, v in MovesetFolder:GetChildren() do
+	return Movesets:FindFirstChild(Moveset)
+end
+
+local function addTools(Player, folder, attributeName)
+	if not folder then
+		warn("MovesetHandler: pasta não encontrada para", Player.Name)
+		return
+	end
+
+	local startIndex = #Player.Moveset:GetChildren()
+
+	for _, v in folder:GetChildren() do
 		if not v:IsA("Tool") then
 			continue
 		end
 
-		local vClone = v:Clone()
-		vClone:SetAttribute("Base", true)
-		vClone:SetAttribute("Index", StartIndex + vClone:GetAttribute("Index"))
-		vClone:SetAttribute("originalCDS", v:GetAttribute("CDS"))
-		vClone.Parent = Player.Moveset
+		local clone = v:Clone()
+		clone:SetAttribute(attributeName, true)
+		clone:SetAttribute("Index", startIndex + clone:GetAttribute("Index"))
+		clone:SetAttribute("originalCDS", v:GetAttribute("CDS"))
+		clone.Parent = Player.Moveset
 	end
 end
 
-function module:AddBaseMoveset(Player, Moveset, RandomMoves)
+function module:AddBaseMoveset(Player, Moveset)
 	Moveset = Moveset or Player:GetAttribute("Moveset")
 
 	for _, v in Player.Moveset:GetChildren() do
 		v:Destroy()
 	end
 
-	AddBaseMoveset(Player, Moveset)
+	addTools(Player, resolveFolder(Player, Moveset), "Base")
 end
 
-function module:AddAwakeningMoveset(Player, MovesetName)
-	MovesetName = MovesetName or Player:GetAttribute("Moveset")
+function module:AddAwakeningMoveset(Player, Moveset)
+	Moveset = Moveset or Player:GetAttribute("Moveset")
 
-	local MovesetFolder = Movesets[MovesetName]:FindFirstChild("Awakening")
-	if not MovesetFolder then
-		return
-	end
-
-	for _, Tool in pairs(Player.Moveset:GetChildren()) do
-		if Tool:IsA("Tool") then
-			Tool:Destroy()
-		end
-	end
-
-	local StartIndex = #Player.Moveset:GetChildren()
-
-	for _, v in pairs(MovesetFolder:GetChildren()) do
+	for _, v in Player.Moveset:GetChildren() do
 		if v:IsA("Tool") then
-			local vClone = v:Clone()
-			vClone:SetAttribute("Awakening", true)
-			vClone:SetAttribute("Index", StartIndex + vClone:GetAttribute("Index"))
-			vClone:SetAttribute("originalCDS", v:GetAttribute("CDS"))
-			vClone.Parent = Player.Moveset
+			v:Destroy()
 		end
 	end
+
+	local movesetInfo = InfoModule.Movesets[Moveset]
+	local folder
+
+	if movesetInfo and movesetInfo.Modes then
+		-- Awakening também tem sub-pastas: Eclipse/Lunar/Awakening
+		local playerClass = shared.playerClasses[Player.UserId]
+		local currentMode = (playerClass and playerClass.MovesetModes[Moveset]) or movesetInfo.DefaultMode
+
+		local root = Movesets:FindFirstChild(Moveset)
+		local modeFolder = root and root:FindFirstChild(currentMode)
+		folder = modeFolder and modeFolder:FindFirstChild("Awakening")
+	else
+		local root = Movesets:FindFirstChild(Moveset)
+		folder = root and root:FindFirstChild("Awakening")
+	end
+
+	addTools(Player, folder, "Awakening")
 end
 
 return module

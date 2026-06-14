@@ -1,10 +1,8 @@
-local LoadStart = tick()
-
 local Players = game:GetService("Players")
-local DataService = game:GetService("DataStoreService")
+
 local RS = game:GetService("ReplicatedStorage")
 local SvSt = game:GetService("ServerStorage")
-local Http = game:GetService("HttpService")
+
 local RNS = game:GetService("RunService")
 local Debris = game:GetService("Debris")
 local CollectionService = game:GetService("CollectionService")
@@ -19,7 +17,7 @@ local StunHandler = require(SvModules.StunHandler)
 local MovesetHandlerModule = require(SvModules.MovesetHandler)
 local RagdollHandler = require(SvModules.RagdollHandler)
 local CollisionsModule = require(SvModules.CollisionsModule)
-
+local ProfileStore = require(SvSt.ServerPackages.profilestore)
 local DamageHandler = require(SvModules.DamageHandler)
 local AnimationService = require(SvModules.AnimationService)
 local Knockback = require(SvModules.BodymoverService)
@@ -27,8 +25,6 @@ local iFramesService = require(SvModules.iFramesService)
 local PlayerClass = require(SvModules.PlayerClass)
 local CombatUtils = require(SvModules.CombatUtils)
 local ReplicatedHitboxes = require(SvModules.ReplicatedHitboxes)
-
-local DataStore = DataService:GetDataStore("DataStore")
 
 local Assets = SvSt.Assets
 local Animations = Assets.Animations
@@ -43,9 +39,11 @@ local ReplicateSet = Replication.Set
 
 shared.playerClasses = {}
 
-local DefaultData = PlayerClass.defaultData
 local AnimationsTable = {}
 local Kills = {}
+
+local Profiles = {}
+local PlayerStore = ProfileStore.New("PlayerData", PlayerClass.defaultData)
 
 pcall(function()
 	PhysicsService:RegisterCollisionGroup("NonPColDebri")
@@ -277,33 +275,19 @@ local function HumanoidDied(Player)
 	end)
 end
 
-local function SaveData(userId, playerClass)
-	if not shared.playerClasses[userId] then
+local function SaveData(userId)
+	local profile = Profiles[userId]
+	if not profile then
 		return
 	end
 
-	local Data = playerClass or table.clone(shared.playerClasses[userId])
+	-- profile.Data já está atualizado (é a mesma referência que playerClass)
+	profile:EndSession()
 
+	Profiles[userId] = nil
 	shared.playerClasses[userId] = nil
 	Kills[userId] = nil
-
 	PlayerClass:RemoveClass(userId)
-
-	DataStore:UpdateAsync(userId, function(oldData)
-		if oldData then
-			oldData = Http:JSONDecode(oldData)
-
-			for Index, Value in DefaultData do
-				if oldData[Index] then
-					continue
-				end
-
-				oldData[Index] = Value
-			end
-		end
-
-		return Http:JSONEncode(Data)
-	end)
 end
 
 local ComunicatorFunctions = {
@@ -993,12 +977,27 @@ local function AddStarterPlayer(Player)
 		Moveset.Parent = Player
 	end
 
+	local playerClassData = shared.playerClasses[Player.UserId]
+	if playerClassData and playerClassData.MovesetModes then
+		for movesetName, mode in playerClassData.MovesetModes do
+			Player:SetAttribute("MovesetMode_" .. movesetName, mode)
+		end
+	end
+
 	local AwakeningProgress = Player:FindFirstChild("AwakeningProgress")
 	if not AwakeningProgress then
 		AwakeningProgress = Instance.new("NumberValue")
 		AwakeningProgress.Name = "AwakeningProgress"
 		AwakeningProgress.Value = 0
 		AwakeningProgress.Parent = Player
+	end
+
+	local CurrentMode = Player:FindFirstChild("CurrentMode")
+	if not CurrentMode then
+		CurrentMode = Instance.new("StringValue")
+		CurrentMode.Name = "CurrentMode"
+		CurrentMode.Value = "Default"
+		CurrentMode.Parent = Player
 	end
 
 	local leaderstats = Player:FindFirstChild("leaderstats")
@@ -1044,39 +1043,46 @@ local function PlayerAdded(Player)
 
 	local userId = Player.UserId
 
-	local data
-	local success, emsg = pcall(function()
-		data = DataStore:GetAsync(userId)
+	local profile = PlayerStore:StartSessionAsync("Player_" .. userId, {
+		Cancel = function()
+			return not Players:GetPlayerByUserId(userId)
+		end,
+	})
+
+	if not profile then
+		Player:Kick("Não foi possível carregar seus dados. Tente novamente.")
+		return
+	end
+
+	-- Reconcilia chaves novas que não existiam no save antigo
+	profile:Reconcile()
+
+	-- Profile liberado em outra sessão (kick automático)
+	profile.OnSessionEnd:Connect(function()
+		Profiles[userId] = nil
+		shared.playerClasses[userId] = nil
+		Player:Kick("Sua sessão foi encerrada.")
 	end)
 
-	if not success then
-		warn(Player.Name .. "'s data was not loaded: " .. emsg)
-	end
+	Profiles[userId] = profile
 
-	local playerClass = nil
-	if data == nil then
-		playerClass = PlayerClass.new(Player)
-	else
-		playerClass = PlayerClass.new(Player, Http:JSONDecode(data))
-	end
+	-- profile.Data É a tabela de dados — passa direto pro PlayerClass
+	-- como é referência, modificações em playerClass refletem em profile.Data automaticamente
+	local playerClass = PlayerClass.new(Player, profile.Data)
 
-	if playerClass == nil then
-		Player:Kick(
-			"Your data could not be loaded, please rejoin. \n If this keeps happening, please, contact a staff member."
-		)
+	if not playerClass then
+		Player:Kick("Erro ao carregar dados. Contate um staff.")
 		return
 	end
 
 	shared.playerClasses[userId] = playerClass
 
-	local LoadedData, ErrorMessage = pcall(AddStarterPlayer, Player)
-	if not LoadedData then
-		Player:Kick("Couldn't load data, try again later.")
-
+	local ok, err = pcall(AddStarterPlayer, Player)
+	if not ok then
+		Player:Kick("Erro ao inicializar personagem.")
 		if RNS:IsStudio() then
-			warn(ErrorMessage)
+			warn(err)
 		end
-
 		return
 	end
 
@@ -1086,7 +1092,6 @@ local function PlayerAdded(Player)
 	if Character then
 		CharacterAdded(Character)
 	end
-
 	Player.CharacterAdded:Connect(CharacterAdded)
 end
 
@@ -1195,8 +1200,8 @@ Players.PlayerRemoving:Connect(PlayerRemoving)
 
 game:BindToClose(function()
 	if RNS:IsStudio() then
-		for userId, playerClass in shared.playerClasses do
-			task.spawn(SaveData, userId, playerClass)
+		for userId in shared.playerClasses do
+			SaveData(userId)
 		end
 	end
 end)
@@ -1243,5 +1248,3 @@ ComSet.OnServerEvent:Connect(function(Player, _Function, Params)
 		ComunicatorFunctions[_Function](Player, Params)
 	end
 end)
-
-print("SERVER LOADED " .. tick() - LoadStart)

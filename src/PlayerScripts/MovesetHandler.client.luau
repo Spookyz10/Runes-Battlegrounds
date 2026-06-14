@@ -1,5 +1,3 @@
---// Services \\--
-
 local UIS = game:GetService("UserInputService")
 local RS = game:GetService("ReplicatedStorage")
 local TS = game:GetService("TweenService")
@@ -8,28 +6,19 @@ local StarterGUI = game:GetService("StarterGui")
 
 StarterGUI:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
 
---// Player \\--
-
 local Player = Players.LocalPlayer
 local Character = Player.Character or Player.CharacterAdded:Wait()
 local Backpack = Player:WaitForChild("Moveset")
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
---// Remotes \\--
-
 local Remotes = RS.Remotes
-
 local MovesetHandler = Remotes.MovesetHandler
-
 local AbilitiesHandlerFolder = Remotes.AbilitiesHandler
-
 local AbilitieRemote_Get = AbilitiesHandlerFolder.Get
 
 local GUI = PlayerGui:WaitForChild("Hotbar")
 local HotbarFrame = GUI.Hotbar
 local CooldownFrame = RS.Resources.UI.Cooldown
-
---// Keys \\--
 
 local Keys = {
 	["One"] = "1",
@@ -40,25 +29,47 @@ local Keys = {
 	["Six"] = "6",
 	["Seven"] = "7",
 	["Eight"] = "8",
-
 	["Nine"] = "9",
 	["Zero"] = "0",
-
 	["ButtonL1"] = "1",
 	["ButtonL2"] = "2",
 	["ButtonR2"] = "3",
 	["ButtonR1"] = "4",
-
 	["DLeft+ButtonL1"] = "0",
 	["DLeft+ButtonR1"] = "9",
 }
 
---// Variables \\--
-
 local MoveSelected = nil
-local hotbarState
 
---// Functions \\--
+local InfoModule = require(RS.Shared.Info)
+
+local function getGradientName()
+	local moveset = Player:GetAttribute("Moveset")
+	local movesetInfo = InfoModule.Movesets[moveset]
+	if movesetInfo and movesetInfo.Modes then
+		return Player:GetAttribute("MovesetMode_" .. moveset) or movesetInfo.DefaultMode
+	end
+	return moveset
+end
+
+local function tweenAllSlotsDown(onComplete)
+	for _, slot in HotbarFrame:GetChildren() do
+		if slot:IsA("Frame") and slot:FindFirstChild("Base") then
+			slot.Base:TweenPosition(
+				UDim2.new(0.5, 0, 0.5, 125),
+				Enum.EasingDirection.Out,
+				Enum.EasingStyle.Quad,
+				0.35,
+				true
+			)
+		end
+	end
+	task.delay(0.35, function()
+		if onComplete then
+			onComplete()
+		end
+	end)
+end
 
 local function whiteGradientTween(Parent)
 	local moveUsed = CooldownFrame:Clone()
@@ -100,7 +111,6 @@ local function Equip(HotbarSlot)
 							whiteGradientTween(HotbarSlot)
 						end
 					end)
-
 					Tween:Play()
 				elseif Tool:GetAttribute("CDS") == 0 then
 					whiteGradientTween(HotbarSlot)
@@ -112,7 +122,6 @@ local function Equip(HotbarSlot)
 				changedSignal = Tool:GetAttributeChangedSignal("onCDS"):Connect(function()
 					if Tool:GetAttribute("onCDS") == true or Tool:GetAttribute("CDS") == 0 then
 						changedSignal:Disconnect()
-
 						if Tool:GetAttribute("CDS") ~= 0 then
 							addCooldown()
 						end
@@ -133,51 +142,69 @@ local function AddTool(Tool)
 	end
 
 	local HotbarSlot = HotbarFrame[tostring(Tool:GetAttribute("Index"))]
-	if HotbarSlot then
-		local Base = HotbarSlot.Base
+	if not HotbarSlot then
+		return
+	end
 
-		local PreviousState = HotbarSlot:GetAttribute("Active")
-		HotbarSlot:SetAttribute("Active", true)
+	local Base = HotbarSlot.Base
+	local PreviousState = HotbarSlot:GetAttribute("Active")
+	HotbarSlot:SetAttribute("Active", true)
 
-		if PreviousState ~= true and Base.SkillName.Text ~= Tool.Name then
-			Base:TweenPosition(UDim2.new(0.5, 0, 0.5, 125), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.5, true)
+	if PreviousState ~= true then
+		Base:TweenPosition(UDim2.new(0.5, 0, 0.5, 125), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.35, true)
+		task.wait(0.35)
+	end
 
-			task.wait(0.5)
+	local Cooldown = Base:FindFirstChild("Cooldown")
+	if Cooldown then
+		Cooldown:Destroy()
+		whiteGradientTween(Base)
+	end
+
+	Base.SkillName.Text = Tool.Name
+	Base.Icon.Image = Tool:GetAttribute("Icon") or "rbxassetid://0"
+	Base.Number.Text = Tool:GetAttribute("Index")
+
+	HotbarSlot.Visible = true
+
+	Base:TweenPosition(UDim2.new(0.5, 0, 0.5, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.35, true)
+end
+
+local function updateHotbarGradients()
+	local name = getGradientName()
+	local source = HotbarFrame:FindFirstChild("Gradients")
+	if not source then
+		return
+	end
+
+	local template = source:FindFirstChild(name)
+
+	for _, slot in HotbarFrame:GetChildren() do
+		if slot:IsA("Frame") and slot:FindFirstChild("Base") then
+			local base = slot.Base
+			for _, child in base:GetChildren() do
+				if child:IsA("UIGradient") then
+					child:Destroy()
+				end
+			end
+			if template then
+				template:Clone().Parent = base
+			end
 		end
-
-		local Cooldown = Base:FindFirstChild("Cooldown")
-		if Cooldown then
-			Cooldown:Destroy()
-
-			whiteGradientTween(Base)
-		end
-
-		Base.SkillName.Text = Tool.Name
-		Base.Icon.Image = Tool:GetAttribute("Icon") or "rbxassetid://0"
-		Base.Number.Text = Tool:GetAttribute("Index")
-
-		HotbarSlot.Visible = true
-
-		Base:TweenPosition(UDim2.new(0.5, 0, 0.5, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.5, true)
 	end
 end
 
---// Events \\--
+updateHotbarGradients()
 
-local IB = UIS.InputBegan
-
-IB:Connect(function(input, gameProccessedEvent)
+UIS.InputBegan:Connect(function(input, gameProccessedEvent)
 	if gameProccessedEvent then
 		return
 	end
 
 	if Keys[input.KeyCode.Name] then
 		local HotbarSlot = HotbarFrame[Keys[input.KeyCode.Name]]
-
 		if HotbarSlot then
-			HotbarSlot = HotbarSlot.Base
-
-			Equip(HotbarSlot)
+			Equip(HotbarSlot.Base)
 		end
 	end
 end)
@@ -192,16 +219,13 @@ for _, HotbarSlot in HotbarFrame:GetChildren() do
 				if HotbarSlot.SelectionObjectClipper.Visible == true then
 					MoveSelected.SelectionObjectClipper.Visible = false
 					MoveSelected = nil
-
 					Character:RemoveTag("Move Selected")
 				else
 					for _, Slot in HotbarFrame:GetChildren() do
 						if Slot:IsA("Frame") and Slot:FindFirstChild("Base") then
 							Slot = Slot.Base
-
 							if Slot ~= HotbarSlot and Slot.SelectionObjectClipper.Visible == true then
 								Slot.SelectionObjectClipper.Visible = false
-
 								Character:RemoveTag("Move Selected")
 							end
 						end
@@ -209,7 +233,6 @@ for _, HotbarSlot in HotbarFrame:GetChildren() do
 
 					HotbarSlot.SelectionObjectClipper.Visible = true
 					MoveSelected = HotbarSlot
-
 					Character:AddTag("Move Selected")
 				end
 			end
@@ -222,11 +245,9 @@ MovesetHandler.OnClientEvent:Connect(function(Goal)
 		for _, Frame in HotbarFrame:GetChildren() do
 			if Frame:IsA("Frame") then
 				local Base = Frame:FindFirstChild("Base")
-
 				local Cooldown = Base:FindFirstChild("Cooldown")
 				if Cooldown then
 					Cooldown:Destroy()
-
 					whiteGradientTween(Base)
 				end
 			end
@@ -235,8 +256,6 @@ MovesetHandler.OnClientEvent:Connect(function(Goal)
 end)
 
 shared.triggerHotbar = function(State)
-	hotbarState = State
-
 	if State == true then
 		HotbarFrame:TweenPosition(
 			UDim2.new(0.5, -327, 1, -70),
@@ -284,7 +303,6 @@ Backpack.ChildRemoved:Connect(function(Tool: Tool)
 						true
 					)
 				end)
-
 				return
 			end
 
@@ -305,3 +323,19 @@ for _, Tool in Backpack:GetChildren() do
 		AddTool(Tool)
 	end)
 end
+
+Player:GetAttributeChangedSignal("Moveset"):Connect(function()
+	tweenAllSlotsDown()
+	task.delay(0.35, function()
+		updateHotbarGradients()
+	end)
+end)
+
+Player.AttributeChanged:Connect(function(attr)
+	if attr:match("^MovesetMode_") then
+		tweenAllSlotsDown()
+		task.delay(0.35, function()
+			updateHotbarGradients()
+		end)
+	end
+end)

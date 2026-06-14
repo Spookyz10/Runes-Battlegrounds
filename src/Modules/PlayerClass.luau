@@ -3,10 +3,22 @@ playerClass.__index = playerClass
 
 local playerClasses = {}
 
-local defaultData = {
-	Moveset = "Lunar",
+local InfoModule = require(game.ReplicatedStorage.Shared.Info)
 
-	--Booleans
+local function buildDefaultModes()
+	local modes = {}
+	for name, info in InfoModule.Movesets do
+		if info.DefaultMode then
+			modes[name] = info.DefaultMode
+		end
+	end
+	return modes
+end
+
+local defaultData = {
+	Moveset = "Eclipse",
+
+	MovesetModes = buildDefaultModes(),
 	Update_2_SawLog = false,
 	DidMonthlyReset = false,
 	CompletedQuest = false,
@@ -86,15 +98,38 @@ playerClass.defaultData = defaultData
 
 function playerClass.new(Player: Player, PlayerData)
 	if PlayerData == nil then
-		PlayerData = defaultData
+		-- deep copy pra não compartilhar referência entre players
+		PlayerData = {}
+		for k, v in defaultData do
+			PlayerData[k] = v
+		end
+		PlayerData.MovesetModes = buildDefaultModes()
 	else
+		-- migração: moveset que não existe mais no Info → reseta pro default
+		if not InfoModule.Movesets[PlayerData.Moveset] then
+			PlayerData.Moveset = defaultData.Moveset
+		end
+
+		-- merge normal dos campos de topo
 		for Index, Value in defaultData do
 			if PlayerData[Index] == nil then
 				PlayerData[Index] = Value
 			end
 		end
 
-		for Index, _ in PlayerData do
+		-- merge especial de MovesetModes: preenche modos novos sem apagar os salvos
+		if type(PlayerData.MovesetModes) ~= "table" then
+			PlayerData.MovesetModes = buildDefaultModes()
+		else
+			for name, defaultMode in buildDefaultModes() do
+				if PlayerData.MovesetModes[name] == nil then
+					PlayerData.MovesetModes[name] = defaultMode
+				end
+			end
+		end
+
+		-- remove chaves obsoletas
+		for Index in PlayerData do
 			if defaultData[Index] == nil then
 				PlayerData[Index] = nil
 			end
