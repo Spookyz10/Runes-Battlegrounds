@@ -279,7 +279,7 @@ return {
 
 					KnockbackModule:Knockback(
 						slammedEnemy,
-						HumRP.CFrame.LookVector * 50 + Vector3.new(0, 10, 0),
+						HumRP.CFrame.LookVector * 50 + Vector3.new(0, 30, 0),
 						nil,
 						nil,
 						nil,
@@ -364,9 +364,6 @@ return {
 			end)
 		)
 
-		-- ────────────────────────────────────────────────
-		-- cleanup geral ao parar a animação
-		-- ────────────────────────────────────────────────
 		UserTrack.Stopped:Once(function()
 			for _, v in UserEvents do
 				v:Disconnect()

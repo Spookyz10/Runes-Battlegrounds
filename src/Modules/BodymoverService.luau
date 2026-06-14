@@ -4,24 +4,8 @@ local TS = game:GetService("TweenService")
 
 local BMS = {}
 
-function BMS:KnockbackRagdoll(Character, Velocity)
-	for _, part in Character:GetDescendants() do
-		if part:IsA("BasePart") and not part.Massless then
-			if part:CanSetNetworkOwnership() then
-				part:SetNetworkOwner(nil)
-			end
-			part.AssemblyLinearVelocity = Velocity
-		end
-	end
-end
-
 function BMS:Knockback(Character, Data)
 	if not Data.Velocity and not Data.Position then
-		return
-	end
-
-	if Character:HasTag("Ragdolled") then
-		BMS:KnockbackRagdoll(Character, Data.Velocity or Vector3.zero)
 		return
 	end
 

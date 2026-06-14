@@ -1,5 +1,5 @@
-local REGEN_RATE = 0.35 / 100 -- Regenerate this fraction of MaxHealth per second.
-local REGEN_STEP = 1 -- Wait this long between each regeneration step.
+local REGEN_RATE = 0.35 / 100
+local REGEN_STEP = 1
 
 local Character = script.Parent
 local Humanoid

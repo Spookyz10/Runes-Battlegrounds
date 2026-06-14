@@ -315,14 +315,6 @@ function Ragdoll.ragdoll(Humanoid, Duration, HardRagdoll, Ragdoller, _, _, check
 		Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
 	else
 		Comunicator:FireClient(Player, "Ragdoll", { State = true })
-
-		for _, part in Character:GetDescendants() do
-			if part:IsA("BasePart") and part:CanSetNetworkOwnership() then
-				pcall(function()
-					part:SetNetworkOwner(nil)
-				end)
-			end
-		end
 	end
 
 	for _, v in ipairs(Character.Torso:GetChildren()) do

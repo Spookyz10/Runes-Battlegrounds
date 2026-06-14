@@ -1404,15 +1404,14 @@ local ReplicationEffects = {
 		ParticlesModule.Emit(SlashClone)
 		Debris:AddItem(SlashClone, 3)
 	end,
-
 	MoonCuttersFinalStart = function(Params)
-		local EChar = Params.EChar
-		if not EChar or not EChar.Parent then
+		local Char = Params.Char
+		if not Char or not Char.Parent then
 			return
 		end
 
-		local Head = EChar:FindFirstChild("Head")
-		if not Head then
+		local RightArm = Char:FindFirstChild("Right Arm")
+		if not RightArm then
 			return
 		end
 
@@ -1424,27 +1423,28 @@ local ReplicationEffects = {
 		local FIClone = FinalImpact:Clone()
 		FIClone.Name = "FinalImpact"
 		FIClone.Anchored = false
-		FIClone.CFrame = Head.CFrame
-		FIClone.Parent = Head
+		FIClone.CFrame = CFrame.new(RightArm.Position)
+			* CFrame.Angles(math.rad(170.702), math.rad(-180), math.rad(-172.399))
+		FIClone.Parent = RightArm
 
 		local Weld = Instance.new("WeldConstraint")
-		Weld.Part0 = Head
+		Weld.Part0 = RightArm
 		Weld.Part1 = FIClone
 		Weld.Parent = FIClone
 	end,
 
 	MoonCuttersFinalEnd = function(Params)
-		local EChar = Params.EChar
-		if not EChar or not EChar.Parent then
+		local Char = Params.Char
+		if not Char or not Char.Parent then
 			return
 		end
 
-		local Head = EChar:FindFirstChild("Head")
-		if not Head then
+		local RightArm = Char:FindFirstChild("Right Arm")
+		if not RightArm then
 			return
 		end
 
-		local FinalImpact = Head:FindFirstChild("FinalImpact")
+		local FinalImpact = RightArm:FindFirstChild("FinalImpact")
 		if not FinalImpact then
 			return
 		end
@@ -1462,7 +1462,7 @@ local ReplicationEffects = {
 			end
 		end
 
-		Debris:AddItem(FinalImpact, 0.6)
+		Debris:AddItem(FinalImpact, 0.3)
 	end,
 
 	EclipseHit = function(Params)

@@ -1,5 +1,3 @@
--- humanoidAnimatePlayEmote.lua
-
 local Figure = script.Parent
 
 local Torso
