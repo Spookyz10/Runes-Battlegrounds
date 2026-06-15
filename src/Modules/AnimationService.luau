@@ -29,7 +29,6 @@ function AnimationService:playAnimation(Character, Animation, Speed, TimePositio
 	local loadedAnims = AnimationService:getLoadedAnimations(Character)
 
 	if not loadedAnims[Animation] then
-		print("[AnimSvc] playAnimation ABORTOU - Animation is nil")
 		return
 	end
 

@@ -9,7 +9,6 @@ module.__index = module
 local function resolveFolder(Player, Moveset)
 	local movesetInfo = InfoModule.Movesets[Moveset]
 
-	-- Se o moveset tem modos, entra na sub-pasta do modo atual
 	if movesetInfo and movesetInfo.Modes then
 		local playerClass = shared.playerClasses[Player.UserId]
 		local currentMode = (playerClass and playerClass.MovesetModes[Moveset]) or movesetInfo.DefaultMode
@@ -23,7 +22,7 @@ end
 
 local function addTools(Player, folder, attributeName)
 	if not folder then
-		warn("MovesetHandler: pasta não encontrada para", Player.Name)
+		warn("No moveset folder for ", Player.Name)
 		return
 	end
 
@@ -65,7 +64,6 @@ function module:AddAwakeningMoveset(Player, Moveset)
 	local folder
 
 	if movesetInfo and movesetInfo.Modes then
-		-- Awakening também tem sub-pastas: Eclipse/Lunar/Awakening
 		local playerClass = shared.playerClasses[Player.UserId]
 		local currentMode = (playerClass and playerClass.MovesetModes[Moveset]) or movesetInfo.DefaultMode
 

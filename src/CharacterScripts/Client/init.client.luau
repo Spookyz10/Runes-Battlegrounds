@@ -4,7 +4,6 @@ local Debris = game:GetService("Debris")
 local RNS = game:GetService("RunService")
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
-local CollectionService = game:GetService("CollectionService")
 
 --Player
 if script.Parent.Parent:GetAttribute("ClonedChar2") then
@@ -29,8 +28,7 @@ Animate:WaitForChild("walk"):WaitForChild("WalkAnim")
 local Humanoid = Character:FindFirstChild("Humanoid") or Character:WaitForChild("Humanoid", 10)
 local Animator = Humanoid:FindFirstChild("Animator") or Humanoid:WaitForChild("Animator", 10)
 local HumRP = Character:FindFirstChild("HumanoidRootPart") or Character:WaitForChild("HumanoidRootPart", 10)
-local RootJoint = HumRP:FindFirstChild("RootJoint") or HumRP:WaitForChild("RootJoint", 10)
-local DefaultC0Offset = RootJoint.C0
+
 local Head = Character:FindFirstChild("Head") or Character:WaitForChild("Head", 10)
 local Torso = Character:FindFirstChild("Torso") or Character:WaitForChild("Torso", 10)
 
@@ -97,10 +95,6 @@ end)
 CameraShaker:Start()
 
 --Functions
-local function raycast(origin, direction)
-	return workspace:Raycast(origin, direction, params)
-end
-
 shared.shake = function(Magnitude, Roughness, FadeInTime, FadeOutTime, PositionInfluence)
 	shared.addshake(Magnitude / 2)
 end
@@ -865,9 +859,6 @@ HumRP.ChildAdded:Connect(function(BodyVelocity)
 	end
 end)
 
-require(RS.Shared.Modules.CameraTableAnims):StopAnimations()
-require(RS.Shared.Modules.CameraHandler):StopAnims()
-
 Animator.AnimationPlayed:Connect(function(AnimationTrack)
 	if AnimationTrack.Animation.AnimationId == "rbxassetid://98691909912183" then
 		AnimationTrack:AdjustSpeed(Humanoid.WalkSpeed / 16)
@@ -881,88 +872,5 @@ Humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
 		elseif AnimationTrack.Animation.AnimationId == "rbxassetid://115733546570440" then
 			AnimationTrack:AdjustSpeed(Humanoid.WalkSpeed / 25)
 		end
-	end
-end)
-
-for _, Prompt in pairs(CollectionService:GetTagged("SnowballPrompt")) do
-	if not Prompt:GetAttribute("OG") then
-		Prompt:SetAttribute("OG", Prompt.MaxActivationDistance)
-	end
-
-	Prompt.MaxActivationDistance = Prompt:GetAttribute("OG")
-end
-
-Character.ChildAdded:Connect(function(Child)
-	if Child.Name == "HasSnowball" then
-		local StartTick = tick()
-
-		repeat
-			task.wait()
-		until Child:GetAttribute("Done") or not Child.Parent or tick() - StartTick > 5
-
-		local IdleAnimation = Animator:LoadAnimation(script["Idle Snowball"])
-		local WalkAnimation = Animator:LoadAnimation(script["Walk Snowball"])
-		local WalkTime = 0
-		local Offset = CFrame.new(0, 0, 0)
-
-		IdleAnimation:Play()
-
-		local Connections = {}
-		local function ActivatePrompts()
-			for _, Connection in pairs(Connections) do
-				Connection:Disconnect()
-			end
-
-			IdleAnimation:Stop()
-			WalkAnimation:Stop()
-
-			TS:Create(RootJoint, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {
-				C0 = DefaultC0Offset,
-			}):Play()
-
-			task.delay(0.95, function()
-				for _, Prompt in pairs(CollectionService:GetTagged("SnowballPrompt")) do
-					Prompt.MaxActivationDistance = Prompt:GetAttribute("OG")
-				end
-			end)
-		end
-
-		table.insert(
-			Connections,
-			RNS.RenderStepped:Connect(function(DeltaTime)
-				if not Child.Parent then
-					ActivatePrompts()
-				else
-					local VectorizedDirection = HumRP.CFrame:VectorToObjectSpace(Humanoid.MoveDirection)
-					Offset = Offset:Lerp(
-						CFrame.Angles(math.rad(-VectorizedDirection.Z) * 10, math.rad(-VectorizedDirection.X) * 10, 0),
-						1 - 0.001 ^ DeltaTime
-					)
-
-					RootJoint.C0 = DefaultC0Offset * Offset
-				end
-			end)
-		)
-
-		for _, Prompt in pairs(CollectionService:GetTagged("SnowballPrompt")) do
-			Prompt.MaxActivationDistance = 0
-		end
-
-		table.insert(
-			Connections,
-			Humanoid:GetPropertyChangedSignal("MoveDirection"):Connect(function()
-				if Humanoid.MoveDirection ~= Vector3.zero then
-					if not WalkAnimation.IsPlaying then
-						WalkAnimation:Play(0.25)
-						IdleAnimation:Stop(0.25)
-						WalkAnimation.TimePosition = WalkTime
-					end
-				elseif WalkAnimation.IsPlaying then
-					WalkTime = WalkAnimation.TimePosition
-					WalkAnimation:Stop(0.25)
-					IdleAnimation:Play(0.25)
-				end
-			end)
-		)
 	end
 end)

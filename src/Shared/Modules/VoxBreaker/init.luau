@@ -225,7 +225,7 @@ end
 
 local destructionSchedule = {} -- Keeps track of parts and their destruction timers
 
-local function Destroy(part, timeToDestroy)
+local function Destroy(part: Instance, timeToDestroy)
 	-- If the part is already scheduled for destruction, cancel the previous timer
 	if destructionSchedule[part] then
 		task.cancel(destructionSchedule[part])
@@ -257,7 +257,7 @@ local function Destroy(part, timeToDestroy)
 	end)
 end
 
-local function CopyProperties(PartOne, PartTwo)
+local function CopyProperties(PartOne: Part, PartTwo: Part)
 	PartTwo.Anchored = PartOne.Anchored
 	PartTwo.Transparency = PartOne.Transparency
 	PartTwo.CanCollide = PartOne.CanCollide
@@ -287,7 +287,7 @@ local function CopyProperties(PartOne, PartTwo)
 	end
 end
 
-local function partCanSubdivide(part) --Checks if part is rectangular.
+local function partCanSubdivide(part: Part) --Checks if part is rectangular.
 	local Threshold = 1.5 -- How much of a difference there can be between the largest axis and the smallest axis
 
 	local largest = math.max(part.Size.X, part.Size.Y, part.Size.Z) --Largest Axis
@@ -306,11 +306,11 @@ local function partCanSubdivide(part) --Checks if part is rectangular.
 	--Part is rectangular if the largest axis is at least 1.5x bigger than the smallest axis
 end
 
-local function getLargestAxis(part) --Returns Largest Axis of Part size
+local function getLargestAxis(part: Part) --Returns Largest Axis of Part size
 	return math.max(part.Size.X, part.Size.Y, part.Size.Z)
 end
 
-local function CutPartinHalf(block, TimeToReset) --Cuts part into two evenly shaped pieces.
+local function CutPartinHalf(block: Part, TimeToReset: number) --Cuts part into two evenly shaped pieces.
 	local partTable: { Part } = {} --Table of parts to be returned
 	local bipolarVectorSet = {} --Offset on where to place halves
 
@@ -473,11 +473,9 @@ local function GetTableMode(Table: { Part })
 		end)
 		return Array[1][1]
 	end
-
-	return nil
 end
 
-local function DivideBlock(block, MinimumVoxelSize, Parent, TimeToReset) --Divides part into evenly shaped cubes.
+local function DivideBlock(block: Part, MinimumVoxelSize: number, Parent: Instance, TimeToReset: number) --Divides part into evenly shaped cubes.
 	--MinimumvVoxelSize Parameter is used to describe the minimum possible size that the parts can be divided. To avoid confusion, this is not the size that the parts will be divided into, but rather the minimum allowed
 	--You CANNOT change the size of the resulting parts. They are dependent on the size of the original part.
 
@@ -793,7 +791,7 @@ local function DivideBlock(block, MinimumVoxelSize, Parent, TimeToReset) --Divid
 	return partTable --Returns resulting parts
 end
 
-local function GetTouchingParts(part, Params) --Used to get all the parts within a part.
+local function GetTouchingParts(part: BasePart, Params: OverlapParams) --Used to get all the parts within a part.
 	local results = {}
 	local touching
 	if Params then
@@ -844,9 +842,11 @@ function VoxBreaker:CreateHitbox(Size, Cframe, Shape, MinimumVoxelSize, TimeToRe
 	--If the TimeToReset parameter is less than 0, then the parts will not reset.
 
 	local DefaultSize = Vector3.new(1, 1, 1) -- Default Hitbox Size
-
+	local DefaultShape = Enum.PartType.Block -- Default Shape of hitbox
 	local DefaultTimeToReset = 50 --Default time in seconds it takes for divided parts to reset
 
+	local size = Size or DefaultSize
+	local shape = Shape or DefaultShape
 	local minimum = MinimumVoxelSize or miniumCubeSize
 	local timetoreset = TimeToReset or DefaultTimeToReset
 
@@ -938,9 +938,11 @@ function VoxBreaker.CreateMoveableHitbox(
 	self.Touched = self.TouchEvent.Event
 
 	local DefaultSize = Vector3.new(1, 1, 1) -- Default Hitbox Size
-
+	local DefaultShape = Enum.PartType.Block -- Default Shape of hitbox
 	local DefaultTimeToReset = 50 --Default time in seconds it takes for divided parts to reset
 
+	local size = Size or DefaultSize
+	local shape = Shape or DefaultShape
 	local minimum = MinimumVoxelSize or miniumCubeSize
 	local timetoreset = TimeToReset or DefaultTimeToReset
 
@@ -1187,7 +1189,7 @@ function VoxBreaker:UnWeld() -- Unwelds the hitbox
 	end)
 end
 
-function VoxBreaker:GetTouchingParts(part) -- Returns all parts touching moveable hitbox OR specified part
+function VoxBreaker:GetTouchingParts(part: Part) -- Returns all parts touching moveable hitbox OR specified part
 	if part then
 		return GetTouchingParts(part)
 	else
@@ -1195,15 +1197,15 @@ function VoxBreaker:GetTouchingParts(part) -- Returns all parts touching moveabl
 	end
 end
 
-function VoxBreaker:CutInHalf(Part, TimeToReset) -- Cuts a specified part into two pieces. Include parent if you want to change the parent of the parts.
+function VoxBreaker:CutInHalf(Part: Part, TimeToReset: number) -- Cuts a specified part into two pieces. Include parent if you want to change the parent of the parts.
 	return CutPartinHalf(Part, TimeToReset) -- Returns halves
 end
 
-function VoxBreaker:Divide(part, minimumVoxelSize, parent, timeToReset) -- Divides a part down once, into four pieces. Will not divide past minimum.
+function VoxBreaker:Divide(part: Part, minimumVoxelSize: number, parent: Instance, timeToReset: number) -- Divides a part down once, into four pieces. Will not divide past minimum.
 	return DivideBlock(part, minimumVoxelSize, parent, timeToReset)
 end
 
-function VoxBreaker:ReturnPart(Part) --Returns Part to PartCache
+function VoxBreaker:ReturnPart(Part: Part) --Returns Part to PartCache
 	if cache and table.find(cache.InUse, Part) then
 		cache:ReturnPart(Part)
 	else

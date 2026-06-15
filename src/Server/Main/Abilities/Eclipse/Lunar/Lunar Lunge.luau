@@ -72,7 +72,6 @@ return {
 
 			ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 1, Last = 0.3 })
 
-			-- damage + knockback no alvo principal
 			local HitInfo =
 				DamageHandler:TakeDamage(Character, EnemyHumanoid, 18, 1.5, nil, true, true, true, true, true, nil, nil)
 
@@ -86,13 +85,13 @@ return {
 				end
 
 				KnockbackModules:Knockback(
-					EnemyCharacter, -- Character
-					PushDir * 100 + Vector3.new(0, 18, 0), -- Velocity
-					nil, -- LookAtCharacter
-					nil, -- CustomAnimation
-					nil, -- customTime
-					nil, -- to
-					false -- ringFX = false
+					EnemyCharacter,
+					PushDir * 100 + Vector3.new(0, 18, 0),
+					nil,
+					nil,
+					nil,
+					nil,
+					false
 				)
 
 				if EnemyPlayer then
@@ -100,7 +99,6 @@ return {
 				end
 			end
 
-			-- splash nos demais perto
 			HitboxHandler:SimpleOnce(
 				SlashCF,
 				25,
@@ -198,11 +196,9 @@ return {
 			destroyVelocity()
 
 			if Frozen then
-				-- animação estava pausada no freeze, despausa para ir até o marker slash
 				Frozen = false
 				UserTrack:AdjustSpeed(1)
 			else
-				-- hit antes do freeze: aplica agora direto
 				applyHit(EnemyCharacter)
 			end
 		end
@@ -213,7 +209,6 @@ return {
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("freeze"):Once(function()
 				if Hit then
-					-- já houve hit antes do freeze, nada a fazer
 					return
 				end
 

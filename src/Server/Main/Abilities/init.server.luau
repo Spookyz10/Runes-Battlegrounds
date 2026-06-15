@@ -1,11 +1,8 @@
---Services
 local SvSt = game:GetService("ServerStorage")
 local RS = game:GetService("ReplicatedStorage")
 
---Bindables
 shared.AirDetect = SvSt.Bindables.AirDetector
 
---Assets
 local Assets = SvSt.Assets
 
 shared.Assets = Assets
@@ -21,39 +18,32 @@ shared.MoveAnims = AnimsFolder.Moves
 
 local Remotes = RS.Remotes
 
---Comunicator
 local ComunicatorFolder = Remotes.Comunicator
 
 shared.PlrSet = ComunicatorFolder.Set
 shared.PlrGet = ComunicatorFolder.Get
 
---ReplicateAbilities
 local ReplicateAbilities = Remotes.AbilitiesHandler
 
 shared.moveget = ReplicateAbilities.Get
 shared.movefire = ReplicateAbilities.Set
 
---ReplicateEffects
 local ReplicateEffects = Remotes.Replicate
 
 shared.repget = ReplicateEffects.Get
 shared.repfire = ReplicateEffects.Set
 
---ReplicatedModules
 local ReplicatedModules = RS.Shared.Modules
 
 shared.AnimationEvents = require(ReplicatedModules.AnimationEvents)
 shared.Utility = require(ReplicatedModules.Utility)
 shared.WeldSystem = require(ReplicatedModules.WeldSystem)
 
---Variables
-
 shared.rad = math.rad
 shared.DefaultJoint = game.StarterPlayer.StarterCharacter.HumanoidRootPart.RootJoint
 
 shared.Abilities = {}
 
---Functions
 local function addToolCDS(Player, Tool)
 	local toolCooldowns = Tool:GetAttribute("Cooldowns")
 
@@ -77,7 +67,6 @@ local function addToolCDS(Player, Tool)
 	end
 end
 
---Runtime
 for _, v in script:GetDescendants() do
 	if v:IsA("ModuleScript") then
 		shared.Abilities[v.Name] = require(v)
@@ -93,28 +82,6 @@ shared.moveget.OnServerInvoke = function(Player, ToolName)
 	local Tool = Player.Moveset:FindFirstChild(ToolName)
 	if not Tool then
 		return
-	end
-
-	if ToolName == "Vanishing Kick" then
-		if
-			Character:GetAttribute("VanishingKickStomp") == true
-			and not Character:HasTag("Stunned")
-			and not Character:HasTag("Blocking")
-		then
-			Character:SetAttribute("VanishingKickStomp", nil)
-
-			return Tool, false
-		end
-	elseif ToolName == "Body Splitter" then
-		if
-			Character:GetAttribute("BodySplitterSlash") == true
-			and not Character:HasTag("Stunned")
-			and not Character:HasTag("Blocking")
-		then
-			Character:SetAttribute("BodySplitterSlash", nil)
-
-			return Tool, false
-		end
 	end
 
 	local Stunned = Character:HasTag("Stunned")

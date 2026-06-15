@@ -1,5 +1,4 @@
 local ServerStorage = game:GetService("ServerStorage")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local SvSt = ServerStorage
 local ServerModules = ServerStorage.Modules

@@ -1,21 +1,19 @@
-return function(Part1: BasePart, Part0: BasePart)
-	local Character: Model = Part1.Parent
-	local EnemyCharacter: Model = Part0.Parent
-	
+return function(Part1, Part0)
+	local EnemyCharacter = Part0.Parent
+
 	local isBehind = false
 
-	local displacementVector: Vector3 = Part0.Position - Part1.Position
-	local direction: Vector3 = displacementVector.Unit
-	local distance: number = displacementVector.Magnitude
+	local displacementVector = Part0.Position - Part1.Position
+	local direction = displacementVector.Unit
 
-	local character1LV: Vector3 = -Part0.CFrame.LookVector
+	local character1LV = -Part0.CFrame.LookVector
 
-	local angle: number = math.acos(character1LV:Dot(direction))
+	local angle = math.acos(character1LV:Dot(direction))
 	if angle >= math.rad(90) then
 		isBehind = true
 	end
-	
-	local canHit = not EnemyCharacter:HasTag('Blocking') or (EnemyCharacter:HasTag('Blocking') and isBehind)
+
+	local canHit = not EnemyCharacter:HasTag("Blocking") or (EnemyCharacter:HasTag("Blocking") and isBehind)
 
 	return canHit
 end

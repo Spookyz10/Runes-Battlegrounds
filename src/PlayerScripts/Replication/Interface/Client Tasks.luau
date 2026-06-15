@@ -241,7 +241,6 @@ local function debrisSpawner(config)
 
 	local lessDivisor = addConfig.less and 2.5 or 1
 
-	-- Spawna debris grandes (chunks)
 	local largeDebrisCount = rng:NextNumber(3, 5)
 	if config.nodebris then
 		largeDebrisCount = 0
@@ -293,7 +292,6 @@ local function debrisSpawner(config)
 		end)
 	end
 
-	-- Spawna debris pequenos
 	local smallDebrisCount = rng:NextNumber(4, 7) / lessDivisor
 	if config.nodebris then
 		smallDebrisCount = 0
@@ -344,7 +342,6 @@ local function debrisSpawner(config)
 		end)
 	end
 
-	-- Spawna as lascas principais (em anel ao redor do impacto)
 	local spawnedPieces = {}
 	local ringInner = 5
 	local ringOuter = 7
@@ -357,7 +354,6 @@ local function debrisSpawner(config)
 	local ringRadius = (ringInner + ringOuter) / 2
 	local pieceCount = config.amount or 16
 
-	-- Monta o CFrame base alinhado com a normal da superfície
 	local baseCFrame = CFrame.new(config.cframe.p)
 	baseCFrame = baseCFrame * calculateCFrameBetweenVectors(baseCFrame.UpVector, config.normal, Vector3.new(0, 1, 0))
 	baseCFrame = baseCFrame * CFrame.Angles(0, math.rad(rng:NextNumber(-360, 360)), 0)
@@ -399,7 +395,6 @@ local function debrisSpawner(config)
 			slab.Transparency = 1
 			slab.Parent = workspace.Thrown
 
-			-- Verifica colisões para decidir se a lasca fica visível
 			local savedCFrame = slab.CFrame
 			local touching = getTouchingPartsExceptIgnored(slab)
 			local touchingParts = {}
@@ -427,7 +422,6 @@ local function debrisSpawner(config)
 				end
 			end
 
-			-- Reposiciona com rotação aleatória pequena
 			slab.CFrame = savedCFrame
 				* (
 					CFrame.new(0, -3, -1.5)
@@ -440,7 +434,6 @@ local function debrisSpawner(config)
 			slab.Transparency = 0
 			table.insert(spawnedPieces, slab)
 
-			-- Determina se deve esconder a lasca
 			local shouldHide = true
 			if #touchingParts ~= 0 then
 				shouldHide = config.ground:GetAttribute("Breakable") or not config.ground.Anchored
@@ -461,7 +454,6 @@ local function debrisSpawner(config)
 			if shouldHide or inAngle then
 				slab.Transparency = 1
 			else
-				-- Adapta cor/material se estiver em contato com superfície diferente
 				if
 					differentMaterialPart
 					and (not touchingGround or touchingGround.Name ~= "Tile")
@@ -473,7 +465,6 @@ local function debrisSpawner(config)
 				slab.Transparency = config.ground.Transparency
 			end
 
-			-- Ajusta colisão baseado na visibilidade
 			if slab.Transparency >= 1 then
 				slab.CanCollide = false
 				slab.CanTouch = false
@@ -482,13 +473,11 @@ local function debrisSpawner(config)
 				slab.CanCollide = true
 			end
 
-			-- Zera velocidade residual
 			if slab.Velocity.Magnitude > 0 then
 				slab.AssemblyLinearVelocity = Vector3.zero
 				slab.AssemblyAngularVelocity = Vector3.zero
 			end
 
-			-- Anima a lasca voltando para a posição original e depois some
 			slab:SetAttribute("OGCframe", originalCFrame)
 
 			TS:Create(slab, TweenInfo.new(rng:NextNumber(0.2, 0.3), Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
@@ -935,8 +924,8 @@ local ReplicationEffects = {
 	LunarDash = function(Params)
 		local char = Params.char
 		local HumRP = char.PrimaryPart
-		local DashSmoke = Resources.CharacterAssets.Lunar.DashSmoke:Clone()
-		local Circle = Resources.CharacterAssets.Lunar.Circle:Clone()
+		local DashSmoke = Resources.CharacterAssets.Eclipse.Lunar.DashSmoke:Clone()
+		local Circle = Resources.CharacterAssets.Eclipse.Lunar.Circle:Clone()
 
 		DashSmoke.Parent = char
 		Circle.Parent = char
@@ -994,7 +983,7 @@ local ReplicationEffects = {
 				local slowElapsed = tick() - slowStartTime
 				local slowDuration = duration - slowdownStart
 				local t = math.clamp(slowElapsed / slowDuration, 0, 1)
-				-- ease out
+
 				local easedT = 1 - (1 - t) ^ 2
 				speed = (Params.Speed or 60) * (1 - easedT)
 
@@ -1034,8 +1023,6 @@ local ReplicationEffects = {
 	end,
 
 	["Ground Crater"] = function(config)
-		-- Normaliza o ponto de origem para Vector3
-
 		if typeof(config.start) == "Instance" then
 			if config.start:IsA("Attachment") then
 				config.start = config.start.WorldPosition
@@ -1043,20 +1030,17 @@ local ReplicationEffects = {
 				config.start = config.start.Position
 			end
 		elseif typeof(config.start) == "Vector3" then
-		-- já é Vector3, não faz nada
 		else
 			config.start = config.start.Position
 		end
 
 		local rng = Random.new(config.Seed)
 
-		-- Raycast do ponto de origem até o destino
 		local hitPart, hitPosition, _, hitNormal = performRaycast({
 			orig = config.start,
 			dir = config["end"],
 		})
 
-		-- Toca o som no ponto de impacto, se fornecido
 		if config.Sound then
 			config.Sound.CFrame = CFrame.new(hitPosition)
 			shared.sfx(config.Sound):Play()
@@ -1066,7 +1050,6 @@ local ReplicationEffects = {
 			return
 		end
 
-		-- Alinha um attachment com a normal da superfície atingida
 		local surfaceAlignment =
 			calculateCFrameBetweenVectors(CFrame.new(hitPosition).UpVector, hitNormal, Vector3.new(0, 1, 0))
 
@@ -1074,13 +1057,11 @@ local ReplicationEffects = {
 		attachment.Parent = hitPart.Anchored and hitPart or workspace.Terrain
 		attachment.WorldCFrame = CFrame.new(hitPosition) * surfaceAlignment
 
-		-- Spawna fumaça lateral e vertical
 		if not config.nosmoke then
 			local smokeCount = 8
 
 			local zJitter = rng:NextNumber(-0.001, 0.001)
 
-			-- Fumaça lateral (Smoke)
 			local smoke = game.ReplicatedStorage.Resources.Effects.Smoke:Clone()
 			smoke.Parent = attachment
 			smoke.ZOffset = smoke.ZOffset + zJitter
@@ -1109,7 +1090,6 @@ local ReplicationEffects = {
 				smoke:Emit(smokeCount)
 			end
 
-			-- Fumaça vertical (UpSmoke)
 			local upSmokeCount = 8
 
 			local upSmoke = game.ReplicatedStorage.Resources.Effects.UpSmoke:Clone()
@@ -1142,10 +1122,8 @@ local ReplicationEffects = {
 
 		game:GetService("Debris"):AddItem(attachment, 9)
 
-		-- Materiais como areia e neve geram menos lascas
 		local isSoftGround = hitPart.Material == Enum.Material.Sand or hitPart.Material == Enum.Material.Snow
 
-		-- Spawna as lascas do chão
 		if not config.NoCrater2 then
 			local baseAmount = config.amount or (isSoftGround and 7 or 10)
 
@@ -1177,7 +1155,7 @@ local ReplicationEffects = {
 			return
 		end
 
-		local LunarEffects = Resources.CharacterAssets.Lunar
+		local LunarEffects = Resources.CharacterAssets.Eclipse.Lunar
 
 		local RightArm = Character:FindFirstChild("Right Arm")
 		local LeftArm = Character:FindFirstChild("Left Arm")
@@ -1233,7 +1211,7 @@ local ReplicationEffects = {
 			return
 		end
 
-		local SlashAsset = Resources.CharacterAssets.Lunar:FindFirstChild("Slash" .. Index)
+		local SlashAsset = Resources.CharacterAssets.Eclipse.Lunar:FindFirstChild("Slash" .. Index)
 		if not SlashAsset then
 			return
 		end
@@ -1257,7 +1235,7 @@ local ReplicationEffects = {
 			return
 		end
 
-		local FinalImpact = Resources.CharacterAssets.Lunar:FindFirstChild("FinalImpact")
+		local FinalImpact = Resources.CharacterAssets.Eclipse.Lunar:FindFirstChild("FinalImpact")
 		if not FinalImpact then
 			return
 		end
@@ -1317,7 +1295,7 @@ local ReplicationEffects = {
 			return
 		end
 
-		local EclipseClone = Resources.CharacterAssets.Lunar.Eclipse:Clone()
+		local EclipseClone = Resources.CharacterAssets.Eclipse.Lunar.Eclipse:Clone()
 		EclipseClone.Name = "Eclipse_FX"
 		EclipseClone.Parent = Head
 

@@ -281,7 +281,6 @@ local function SaveData(userId)
 		return
 	end
 
-	-- profile.Data já está atualizado (é a mesma referência que playerClass)
 	profile:EndSession()
 
 	Profiles[userId] = nil
@@ -963,7 +962,7 @@ local function AddStarterPlayer(Player)
 	local userId = Player.UserId
 	local playerClass = shared.playerClasses[userId]
 
-	local template = script.StarterPlayer
+	local template = SvSt.StarterPlayer
 
 	for _, obj in template:GetChildren() do
 		local clone = obj:Clone()
@@ -1054,10 +1053,8 @@ local function PlayerAdded(Player)
 		return
 	end
 
-	-- Reconcilia chaves novas que não existiam no save antigo
 	profile:Reconcile()
 
-	-- Profile liberado em outra sessão (kick automático)
 	profile.OnSessionEnd:Connect(function()
 		Profiles[userId] = nil
 		shared.playerClasses[userId] = nil
@@ -1066,8 +1063,6 @@ local function PlayerAdded(Player)
 
 	Profiles[userId] = profile
 
-	-- profile.Data É a tabela de dados — passa direto pro PlayerClass
-	-- como é referência, modificações em playerClass refletem em profile.Data automaticamente
 	local playerClass = PlayerClass.new(Player, profile.Data)
 
 	if not playerClass then

@@ -88,7 +88,7 @@ local function ActivateAwk()
 	AwakeningSet:FireServer("Awakening")
 end
 
-AwkProgChanged:Connect(function()
+local function UpdateAwakeningProgress()
 	local FinalXSize = math.clamp(AwakeningProgress.Value / 100, 0, 1)
 
 	BarFrame.Progress.Bar:TweenSize(UDim2.fromScale(FinalXSize, 2.4), nil, nil, 0.4, true)
@@ -112,7 +112,9 @@ AwkProgChanged:Connect(function()
 	else
 		UltKey.Visible = false
 	end
-end)
+end
+
+AwkProgChanged:Connect(UpdateAwakeningProgress)
 
 IB:Connect(function(input, gameProcessedEvent)
 	if gameProcessedEvent then
@@ -129,6 +131,7 @@ BarFrame.ActivateButton.Activated:Connect(ActivateAwk)
 Player:GetAttributeChangedSignal("Moveset"):Connect(function()
 	SetUltName()
 	updateAwkGradients()
+	UpdateAwakeningProgress()
 end)
 
 Player.AttributeChanged:Connect(function(attr)
@@ -139,3 +142,4 @@ end)
 
 SetUltName()
 updateAwkGradients()
+UpdateAwakeningProgress()

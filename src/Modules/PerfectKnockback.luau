@@ -71,17 +71,14 @@ end
 
 function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 	if not EnemyCharacter then
-		warn("[PerfectKB] EnemyCharacter is nil")
 		return
 	end
 	if not EnemyCharacter.Parent then
-		warn("[PerfectKB] EnemyCharacter has no Parent")
 		return
 	end
 
 	local HumanoidRootPart = EnemyCharacter:FindFirstChild("HumanoidRootPart")
 	if not HumanoidRootPart then
-		warn("[PerfectKB] No HumanoidRootPart on", EnemyCharacter.Name)
 		return
 	end
 
@@ -115,10 +112,8 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 	Params.FallingDetectDelay = Params.FallingDetectDelay or 0.715
 
 	local EnemyHumanoid = EnemyCharacter.Humanoid
-	local EnemyHumRP = EnemyHumanoid.RootPart
 
 	if EnemyHumanoid.Health <= 0 then
-		warn("[PerfectKB] Enemy already dead, aborting")
 		return
 	end
 

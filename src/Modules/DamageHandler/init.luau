@@ -9,16 +9,9 @@ local CombatLogger = require(script.CombatLogger)
 local Utility = require(RPModules.Utility)
 local AnimationService = require(SvModules.AnimationService)
 
-local InfoModule = require(RS.Shared.Info)
-
 local CheckBehind = Utility("CheckBehind")
 
-local DummyCounter = 0.08 / 100
 local module = {}
-
-local function RNG()
-	return Random.new():NextNumber() <= DummyCounter
-end
 
 local function AddDealtDamage(Damaged, Damager, Damage)
 	local Player = Players:GetPlayerFromCharacter(Damager)
@@ -50,7 +43,6 @@ local function AddDealtDamage(Damaged, Damager, Damage)
 end
 
 local Remotes = RS.Remotes
-local ComSet = Remotes.Comunicator.Set
 local ReplicateSet = Remotes.Replicate.Set
 
 function module:TakeDamage(
@@ -93,17 +85,7 @@ function module:TakeDamage(
 	then
 		returnValue.Blocked = true
 	else
-		local specialCountered = (
-			Damaged:FindFirstChild("Dummy") and (RNG() == true and (Type == "M1" or Type == "Dropkick"))
-		)
-			or Damaged:HasTag("SpecialCounter")
-			or Damaged:GetAttribute("CMDCounter")
-
-		if (Damaged:HasTag("Countering") and Counterable == true) or specialCountered then
-			if specialCountered then
-				Damaged:AddTag("SpecialCounter")
-				AnimationService:stopAll(Damaged)
-			end
+		if Damaged:HasTag("Countering") and Counterable == true then
 			returnValue.Countered = true
 		else
 			returnValue.CouldHit = true
@@ -176,8 +158,6 @@ function module:TakeDamage(
 			end
 
 			if DamagerPlayer then
-				local DamagerClass = shared.playerClasses[DamagerPlayer.UserId]
-
 				if not WasDead and returnValue.Finisher == true and doFinisher == true then
 					local MostDealt = nil
 					for Name, Value in Damaged:GetAttributes() do
@@ -214,24 +194,6 @@ function module:TakeDamage(
 							end
 
 							Damager:SetAttribute("Streak", (Damager:GetAttribute("Streak") or 0) + 1)
-
-							if DamagerClass then
-								local BonusGold = math.clamp((Damager:GetAttribute("Streak") or 1 - 1) * 5, 0, 450)
-								local GoldAmount = 30 + BonusGold
-
-								DamagerClass.Gold += GoldAmount
-								DamagerPlayer:SetAttribute("Gold", DamagerClass.Gold)
-
-								ComSet:FireClient(
-									DamagerPlayer,
-									"SendNotification",
-									{
-										Text = "Earned " .. GoldAmount .. " gold. (Streak: " .. tostring(
-											Damager:GetAttribute("Streak") or 1
-										) .. ")",
-									}
-								)
-							end
 						end
 					end
 				end
@@ -302,22 +264,6 @@ Players.PlayerRemoving:Connect(function(DamagedPlayer)
 	end
 
 	Damager:SetAttribute("Streak", (Damager:GetAttribute("Streak") or 0) + 1)
-
-	local playerClass = shared.playerClasses[DamagerPlayer.UserId]
-	if playerClass then
-		local BonusGold = math.clamp((Damager:GetAttribute("Streak") or 1 - 1) * 5, 0, 450)
-		local GoldAmount = 30 + BonusGold
-
-		playerClass.Gold += GoldAmount
-		DamagerPlayer:SetAttribute("Gold", playerClass.Gold)
-
-		local ComSet2 = RS.Remotes.Comunicator.Set
-		ComSet2:FireClient(
-			DamagerPlayer,
-			"SendNotification",
-			{ Text = "Earned " .. GoldAmount .. " gold. Kill awarded (left mid-fight)." }
-		)
-	end
 end)
 
 return module

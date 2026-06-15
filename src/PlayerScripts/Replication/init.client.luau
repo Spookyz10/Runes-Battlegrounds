@@ -982,8 +982,7 @@ task.spawn(function()
 		end
 	end
 
-	local isOldUI = game:GetService("GuiService").TopbarInset.Height == 36
-	local IconModule = RPModules[isOldUI and "Icon" or "NewIcon"]
+	local IconModule = RPModules["NewIcon"]
 	local IconController = require(IconModule.IconController)
 
 	shared.triggerTopbar = function(bool)

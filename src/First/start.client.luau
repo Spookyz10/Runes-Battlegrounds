@@ -3,23 +3,14 @@ local RunService = game["Run Service"]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
-local TweenService = game:GetService("TweenService")
 local SoundService = game:GetService("SoundService")
-local ChatService = game:GetService("Chat")
+local TweenService = game:GetService("TweenService")
 
 --Camera
 local CurrentCamera = workspace.CurrentCamera
 workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
 	CurrentCamera = workspace.CurrentCamera
 end)
-
---Runtime
-ChatService.BubbleChatEnabled = true
-ChatService:SetBubbleChatSettings({
-	BackgroundColor3 = Color3.fromRGB(25, 25, 25),
-	TextColor3 = Color3.fromRGB(250, 250, 250),
-	LocalPlayerStudsOffset = Vector3.new(0, 0.6000000238418579, 0, 0),
-})
 
 --Functions
 shared.loop = function(Function, Rate, Yield)
@@ -156,7 +147,7 @@ shared.resizemodel = function(model, scale)
 		return RunService.Heartbeat:Wait()
 	end
 
-	local config = {}
+	local config: { [string]: any } = {}
 
 	local function getPartBounds(partList)
 		local minX, minY, minZ = 1e999, 1e999, 1e999
@@ -718,14 +709,19 @@ shared.CutsceneEvent = function(Params, Clean)
 
 						if Params.NoLerp or Params.NoLerpAfter and LerpValue.Value == 0.5 then
 							CurrentCamera.FieldOfView = tonumber(FOVValue.Value)
+							return
 						else
 							local CurrentFOV = CurrentCamera.FieldOfView
 							CurrentCamera.FieldOfView = CurrentFOV + (tonumber(FOVValue.Value) - CurrentFOV) * 0.25
+							return
 						end
 					end
+					return
 				end
+				return
 			end
 		end
+		return
 	end)
 
 	local StoppedConnection = nil
