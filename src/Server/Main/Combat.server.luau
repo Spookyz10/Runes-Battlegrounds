@@ -253,7 +253,7 @@ local function M1(Player)
 							Velocity = Velocity,
 						})
 						if not EnemyCharacter:HasTag("Knockbacked") then
-							NewKnockback:Knockback(EnemyHumRP, {
+							NewKnockback:Knockback(EnemyCharacter, {
 								KnockbackType = "Velocity",
 								MaxForce = Vector3.new(math.huge, 0, math.huge),
 								Velocity = Velocity,

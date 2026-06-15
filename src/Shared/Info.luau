@@ -42,10 +42,7 @@ return {
 				Cooldown = 5,
 				Action = "SwapMode",
 			},
-			Indicator = {
-				Sound = "rbxassetid://113229409180409",
-				Volume = 0.75,
-			},
+
 			Glow = Color3.new(0.8, 0.8, 0.8),
 			Order = 2,
 			Icon = 15124465440,

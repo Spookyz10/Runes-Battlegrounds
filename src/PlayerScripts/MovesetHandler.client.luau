@@ -375,11 +375,13 @@ for _, Tool in Backpack:GetChildren() do
 end
 
 Player:GetAttributeChangedSignal("Moveset"):Connect(function()
-	tweenAllSlotsDown(updateHotbarGradients)
+	tweenAllSlotsDown()
+	task.delay(TWEEN_SLIDE.Time, updateHotbarGradients)
 end)
 
 Player.AttributeChanged:Connect(function(attr)
 	if attr:match("^MovesetMode_") then
-		tweenAllSlotsDown(updateHotbarGradients)
+		tweenAllSlotsDown()
+		task.delay(TWEEN_SLIDE.Time, updateHotbarGradients)
 	end
 end)

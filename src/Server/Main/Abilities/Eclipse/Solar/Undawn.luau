@@ -1,6 +1,4 @@
 local ServerStorage = game:GetService("ServerStorage")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
 
 local ServerModules = ServerStorage.Modules
 
@@ -9,51 +7,15 @@ local HitboxHandler = require(ServerModules.HitboxHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local PerfectKnockback = require(ServerModules.PerfectKnockback)
+local RagdollHandler = require(ServerModules.RagdollHandler)
+local KnockbackService = require(ServerModules.KnockbackModule)
 
 local PILLAR_SEARCH_RADIUS = 60
-local PILLAR_DAMAGE = 35
+local PILLAR_DAMAGE = 1
 local PILLAR_STUN = 1.5
 
 local EMPOWERED_DAMAGE = 22
 local EMPOWERED_STUN = 0.35
-
-local INFERNO_DURATION = 3
-
-local function applyInferno(EnemyCharacter)
-	local existing = EnemyCharacter:GetAttribute("Inferno")
-	EnemyCharacter:SetAttribute("Inferno", true)
-	if existing then
-		return
-	end
-
-	local tickStart = tick()
-	local duration = INFERNO_DURATION
-	local dotInterval = 0.5
-	local dotDamage = 3
-
-	task.spawn(function()
-		while EnemyCharacter and EnemyCharacter.Parent and EnemyCharacter:GetAttribute("Inferno") do
-			if tick() - tickStart >= duration then
-				break
-			end
-			local Hum = EnemyCharacter:FindFirstChild("Humanoid")
-			if not Hum or Hum.Health <= 0 then
-				break
-			end
-			Hum:TakeDamage(dotDamage)
-			task.wait(dotInterval)
-		end
-		if EnemyCharacter and EnemyCharacter.Parent then
-			EnemyCharacter:SetAttribute("Inferno", nil)
-		end
-	end)
-
-	task.delay(duration, function()
-		if EnemyCharacter and EnemyCharacter.Parent then
-			EnemyCharacter:SetAttribute("Inferno", nil)
-		end
-	end)
-end
 
 local function setupEmpoweredM1s(Character, Tool, chargesLeft)
 	if chargesLeft <= 0 then
@@ -142,8 +104,6 @@ local function setupEmpoweredM1s(Character, Tool, chargesLeft)
 						Dot = 1,
 						DontFreeze = false,
 					}, Character)
-
-					applyInferno(EnemyCharacter)
 				end
 
 				if newRemaining <= 0 then
@@ -223,29 +183,17 @@ return {
 
 				if not HitInfo.Countered and not HitInfo.Blocked then
 					EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
+					EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
 
-					local pushDir = (EnemyHumRP.Position - HumRP.Position)
-					pushDir = Vector3.new(pushDir.X, 0, pushDir.Z)
-					if pushDir.Magnitude > 0 then
-						pushDir = pushDir.Unit
-					else
-						pushDir = HumRP.CFrame.LookVector
-					end
+					RagdollHandler.ragdoll(EnemyHumanoid, 6, nil, nil, nil, nil, true)
 
-					local lookCF = CFrame.lookAt(EnemyHumRP.Position, EnemyHumRP.Position + pushDir)
+					task.defer(function()
+						if not EnemyCharacter or not EnemyCharacter.Parent then
+							return
+						end
 
-					PerfectKnockback:KnockBack(nil, EnemyCharacter, {
-						LookVector = pushDir,
-						LookForce = 40,
-						LookFinalForce = 35,
-						LookAt = lookCF,
-						UpVelocity = Vector3.new(0, 60, 0),
-						UpVelocityTime = 0.2,
-						GroundStunTime = 1.2,
-						FallingDetectDelay = 0.6,
-						Dot = 1,
-						DontFreeze = false,
-					}, Character)
+						KnockbackService:Knockback(EnemyCharacter, Vector3.new(0, 90, 0), nil, nil, nil, nil, nil, true)
+					end)
 				end
 			end
 		)

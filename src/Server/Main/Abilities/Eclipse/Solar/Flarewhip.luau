@@ -229,21 +229,35 @@ return {
 			StunHandler:Unstun(closestEnemy, VictimStun)
 			iFramesService:RemoveAlliFrames(closestEnemy)
 			closestEnemy:RemoveTag("CantRotate")
+			closestEnemy:RemoveTag("Knockbacked")
 
 			DamageHandler:TakeDamage(Character, EnemyHumanoid, DAMAGE, nil, nil, true, true, true, true, true, nil, nil)
 
 			EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
+			EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
 
 			local kickDir = HumRP.CFrame.LookVector
-			local kickFlat = Vector3.new(kickDir.X, 0, kickDir.Z).Unit
+			local kickFlat = Vector3.new(kickDir.X, 0, kickDir.Z)
 
-			BodymoverService:Knockback(closestEnemy, {
-				KnockbackType = "Velocity",
-				MaxForce = Vector3.new(1, 1, 1) * 100000,
-				Velocity = kickFlat * KICK_HORIZONTAL_FORCE + KICK_VELOCITY,
-			})
+			if kickFlat.Magnitude < 0.1 then
+				kickFlat = Vector3.new(0, 0, -1)
+			else
+				kickFlat = kickFlat.Unit
+			end
 
 			RagdollHandler.ragdoll(EnemyHumanoid, 2, nil, nil, nil, nil, true)
+
+			task.defer(function()
+				if not closestEnemy or not closestEnemy.Parent then
+					return
+				end
+
+				BodymoverService:Knockback(closestEnemy, {
+					KnockbackType = "Velocity",
+					MaxForce = Vector3.new(1, 1, 1) * 100000,
+					Velocity = kickFlat * KICK_HORIZONTAL_FORCE + KICK_VELOCITY,
+				})
+			end)
 
 			applyInferno(closestEnemy)
 
