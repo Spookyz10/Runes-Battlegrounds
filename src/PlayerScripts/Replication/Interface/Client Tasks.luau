@@ -14,6 +14,10 @@ local Debris = game:GetService("Debris")
 local RS = game:GetService("ReplicatedStorage")
 local TS = game:GetService("TweenService")
 local CollectionService = game:GetService("CollectionService")
+local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
+
+local DayTime = Lighting.TimeOfDay
 
 local Resources = RS:WaitForChild("Resources")
 
@@ -61,6 +65,18 @@ shared.DestroyedParts = DestroyedParts
 
 local dataTable = {}
 local startTime = tick()
+local EclipseNightTime = 0
+
+local R6Parts = {
+	"Head",
+	"Torso",
+	"Left Arm",
+	"Right Arm",
+	"Left Leg",
+	"Right Leg",
+}
+
+local CharacterAssets = Resources:WaitForChild("CharacterAssets")
 
 local function calculateCFrameBetweenVectors(vectorA, vectorB, axis)
 	local dotProduct = vectorA:Dot(vectorB)
@@ -924,8 +940,8 @@ local ReplicationEffects = {
 	LunarDash = function(Params)
 		local char = Params.char
 		local HumRP = char.PrimaryPart
-		local DashSmoke = Resources.CharacterAssets.Eclipse.Lunar.DashSmoke:Clone()
-		local Circle = Resources.CharacterAssets.Eclipse.Lunar.Circle:Clone()
+		local DashSmoke = CharacterAssets.Eclipse.Lunar.DashSmoke:Clone()
+		local Circle = CharacterAssets.Eclipse.Lunar.Circle:Clone()
 
 		DashSmoke.Parent = char
 		Circle.Parent = char
@@ -1155,7 +1171,7 @@ local ReplicationEffects = {
 			return
 		end
 
-		local LunarEffects = Resources.CharacterAssets.Eclipse.Lunar
+		local LunarEffects = CharacterAssets.Eclipse.Lunar
 
 		local RightArm = Character:FindFirstChild("Right Arm")
 		local LeftArm = Character:FindFirstChild("Left Arm")
@@ -1211,7 +1227,7 @@ local ReplicationEffects = {
 			return
 		end
 
-		local SlashAsset = Resources.CharacterAssets.Eclipse.Lunar:FindFirstChild("Slash" .. Index)
+		local SlashAsset = CharacterAssets.Eclipse.Lunar:FindFirstChild("Slash" .. Index)
 		if not SlashAsset then
 			return
 		end
@@ -1235,7 +1251,7 @@ local ReplicationEffects = {
 			return
 		end
 
-		local FinalImpact = Resources.CharacterAssets.Eclipse.Lunar:FindFirstChild("FinalImpact")
+		local FinalImpact = CharacterAssets.Eclipse.Lunar:FindFirstChild("FinalImpact")
 		if not FinalImpact then
 			return
 		end
@@ -1295,7 +1311,7 @@ local ReplicationEffects = {
 			return
 		end
 
-		local EclipseClone = Resources.CharacterAssets.Eclipse.Lunar.Eclipse:Clone()
+		local EclipseClone = CharacterAssets.Eclipse.Lunar.Eclipse:Clone()
 		EclipseClone.Name = "Eclipse_FX"
 		EclipseClone.Parent = Head
 
@@ -1303,7 +1319,72 @@ local ReplicationEffects = {
 
 		Debris:AddItem(EclipseClone, 3)
 	end,
+
+	StartEclipseAwakening = function(Params)
+		EclipseNightTime = 10
+
+		local Fog = CharacterAssets.Eclipse:FindFirstChild(Params.FogName):Clone()
+		Fog.Parent = workspace
+		Fog:PivotTo(Params.Character.PrimaryPart.CFrame + Vector3.new(0, -3, 0))
+
+		Debris:AddItem(Fog, 15)
+	end,
+
+	GivePlayerAura = function(Params)
+		local Character = Params.Char
+		if not Character or not Character.Parent then
+			return
+		end
+
+		for _, Child in Character:GetDescendants() do
+			if Child.Name == "AwakeningAura" then
+				Child:Destroy()
+			end
+		end
+
+		local Aura = Resources.Auras:FindFirstChild(Params.AuraName)
+
+		for _, Effect in Aura:GetChildren() do
+			if R6Parts[Effect.Name] then
+				local Part = Character:FindFirstChild(Effect.Name)
+				if Part then
+					local EffectClone = Effect:Clone()
+					EffectClone.Parent = Part
+					if EffectClone:IsA("Attachment") then
+						EffectClone.WorldCFrame = Part.CFrame * EffectClone.CFrame
+					end
+					EffectClone.Name = "AwakeningAura"
+				end
+			elseif Effect.Name == "All" then
+				for _, Part in Character:GetChildren() do
+					if R6Parts[Part.Name] then
+						local EffectClone = Effect:Clone()
+						EffectClone.Parent = Part
+						if EffectClone:IsA("Attachment") then
+							EffectClone.WorldCFrame = Part.CFrame * EffectClone.CFrame
+						end
+						EffectClone.Name = "AwakeningAura"
+					end
+				end
+			end
+		end
+	end,
 }
+
+RunService.RenderStepped:Connect(function()
+	if EclipseNightTime > 0 then
+		DayTime = "00:00:00"
+	else
+		DayTime = "12:00:00"
+	end
+end)
+
+while true do
+	task.wait(1)
+	if EclipseNightTime > 0 then
+		EclipseNightTime -= 1
+	end
+end
 
 shared.clearVelocities = function(Part: Part, Ignore: BodyVelocity?)
 	for _, Velocity in Part:GetDescendants() do

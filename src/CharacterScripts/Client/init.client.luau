@@ -612,20 +612,6 @@ end
 Player.CameraMaxZoomDistance = 128
 Player.CameraMinZoomDistance = 0.5
 Camera.CameraSubject = Humanoid
-Player.PlayerGui.Hotbar.Hotbar:TweenPosition(
-	UDim2.new(0.5, -327, 1, -70),
-	Enum.EasingDirection.InOut,
-	Enum.EasingStyle.Quad,
-	1,
-	true
-)
-Player.PlayerGui.AwakeningBar.UltimateBar:TweenPosition(
-	UDim2.new(0.5, 0, 1, -(shared.IsMobile and 150 or 90)),
-	Enum.EasingDirection.InOut,
-	Enum.EasingStyle.Quad,
-	1,
-	true
-)
 
 Humanoid.Died:Connect(function()
 	if Head then

@@ -22,6 +22,7 @@ local IB = UIS.InputBegan
 local GUI = Player:WaitForChild("PlayerGui"):WaitForChild("AwakeningBar")
 local BarFrame = GUI.UltimateBar
 local UltKey = BarFrame.Key
+local ProgressLabel = BarFrame.ProgressLabel
 
 local DeviceUltKey = "[G]"
 if UIS.TouchEnabled then
@@ -99,18 +100,11 @@ local function UpdateAwakeningProgress()
 		end
 		UltKey.Text = DeviceUltKey
 		UltKey.Visible = true
-
-		local Indicator = InfoModule.Movesets[Player:GetAttribute("Moveset")].Indicator
-		shared
-			.sfx({
-				SoundId = Indicator.Sound,
-				Parent = Character.Torso,
-				Volume = Indicator.Volume,
-				RollOffMaxDistance = 100,
-			})
-			:Play()
+		ProgressLabel.Visible = false
 	else
 		UltKey.Visible = false
+		ProgressLabel.Visible = true
+		ProgressLabel.Text = string.format("%.1f%%", AwakeningProgress.Value)
 	end
 end
 

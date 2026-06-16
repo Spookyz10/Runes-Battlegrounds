@@ -227,7 +227,7 @@ local function updateHotbarGradients()
 
 	for _, slot in HotbarFrame:GetChildren() do
 		if slot:IsA("Frame") and slot:FindFirstChild("Base") then
-			local base = slot.Base
+			local base = slot.Base.Colored
 			for _, child in base:GetChildren() do
 				if child:IsA("UIGradient") then
 					child:Destroy()

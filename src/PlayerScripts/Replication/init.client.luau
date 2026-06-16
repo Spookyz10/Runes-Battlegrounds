@@ -805,11 +805,6 @@ local function ComunicationFunction(func, params)
 				selectedFrame = nil
 			end)
 
-			if AwakeningBar then
-				AwakeningBar.UIScale.Scale = 0.6
-				AwakeningBar.UltimateBar.Position = UDim2.new(0.5, 0, 1, -150)
-			end
-
 			RNS.RenderStepped:Connect(function()
 				if Character:FindFirstChild("ChangingButtons") then
 					if MobileGUI then

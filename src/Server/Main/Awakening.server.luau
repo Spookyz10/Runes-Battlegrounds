@@ -19,7 +19,7 @@ local AnimationService = require(SvModules.AnimationService)
 local iFramesHandler = require(SvModules.iFramesService)
 local MovesetHandler = require(SvModules.MovesetHandler)
 local RagdollHandler = require(SvModules.RagdollHandler)
-local NewKnockback = require(SvModules.BodymoverService)
+local KnockbackModule = require(SvModules.KnockbackModule)
 
 local RpRemotes = RS.Remotes
 local AwakeningRemotes = RpRemotes.Awakening
@@ -60,16 +60,22 @@ local function EndAwakening(Player, Awk0C, AwkTween)
 	Character:SetAttribute("Awakened", nil)
 	Character:SetAttribute("AwakeningAura", false)
 
-	task.spawn(function()
-		shared.AddAppareance(Player, Character)
-	end)
+	if Character:FindFirstChild("Humanoid") then
+		Character.Humanoid.WalkSpeed = 16
+	end
 
 	MovesetHandler:AddBaseMoveset(Player, Player:GetAttribute("Moveset"))
 end
 
 local AwakeningAnimations = {
-
-	["Eclipse"] = function(Player) end,
+	["Astral Shift"] = function(Player)
+		local Moveset = Player:FindFirstChild("Moveset")
+		if Moveset.Value == "Solar" then
+			ReplicateSet:FireAllClients("Solar Eclipse", { char = Player.Character })
+		elseif Moveset.Value == "Lunar" then
+			ReplicateSet:FireAllClients("Lunar Eclipse", { char = Player.Character })
+		end
+	end,
 }
 
 local function Awakening(Player)
@@ -114,23 +120,11 @@ local function Awakening(Player)
 
 		iFramesHandler:AddAlliFrames(Character)
 
-		CommsSet:FireClient(Player, "HideHotbar")
-		CommsSet:FireClient(Player, "HideAwkbar")
+		AwakeningAnimations[InfoModule.Movesets[CurrentMoveset].AwakeningAnimation](Player)
 
 		task.delay(0.5, function()
 			MovesetHandler:AddAwakeningMoveset(Player, Player:GetAttribute("Moveset"))
 		end)
-
-		if AwakeningAnimations[CurrentMoveset] then
-			AwakeningAnimations[CurrentMoveset](Player)
-
-			CommsSet:FireClient(Player, "ShowHotbar")
-		else
-			task.delay(0.5, function()
-				CommsSet:FireClient(Player, "ShowHotbar")
-				CommsSet:FireClient(Player, "ShowAwkbar")
-			end)
-		end
 
 		local playerClass = shared.playerClasses[Player.UserId]
 		if playerClass then
@@ -157,18 +151,8 @@ local function Awakening(Player)
 			end
 		end)
 
-		if not workspace.Configuration.InfiniteAwk.Value then
-			AwkTween.Completed:Once(function()
-				if Ended == false then
-					Ended = true
-
-					EndAwakening(Player, Awk0C, AwkTween)
-				end
-			end)
-
-			if CurrentMoveset ~= "KJ" and CurrentMoveset ~= "The Strongest Hero" then
-				AwkTween:Play()
-			end
+		if Character:FindFirstChild("Humanoid") then
+			Character.Humanoid.WalkSpeed = 25
 		end
 	end)
 end
