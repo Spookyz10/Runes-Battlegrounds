@@ -667,7 +667,6 @@ local ReplicationEffects = {
 	end,
 
 	Hitbox = function(Params)
-		warn("Hitbox recebido:", Params.Method, Params.Size, Params.CFrame)
 		for _, v in workspace.Thrown:GetChildren() do
 			if v.Name == LocalPlayer.UserId .. " Hitbox" then
 				v:Destroy()
@@ -1444,12 +1443,14 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
-while true do
-	task.wait(1)
-	if EclipseNightTime > 0 then
-		EclipseNightTime -= 1
+task.spawn(function()
+	while true do
+		task.wait(1)
+		if EclipseNightTime > 0 then
+			EclipseNightTime -= 1
+		end
 	end
-end
+end)
 
 shared.clearVelocities = function(Part: Part, Ignore: BodyVelocity?)
 	for _, Velocity in Part:GetDescendants() do
