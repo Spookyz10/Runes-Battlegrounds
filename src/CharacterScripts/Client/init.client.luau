@@ -609,8 +609,6 @@ else
 	Camera.CameraType = Enum.CameraType.Custom
 end
 
-Player.CameraMaxZoomDistance = 128
-Player.CameraMinZoomDistance = 0.5
 Camera.CameraSubject = Humanoid
 
 Humanoid.Died:Connect(function()

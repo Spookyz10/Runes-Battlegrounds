@@ -12,6 +12,4 @@ return function(Params)
 		data.moonFog:Destroy()
 		data.moonFog = nil
 	end
-
-	State.lunarData[Character] = nil
 end

@@ -58,7 +58,7 @@ local function explode(Character, Position)
 		end
 	end)
 
-	ReplicateSet:FireAllClients("LunarAwakenMoonImpact", { char = Character })
+	ReplicateSet:FireAllClients("LunarAwakenMoonImpact", { char = Character, position = Position })
 
 	ReplicateSet:FireAllClients("Ground Crater", {
 		nosmoke = true,
