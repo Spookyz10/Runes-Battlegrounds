@@ -63,11 +63,12 @@ local function explode(Character, Position)
 	ReplicateSet:FireAllClients("LunarAwakenMoonImpact", { char = Character })
 
 	ReplicateSet:FireAllClients("Ground Crater", {
-		Seed = math.random(1, 2000000000),
-		start = Position,
+		nosmoke = true,
+		Seed = math.random(1, 2147483647),
+		amount = 15,
+		start = Position + Vector3.new(0, -3.1, 0),
+		size = 1.8,
 		["end"] = Vector3.new(0, -14, 0),
-		amount = 16,
-		size = 3,
 		nosound = true,
 	})
 
@@ -179,14 +180,16 @@ local function triggerLandingImpact(Character, Position)
 		radialKnockback(Character, EnemyCharacter, EnemyHumanoid, Position, 145, 12)
 	end)
 
-	ReplicateSet:FireAllClients("ImpactCrater", {
-		Seed = math.random(1, 2e9),
-		Position = Character.PrimaryPart.Position,
-		Size = 1.2,
-		Rings = 6,
-		CrackSpread = 17,
-		CrackLifetime = 6,
+	ReplicateSet:FireAllClients("Ground Crater", {
+		nosmoke = true,
+		Seed = math.random(1, 2147483647),
+		amount = 50,
+		start = Position + Vector3.new(0, 10, 0),
+		size = 50,
+		["end"] = Vector3.new(0, -14, 0),
+		nosound = true,
 	})
+
 	task.delay(0.4, function()
 		if Character and Character.Parent then
 			StunHandler:Unstun(Character, ImpactStun)
@@ -275,6 +278,11 @@ function module:Activate(Player)
 	Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
 	Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
 
+	-- Kill any leftover horizontal velocity from walking before the ability
+	-- was triggered, otherwise the character keeps sliding in that direction
+	-- while rising since the BodyPosition below only constrains the Y axis.
+	HumRP.AssemblyLinearVelocity = Vector3.new(0, HumRP.AssemblyLinearVelocity.Y, 0)
+
 	local RiseBodyPosition = Instance.new("BodyPosition")
 	RiseBodyPosition.Name = "LunarAwaken_Rise"
 	RiseBodyPosition.MaxForce = Vector3.new(0, math.huge, 0)
@@ -292,6 +300,9 @@ function module:Activate(Player)
 			return
 		end
 
+		-- Re-lock horizontal velocity every frame so nothing (residual momentum,
+		-- a stray force, etc.) can drift the character sideways while charging.
+		HumRP.AssemblyLinearVelocity = Vector3.new(0, HumRP.AssemblyLinearVelocity.Y, 0)
 		RiseBodyPosition.Position = Vector3.new(HumRP.Position.X, TargetY, HumRP.Position.Z)
 	end)
 

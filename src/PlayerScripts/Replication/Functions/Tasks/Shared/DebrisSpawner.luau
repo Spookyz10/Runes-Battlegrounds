@@ -205,6 +205,12 @@ local function debrisSpawner(config)
 		config.Double = 2
 	end
 
+	-- Optional: instead of settling perfectly flat against the ground (the
+	-- default look), let pieces keep a small resting tilt so the ring reads
+	-- as jagged/erupted debris rather than flush tiles. Off by default so
+	-- every other ability using Ground Crater keeps its current look.
+	local keepTilt = config.tiltMin ~= nil and config.tiltMax ~= nil
+
 	for i = 1, pieceCount do
 		for ring = 1, config.Double or 1 do
 			local activeCFrame = (ring > 1) and offsetCFrame or baseCFrame
@@ -319,10 +325,16 @@ local function debrisSpawner(config)
 				slab.AssemblyAngularVelocity = Vector3.zero
 			end
 
-			slab:SetAttribute("OGCframe", originalCFrame)
+			local restCFrame = originalCFrame
+			if keepTilt then
+				restCFrame = originalCFrame
+					* CFrame.Angles(math.rad(-rng:NextNumber(config.tiltMin, config.tiltMax)), 0, 0)
+			end
+
+			slab:SetAttribute("OGCframe", restCFrame)
 
 			TS:Create(slab, TweenInfo.new(rng:NextNumber(0.2, 0.3), Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-				CFrame = originalCFrame,
+				CFrame = restCFrame,
 			}):Play()
 
 			local keepDuration = addConfig.keep
@@ -333,7 +345,7 @@ local function debrisSpawner(config)
 			task.delay(keepDuration, function()
 				if addConfig.keep then
 					TS:Create(slab, TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-						CFrame = originalCFrame,
+						CFrame = restCFrame,
 						Size = slab.Size,
 					}):Play()
 					task.wait(2)

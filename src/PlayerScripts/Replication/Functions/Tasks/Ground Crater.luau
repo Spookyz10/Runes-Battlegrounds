@@ -129,6 +129,8 @@ return function(config)
 			nodebris = config.nodebris,
 			notiles = config.notiles,
 			Seed = config.Seed,
+			tiltMin = config.tiltMin,
+			tiltMax = config.tiltMax,
 		})
 	end
 end
