@@ -61,6 +61,12 @@ local function cleanupThrownObjects()
 	end
 end
 
+-- Constrói um CFrame que tem a mesma rotação que 'cf' mas a posição deslocada
+-- em world-space por 'worldOffset' (Vector3).
+local function shiftCFrameWorldY(cf, dy)
+	return CFrame.new(cf.Position + Vector3.new(0, dy, 0)) * cf.Rotation
+end
+
 local function debrisSpawner(config)
 	if not config.add then
 		config.add = {}
@@ -117,6 +123,9 @@ local function debrisSpawner(config)
 		Debris:AddItem(bv, 0.15)
 
 		task.delay(3 + rng:NextNumber(0, 1), function()
+			if not chunk or not chunk.Parent then
+				return
+			end
 			TS:Create(chunk, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 				Transparency = 1,
 				Size = chunk.Size / 1.5,
@@ -167,13 +176,18 @@ local function debrisSpawner(config)
 		Debris:AddItem(bav, 0.5)
 
 		task.delay(3 + rng:NextNumber(0, 1), function()
+			if not piece or not piece.Parent then
+				return
+			end
 			TS:Create(piece, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 				Transparency = 1,
 				Size = piece.Size / 1.5,
 			}):Play()
 
 			task.delay(0.3, function()
-				bav:Destroy()
+				if bav and bav.Parent then
+					bav:Destroy()
+				end
 				piece.Anchored = true
 				piece.CanCollide = false
 				piece.CFrame = CFrame.new(1e8, 1e8, 1e8)
@@ -296,15 +310,6 @@ local function debrisSpawner(config)
 				end
 			end
 
-			slab.CFrame = savedCFrame
-				* (
-					CFrame.new(0, -3 * (0.7 + 0.3 * ringSizeScale), -1.5)
-					* CFrame.Angles(
-						math.rad(rng:NextNumber(-11, 11)),
-						math.rad(rng:NextNumber(-11, 11)),
-						math.rad(rng:NextNumber(-11, 11))
-					)
-				)
 			slab.Transparency = 0
 			table.insert(spawnedPieces, slab)
 
@@ -382,36 +387,71 @@ local function debrisSpawner(config)
 
 			slab:SetAttribute("OGCframe", restCFrame)
 
-			TS
-				:Create(
+			-- Posição inicial: enterrado no chão em world-space (Y negativo suficiente
+			-- pra esconder o slab por completo), mesma rotação do restCFrame.
+			local buriedDepth = slab.Size.Y + slab.Size.Z * 0.5 + 2
+			local buriedCFrame = CFrame.new(restCFrame.Position + Vector3.new(0, -buriedDepth, 0)) * restCFrame.Rotation
+			slab.CFrame = buriedCFrame
+
+			-- Atraso por anel pra dar efeito de onda emergindo do centro pra fora
+			local emergeDelay = rng:NextNumber(0, 0.12) + (ringIndex - 1) * 0.07
+			local emergeTime = rng:NextNumber(0.28, 0.45)
+
+			task.delay(emergeDelay, function()
+				if not slab or not slab.Parent then
+					return
+				end
+				TS:Create(
 					slab,
-					TweenInfo.new(rng:NextNumber(0.22, 0.38), Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-					{
-						CFrame = restCFrame,
-					}
-				)
-				:Play()
+					TweenInfo.new(emergeTime, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+					{ CFrame = restCFrame }
+				):Play()
+			end)
 
 			local keepDuration = addConfig.keep
 			if not keepDuration then
 				keepDuration = rng:NextNumber(5, 7)
 			end
 
+			-- Captura restCFrame no closure para garantir que usamos o valor certo
+			local capturedRestCFrame = restCFrame
+			local capturedSize = slab.Size
+
 			task.delay(keepDuration, function()
+				if not slab or not slab.Parent then
+					return
+				end
+
 				if addConfig.keep then
 					TS:Create(slab, TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-						CFrame = restCFrame,
-						Size = slab.Size,
+						CFrame = capturedRestCFrame,
+						Size = capturedSize,
 					}):Play()
 					task.wait(2)
 				end
 
+				if not slab or not slab.Parent then
+					return
+				end
+
+				-- BUG FIX: mover no eixo Y do MUNDO, não do objeto.
+				-- slab.CFrame * CFrame.new(0,-7,0) movia no eixo Y LOCAL do slab
+				-- (que pode estar inclinado), causando o slab ir pra lado em vez de descer.
+				-- Agora preservamos a rotação e só deslocamos a posição no world-space.
+				local currentPos = slab.CFrame.Position
+				local sinkCFrame = CFrame.new(currentPos + Vector3.new(0, -7, 0)) * slab.CFrame.Rotation
+
 				TS:Create(slab, TweenInfo.new(2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-					CFrame = slab.CFrame * CFrame.new(0, -7, 0),
-					Size = slab.Size / 1.5,
+					CFrame = sinkCFrame,
+					Size = capturedSize / 1.5,
 				}):Play()
 
 				task.wait(2)
+
+				if not slab or not slab.Parent then
+					return
+				end
+
 				slab:SetAttribute("OGCframe", nil)
 				slab.Anchored = true
 				slab.CFrame = CFrame.new(1e8, 1e8, 1e8)

@@ -14,6 +14,10 @@ return function(Params)
 		if data.moon and data.moon.Parent then
 			data.moon:Destroy()
 		end
+		if data.moonFog then
+			data.moonFog:Destroy()
+			data.moonFog = nil
+		end
 		State.lunarData[Character] = nil
 	end
 

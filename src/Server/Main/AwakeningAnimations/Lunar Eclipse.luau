@@ -39,9 +39,7 @@ local module = {}
 
 local function radialKnockback(Character, EnemyCharacter, EnemyHumanoid, ExplosionPosition, BaseForce, Damage)
 	DamageHandler:TakeDamage(Character, EnemyHumanoid, Damage, 1, nil, false, false, true, true, true, nil, nil)
-
 	RagdollHandler.ragdoll(EnemyHumanoid, 5)
-
 	KnockbackService:Knockback(EnemyCharacter, Vector3.new(0, BaseForce, 0), nil, nil, nil, nil, nil, false, false)
 end
 
@@ -64,12 +62,22 @@ local function explode(Character, Position)
 
 	ReplicateSet:FireAllClients("Ground Crater", {
 		nosmoke = true,
-		Seed = math.random(1, 2147483647),
-		amount = 15,
-		start = Position + Vector3.new(0, -3.1, 0),
-		size = 1.8,
-		["end"] = Vector3.new(0, -14, 0),
 		nosound = true,
+		Seed = math.random(1, 2147483647),
+		amount = 60,
+		start = Position + Vector3.new(0, 2, 0),
+		["end"] = Vector3.new(0, -20, 0),
+		size = 2.8,
+		rings = 3,
+		ringSpacing = 18,
+		ringSizeGrowth = 1.8,
+		ringGap = 0.22,
+		outwardTilt = true,
+		debrisSizeMin = 7,
+		debrisSizeMax = 18,
+		debrisHeightMin = 4,
+		debrisHeightMax = 9,
+		sizemult = 1.6,
 	})
 
 	if Player then
@@ -81,7 +89,6 @@ local function explode(Character, Position)
 		if not EnemyHumanoid or EnemyHumanoid.Health <= 0 then
 			return
 		end
-
 		radialKnockback(Character, EnemyCharacter, EnemyHumanoid, Position, 145, 18)
 	end)
 end
@@ -176,20 +183,26 @@ local function triggerLandingImpact(Character, Position)
 		if not EnemyHumanoid or EnemyHumanoid.Health <= 0 then
 			return
 		end
-
 		radialKnockback(Character, EnemyCharacter, EnemyHumanoid, Position, 145, 12)
 	end)
 
 	ReplicateSet:FireAllClients("Ground Crater", {
 		Seed = math.random(1, 2147483647),
-		amount = 20,
-		start = Position + Vector3.new(0, 10, 0),
+		amount = 80,
+		start = Position + Vector3.new(0, 4, 0),
+		["end"] = Vector3.new(0, -20, 0),
 		rings = 4,
-		ringSpacing = 50,
-		ringSizeGrowth = 1.3,
-		debrisSizeMin = 5,
-		debrisSizeMax = 10,
-		["end"] = Vector3.new(0, -14, 0),
+		ringSpacing = 60,
+		ringSizeGrowth = 1.4,
+		ringGap = 0.20,
+		outwardTilt = true,
+		debrisSizeMin = 4,
+		debrisSizeMax = 12,
+		debrisHeightMin = 4,
+		debrisHeightMax = 9,
+		sizemult = 1.3,
+		tiltMin = 5,
+		tiltMax = 30,
 	})
 
 	task.delay(0.4, function()
@@ -232,7 +245,6 @@ local function watchForLanding(Character, Humanoid, HumRP)
 
 		Landed = true
 		Connection:Disconnect()
-
 		triggerLandingImpact(Character, RayResult.Position)
 	end)
 end
@@ -264,12 +276,12 @@ function module:Activate(Player)
 		end
 	end
 
+	-- Fase 1: efeitos de início (fog, noite, aura) — SEM a moon ainda
 	ReplicateSet:FireAllClients("LunarAwakenStart", { char = Character })
 
 	task.wait(0.5)
 
 	ReplicateSet:FireAllClients("GivePlayerAura", { Char = Character, AuraName = "Lunar Eclipse" })
-
 	ReplicateSet:FireClient(Player, "StartLunarAimControl", { Duration = CHARGE_TIME })
 
 	Humanoid.AutoRotate = false
@@ -280,9 +292,6 @@ function module:Activate(Player)
 	Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
 	Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
 
-	-- Kill any leftover horizontal velocity from walking before the ability
-	-- was triggered, otherwise the character keeps sliding in that direction
-	-- while rising since the BodyPosition below only constrains the Y axis.
 	HumRP.AssemblyLinearVelocity = Vector3.new(0, HumRP.AssemblyLinearVelocity.Y, 0)
 
 	local RiseBodyPosition = Instance.new("BodyPosition")
@@ -301,14 +310,19 @@ function module:Activate(Player)
 			end
 			return
 		end
-
-		-- Re-lock horizontal velocity every frame so nothing (residual momentum,
-		-- a stray force, etc.) can drift the character sideways while charging.
 		HumRP.AssemblyLinearVelocity = Vector3.new(0, HumRP.AssemblyLinearVelocity.Y, 0)
 		RiseBodyPosition.Position = Vector3.new(HumRP.Position.X, TargetY, HumRP.Position.Z)
 	end)
 
-	task.wait(CHARGE_TIME)
+	-- Aguarda o rise estabilizar (aprox. 1.5s é suficiente pra chegar lá)
+	task.wait(1.5)
+
+	-- Fase 2: char chegou lá em cima — spawna a moon e o indicador no chão
+	ReplicateSet:FireAllClients("LunarAwakenMoonSpawn", { char = Character })
+	ReplicateSet:FireAllClients("LunarAwakenIndicator", { char = Character })
+
+	-- Espera o restante do CHARGE_TIME
+	task.wait(CHARGE_TIME - 1.5)
 
 	if RiseConnection then
 		RiseConnection:Disconnect()
@@ -337,8 +351,8 @@ function module:Activate(Player)
 		LaunchDirection = result.Unit
 	end
 
+	-- Fase 3: lança — LunarAwakenMoonLaunch já destrói o indicador no cliente
 	ReplicateSet:FireAllClients("LunarAwakenMoonLaunch", { char = Character, direction = LaunchDirection })
-
 	ReplicateSet:FireClient(Player, "StopLunarAimControl", {})
 
 	local LaunchOrigin = HumRP.Position + Vector3.new(0, 70, 0)
