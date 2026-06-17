@@ -10,6 +10,7 @@ local StunHandler = require(SvModules.StunHandler)
 local DamageHandler = require(SvModules.DamageHandler)
 local NewKnockback = require(SvModules.BodymoverService)
 local iFramesService = require(SvModules.iFramesService)
+local HitboxHandler = require(SvModules.HitboxHandler)
 
 local Remotes = ReplicatedStorage.Remotes
 local ReplicateSet = Remotes.Replicate.Set
@@ -20,10 +21,6 @@ MapRayParams.FilterType = Enum.RaycastFilterType.Include
 MapRayParams.FilterDescendantsInstances = { workspace.Map }
 MapRayParams.RespectCanCollide = true
 MapRayParams.IgnoreWater = true
-
-local ExplosionOverlapParams = OverlapParams.new()
-ExplosionOverlapParams.FilterType = Enum.RaycastFilterType.Include
-ExplosionOverlapParams.FilterDescendantsInstances = { workspace.Live }
 
 local ProjectileOverlapParams = OverlapParams.new()
 ProjectileOverlapParams.FilterType = Enum.RaycastFilterType.Include
@@ -86,33 +83,14 @@ local function explode(Character, Position)
 		ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 10, Last = 1 })
 	end
 
-	local TouchedCharacters = workspace:GetPartBoundsInBox(CFrame.new(Position), EXPLOSION_SIZE, ExplosionOverlapParams)
-	local AlreadyHit = {}
-
-	for _, Part in TouchedCharacters do
-		if not Part or not Part.Parent then
-			continue
-		end
-
-		local EnemyCharacter = Part.Parent
-		if AlreadyHit[EnemyCharacter] or EnemyCharacter == Character then
-			continue
-		end
-
+	HitboxHandler:SimpleOnce(Position, EXPLOSION_SIZE, nil, { Character }, "Box", nil, function(EnemyCharacter)
 		local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
 		if not EnemyHumanoid or EnemyHumanoid.Health <= 0 then
-			continue
+			return
 		end
-
-		local EnemyPlayer = Players:GetPlayerFromCharacter(EnemyCharacter)
-		if EnemyPlayer and not EnemyPlayer:FindFirstChild("LoadedData") then
-			continue
-		end
-
-		AlreadyHit[EnemyCharacter] = true
 
 		radialKnockback(Character, EnemyCharacter, EnemyHumanoid, Position, 145, 18)
-	end
+	end)
 end
 
 local function fireProjectile(Character, Origin, Direction)
@@ -200,33 +178,14 @@ end
 local function triggerLandingImpact(Character, Position)
 	local ImpactStun = StunHandler:Stun(Character, 0.4, true, 0, 0, true)
 
-	local TouchedCharacters = workspace:GetPartBoundsInBox(CFrame.new(Position), IMPACT_SIZE, ExplosionOverlapParams)
-	local AlreadyHit = {}
-
-	for _, Part in TouchedCharacters do
-		if not Part or not Part.Parent then
-			continue
-		end
-
-		local EnemyCharacter = Part.Parent
-		if AlreadyHit[EnemyCharacter] or EnemyCharacter == Character then
-			continue
-		end
-
+	HitboxHandler:SimpleOnce(Position, IMPACT_SIZE, nil, { Character }, "Box", nil, function(EnemyCharacter)
 		local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
 		if not EnemyHumanoid or EnemyHumanoid.Health <= 0 then
-			continue
+			return
 		end
-
-		local EnemyPlayer = Players:GetPlayerFromCharacter(EnemyCharacter)
-		if EnemyPlayer and not EnemyPlayer:FindFirstChild("LoadedData") then
-			continue
-		end
-
-		AlreadyHit[EnemyCharacter] = true
 
 		radialKnockback(Character, EnemyCharacter, EnemyHumanoid, Position, 95, 12)
-	end
+	end)
 
 	ReplicateSet:FireAllClients("Ground Crater", {
 		Seed = math.random(1, 2000000000),
@@ -299,6 +258,28 @@ function module:Activate(Player)
 
 	ReplicateSet:FireClient(Player, "StartLunarAimControl", { Duration = CHARGE_TIME })
 
+	-- libera rotação 3D completa (sem isso o Humanoid força o personagem
+	-- a ficar em pé e cancela o pitch que o client aplica)
+	Humanoid.AutoRotate = false
+	Humanoid.PlatformStand = true
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp, false)
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+	Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+
+	local function restoreControl()
+		Humanoid.PlatformStand = false
+		Humanoid.AutoRotate = true
+		Humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
+		Humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp, true)
+		Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
+		Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
+		if Humanoid.Health > 0 then
+			Humanoid:ChangeState(Enum.HumanoidStateType.Running)
+		end
+	end
+
 	local RiseBodyPosition = Instance.new("BodyPosition")
 	RiseBodyPosition.Name = "LunarAwaken_Rise"
 	RiseBodyPosition.MaxForce = Vector3.new(0, math.huge, 0)
@@ -332,8 +313,13 @@ function module:Activate(Player)
 
 	if not Character.Parent or Humanoid.Health <= 0 then
 		ReplicateSet:FireClient(Player, "StopLunarAimControl", {})
+		if Character.Parent then
+			restoreControl()
+		end
 		return
 	end
+
+	restoreControl()
 
 	local LaunchDirection = HumRP.CFrame.LookVector
 	local ok, result = pcall(function()
