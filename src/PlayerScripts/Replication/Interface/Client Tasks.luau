@@ -1369,6 +1369,66 @@ local ReplicationEffects = {
 			end
 		end
 	end,
+
+	StartLunarAimControl = function(Params)
+		if shared._lunarAimConn then
+			shared._lunarAimConn:Disconnect()
+			shared._lunarAimConn = nil
+		end
+
+		local LocalChar = LocalPlayer.Character
+		local LocalHumRP = LocalChar and LocalChar:FindFirstChild("HumanoidRootPart")
+		local LocalHumanoid = LocalChar and LocalChar:FindFirstChild("Humanoid")
+		if not LocalHumRP or not LocalHumanoid then
+			return
+		end
+
+		LocalHumanoid.AutoRotate = false
+		shared._lunarAimDirection = workspace.CurrentCamera.CFrame.LookVector
+
+		local duration = Params.Duration or 5
+		local startTime = tick()
+
+		shared._lunarAimConn = RunService.RenderStepped:Connect(function()
+			if not LocalHumRP or not LocalHumRP.Parent then
+				if shared._lunarAimConn then
+					shared._lunarAimConn:Disconnect()
+					shared._lunarAimConn = nil
+				end
+				LocalHumanoid.AutoRotate = true
+				return
+			end
+
+			if tick() - startTime >= duration then
+				if shared._lunarAimConn then
+					shared._lunarAimConn:Disconnect()
+					shared._lunarAimConn = nil
+				end
+				LocalHumanoid.AutoRotate = true
+				return
+			end
+
+			local lookDir = workspace.CurrentCamera.CFrame.LookVector
+			shared._lunarAimDirection = lookDir
+
+			-- Rotaciona o personagem inteiro pra direção da câmera (full 3D com pitch)
+			-- Só aplica posição atual pra não travar o BodyPosition do servidor
+			LocalHumRP.CFrame = CFrame.new(LocalHumRP.Position, LocalHumRP.Position + lookDir)
+		end)
+	end,
+
+	StopLunarAimControl = function(Params)
+		if shared._lunarAimConn then
+			shared._lunarAimConn:Disconnect()
+			shared._lunarAimConn = nil
+		end
+
+		local LocalChar = LocalPlayer.Character
+		local LocalHumanoid = LocalChar and LocalChar:FindFirstChild("Humanoid")
+		if LocalHumanoid then
+			LocalHumanoid.AutoRotate = true
+		end
+	end,
 }
 
 RunService.RenderStepped:Connect(function()

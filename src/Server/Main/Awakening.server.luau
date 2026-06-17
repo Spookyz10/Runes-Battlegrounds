@@ -1,10 +1,9 @@
 local SvSt = game:GetService("ServerStorage")
 local RS = game:GetService("ReplicatedStorage")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local TS = game:GetService("TweenService")
 
 local InfoModule = require(RS.Shared.Info)
-local Info = require(ReplicatedStorage.Shared.Info)
 
 local SvModules = SvSt.Modules
 
@@ -61,8 +60,6 @@ local AwakeningAnimations = {
 		if Moveset == "Solar" then
 			ReplicateSet:FireAllClients("Solar Eclipse", { char = Player.Character })
 		elseif Moveset == "Lunar" then
-			--ReplicateSet:FireAllClients("Lunar Eclipse", { char = Player.Character })
-			print("test")
 			task.spawn(function()
 				AwakenAnimations["Lunar Eclipse"]:Activate(Player)
 			end)

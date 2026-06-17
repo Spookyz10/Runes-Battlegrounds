@@ -13,6 +13,7 @@ local iFramesService = require(SvModules.iFramesService)
 
 local Remotes = ReplicatedStorage.Remotes
 local ReplicateSet = Remotes.Replicate.Set
+local ComGet = Remotes.Comunicator.Get
 
 local MapRayParams = RaycastParams.new()
 MapRayParams.FilterType = Enum.RaycastFilterType.Include
@@ -24,8 +25,9 @@ local ExplosionOverlapParams = OverlapParams.new()
 ExplosionOverlapParams.FilterType = Enum.RaycastFilterType.Include
 ExplosionOverlapParams.FilterDescendantsInstances = { workspace.Live }
 
-local ProjectileRayParams = RaycastParams.new()
-ProjectileRayParams.FilterType = Enum.RaycastFilterType.Exclude
+local ProjectileOverlapParams = OverlapParams.new()
+ProjectileOverlapParams.FilterType = Enum.RaycastFilterType.Include
+ProjectileOverlapParams.FilterDescendantsInstances = { workspace.Live }
 
 local RISE_HEIGHT = 60
 local CHARGE_TIME = 5
@@ -128,8 +130,9 @@ local function fireProjectile(Character, Origin, Direction)
 
 	Debris:AddItem(Projectile, PROJECTILE_LIFETIME + 1)
 
-	local RayParams = ProjectileRayParams
-	RayParams.FilterDescendantsInstances = { Character, Projectile }
+	local ProjectileRayParams = RaycastParams.new()
+	ProjectileRayParams.FilterType = Enum.RaycastFilterType.Exclude
+	ProjectileRayParams.FilterDescendantsInstances = { Character, Projectile }
 
 	local StartTime = os.clock()
 	local Exploded = false
@@ -158,7 +161,7 @@ local function fireProjectile(Character, Origin, Direction)
 		end
 
 		local Step = Direction * PROJECTILE_SPEED * dt
-		local RayResult = workspace:Raycast(Projectile.Position, Step, RayParams)
+		local RayResult = workspace:Raycast(Projectile.Position, Step, ProjectileRayParams)
 
 		if RayResult then
 			Exploded = true
@@ -169,19 +172,24 @@ local function fireProjectile(Character, Origin, Direction)
 			return
 		end
 
-		local TouchingParts = workspace:GetPartBoundsInRadius(Projectile.Position, PROJECTILE_SIZE.X, RayParams)
+		local TouchingParts =
+			workspace:GetPartBoundsInRadius(Projectile.Position, PROJECTILE_SIZE.X, ProjectileOverlapParams)
 		for _, Part in TouchingParts do
-			if Part and Part.Parent and Part.CanCollide ~= false then
-				local PartCharacter = Part.Parent
-				local PartHumanoid = PartCharacter:FindFirstChild("Humanoid")
-				if PartHumanoid and PartCharacter ~= Character then
-					Exploded = true
-					local Position = Projectile.Position
-					Connection:Disconnect()
-					Projectile:Destroy()
-					explode(Character, Position)
-					return
-				end
+			if not Part or not Part.Parent then
+				continue
+			end
+			local PartCharacter = Part.Parent
+			if PartCharacter == Character then
+				continue
+			end
+			local PartHumanoid = PartCharacter:FindFirstChild("Humanoid")
+			if PartHumanoid then
+				Exploded = true
+				local Position = Projectile.Position
+				Connection:Disconnect()
+				Projectile:Destroy()
+				explode(Character, Position)
+				return
 			end
 		end
 
@@ -289,6 +297,8 @@ function module:Activate(Player)
 	local StartPosition = HumRP.Position
 	local TargetY = StartPosition.Y + RISE_HEIGHT
 
+	ReplicateSet:FireClient(Player, "StartLunarAimControl", { Duration = CHARGE_TIME })
+
 	local RiseBodyPosition = Instance.new("BodyPosition")
 	RiseBodyPosition.Name = "LunarAwaken_Rise"
 	RiseBodyPosition.MaxForce = Vector3.new(0, math.huge, 0)
@@ -321,10 +331,20 @@ function module:Activate(Player)
 	end
 
 	if not Character.Parent or Humanoid.Health <= 0 then
+		ReplicateSet:FireClient(Player, "StopLunarAimControl", {})
 		return
 	end
 
 	local LaunchDirection = HumRP.CFrame.LookVector
+	local ok, result = pcall(function()
+		return ComGet:InvokeClient(Player, { Func = "GetLunarAimDirection" })
+	end)
+	if ok and typeof(result) == "Vector3" and result.Magnitude > 0.01 then
+		LaunchDirection = result.Unit
+	end
+
+	ReplicateSet:FireClient(Player, "StopLunarAimControl", {})
+
 	local LaunchOrigin = HumRP.Position
 
 	fireProjectile(Character, LaunchOrigin, LaunchDirection)
