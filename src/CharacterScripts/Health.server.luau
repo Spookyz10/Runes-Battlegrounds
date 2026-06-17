@@ -22,8 +22,7 @@ while true do
 		local dt = task.wait(REGEN_STEP)
 		local dh = dt * REGEN_RATE * Humanoid.MaxHealth
 		if CanHeal() then
-			Humanoid.Health =
-				math.min(Humanoid.Health + (dh * workspace.Configuration.RegenMult.Value), Humanoid.MaxHealth)
+			Humanoid.Health = math.min(Humanoid.Health + dh, Humanoid.MaxHealth)
 		end
 	end
 	Humanoid.HealthChanged:Wait()

@@ -63,9 +63,10 @@ local function explode(Character, Position)
 	ReplicateSet:FireAllClients("Ground Crater", {
 		nosmoke = true,
 		nosound = true,
+		nodebris = true,
 		Seed = math.random(1, 2147483647),
 		amount = 60,
-		start = Position + Vector3.new(0, 2, 0),
+		start = Position + Vector3.new(0, 1, 0),
 		["end"] = Vector3.new(0, -20, 0),
 		size = 2.8,
 		rings = 3,
@@ -178,6 +179,8 @@ end
 local function triggerLandingImpact(Character, Position)
 	local ImpactStun = StunHandler:Stun(Character, 0.4, true, 0, 0, true)
 
+	ReplicateSet:FireAllClients("LunarAwakenFogEnd", { char = Character })
+
 	HitboxHandler:SimpleOnce(Position, IMPACT_SIZE, nil, { Character }, "Box", nil, function(EnemyCharacter)
 		local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
 		if not EnemyHumanoid or EnemyHumanoid.Health <= 0 then
@@ -191,7 +194,7 @@ local function triggerLandingImpact(Character, Position)
 		amount = 80,
 		start = Position + Vector3.new(0, 4, 0),
 		["end"] = Vector3.new(0, -20, 0),
-		rings = 4,
+		rings = 2,
 		ringSpacing = 60,
 		ringSizeGrowth = 1.4,
 		ringGap = 0.20,
@@ -261,6 +264,8 @@ function module:Activate(Player)
 		return
 	end
 
+	local ownerId = Player.UserId
+
 	local StartPosition = HumRP.Position
 	local TargetY = StartPosition.Y + RISE_HEIGHT
 
@@ -276,7 +281,6 @@ function module:Activate(Player)
 		end
 	end
 
-	-- Fase 1: efeitos de início (fog, noite, aura) — SEM a moon ainda
 	ReplicateSet:FireAllClients("LunarAwakenStart", { char = Character })
 
 	task.wait(0.5)
@@ -291,6 +295,29 @@ function module:Activate(Player)
 	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
 	Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
 	Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+
+	-- cratera pequena no ponto de decolagem
+	local LiftRay = workspace:Raycast(StartPosition, Vector3.new(0, -6, 0), MapRayParams)
+	if LiftRay then
+		ReplicateSet:FireAllClients("Ground Crater", {
+			nodebris = true,
+			nosmoke = true,
+			Seed = math.random(1, 2147483647),
+			amount = 30,
+			start = LiftRay.Position + Vector3.new(0, 1, 0),
+			["end"] = Vector3.new(0, -10, 0),
+			rings = 2,
+			ringSpacing = 12,
+			ringSizeGrowth = 1.4,
+			ringGap = 0.20,
+			outwardTilt = true,
+			debrisSizeMin = 3,
+			debrisSizeMax = 8,
+			debrisHeightMin = 2,
+			debrisHeightMax = 5,
+			sizemult = 0.8,
+		})
+	end
 
 	HumRP.AssemblyLinearVelocity = Vector3.new(0, HumRP.AssemblyLinearVelocity.Y, 0)
 
@@ -314,14 +341,11 @@ function module:Activate(Player)
 		RiseBodyPosition.Position = Vector3.new(HumRP.Position.X, TargetY, HumRP.Position.Z)
 	end)
 
-	-- Aguarda o rise estabilizar (aprox. 1.5s é suficiente pra chegar lá)
 	task.wait(1.5)
 
-	-- Fase 2: char chegou lá em cima — spawna a moon e o indicador no chão
 	ReplicateSet:FireAllClients("LunarAwakenMoonSpawn", { char = Character })
-	ReplicateSet:FireAllClients("LunarAwakenIndicator", { char = Character })
+	ReplicateSet:FireAllClients("LunarAwakenIndicator", { char = Character, ownerId = ownerId })
 
-	-- Espera o restante do CHARGE_TIME
 	task.wait(CHARGE_TIME - 1.5)
 
 	if RiseConnection then
@@ -351,8 +375,11 @@ function module:Activate(Player)
 		LaunchDirection = result.Unit
 	end
 
-	-- Fase 3: lança — LunarAwakenMoonLaunch já destrói o indicador no cliente
-	ReplicateSet:FireAllClients("LunarAwakenMoonLaunch", { char = Character, direction = LaunchDirection })
+	ReplicateSet:FireAllClients("LunarAwakenMoonLaunch", {
+		char = Character,
+		direction = LaunchDirection,
+		ownerId = ownerId,
+	})
 	ReplicateSet:FireClient(Player, "StopLunarAimControl", {})
 
 	local LaunchOrigin = HumRP.Position + Vector3.new(0, 70, 0)

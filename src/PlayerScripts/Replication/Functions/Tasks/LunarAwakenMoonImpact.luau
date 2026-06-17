@@ -1,4 +1,3 @@
-local Constants = require(script.Parent.Shared.Constants)
 local State = require(script.Parent.Shared.State)
 
 return function(Params)
@@ -10,12 +9,14 @@ return function(Params)
 
 	if data.moonConn then
 		data.moonConn:Disconnect()
+		data.moonConn = nil
 	end
 	if data.moonLaunchConn then
 		data.moonLaunchConn:Disconnect()
+		data.moonLaunchConn = nil
 	end
 	if data.moon and data.moon.Parent then
 		data.moon:Destroy()
+		data.moon = nil
 	end
-	State.lunarData[Character] = nil
 end

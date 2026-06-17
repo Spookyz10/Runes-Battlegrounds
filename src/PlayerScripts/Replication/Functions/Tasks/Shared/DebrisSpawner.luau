@@ -230,7 +230,7 @@ local function debrisSpawner(config)
 	local keepTilt = config.tiltMin ~= nil and config.tiltMax ~= nil
 
 	for ringIndex = 1, ringCount do
-		local ringRadius = baseRingRadius + ringSpacing * (ringIndex - 1)
+		local ringRadius = baseRingRadius + ringSpacing * ringIndex
 		local ringRadiusScale = ringRadius / baseRingRadius
 		local ringSizeScale = ringSizeGrowth ^ (ringIndex - 1)
 

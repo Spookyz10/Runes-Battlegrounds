@@ -52,9 +52,6 @@ function Interface:Start()
 
 	local ResetBindable = Instance.new("BindableEvent")
 	ResetBindable.Event:Connect(function()
-		if workspace.Configuration.NoReset.Value == true or LocalPlayer.Commands.NoReset.Value == true then
-			return
-		end
 		ComSet:FireServer("ResetCharacter")
 	end)
 

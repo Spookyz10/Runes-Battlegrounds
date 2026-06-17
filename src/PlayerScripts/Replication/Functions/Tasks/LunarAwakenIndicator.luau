@@ -1,6 +1,7 @@
 local Constants = require(script.Parent.Shared.Constants)
 local RunService = Constants.RunService
 local TS = Constants.TS
+local LocalPlayer = Constants.LocalPlayer
 
 local INDICATOR_COLOR = Color3.fromRGB(180, 220, 255)
 local INDICATOR_SIZE_START = 4
@@ -18,6 +19,7 @@ ExcludeRayParams.IgnoreWater = true
 
 return function(Params)
 	local Character = Params.char
+	local ownerId = Params.ownerId
 	if not Character or not Character.Parent then
 		return
 	end
@@ -26,8 +28,10 @@ return function(Params)
 		return
 	end
 
+	local isOwner = LocalPlayer and LocalPlayer.UserId == ownerId
+
 	local Indicator = Instance.new("Part")
-	Indicator.Name = "LunarIndicator_" .. Character.Name
+	Indicator.Name = "LunarIndicator_" .. tostring(ownerId or Character.Name)
 	Indicator.Anchored = true
 	Indicator.CanCollide = false
 	Indicator.CanTouch = false
@@ -54,25 +58,23 @@ return function(Params)
 			return
 		end
 
-		-- Origem da lua: 70 studs acima do HumRP (mesmo do servidor)
 		local moonOrigin = HumRP and HumRP.Parent and (HumRP.Position + PROJECTILE_ORIGIN_OFFSET) or Indicator.Position
 
-		-- Direção atual do aim (atualizada em tempo real pelo StartLunarAimControl)
-		local aimDir = shared._lunarAimDirection
+		local aimDir
+		if isOwner then
+			aimDir = shared._lunarAimDirection
+		end
 		if not aimDir or aimDir.Magnitude < 0.01 then
 			aimDir = HumRP and HumRP.Parent and HumRP.CFrame.LookVector or Vector3.new(0, 0, -1)
 		end
 		aimDir = aimDir.Unit
 
-		-- Raycast na direção do aim a partir da origem da lua
 		local ray = workspace:Raycast(moonOrigin, aimDir * MAX_RAYCAST_DIST, ExcludeRayParams)
 
 		local landPos
 		if ray then
 			landPos = ray.Position
 		else
-			-- Se não bater em nada, projeta no chão (Y=0 ou ponto mais próximo)
-			-- Resolve: moonOrigin + t * aimDir onde Y = 0
 			if math.abs(aimDir.Y) > 0.001 then
 				local t = -moonOrigin.Y / aimDir.Y
 				if t > 0 then
@@ -82,12 +84,9 @@ return function(Params)
 		end
 
 		if landPos then
-			-- Reposiciona o indicador no ponto de impacto projetado
-			-- Cylinder tem eixo ao longo do X local → rotaciona 90° em Z pra deitar no chão
 			Indicator.CFrame = CFrame.new(landPos + Vector3.new(0, Y_OFFSET, 0)) * CFrame.Angles(0, 0, math.rad(90))
 		end
 
-		-- Pulso de transparência
 		local elapsed = os.clock() - startTime
 		local pulse = math.sin(elapsed * PULSE_SPEED * math.pi) * 0.15
 		Indicator.Transparency = math.clamp(0.35 + pulse, 0.1, 0.6)
@@ -96,5 +95,5 @@ return function(Params)
 	if not shared._lunarIndicators then
 		shared._lunarIndicators = {}
 	end
-	shared._lunarIndicators[Character] = { part = Indicator, conn = conn }
+	shared._lunarIndicators[ownerId] = { part = Indicator, conn = conn }
 end
