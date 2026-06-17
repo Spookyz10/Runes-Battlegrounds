@@ -8,6 +8,7 @@ local StunHandler = require(SvModules.StunHandler)
 local CombatLogger = require(script.CombatLogger)
 local Utility = require(RPModules.Utility)
 local AnimationService = require(SvModules.AnimationService)
+local AntiTeamingHandler = require(SvModules.AntiTeamingHandler)
 
 local CheckBehind = Utility("CheckBehind")
 
@@ -66,6 +67,11 @@ function module:TakeDamage(
 		doFinisher = true
 	end
 
+	local mult = AntiTeamingHandler:GetDamageMultiplier(Damager)
+	if mult ~= 1 then
+		Damage = math.round(Damage * mult)
+	end
+
 	local DamagerPlayer = Players:GetPlayerFromCharacter(Damager)
 	local Damaged = Hum.Parent
 
@@ -113,10 +119,14 @@ function module:TakeDamage(
 
 					Hum:TakeDamage(FinisherRequirement or Damage)
 					AddDealtDamage(Damaged, Damager, Damage)
+
+					AntiTeamingHandler:OnDamageReceived(Damaged, Damager, FinisherRequirement or Damage)
 				end
 			else
 				Hum:TakeDamage(Damage)
 				AddDealtDamage(Damaged, Damager, Damage)
+
+				AntiTeamingHandler:OnDamageReceived(Damaged, Damager, Damage)
 
 				if Type == "M1" then
 					ReplicateSet:FireAllClients("RemoveAllBodyMovers", Damaged)
@@ -224,6 +234,8 @@ Players.PlayerRemoving:Connect(function(DamagedPlayer)
 	if Damaged:FindFirstChild("Dummy") then
 		return
 	end
+
+	AntiTeamingHandler:Cleanup(Damaged)
 
 	local LastHitFrom = Damaged:GetAttribute("LastHitBy")
 	if not LastHitFrom then
