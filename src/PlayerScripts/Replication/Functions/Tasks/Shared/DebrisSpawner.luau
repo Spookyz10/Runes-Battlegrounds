@@ -183,46 +183,58 @@ local function debrisSpawner(config)
 	end
 
 	local spawnedPieces = {}
+
 	local ringInner = 5
 	local ringOuter = 7
-
 	if config.new then
 		ringInner = config.new[1]
 		ringOuter = config.new[2]
 	end
+	local baseRingRadius = (ringInner + ringOuter) / 2
 
-	local ringRadius = (ringInner + ringOuter) / 2
-	local pieceCount = config.amount or 16
+	local ringCount = config.rings or 4
+	local ringSpacing = config.ringSpacing or 6
+	local ringSizeGrowth = config.ringSizeGrowth or 1.6
+	local ringGap = config.ringGap or 0.18
+	local outwardTilt = config.outwardTilt
+	if outwardTilt == nil then
+		outwardTilt = true
+	end
+
+	local debrisSizeMin = config.debrisSizeMin or 2
+	local debrisSizeMax = config.debrisSizeMax or 5
+	local debrisHeightMin = config.debrisHeightMin or 1.9
+	local debrisHeightMax = config.debrisHeightMax or 3.2
+
+	local basePieceCount = config.amount or 24
 
 	local baseCFrame = CFrame.new(config.cframe.p)
 	baseCFrame = baseCFrame
 		* Helpers.calculateCFrameBetweenVectors(baseCFrame.UpVector, config.normal, Vector3.new(0, 1, 0))
 	baseCFrame = baseCFrame * CFrame.Angles(0, math.rad(rng:NextNumber(-360, 360)), 0)
 
-	local offsetCFrame = baseCFrame * CFrame.Angles(0, math.rad(rng:NextNumber(-16, 16)), 0)
-
-	if ringInner ~= 5 or ringOuter ~= 7 then
-		config.Double = 2
-	end
-
-	-- Optional: instead of settling perfectly flat against the ground (the
-	-- default look), let pieces keep a small resting tilt so the ring reads
-	-- as jagged/erupted debris rather than flush tiles. Off by default so
-	-- every other ability using Ground Crater keeps its current look.
 	local keepTilt = config.tiltMin ~= nil and config.tiltMax ~= nil
 
-	for i = 1, pieceCount do
-		for ring = 1, config.Double or 1 do
-			local activeCFrame = (ring > 1) and offsetCFrame or baseCFrame
-			local currentRadius = (ring > 1) and ringRadius + 1 or ringRadius
+	for ringIndex = 1, ringCount do
+		local ringRadius = baseRingRadius + ringSpacing * (ringIndex - 1)
+		local ringRadiusScale = ringRadius / baseRingRadius
+		local ringSizeScale = ringSizeGrowth ^ (ringIndex - 1)
 
-			local angle = (360 / pieceCount + 360 / pieceCount * i) / 57.296
-			local offsetX = currentRadius * math.sin(angle)
-			local offsetZ = currentRadius * math.cos(angle)
+		local pieceCount = math.max(4, math.floor((basePieceCount / ringCount) * ringRadiusScale))
 
-			local spread = config.Double and 0.35 or 0.2
-			local pieceCFrame = activeCFrame * CFrame.new(offsetX, 0, offsetZ)
-			pieceCFrame = pieceCFrame + pieceCFrame.LookVector * rng:NextNumber(-spread, spread)
+		local ringRotationOffset = math.rad(rng:NextNumber(-360, 360))
+		local ringCFrame = baseCFrame * CFrame.Angles(0, ringRotationOffset, 0)
+
+		for i = 1, pieceCount do
+			local angle = (i / pieceCount) * (math.pi * 2) + rng:NextNumber(-0.12, 0.12)
+
+			local radiusJitter = ringRadius * rng:NextNumber(1 - ringGap, 1 + ringGap)
+			local offsetX = radiusJitter * math.sin(angle)
+			local offsetZ = radiusJitter * math.cos(angle)
+
+			local pieceCFrame = ringCFrame * CFrame.new(offsetX, 0, offsetZ)
+			pieceCFrame = pieceCFrame * CFrame.Angles(0, angle, 0)
+			pieceCFrame = pieceCFrame + pieceCFrame.LookVector * rng:NextNumber(-0.4, 0.4) * ringRadiusScale
 
 			local slab = cleanupThrownObjects() or Instance.new("Part")
 			slab.Anchored = true
@@ -230,13 +242,28 @@ local function debrisSpawner(config)
 			slab.CanTouch = true
 			slab.Material = config.ground.Material
 			slab.Color = config.ground.Color
-			slab.CFrame = pieceCFrame * CFrame.fromEulerAnglesXYZ(0, angle, 0)
+
+			local widthScale = ringSizeScale
+			local slabWidth = rng:NextNumber(debrisSizeMin, debrisSizeMax) * widthScale * sizeMult
+			local slabHeight = rng:NextNumber(debrisHeightMin, debrisHeightMax)
+				* (1 + (ringSizeScale - 1) * 0.35)
+				* sizeMult
+			local slabDepth = randomRange(debrisSizeMin, debrisSizeMax) * widthScale * sizeMult
+			slab.Size = Vector3.new(slabWidth, slabHeight, slabDepth)
+
+			slab.CFrame = pieceCFrame
+
+			local randomYaw = math.rad(rng:NextNumber(-25, 25))
+			local outwardPitch = 0
+			if outwardTilt then
+				outwardPitch = math.rad(rng:NextNumber(8, 38) * (0.6 + 0.4 * ringRadiusScale))
+			end
+			local randomPitch = math.rad(rng:NextNumber(-14, 14))
+			local randomRoll = math.rad(rng:NextNumber(-22, 22))
+
+			slab.CFrame = slab.CFrame * CFrame.Angles(-outwardPitch + randomPitch, randomYaw, randomRoll)
 
 			local originalCFrame = slab.CFrame
-			slab.CFrame = originalCFrame * CFrame.Angles(math.rad(-rng:NextNumber(6, 42)), 0, 0)
-
-			local slabWidth = rng:NextNumber(2, 5) * (ring > 1 and 1.8 or config.Double and 1.35 or 1)
-			slab.Size = Vector3.new(slabWidth, rng:NextNumber(1.9, 2.4), randomRange(2, 6)) * sizeMult
 
 			slab.CFrame = slab.CFrame * CFrame.new(0, -(slab.Size.Y / 3 + slab.Size.Z / 3) / 3, 0)
 			slab.Transparency = 1
@@ -271,7 +298,7 @@ local function debrisSpawner(config)
 
 			slab.CFrame = savedCFrame
 				* (
-					CFrame.new(0, -3, -1.5)
+					CFrame.new(0, -3 * (0.7 + 0.3 * ringSizeScale), -1.5)
 					* CFrame.Angles(
 						math.rad(rng:NextNumber(-11, 11)),
 						math.rad(rng:NextNumber(-11, 11)),
@@ -331,11 +358,39 @@ local function debrisSpawner(config)
 					* CFrame.Angles(math.rad(-rng:NextNumber(config.tiltMin, config.tiltMax)), 0, 0)
 			end
 
+			local groundLevel = config.cframe.p.Y
+			local halfSize = slab.Size / 2
+			local corners = {
+				Vector3.new(-halfSize.X, -halfSize.Y, -halfSize.Z),
+				Vector3.new(halfSize.X, -halfSize.Y, -halfSize.Z),
+				Vector3.new(-halfSize.X, -halfSize.Y, halfSize.Z),
+				Vector3.new(halfSize.X, -halfSize.Y, halfSize.Z),
+			}
+
+			local lowestY = math.huge
+			for _, corner in corners do
+				local worldCorner = (restCFrame * CFrame.new(corner)).Position
+				lowestY = math.min(lowestY, worldCorner.Y)
+			end
+
+			local missingDepth = (lowestY - groundLevel)
+			if missingDepth > 0 then
+				local stretchedSize = slab.Size + Vector3.new(0, missingDepth, 0)
+				slab.Size = stretchedSize
+				restCFrame = restCFrame * CFrame.new(0, -missingDepth / 2, 0)
+			end
+
 			slab:SetAttribute("OGCframe", restCFrame)
 
-			TS:Create(slab, TweenInfo.new(rng:NextNumber(0.2, 0.3), Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-				CFrame = restCFrame,
-			}):Play()
+			TS
+				:Create(
+					slab,
+					TweenInfo.new(rng:NextNumber(0.22, 0.38), Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+					{
+						CFrame = restCFrame,
+					}
+				)
+				:Play()
 
 			local keepDuration = addConfig.keep
 			if not keepDuration then

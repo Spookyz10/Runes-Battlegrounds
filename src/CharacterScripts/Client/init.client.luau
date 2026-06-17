@@ -81,7 +81,7 @@ end)
 
 local RunAnimation = Instance.new("Animation")
 
-RunAnimation.AnimationId = "rbxassetid://115733546570440"
+RunAnimation.AnimationId = "rbxassetid://131755368137980"
 
 local RunTrack = Animator:LoadAnimation(RunAnimation)
 RunAnimation:Destroy()

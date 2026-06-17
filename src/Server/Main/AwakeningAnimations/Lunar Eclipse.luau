@@ -181,13 +181,15 @@ local function triggerLandingImpact(Character, Position)
 	end)
 
 	ReplicateSet:FireAllClients("Ground Crater", {
-		nosmoke = true,
 		Seed = math.random(1, 2147483647),
-		amount = 50,
+		amount = 20,
 		start = Position + Vector3.new(0, 10, 0),
-		size = 50,
+		rings = 4,
+		ringSpacing = 50,
+		ringSizeGrowth = 1.3,
+		debrisSizeMin = 5,
+		debrisSizeMax = 10,
 		["end"] = Vector3.new(0, -14, 0),
-		nosound = true,
 	})
 
 	task.delay(0.4, function()
