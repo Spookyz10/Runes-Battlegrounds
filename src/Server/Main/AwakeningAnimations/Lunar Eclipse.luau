@@ -183,8 +183,8 @@ local function triggerLandingImpact(Character, Position)
 		Seed = math.random(1, 2e9),
 		Position = Character.PrimaryPart.Position,
 		Size = 1.2,
-		Rings = 3,
-		RockUpForce = { 12, 35 },
+		Rings = 6,
+		CrackSpread = 17,
 		CrackLifetime = 6,
 	})
 	task.delay(0.4, function()
