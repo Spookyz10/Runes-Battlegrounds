@@ -2,8 +2,8 @@ local TouchGui
 
 local Player = game.Players.LocalPlayer
 
-local InterfaceHandler = require(script.Interface).new()
-task.spawn(InterfaceHandler.Start, InterfaceHandler)
+local FunctionsHandler = require(script.Functions).new()
+task.spawn(FunctionsHandler.Start, FunctionsHandler)
 
 repeat
 	task.wait()

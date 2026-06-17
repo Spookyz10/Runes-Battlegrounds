@@ -47,6 +47,15 @@ local function EndAwakening(Player, Awk0C, AwkTween)
 	Character:SetAttribute("Awakened", nil)
 	Character:SetAttribute("AwakeningAura", false)
 
+	local moveset = Player:GetAttribute("Moveset")
+	if moveset == "Eclipse" then
+		local playerClass = shared.playerClasses[Player.UserId]
+		local mode = playerClass and playerClass.MovesetModes["Eclipse"]
+		if mode == "Lunar" then
+			ReplicateSet:FireAllClients("LunarAwakenEnd", { char = Character })
+		end
+	end
+
 	if Character:FindFirstChild("Humanoid") then
 		Character.Humanoid.WalkSpeed = 16
 	end

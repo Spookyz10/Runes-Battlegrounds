@@ -28,7 +28,7 @@ function Interface:Start()
 		task.wait()
 	end
 
-	local ClientTasks = require(script["Client Tasks"])
+	local ClientTasks = require(script.Tasks)
 
 	local function repfire(replicateName, params)
 		local ReplicateFunc = ClientTasks[replicateName]
@@ -102,6 +102,28 @@ function Interface:Start()
 		UpdateClouds()
 	end
 	ComSet:FireServer("replicationLoaded")
+
+	shared.clearVelocities = function(Part: Part, Ignore: BodyVelocity?)
+		for _, Velocity in Part:GetDescendants() do
+			if
+				Velocity ~= Ignore
+				and (
+					Velocity:IsA("BodyVelocity")
+					or Velocity:IsA("LinearVelocity")
+					or Velocity:IsA("BodyPosition")
+					or Velocity:IsA("BodyGyro")
+					or Velocity:IsA("BodyAngularVelocity")
+					or Velocity:IsA("BodyMover")
+					or Velocity:IsA("BodyForce")
+					or Velocity:IsA("BodyThrust")
+					or Velocity:IsA("AngularVelocity")
+					or Velocity:IsA("VelocityMotor")
+				)
+			then
+				Velocity:Destroy()
+			end
+		end
+	end
 
 	script:Destroy()
 end

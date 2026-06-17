@@ -8,9 +8,10 @@ local SvModules = ServerStorage.Modules
 
 local StunHandler = require(SvModules.StunHandler)
 local DamageHandler = require(SvModules.DamageHandler)
-local NewKnockback = require(SvModules.BodymoverService)
+local KnockbackService = require(SvModules.KnockbackModule)
 local iFramesService = require(SvModules.iFramesService)
 local HitboxHandler = require(SvModules.HitboxHandler)
+local RagdollHandler = require(SvModules.RagdollHandler)
 
 local Remotes = ReplicatedStorage.Remotes
 local ReplicateSet = Remotes.Replicate.Set
@@ -32,39 +33,16 @@ local PROJECTILE_SPEED = 80
 local PROJECTILE_LIFETIME = 10
 local PROJECTILE_SIZE = Vector3.new(2, 2, 2)
 local EXPLOSION_SIZE = Vector3.new(100, 100, 100)
-local IMPACT_SIZE = Vector3.new(30, 30, 30)
+local IMPACT_SIZE = Vector3.new(90, 30, 90)
 
 local module = {}
 
-local function setOwnershipAll(Character, Owner)
-	for _, v in Character:GetDescendants() do
-		if v:IsA("BasePart") then
-			pcall(function()
-				if v:CanSetNetworkOwnership() then
-					v:SetNetworkOwner(Owner)
-				end
-			end)
-		end
-	end
-end
-
 local function radialKnockback(Character, EnemyCharacter, EnemyHumanoid, ExplosionPosition, BaseForce, Damage)
-	local EnemyHumRP = EnemyCharacter.HumanoidRootPart
-
-	local Direction = (EnemyHumRP.Position - ExplosionPosition)
-	if Direction.Magnitude <= 0.05 then
-		Direction = Vector3.new(0, 1, 0)
-	else
-		Direction = Direction.Unit
-	end
-
 	DamageHandler:TakeDamage(Character, EnemyHumanoid, Damage, 1, nil, false, false, true, true, true, nil, nil)
 
-	NewKnockback:Knockback(EnemyCharacter, {
-		KnockbackType = "Velocity",
-		MaxForce = Vector3.new(1, 1, 1) * 100000,
-		Velocity = Direction * BaseForce + Vector3.new(0, BaseForce * 0.6, 0),
-	})
+	RagdollHandler.ragdoll(EnemyHumanoid, 5)
+
+	KnockbackService:Knockback(EnemyCharacter, Vector3.new(0, BaseForce, 0), nil, nil, nil, nil, nil, false, false)
 end
 
 local function explode(Character, Position)
@@ -81,6 +59,8 @@ local function explode(Character, Position)
 			end
 		end
 	end)
+
+	ReplicateSet:FireAllClients("LunarAwakenMoonImpact", { char = Character })
 
 	ReplicateSet:FireAllClients("Ground Crater", {
 		Seed = math.random(1, 2000000000),
@@ -196,18 +176,17 @@ local function triggerLandingImpact(Character, Position)
 			return
 		end
 
-		radialKnockback(Character, EnemyCharacter, EnemyHumanoid, Position, 95, 12)
+		radialKnockback(Character, EnemyCharacter, EnemyHumanoid, Position, 145, 12)
 	end)
 
-	ReplicateSet:FireAllClients("Ground Crater", {
-		Seed = math.random(1, 2000000000),
-		start = Position,
-		["end"] = Vector3.new(0, -14, 0),
-		amount = 9,
-		size = 1.5,
-		nosound = true,
+	ReplicateSet:FireAllClients("ImpactCrater", {
+		Seed = math.random(1, 2e9),
+		Position = Character.PrimaryPart.Position,
+		Size = 1.2,
+		Rings = 3,
+		RockUpForce = { 12, 35 },
+		CrackLifetime = 6,
 	})
-
 	task.delay(0.4, function()
 		if Character and Character.Parent then
 			StunHandler:Unstun(Character, ImpactStun)
@@ -268,16 +247,6 @@ function module:Activate(Player)
 	local StartPosition = HumRP.Position
 	local TargetY = StartPosition.Y + RISE_HEIGHT
 
-	ReplicateSet:FireClient(Player, "StartLunarAimControl", { Duration = CHARGE_TIME })
-
-	Humanoid.AutoRotate = false
-	Humanoid.PlatformStand = true
-	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-	Humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp, false)
-	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
-	Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-	Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-
 	local function restoreControl()
 		Humanoid.PlatformStand = false
 		Humanoid.AutoRotate = true
@@ -289,6 +258,22 @@ function module:Activate(Player)
 			Humanoid:ChangeState(Enum.HumanoidStateType.Running)
 		end
 	end
+
+	ReplicateSet:FireAllClients("LunarAwakenStart", { char = Character })
+
+	task.wait(0.5)
+
+	ReplicateSet:FireAllClients("GivePlayerAura", { Char = Character, AuraName = "Lunar Eclipse" })
+
+	ReplicateSet:FireClient(Player, "StartLunarAimControl", { Duration = CHARGE_TIME })
+
+	Humanoid.AutoRotate = false
+	Humanoid.PlatformStand = true
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp, false)
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+	Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
 
 	local RiseBodyPosition = Instance.new("BodyPosition")
 	RiseBodyPosition.Name = "LunarAwaken_Rise"
@@ -339,9 +324,11 @@ function module:Activate(Player)
 		LaunchDirection = result.Unit
 	end
 
+	ReplicateSet:FireAllClients("LunarAwakenMoonLaunch", { char = Character, direction = LaunchDirection })
+
 	ReplicateSet:FireClient(Player, "StopLunarAimControl", {})
 
-	local LaunchOrigin = HumRP.Position
+	local LaunchOrigin = HumRP.Position + Vector3.new(0, 70, 0)
 
 	fireProjectile(Character, LaunchOrigin, LaunchDirection)
 	watchForLanding(Character, Humanoid, HumRP)
