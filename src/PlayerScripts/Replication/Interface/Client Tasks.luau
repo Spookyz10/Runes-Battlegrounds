@@ -667,6 +667,7 @@ local ReplicationEffects = {
 	end,
 
 	Hitbox = function(Params)
+		warn("Hitbox recebido:", Params.Method, Params.Size, Params.CFrame)
 		for _, v in workspace.Thrown:GetChildren() do
 			if v.Name == LocalPlayer.UserId .. " Hitbox" then
 				v:Destroy()
@@ -1376,6 +1377,8 @@ local ReplicationEffects = {
 			shared._lunarAimConn = nil
 		end
 
+		shared._lunarAimActive = true
+
 		local LocalChar = LocalPlayer.Character
 		local LocalHumRP = LocalChar and LocalChar:FindFirstChild("HumanoidRootPart")
 		local LocalHumanoid = LocalChar and LocalChar:FindFirstChild("Humanoid")
@@ -1418,6 +1421,8 @@ local ReplicationEffects = {
 	end,
 
 	StopLunarAimControl = function(Params)
+		shared._lunarAimActive = false
+
 		if shared._lunarAimConn then
 			shared._lunarAimConn:Disconnect()
 			shared._lunarAimConn = nil

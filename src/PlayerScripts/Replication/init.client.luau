@@ -53,6 +53,9 @@ local shiftlockActive = false
 local shiftlockDebounce = false
 
 local function Shiftlock()
+	if shared._lunarAimActive then
+		return
+	end
 	if not Character:HasTag("CantRotate") then
 		Humanoid.AutoRotate = false
 		HumRP.CFrame = CFrame.new(

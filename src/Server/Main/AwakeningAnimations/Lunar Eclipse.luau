@@ -36,6 +36,18 @@ local IMPACT_SIZE = Vector3.new(30, 30, 30)
 
 local module = {}
 
+local function setOwnershipAll(Character, Owner)
+	for _, v in Character:GetDescendants() do
+		if v:IsA("BasePart") then
+			pcall(function()
+				if v:CanSetNetworkOwnership() then
+					v:SetNetworkOwner(Owner)
+				end
+			end)
+		end
+	end
+end
+
 local function radialKnockback(Character, EnemyCharacter, EnemyHumanoid, ExplosionPosition, BaseForce, Damage)
 	local EnemyHumRP = EnemyCharacter.HumanoidRootPart
 
@@ -258,8 +270,6 @@ function module:Activate(Player)
 
 	ReplicateSet:FireClient(Player, "StartLunarAimControl", { Duration = CHARGE_TIME })
 
-	-- libera rotação 3D completa (sem isso o Humanoid força o personagem
-	-- a ficar em pé e cancela o pitch que o client aplica)
 	Humanoid.AutoRotate = false
 	Humanoid.PlatformStand = true
 	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
