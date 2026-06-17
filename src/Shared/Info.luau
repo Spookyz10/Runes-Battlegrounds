@@ -11,7 +11,7 @@ return {
 			DefaultMode = "Lunar",
 			Base = {
 				Lunar = {
-					"Lunar Lunge",
+					"Nightstalk",
 					"Prowl",
 					"ShadeStep",
 					"Grasp",
@@ -20,7 +20,7 @@ return {
 					"Sunquake",
 					"Undawn",
 					"Immolate",
-					"Flarewhip",
+					"Solar Chains",
 				},
 			},
 			Ultimate = {

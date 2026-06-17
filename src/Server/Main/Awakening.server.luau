@@ -1,35 +1,23 @@
 local SvSt = game:GetService("ServerStorage")
 local RS = game:GetService("ReplicatedStorage")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TS = game:GetService("TweenService")
 
-local Assets = SvSt.Assets
-
-local Animations = Assets.Animations
-
-local AwkAnims = Animations.Awakenings
-
 local InfoModule = require(RS.Shared.Info)
+local Info = require(ReplicatedStorage.Shared.Info)
 
 local SvModules = SvSt.Modules
 
-local StunHandler = require(SvModules.StunHandler)
-local HitboxHandler = require(SvModules.HitboxHandler)
-local DamageHandler = require(SvModules.DamageHandler)
-local AnimationService = require(SvModules.AnimationService)
 local iFramesHandler = require(SvModules.iFramesService)
 local MovesetHandler = require(SvModules.MovesetHandler)
-local RagdollHandler = require(SvModules.RagdollHandler)
-local KnockbackModule = require(SvModules.KnockbackModule)
+
+local AwakenAnimations = require(script.Parent.AwakeningAnimations)
 
 local RpRemotes = RS.Remotes
 local AwakeningRemotes = RpRemotes.Awakening
 local AwakeningSet = AwakeningRemotes.Set
 local ReplicateRemotes = RpRemotes.Replicate
 local ReplicateSet = ReplicateRemotes.Set
-local Comms = RpRemotes.Comunicator
-local CommsSet = Comms.Set
-
-local AwakeningSvEvent = AwakeningSet.OnServerEvent
 
 local function EndAwakening(Player, Awk0C, AwkTween)
 	if not Player or not Player.Parent then
@@ -69,21 +57,21 @@ end
 
 local AwakeningAnimations = {
 	["Astral Shift"] = function(Player)
-		local Moveset = Player:FindFirstChild("Moveset")
-		if Moveset.Value == "Solar" then
+		local Moveset = Player:GetAttribute("MovesetMode_Eclipse")
+		if Moveset == "Solar" then
 			ReplicateSet:FireAllClients("Solar Eclipse", { char = Player.Character })
-		elseif Moveset.Value == "Lunar" then
-			ReplicateSet:FireAllClients("Lunar Eclipse", { char = Player.Character })
+		elseif Moveset == "Lunar" then
+			--ReplicateSet:FireAllClients("Lunar Eclipse", { char = Player.Character })
+			print("test")
+			task.spawn(function()
+				AwakenAnimations["Lunar Eclipse"]:Activate(Player)
+			end)
 		end
 	end,
 }
 
 local function Awakening(Player)
 	task.spawn(function()
-		if Player.Commands.NoAwk.Value == true then
-			return
-		end
-
 		local Character = Player.Character
 
 		if
@@ -95,8 +83,6 @@ local function Awakening(Player)
 		then
 			return
 		end
-
-		local Humanoid = Character.Humanoid
 
 		local AwkProgressObj = Player.AwakeningProgress
 
@@ -114,23 +100,14 @@ local function Awakening(Player)
 		Character:AddTag("Awakened")
 		Character:SetAttribute("Awakened", true)
 		Player:SetAttribute("Awakened", true)
-		if CurrentMoveset ~= "Cursed Child" then
-			Humanoid.Health = Humanoid.MaxHealth
-		end
 
 		iFramesHandler:AddAlliFrames(Character)
 
-		AwakeningAnimations[InfoModule.Movesets[CurrentMoveset].AwakeningAnimation](Player)
+		AwakeningAnimations[InfoModule.Movesets[CurrentMoveset].UltimateName](Player)
 
 		task.delay(0.5, function()
 			MovesetHandler:AddAwakeningMoveset(Player, Player:GetAttribute("Moveset"))
 		end)
-
-		local playerClass = shared.playerClasses[Player.UserId]
-		if playerClass then
-			playerClass.TitlesProgress.Awakens += 1
-			Player:SetAttribute("AwakensProgress", playerClass.TitlesProgress.Awakens)
-		end
 
 		iFramesHandler:RemoveAlliFrames(Character)
 
@@ -157,7 +134,7 @@ local function Awakening(Player)
 	end)
 end
 
-AwakeningSvEvent:Connect(function(Player)
+AwakeningSet.OnServerEvent:Connect(function(Player)
 	if Player.AwakeningProgress.Value < 100 then
 		return
 	end
