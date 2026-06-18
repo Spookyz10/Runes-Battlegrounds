@@ -98,7 +98,7 @@ local function tweenAllSlotsDown(onComplete: (() -> ())?)
 	local done = 0
 
 	for _, slot in HotbarFrame:GetChildren() do
-		if slot:IsA("Frame") and slot:FindFirstChild("Base") then
+		if slot:IsA("ImageLabel") and slot:FindFirstChild("Base") then
 			total += 1
 		end
 	end
@@ -111,7 +111,7 @@ local function tweenAllSlotsDown(onComplete: (() -> ())?)
 	end
 
 	for _, slot in HotbarFrame:GetChildren() do
-		if slot:IsA("Frame") and slot:FindFirstChild("Base") then
+		if slot:IsA("ImageLabel") and slot:FindFirstChild("Base") then
 			tweenBase(slot.Base, POS_DOWN, TWEEN_SLIDE, function()
 				done += 1
 				if done == total and onComplete then
@@ -132,14 +132,14 @@ local function cancelCdTween(cdFrame: GuiObject)
 end
 
 local function shineIconEffect(slot)
-	local icon = slot:FindFirstChild("Icon")
+	local icon = slot:FindFirstChild("Base"):FindFirstChild("Shine")
 	if not icon then
 		return
 	end
 	icon.ClipsDescendants = true
 	local shine = Instance.new("Frame")
 	shine.Name = "ShineEffect"
-	shine.Size = UDim2.fromScale(0.45, 1)
+	shine.Size = UDim2.fromScale(1, 1)
 	shine.Position = UDim2.fromScale(-0.45, 0)
 	shine.BackgroundColor3 = Color3.new(1, 1, 1)
 	shine.BackgroundTransparency = 0.25
@@ -182,11 +182,11 @@ local function Equip(HotbarSlot)
 			end
 
 			cancelCdTween(cdFrame)
-			cdFrame.Size = UDim2.fromScale(1, 1)
+			cdFrame.Size = UDim2.fromScale(1, 0.85)
 
 			if cds > 0 then
 				local cdTween =
-					TS:Create(cdFrame, TweenInfo.new(cds, Enum.EasingStyle.Linear), { Size = UDim2.fromScale(1, 0) })
+					TS:Create(cdFrame, TweenInfo.new(cds, Enum.EasingStyle.Linear), { Size = UDim2.fromScale(1, 0.15) })
 				activeCdTweens[cdFrame] = cdTween
 				cdTween.Completed:Once(function(state)
 					if activeCdTweens[cdFrame] == cdTween then
@@ -269,8 +269,8 @@ local function updateHotbarGradients()
 	local template = source:FindFirstChild(name)
 
 	for _, slot in HotbarFrame:GetChildren() do
-		if slot:IsA("Frame") and slot:FindFirstChild("Base") then
-			local base = slot.Base.Colored
+		if slot:IsA("ImageLabel") and slot:FindFirstChild("Base") then
+			local base = slot.Base
 			for _, child in base:GetChildren() do
 				if child:IsA("UIGradient") then
 					child:Destroy()
@@ -284,7 +284,7 @@ local function updateHotbarGradients()
 end
 
 for _, slot in HotbarFrame:GetChildren() do
-	if slot:IsA("Frame") then
+	if slot:IsA("ImageLabel") then
 		local cdFrame = slot:FindFirstChild("CooldownFrame")
 		if cdFrame then
 			cdFrame.Size = UDim2.fromScale(1, 0)
@@ -309,7 +309,7 @@ UIS.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 for _, HotbarSlot in HotbarFrame:GetChildren() do
-	if HotbarSlot:IsA("Frame") and HotbarSlot:FindFirstChild("Base") then
+	if HotbarSlot:IsA("ImageLabel") and HotbarSlot:FindFirstChild("Base") then
 		local Base = HotbarSlot.Base
 		Base.Activated:Connect(function()
 			local char = getCharacter()
@@ -325,7 +325,7 @@ for _, HotbarSlot in HotbarFrame:GetChildren() do
 					end
 				else
 					for _, Slot in HotbarFrame:GetChildren() do
-						if Slot:IsA("Frame") and Slot:FindFirstChild("Base") then
+						if Slot:IsA("ImageLabel") and Slot:FindFirstChild("Base") then
 							local SlotBase = Slot.Base
 							if SlotBase ~= Base and SlotBase.SelectionObjectClipper.Visible == true then
 								SlotBase.SelectionObjectClipper.Visible = false
@@ -350,7 +350,7 @@ end
 MovesetHandler.OnClientEvent:Connect(function(Goal)
 	if Goal == "removeCooldowns" then
 		for _, Frame in HotbarFrame:GetChildren() do
-			if Frame:IsA("Frame") then
+			if Frame:IsA("ImageLabel") then
 				local cdFrame = Frame:FindFirstChild("CooldownFrame")
 				if cdFrame then
 					cancelCdTween(cdFrame)

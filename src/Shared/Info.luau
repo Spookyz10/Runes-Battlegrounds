@@ -34,7 +34,7 @@ return {
 			},
 			Special = {
 				Cost = 0,
-				Cooldown = 5,
+				Cooldown = 1,
 				Action = "SwapMode",
 			},
 			UltimateSpecial = {

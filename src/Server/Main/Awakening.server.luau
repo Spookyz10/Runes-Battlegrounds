@@ -80,9 +80,7 @@ local AwakeningAnimations = {
 		if Moveset == "Solar" then
 			ReplicateSet:FireAllClients("Solar Eclipse", { char = Player.Character })
 		elseif Moveset == "Lunar" then
-			task.spawn(function()
-				AwakenAnimations["Lunar Eclipse"]:Activate(Player)
-			end)
+			AwakenAnimations["Lunar Eclipse"]:Activate(Player)
 		end
 	end,
 }
@@ -121,6 +119,8 @@ local function Awakening(Player)
 		iFramesHandler:AddAlliFrames(Character)
 
 		AwakeningAnimations[InfoModule.Movesets[CurrentMoveset].UltimateName](Player)
+
+		print("finished animation")
 
 		task.delay(0.5, function()
 			MovesetHandler:AddAwakeningMoveset(Player, Player:GetAttribute("Moveset"))

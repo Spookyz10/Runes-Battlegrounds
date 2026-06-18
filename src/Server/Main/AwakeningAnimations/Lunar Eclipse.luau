@@ -12,10 +12,15 @@ local KnockbackService = require(SvModules.KnockbackModule)
 local iFramesService = require(SvModules.iFramesService)
 local HitboxHandler = require(SvModules.HitboxHandler)
 local RagdollHandler = require(SvModules.RagdollHandler)
+local AnimationService = require(SvModules.AnimationService)
 
 local Remotes = ReplicatedStorage.Remotes
 local ReplicateSet = Remotes.Replicate.Set
 local ComGet = Remotes.Comunicator.Get
+
+local Assets = ServerStorage.Assets
+local Animations = Assets.Animations
+local LunarEclipseAnim = Animations.Awakenings["Lunar Eclipse"]
 
 local MapRayParams = RaycastParams.new()
 MapRayParams.FilterType = Enum.RaycastFilterType.Include
@@ -28,6 +33,7 @@ ProjectileOverlapParams.FilterType = Enum.RaycastFilterType.Include
 ProjectileOverlapParams.FilterDescendantsInstances = { workspace.Live }
 
 local RISE_HEIGHT = 60
+local RISE_TOP_THRESHOLD = 2
 local CHARGE_TIME = 5
 local PROJECTILE_SPEED = 80
 local PROJECTILE_LIFETIME = 10
@@ -281,111 +287,170 @@ function module:Activate(Player)
 		end
 	end
 
-	ReplicateSet:FireAllClients("LunarAwakenStart", { char = Character })
+	AnimationService:stopAll(Character)
 
-	task.wait(0.5)
-
-	ReplicateSet:FireAllClients("GivePlayerAura", { Char = Character, AuraName = "Lunar Eclipse" })
-	ReplicateSet:FireClient(Player, "StartLunarAimControl", { Duration = CHARGE_TIME })
-
-	Humanoid.AutoRotate = false
-	Humanoid.PlatformStand = true
-	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-	Humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp, false)
-	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
-	Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-	Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-
-	-- cratera pequena no ponto de decolagem
-	local LiftRay = workspace:Raycast(StartPosition, Vector3.new(0, -6, 0), MapRayParams)
-	if LiftRay then
-		ReplicateSet:FireAllClients("Ground Crater", {
-			nodebris = true,
-			nosmoke = true,
-			Seed = math.random(1, 2147483647),
-			amount = 30,
-			start = LiftRay.Position + Vector3.new(0, 1, 0),
-			["end"] = Vector3.new(0, -10, 0),
-			rings = 2,
-			ringSpacing = 12,
-			ringSizeGrowth = 1.4,
-			ringGap = 0.20,
-			outwardTilt = true,
-			debrisSizeMin = 3,
-			debrisSizeMax = 8,
-			debrisHeightMin = 2,
-			debrisHeightMax = 5,
-			sizemult = 0.8,
-		})
-	end
-
-	HumRP.AssemblyLinearVelocity = Vector3.new(0, HumRP.AssemblyLinearVelocity.Y, 0)
-
-	local RiseBodyPosition = Instance.new("BodyPosition")
-	RiseBodyPosition.Name = "LunarAwaken_Rise"
-	RiseBodyPosition.MaxForce = Vector3.new(0, math.huge, 0)
-	RiseBodyPosition.P = 10000
-	RiseBodyPosition.D = 500
-	RiseBodyPosition.Position = Vector3.new(StartPosition.X, TargetY, StartPosition.Z)
-	RiseBodyPosition.Parent = HumRP
-
-	local RiseConnection
-	RiseConnection = RunService.Heartbeat:Connect(function()
-		if not RiseBodyPosition or not RiseBodyPosition.Parent then
-			if RiseConnection then
-				RiseConnection:Disconnect()
-			end
-			return
-		end
-		HumRP.AssemblyLinearVelocity = Vector3.new(0, HumRP.AssemblyLinearVelocity.Y, 0)
-		RiseBodyPosition.Position = Vector3.new(HumRP.Position.X, TargetY, HumRP.Position.Z)
-	end)
-
-	task.wait(1.5)
-
-	ReplicateSet:FireAllClients("LunarAwakenMoonSpawn", { char = Character })
-	ReplicateSet:FireAllClients("LunarAwakenIndicator", { char = Character, ownerId = ownerId })
-
-	task.wait(CHARGE_TIME - 1.5)
-
-	if RiseConnection then
-		RiseConnection:Disconnect()
-		RiseConnection = nil
-	end
-
-	if RiseBodyPosition and RiseBodyPosition.Parent then
-		RiseBodyPosition:Destroy()
-	end
-
-	if not Character.Parent or Humanoid.Health <= 0 then
-		ReplicateSet:FireClient(Player, "StopLunarAimControl", {})
-		if Character.Parent then
-			restoreControl()
-		end
+	local AnimTrack, AnimEvents = AnimationService:getAnimationTrack(Character, LunarEclipseAnim)
+	if not AnimTrack then
+		warn("[LunarEclipse] AnimTrack is nil for", Character.Name, "— animação não carregada?")
 		return
 	end
 
-	restoreControl()
+	ReplicateSet:FireAllClients("GivePlayerAura", { Char = Character, AuraName = "Lunar Eclipse" })
 
-	local LaunchDirection = HumRP.CFrame.LookVector
-	local ok, result = pcall(function()
-		return ComGet:InvokeClient(Player, { Func = "GetLunarAimDirection" })
-	end)
-	if ok and typeof(result) == "Vector3" and result.Magnitude > 0.01 then
-		LaunchDirection = result.Unit
+	local RiseBodyPosition
+	local RiseConnection
+	local ReachedTop = false
+
+	local function startRise()
+		ReplicateSet:FireAllClients("LunarAwakenStart", { char = Character })
+
+		Humanoid.AutoRotate = false
+		Humanoid.PlatformStand = true
+		Humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+		Humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp, false)
+		Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+		Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+		Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+
+		local LiftRay = workspace:Raycast(HumRP.Position, Vector3.new(0, -6, 0), MapRayParams)
+		if LiftRay then
+			ReplicateSet:FireAllClients("Ground Crater", {
+				nodebris = true,
+				nosmoke = true,
+				Seed = math.random(1, 2147483647),
+				amount = 30,
+				start = LiftRay.Position + Vector3.new(0, 1, 0),
+				["end"] = Vector3.new(0, -10, 0),
+				rings = 2,
+				ringSpacing = 12,
+				ringSizeGrowth = 1.4,
+				ringGap = 0.20,
+				outwardTilt = true,
+				debrisSizeMin = 3,
+				debrisSizeMax = 8,
+				debrisHeightMin = 2,
+				debrisHeightMax = 5,
+				sizemult = 0.8,
+			})
+		end
+
+		HumRP.AssemblyLinearVelocity = Vector3.new(0, HumRP.AssemblyLinearVelocity.Y, 0)
+
+		RiseBodyPosition = Instance.new("BodyPosition")
+		RiseBodyPosition.Name = "LunarAwaken_Rise"
+		RiseBodyPosition.MaxForce = Vector3.new(0, math.huge, 0)
+		RiseBodyPosition.P = 10000
+		RiseBodyPosition.D = 500
+		RiseBodyPosition.Position = Vector3.new(StartPosition.X, TargetY, StartPosition.Z)
+		RiseBodyPosition.Parent = HumRP
+
+		RiseConnection = RunService.Heartbeat:Connect(function()
+			if not Character or not Character.Parent or Humanoid.Health <= 0 then
+				if RiseConnection then
+					RiseConnection:Disconnect()
+					RiseConnection = nil
+				end
+				return
+			end
+
+			if not RiseBodyPosition or not RiseBodyPosition.Parent then
+				if RiseConnection then
+					RiseConnection:Disconnect()
+					RiseConnection = nil
+				end
+				return
+			end
+
+			HumRP.AssemblyLinearVelocity = Vector3.new(0, HumRP.AssemblyLinearVelocity.Y, 0)
+			RiseBodyPosition.Position = Vector3.new(HumRP.Position.X, TargetY, HumRP.Position.Z)
+
+			if not ReachedTop and math.abs(HumRP.Position.Y - TargetY) <= RISE_TOP_THRESHOLD then
+				ReachedTop = true
+				AnimTrack:AdjustSpeed(1)
+			end
+		end)
 	end
 
-	ReplicateSet:FireAllClients("LunarAwakenMoonLaunch", {
-		char = Character,
-		direction = LaunchDirection,
-		ownerId = ownerId,
-	})
-	ReplicateSet:FireClient(Player, "StopLunarAimControl", {})
+	local function stopRise()
+		if RiseConnection then
+			RiseConnection:Disconnect()
+			RiseConnection = nil
+		end
+		if RiseBodyPosition and RiseBodyPosition.Parent then
+			RiseBodyPosition:Destroy()
+			RiseBodyPosition = nil
+		end
+	end
 
-	local LaunchOrigin = HumRP.Position + Vector3.new(0, 70, 0)
+	table.insert(
+		AnimEvents,
+		AnimTrack:GetMarkerReachedSignal("jump"):Connect(function()
+			AnimTrack:AdjustSpeed(0)
+			startRise()
+		end)
+	)
 
-	fireProjectile(Character, LaunchOrigin, LaunchDirection)
-	watchForLanding(Character, Humanoid, HumRP)
+	table.insert(
+		AnimEvents,
+		AnimTrack:GetMarkerReachedSignal("charge"):Connect(function()
+			AnimTrack:AdjustSpeed(0)
+
+			ReplicateSet:FireAllClients("LunarAwakenMoonSpawn", { char = Character })
+			ReplicateSet:FireAllClients("LunarAwakenIndicator", { char = Character, ownerId = ownerId })
+			ReplicateSet:FireClient(Player, "StartLunarAimControl", { Duration = CHARGE_TIME })
+
+			task.delay(CHARGE_TIME, function()
+				if not Character or not Character.Parent or Humanoid.Health <= 0 then
+					return
+				end
+				AnimTrack:AdjustSpeed(1)
+			end)
+		end)
+	)
+
+	table.insert(
+		AnimEvents,
+		AnimTrack:GetMarkerReachedSignal("throw"):Connect(function()
+			stopRise()
+			ReplicateSet:FireClient(Player, "StopLunarAimControl", {})
+
+			if not Character.Parent or Humanoid.Health <= 0 then
+				if Character.Parent then
+					restoreControl()
+				end
+				return
+			end
+
+			restoreControl()
+
+			local LaunchDirection = HumRP.CFrame.LookVector
+			local ok, result = pcall(function()
+				return ComGet:InvokeClient(Player, { Func = "GetLunarAimDirection" })
+			end)
+			if ok and typeof(result) == "Vector3" and result.Magnitude > 0.01 then
+				LaunchDirection = result.Unit
+			end
+
+			ReplicateSet:FireAllClients("LunarAwakenMoonLaunch", {
+				char = Character,
+				direction = LaunchDirection,
+				ownerId = ownerId,
+			})
+
+			local LaunchOrigin = HumRP.Position + Vector3.new(0, 70, 0)
+
+			fireProjectile(Character, LaunchOrigin, LaunchDirection)
+			task.spawn(function()
+				watchForLanding(Character, Humanoid, HumRP)
+			end)
+		end)
+	)
+
+	AnimTrack.Stopped:Once(function()
+		stopRise()
+	end)
+
+	AnimationService:playAnimation(Character, LunarEclipseAnim)
 end
 
 return module
