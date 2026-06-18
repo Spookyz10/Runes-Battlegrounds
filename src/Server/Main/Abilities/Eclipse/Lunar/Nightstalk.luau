@@ -45,7 +45,7 @@ return {
 			ReplicateSet:FireClient(Player, "deleteLungeVelocity", {})
 		end
 
-		local UserAnimation = MoveAnims.Lunar:FindFirstChild("Lunar Lunge")
+		local UserAnimation = MoveAnims.Eclipse.Lunar:FindFirstChild("Lunar Lunge")
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
 
 		local Hitbox = ReplicatedHitboxes.new(Player)

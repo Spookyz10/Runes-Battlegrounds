@@ -120,8 +120,6 @@ local function Awakening(Player)
 
 		AwakeningAnimations[InfoModule.Movesets[CurrentMoveset].UltimateName](Player)
 
-		print("finished animation")
-
 		task.delay(0.5, function()
 			MovesetHandler:AddAwakeningMoveset(Player, Player:GetAttribute("Moveset"))
 		end)

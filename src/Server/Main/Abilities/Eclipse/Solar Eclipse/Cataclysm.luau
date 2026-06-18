@@ -42,7 +42,7 @@ return {
 		local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true)
 		iFramesService:AddAlliFrames(Character)
 
-		local UserAnimation = MoveAnims.Lunar["Prowl"]
+		local UserAnimation = MoveAnims.Eclipse.Lunar["Prowl"]
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
 
 		local GrabbedEnemy = nil

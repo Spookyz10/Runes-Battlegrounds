@@ -24,6 +24,14 @@ local BarFrame = GUI.UltimateBar
 local UltKey = BarFrame.Key
 local ProgressLabel = BarFrame.ProgressLabel
 
+shared.triggerAwkbar = function(State: boolean)
+	if State == true then
+		BarFrame:TweenPosition(UDim2.new(0.5, 0, 1, -90), Enum.EasingDirection.InOut, Enum.EasingStyle.Quad, 0.6, true)
+	else
+		BarFrame:TweenPosition(UDim2.new(0.5, 0, 1, 55), Enum.EasingDirection.InOut, Enum.EasingStyle.Quad, 0.6, true)
+	end
+end
+
 local DeviceUltKey = "[G]"
 if UIS.TouchEnabled then
 	DeviceUltKey = "[PRESS]"

@@ -296,6 +296,8 @@ function module:Activate(Player)
 	end
 
 	ReplicateSet:FireAllClients("GivePlayerAura", { Char = Character, AuraName = "Lunar Eclipse" })
+	ReplicateSet:FireAllClients("HideHotbar")
+	ReplicateSet:FireAllClients("HideAwkbar")
 
 	local RiseBodyPosition
 	local RiseConnection
@@ -451,6 +453,9 @@ function module:Activate(Player)
 	end)
 
 	AnimationService:playAnimation(Character, LunarEclipseAnim)
+	AnimTrack.Stopped:Wait()
+	ReplicateSet:FireAllClients("ShowHotbar")
+	ReplicateSet:FireAllClients("ShowAwkbar")
 end
 
 return module
