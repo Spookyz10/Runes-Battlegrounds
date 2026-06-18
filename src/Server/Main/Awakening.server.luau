@@ -1,7 +1,7 @@
 local SvSt = game:GetService("ServerStorage")
 local RS = game:GetService("ReplicatedStorage")
-
 local TS = game:GetService("TweenService")
+local Players = game:GetService("Players")
 
 local InfoModule = require(RS.Shared.Info)
 
@@ -18,17 +18,9 @@ local AwakeningSet = AwakeningRemotes.Set
 local ReplicateRemotes = RpRemotes.Replicate
 local ReplicateSet = ReplicateRemotes.Set
 
-local function EndAwakening(Player, Awk0C, AwkTween)
+local function EndAwakening(Player, Awk0C, AwkTween, DeathConn)
 	if not Player or not Player.Parent then
 		return
-	end
-
-	local Character = Player.Character
-
-	local HumRP = Character.HumanoidRootPart
-
-	if AwkTween.PlaybackState ~= Enum.PlaybackState.Completed then
-		ReplicateSet:FireAllClients("StopAwakeningMusics", { MusAtt = HumRP.AwakeningMusic })
 	end
 
 	if Awk0C then
@@ -36,12 +28,31 @@ local function EndAwakening(Player, Awk0C, AwkTween)
 		Awk0C = nil
 	end
 
+	if DeathConn then
+		DeathConn:Disconnect()
+		DeathConn = nil
+	end
+
 	if AwkTween then
+		if AwkTween.PlaybackState ~= Enum.PlaybackState.Completed then
+			local Character = Player.Character
+			if Character then
+				local HumRP = Character:FindFirstChild("HumanoidRootPart")
+				if HumRP then
+					ReplicateSet:FireAllClients("StopAwakeningMusics", { MusAtt = HumRP.AwakeningMusic })
+				end
+			end
+		end
 		AwkTween:Cancel()
 		AwkTween = nil
 	end
 
 	Player:SetAttribute("Awakened", nil)
+
+	local Character = Player.Character
+	if not Character or not Character.Parent then
+		return
+	end
 
 	Character:RemoveTag("Awakened")
 	Character:SetAttribute("Awakened", nil)
@@ -118,6 +129,7 @@ local function Awakening(Player)
 		iFramesHandler:RemoveAlliFrames(Character)
 
 		local Ended = false
+
 		local AwkTween = TS:Create(
 			AwkProgressObj,
 			TweenInfo.new(InfoModule.Movesets[Player:GetAttribute("Moveset")].UltimateTime, Enum.EasingStyle.Linear),
@@ -125,18 +137,30 @@ local function Awakening(Player)
 		)
 
 		local Awk0C
+		local DeathConn
+		local Humanoid = Character:FindFirstChild("Humanoid")
+
 		Awk0C = AwkProgressObj:GetPropertyChangedSignal("Value"):Connect(function()
 			if Ended == false and AwkProgressObj.Value <= 0 then
 				Ended = true
-				Awk0C:Disconnect()
-
-				EndAwakening(Player, Awk0C, AwkTween)
+				EndAwakening(Player, nil, AwkTween, DeathConn)
 			end
 		end)
 
-		if Character:FindFirstChild("Humanoid") then
-			Character.Humanoid.WalkSpeed = 25
+		if Humanoid then
+			DeathConn = Humanoid.Died:Connect(function()
+				if Ended == false then
+					Ended = true
+					EndAwakening(Player, Awk0C, AwkTween, nil)
+				end
+			end)
 		end
+
+		if Humanoid then
+			Humanoid.WalkSpeed = 25
+		end
+
+		AwkTween:Play()
 	end)
 end
 
@@ -147,5 +171,17 @@ AwakeningSet.OnServerEvent:Connect(function(Player)
 
 	Awakening(Player)
 end)
+
+Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function()
+		player:SetAttribute("Awakened", nil)
+	end)
+end)
+
+for _, player in Players:GetPlayers() do
+	player.CharacterAdded:Connect(function()
+		player:SetAttribute("Awakened", nil)
+	end)
+end
 
 shared.ActivateAwakening = Awakening

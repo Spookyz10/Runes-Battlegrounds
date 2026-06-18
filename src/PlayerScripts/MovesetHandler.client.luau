@@ -18,7 +18,6 @@ local AbilitieRemote_Get = AbilitiesHandlerFolder.Get
 
 local GUI = PlayerGui:WaitForChild("Hotbar")
 local HotbarFrame = GUI.Hotbar
-local CooldownFrame = RS.Resources.UI.Cooldown
 
 local Keys = {
 	["One"] = "1",
@@ -58,7 +57,8 @@ end
 
 local function tweenBase(base: GuiObject, goal: UDim2, tweenInfo: TweenInfo?, onComplete: (() -> ())?)
 	cancelTween(base)
-	local tween = TS:Create(base, tweenInfo or TWEEN_SLIDE, { Position = goal })
+	local info = tweenInfo or TWEEN_SLIDE
+	local tween = TS:Create(base, info, { Position = goal })
 	activeBaseTweens[base] = tween
 	tween.Completed:Once(function(state)
 		if activeBaseTweens[base] == tween then
@@ -69,6 +69,15 @@ local function tweenBase(base: GuiObject, goal: UDim2, tweenInfo: TweenInfo?, on
 		end
 	end)
 	tween:Play()
+
+	local slot = base.Parent
+	if slot then
+		local offsetY = goal.Y.Offset
+		local icon = slot:FindFirstChild("Icon")
+		if icon then
+			TS:Create(icon, info, { Position = UDim2.new(0, 0, 0, offsetY) }):Play()
+		end
+	end
 end
 
 local function getCharacter()
@@ -113,13 +122,41 @@ local function tweenAllSlotsDown(onComplete: (() -> ())?)
 	end
 end
 
-local function whiteGradientTween(parent)
-	local flash = CooldownFrame:Clone()
-	flash.BackgroundColor3 = Color3.new(1, 1, 1)
-	flash.Size = UDim2.fromScale(1, -1)
-	flash.Parent = parent
-	TS:Create(flash, TweenInfo.new(0.5, Enum.EasingStyle.Linear), { BackgroundTransparency = 1 }):Play()
-	game.Debris:AddItem(flash, 0.5)
+local activeCdTweens: { [GuiObject]: Tween } = {}
+
+local function cancelCdTween(cdFrame: GuiObject)
+	if activeCdTweens[cdFrame] then
+		activeCdTweens[cdFrame]:Cancel()
+		activeCdTweens[cdFrame] = nil
+	end
+end
+
+local function shineIconEffect(slot)
+	local icon = slot:FindFirstChild("Icon")
+	if not icon then
+		return
+	end
+	icon.ClipsDescendants = true
+	local shine = Instance.new("Frame")
+	shine.Name = "ShineEffect"
+	shine.Size = UDim2.fromScale(0.45, 1)
+	shine.Position = UDim2.fromScale(-0.45, 0)
+	shine.BackgroundColor3 = Color3.new(1, 1, 1)
+	shine.BackgroundTransparency = 0.25
+	shine.BorderSizePixel = 0
+	shine.ZIndex = (icon.ZIndex or 1) + 5
+	shine.Parent = icon
+	local grad = Instance.new("UIGradient")
+	grad.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(0.5, 0.25),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	grad.Parent = shine
+	TS:Create(shine, TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Position = UDim2.fromScale(1.45, 0),
+	}):Play()
+	game.Debris:AddItem(shine, 0.6)
 end
 
 local function Equip(HotbarSlot)
@@ -136,22 +173,27 @@ local function Equip(HotbarSlot)
 	local cds = Tool:GetAttribute("CDS")
 
 	if cds ~= 0 then
+		local slot = HotbarSlot.Parent
+
 		local function addCooldown()
-			local prev = HotbarSlot:FindFirstChild("Cooldown")
-			if prev then
-				prev:Destroy()
+			local cdFrame = slot:FindFirstChild("CooldownFrame")
+			if not cdFrame then
+				return
 			end
 
-			local Cooldown = CooldownFrame:Clone()
-			Cooldown.Parent = HotbarSlot
-			if cds > 0 then
-				game.Debris:AddItem(Cooldown, cds)
+			cancelCdTween(cdFrame)
+			cdFrame.Size = UDim2.fromScale(1, 1)
 
+			if cds > 0 then
 				local cdTween =
-					TS:Create(Cooldown, TweenInfo.new(cds, Enum.EasingStyle.Linear), { Size = UDim2.fromScale(1, 0) })
-				cdTween.Completed:Once(function()
-					if Tool.Name == HotbarSlot.SkillName.Text then
-						whiteGradientTween(HotbarSlot)
+					TS:Create(cdFrame, TweenInfo.new(cds, Enum.EasingStyle.Linear), { Size = UDim2.fromScale(1, 0) })
+				activeCdTweens[cdFrame] = cdTween
+				cdTween.Completed:Once(function(state)
+					if activeCdTweens[cdFrame] == cdTween then
+						activeCdTweens[cdFrame] = nil
+					end
+					if state == Enum.PlaybackState.Completed and Tool.Name == HotbarSlot.SkillName.Text then
+						shineIconEffect(slot)
 					end
 				end)
 				cdTween:Play()
@@ -171,8 +213,6 @@ local function Equip(HotbarSlot)
 		else
 			addCooldown()
 		end
-	else
-		whiteGradientTween(HotbarSlot)
 	end
 end
 
@@ -203,11 +243,14 @@ local function AddTool(Tool: Tool)
 		local existing = Base:FindFirstChild("Cooldown")
 		if existing then
 			existing:Destroy()
-			whiteGradientTween(Base)
 		end
 
 		Base.SkillName.Text = Tool.Name
-		Base.Icon.Image = Tool:GetAttribute("Icon") or "rbxassetid://0"
+		HotbarSlot.Icon.Image = Tool:GetAttribute("Icon") or "rbxassetid://0"
+		local cdIcon = HotbarSlot.CooldownFrame:FindFirstChild("CooldownIcon")
+		if cdIcon then
+			cdIcon.Image = Tool:GetAttribute("Icon") or "rbxassetid://0"
+		end
 		Base.Number.Text = tostring(Tool:GetAttribute("Index"))
 
 		HotbarSlot.Visible = true
@@ -236,6 +279,15 @@ local function updateHotbarGradients()
 			if template then
 				template:Clone().Parent = base
 			end
+		end
+	end
+end
+
+for _, slot in HotbarFrame:GetChildren() do
+	if slot:IsA("Frame") then
+		local cdFrame = slot:FindFirstChild("CooldownFrame")
+		if cdFrame then
+			cdFrame.Size = UDim2.fromScale(1, 0)
 		end
 	end
 end
@@ -299,15 +351,10 @@ MovesetHandler.OnClientEvent:Connect(function(Goal)
 	if Goal == "removeCooldowns" then
 		for _, Frame in HotbarFrame:GetChildren() do
 			if Frame:IsA("Frame") then
-				local Base = Frame:FindFirstChild("Base")
-				if not Base then
-					continue
-				end
-
-				local Cooldown = Base:FindFirstChild("Cooldown")
-				if Cooldown then
-					Cooldown:Destroy()
-					whiteGradientTween(Base)
+				local cdFrame = Frame:FindFirstChild("CooldownFrame")
+				if cdFrame then
+					cancelCdTween(cdFrame)
+					cdFrame.Size = UDim2.fromScale(1, 0)
 				end
 			end
 		end
