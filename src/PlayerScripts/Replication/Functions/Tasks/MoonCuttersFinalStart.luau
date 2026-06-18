@@ -1,6 +1,9 @@
 local Constants = require(script.Parent.Shared.Constants)
 local CharacterAssets = Constants.CharacterAssets
 
+local OFFSET_POSITION = Vector3.new(0, 0, 0)
+local OFFSET_ROTATION = Vector3.new(-90, 0, 0)
+
 return function(Params)
 	local Char = Params.Char
 	if not Char or not Char.Parent then
@@ -20,7 +23,11 @@ return function(Params)
 	local FIClone = FinalImpact:Clone()
 	FIClone.Name = "FinalImpact"
 	FIClone.Anchored = false
-	FIClone.CFrame = RightArm.CFrame * CFrame.Angles(math.rad(170.702), math.rad(-180), math.rad(-172.399))
+
+	FIClone.CFrame = RightArm.CFrame
+		* CFrame.new(OFFSET_POSITION)
+		* CFrame.Angles(math.rad(OFFSET_ROTATION.X), math.rad(OFFSET_ROTATION.Y), math.rad(OFFSET_ROTATION.Z))
+
 	FIClone.Parent = RightArm
 
 	local Weld = Instance.new("WeldConstraint")
