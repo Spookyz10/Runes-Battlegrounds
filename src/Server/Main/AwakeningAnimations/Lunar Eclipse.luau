@@ -22,6 +22,9 @@ local Assets = ServerStorage.Assets
 local Animations = Assets.Animations
 local LunarEclipseAnim = Animations.Awakenings["Lunar Eclipse"]
 
+local CharacterAssets = ReplicatedStorage.Resources.CharacterAssets
+local LunarIndicatorAsset = CharacterAssets.Eclipse.Lunar.Awaken.LunarIndicator
+
 local MapRayParams = RaycastParams.new()
 MapRayParams.FilterType = Enum.RaycastFilterType.Include
 MapRayParams.FilterDescendantsInstances = { workspace.Map }
@@ -398,7 +401,11 @@ function module:Activate(Player)
 			AnimTrack:AdjustSpeed(0)
 
 			ReplicateSet:FireAllClients("LunarAwakenMoonSpawn", { char = Character })
-			ReplicateSet:FireAllClients("LunarAwakenIndicator", { char = Character, ownerId = ownerId })
+			ReplicateSet:FireAllClients("Indicator", {
+				char = Character,
+				ownerId = ownerId,
+				asset = LunarIndicatorAsset,
+			})
 			ReplicateSet:FireClient(Player, "StartLunarAimControl", { Duration = CHARGE_TIME })
 
 			task.delay(CHARGE_TIME, function()
@@ -432,6 +439,8 @@ function module:Activate(Player)
 			if ok and typeof(result) == "Vector3" and result.Magnitude > 0.01 then
 				LaunchDirection = result.Unit
 			end
+
+			ReplicateSet:FireAllClients("IndicatorEnd", { ownerId = ownerId })
 
 			ReplicateSet:FireAllClients("LunarAwakenMoonLaunch", {
 				char = Character,

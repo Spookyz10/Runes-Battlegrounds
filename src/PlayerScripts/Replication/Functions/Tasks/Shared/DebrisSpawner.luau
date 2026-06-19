@@ -413,7 +413,6 @@ local function debrisSpawner(config)
 				keepDuration = rng:NextNumber(5, 7)
 			end
 
-			-- Captura restCFrame no closure para garantir que usamos o valor certo
 			local capturedRestCFrame = restCFrame
 			local capturedSize = slab.Size
 
@@ -434,10 +433,6 @@ local function debrisSpawner(config)
 					return
 				end
 
-				-- BUG FIX: mover no eixo Y do MUNDO, não do objeto.
-				-- slab.CFrame * CFrame.new(0,-7,0) movia no eixo Y LOCAL do slab
-				-- (que pode estar inclinado), causando o slab ir pra lado em vez de descer.
-				-- Agora preservamos a rotação e só deslocamos a posição no world-space.
 				local currentPos = slab.CFrame.Position
 				local sinkCFrame = CFrame.new(currentPos + Vector3.new(0, -7, 0)) * slab.CFrame.Rotation
 
@@ -454,8 +449,16 @@ local function debrisSpawner(config)
 
 				slab:SetAttribute("OGCframe", nil)
 				slab.Anchored = true
-				slab.CFrame = CFrame.new(1e8, 1e8, 1e8)
-				table.insert(dataTable, slab)
+				slab.CanCollide = false
+				slab.CanTouch = false
+				slab.CanQuery = false
+
+				if #dataTable < 100 then
+					slab.CFrame = CFrame.new(1e8, 1e8, 1e8)
+					table.insert(dataTable, slab)
+				else
+					slab:Destroy()
+				end
 			end)
 		end
 	end
