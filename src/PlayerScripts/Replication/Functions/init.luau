@@ -1,16 +1,16 @@
---Services
 local RS = game:GetService("ReplicatedStorage")
 local TS = game:GetService("TweenService")
---Player
+
 local LocalPlayer = game.Players.LocalPlayer
---Remotes
+
 local Remotes = RS.Remotes
 local Comunicator = Remotes.Comunicator
 local ComSet = Comunicator.Set
+local ComGet = Comunicator.Get
 local Replicate = Remotes.Replicate
 local Replicate_Set = Replicate.Set
 local Replicate_Get = Replicate.Get
---Interface Handler
+
 local Interface = {}
 Interface.__index = Interface
 
@@ -19,7 +19,6 @@ function Interface.new()
 	return metatable
 end
 
---Runtime
 function Interface:Start()
 	while true do
 		if game:IsLoaded() then
@@ -32,7 +31,6 @@ function Interface:Start()
 
 	local function repfire(replicateName, params)
 		local ReplicateFunc = ClientTasks[replicateName]
-
 		if ReplicateFunc then
 			coroutine.wrap(function()
 				ReplicateFunc(params)
@@ -43,12 +41,23 @@ function Interface:Start()
 	end
 
 	Replicate_Set.OnClientEvent:Connect(repfire)
+
 	Replicate_Get.OnClientInvoke = function(GoalName, Parameters)
 		if GoalName == "IsPartDestroyed" then
 			return table.find(shared.DestroyedParts, Parameters.Part) ~= nil
 		end
 	end
+
 	shared.repfire = repfire
+
+	local IndicatorService = require(script.Tasks.Shared.IndicatorService)
+
+	ComGet.OnClientInvoke = function(Player, Parameters)
+		if Parameters.Func == "GetIndicatorPosition" then
+			return IndicatorService:GetPosition(Parameters.id)
+		end
+		return nil
+	end
 
 	local ResetBindable = Instance.new("BindableEvent")
 	ResetBindable.Event:Connect(function()
@@ -98,6 +107,7 @@ function Interface:Start()
 		Clouds.ChildRemoved:Connect(UpdateClouds)
 		UpdateClouds()
 	end
+
 	ComSet:FireServer("replicationLoaded")
 
 	shared.clearVelocities = function(Part: Part, Ignore: BodyVelocity?)

@@ -1,10 +1,10 @@
 local Constants = require(script.Parent.Constants)
 local Lighting = Constants.Lighting
 local TS = Constants.TS
-local RunService = Constants.RunService
 
 local state = {
 	lunarData = {},
+	solarData = {},
 	lunarNightCount = 0,
 	nightTween = nil,
 	dayTween = nil,

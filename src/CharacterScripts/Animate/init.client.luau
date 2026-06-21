@@ -62,7 +62,6 @@ local animNames = {
 	},
 	toolslash = {
 		{ id = "http://www.roblox.com/asset/?id=129967390", weight = 10 },
-		--				{ id = "slash.xml", weight = 10 }
 	},
 	toollunge = {
 		{ id = "http://www.roblox.com/asset/?id=129967478", weight = 10 },
@@ -97,7 +96,6 @@ local animNames = {
 }
 local dances = { "dance1", "dance2", "dance3" }
 
--- Existance in this list signifies that it is an emote, the value indicates if it is a looping emote
 local emoteNames =
 	{ wave = false, point = false, dance1 = true, dance2 = true, dance3 = true, laugh = false, cheer = false }
 

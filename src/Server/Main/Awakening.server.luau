@@ -64,6 +64,8 @@ local function EndAwakening(Player, Awk0C, AwkTween, DeathConn)
 		local mode = playerClass and playerClass.MovesetModes["Eclipse"]
 		if mode == "Lunar" then
 			ReplicateSet:FireAllClients("LunarAwakenEnd", { char = Character })
+		elseif mode == "Solar" then
+			ReplicateSet:FireAllClients("SolarAwakenEnd", { char = Character })
 		end
 	end
 
@@ -78,7 +80,7 @@ local AwakeningAnimations = {
 	["Astral Shift"] = function(Player)
 		local Moveset = Player:GetAttribute("MovesetMode_Eclipse")
 		if Moveset == "Solar" then
-			ReplicateSet:FireAllClients("Solar Eclipse", { char = Player.Character })
+			AwakenAnimations["Solar Eclipse"]:Activate(Player)
 		elseif Moveset == "Lunar" then
 			AwakenAnimations["Lunar Eclipse"]:Activate(Player)
 		end

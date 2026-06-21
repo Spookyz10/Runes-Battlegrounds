@@ -1448,8 +1448,6 @@ Getter.OnClientInvoke = function(Params)
 		else
 			return Params.Object.CFrame
 		end
-	elseif Func == "GetLunarAimDirection" then
-		return shared._lunarAimDirection or (HumRP and HumRP.CFrame.LookVector) or Vector3.new(0, 0, -1)
 	end
 
 	return nil
