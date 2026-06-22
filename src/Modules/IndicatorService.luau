@@ -28,6 +28,7 @@ function IndicatorService:GetPosition(Player, id)
 	local ok, result = pcall(function()
 		return ComGet:InvokeClient(Player, { Func = "GetIndicatorPosition", id = id })
 	end)
+
 	if ok and typeof(result) == "Vector3" then
 		return result
 	end

@@ -1,12 +1,10 @@
 local RS = game:GetService("ReplicatedStorage")
 local TS = game:GetService("TweenService")
 
-local LocalPlayer = game.Players.LocalPlayer
-
 local Remotes = RS.Remotes
 local Comunicator = Remotes.Comunicator
 local ComSet = Comunicator.Set
-local ComGet = Comunicator.Get
+
 local Replicate = Remotes.Replicate
 local Replicate_Set = Replicate.Set
 local Replicate_Get = Replicate.Get
@@ -46,18 +44,11 @@ function Interface:Start()
 		if GoalName == "IsPartDestroyed" then
 			return table.find(shared.DestroyedParts, Parameters.Part) ~= nil
 		end
+
+		return nil
 	end
 
 	shared.repfire = repfire
-
-	local IndicatorService = require(script.Tasks.Shared.IndicatorService)
-
-	ComGet.OnClientInvoke = function(Player, Parameters)
-		if Parameters.Func == "GetIndicatorPosition" then
-			return IndicatorService:GetPosition(Parameters.id)
-		end
-		return nil
-	end
 
 	local ResetBindable = Instance.new("BindableEvent")
 	ResetBindable.Event:Connect(function()
@@ -131,8 +122,6 @@ function Interface:Start()
 			end
 		end
 	end
-
-	script:Destroy()
 end
 
 return Interface

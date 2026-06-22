@@ -32,6 +32,7 @@ local SpecialsSet = Remotes.Specials.Set
 local RPModules = RS.Shared.Modules
 
 local InfoModule = require(RS.Shared.Info)
+local IndicatorService = require(script.Functions.Tasks.Shared.IndicatorService)
 
 local gameSettings = UserSettings().GameSettings
 local Mouse = Player:GetMouse()
@@ -1448,6 +1449,8 @@ Getter.OnClientInvoke = function(Params)
 		else
 			return Params.Object.CFrame
 		end
+	elseif Func == "GetIndicatorPosition" then
+		return IndicatorService:GetPosition(Params.id)
 	end
 
 	return nil

@@ -59,8 +59,9 @@ local function triggerExplosion(Character, Position)
 	local ExplosionAsset = CharacterAssets.Eclipse.Solar.Awaken:FindFirstChild("Explosion")
 	if ExplosionAsset then
 		local ExplosionClone = ExplosionAsset:Clone()
+		local currentCFrame = ExplosionClone:GetPivot()
+		ExplosionClone:PivotTo(CFrame.new(Position) * currentCFrame.Rotation)
 		ExplosionClone.Parent = workspace
-		ExplosionClone:PivotTo(CFrame.new(Position))
 		Debris:AddItem(ExplosionClone, 5)
 	end
 
@@ -216,6 +217,8 @@ function module:Activate(Player)
 	local StartPosition = HumRP.Position
 	local TargetY = StartPosition.Y + RISE_HEIGHT
 
+	local capturedImpactPosition = nil
+
 	local function restoreControl()
 		Humanoid.PlatformStand = false
 		Humanoid.AutoRotate = true
@@ -243,6 +246,31 @@ function module:Activate(Player)
 	local RiseBodyPosition
 	local RiseConnection
 	local ReachedTop = false
+
+	local pollingConnection = nil
+
+	local function startPolling()
+		pollingConnection = RunService.Heartbeat:Connect(function()
+			if not Character or not Character.Parent or Humanoid.Health <= 0 then
+				if pollingConnection then
+					pollingConnection:Disconnect()
+					pollingConnection = nil
+				end
+				return
+			end
+			local pos = IndicatorService:GetPosition(Player, indicatorId)
+			if pos then
+				capturedImpactPosition = pos
+			end
+		end)
+	end
+
+	local function stopPolling()
+		if pollingConnection then
+			pollingConnection:Disconnect()
+			pollingConnection = nil
+		end
+	end
 
 	local function startRise()
 		ReplicateSet:FireAllClients("SolarAwakenStart", { char = Character })
@@ -347,6 +375,8 @@ function module:Activate(Player)
 				asset = SolarIndicatorAsset,
 			})
 
+			startPolling()
+
 			task.delay(CHARGE_TIME, function()
 				if not Character or not Character.Parent or Humanoid.Health <= 0 then
 					return
@@ -360,9 +390,9 @@ function module:Activate(Player)
 		AnimEvents,
 		AnimTrack:GetMarkerReachedSignal("throw"):Connect(function()
 			stopRise()
+			stopPolling()
 			ReplicateSet:FireClient(Player, "StopSolarAimControl", {})
 
-			local impactPosition = IndicatorService:GetPosition(Player, indicatorId)
 			IndicatorService:Destroy(indicatorId)
 			ReplicateSet:FireAllClients("SolarAwakenEnd", { char = Character })
 
@@ -375,22 +405,26 @@ function module:Activate(Player)
 
 			restoreControl()
 
-			local resolvedPosition = impactPosition or HumRP.Position
+			local resolvedPosition = capturedImpactPosition or HumRP.Position
+			local explosionPosition = resolvedPosition + Vector3.new(0, 130, 0)
 
-			task.delay(EXPLOSION_DELAY, function()
+			task.spawn(function()
+				watchForLanding(Character, Humanoid, HumRP)
+			end)
+
+			task.spawn(function()
+				task.wait(EXPLOSION_DELAY)
 				if not Character or not Character.Parent then
 					return
 				end
-				triggerExplosion(Character, resolvedPosition)
-				task.spawn(function()
-					watchForLanding(Character, Humanoid, HumRP)
-				end)
+				triggerExplosion(Character, explosionPosition)
 			end)
 		end)
 	)
 
 	AnimTrack.Stopped:Once(function()
 		stopRise()
+		stopPolling()
 	end)
 
 	AnimationService:playAnimation(Character, SolarEclipseAnim)
