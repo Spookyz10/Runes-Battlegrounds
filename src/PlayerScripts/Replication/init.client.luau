@@ -1647,9 +1647,6 @@ CollectionService:GetInstanceAddedSignal("ballnchain"):Connect(function(LegIron)
 	end
 end)
 
-local SoundClient = require(script.SoundClient)
-SoundClient()
-
 Animator.AnimationPlayed:Connect(function(animationTrack)
 	animationTrack.Ended:Once(function()
 		if not HumRP then

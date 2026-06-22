@@ -858,3 +858,15 @@ Humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
 		end
 	end
 end)
+
+HumRP.DescendantAdded:Connect(function(desc)
+	if desc:IsA("Sound") then
+		desc:Destroy()
+	end
+end)
+
+for _, sound in HumRP:GetDescendants() do
+	if sound:IsA("Sound") then
+		sound:Destroy()
+	end
+end

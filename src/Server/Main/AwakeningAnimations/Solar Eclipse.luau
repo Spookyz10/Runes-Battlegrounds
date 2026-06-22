@@ -56,14 +56,8 @@ local function triggerExplosion(Character, Position)
 		end
 	end)
 
-	local ExplosionAsset = CharacterAssets.Eclipse.Solar.Awaken:FindFirstChild("Explosion")
-	if ExplosionAsset then
-		local ExplosionClone = ExplosionAsset:Clone()
-		local currentCFrame = ExplosionClone:GetPivot()
-		ExplosionClone:PivotTo(CFrame.new(Position) * currentCFrame.Rotation)
-		ExplosionClone.Parent = workspace
-		Debris:AddItem(ExplosionClone, 5)
-	end
+	-- Explosion visual agora é feito no client
+	ReplicateSet:FireAllClients("SolarAwakenExplosion", { char = Character, position = Position })
 
 	if Player then
 		ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 10, Last = 1 })
@@ -406,7 +400,7 @@ function module:Activate(Player)
 			restoreControl()
 
 			local resolvedPosition = capturedImpactPosition or HumRP.Position
-			local explosionPosition = resolvedPosition + Vector3.new(0, 130, 0)
+			local explosionPosition = resolvedPosition + Vector3.new(0, 250, 0)
 
 			task.spawn(function()
 				watchForLanding(Character, Humanoid, HumRP)
