@@ -7,12 +7,12 @@ local TS = Constants.TS
 local dataTable = {}
 local startTime = tick()
 
-local function cleanupThrownObjects()
+local function cleanupDebrisObjects()
 	if tick() - startTime > 300 then
 		startTime = tick()
 		local destroyedCount = 0
 
-		for _, object in pairs(workspace.Thrown:GetChildren()) do
+		for _, object in pairs(workspace.Debris:GetChildren()) do
 			if
 				object:IsA("Part")
 				and object:GetAttribute("Spawn")
@@ -97,7 +97,7 @@ local function debrisSpawner(config)
 		end
 
 		local chunkSize = rng:NextNumber(1, 3)
-		local chunk = cleanupThrownObjects() or Instance.new("Part")
+		local chunk = cleanupDebrisObjects() or Instance.new("Part")
 		chunk.CollisionGroup = "NonPColDebri"
 
 		chunk.CFrame = config.cframe
@@ -114,7 +114,7 @@ local function debrisSpawner(config)
 		chunk.Material = config.ground.Material
 		chunk.Transparency = config.ground.Transparency
 		chunk:SetAttribute("CanGoThroughCamera", true)
-		chunk.Parent = workspace.Thrown
+		chunk.Parent = workspace.Debris
 
 		local bv = Instance.new("BodyVelocity")
 		bv.MaxForce = Vector3.new(2e9, 2e9, 2e9)
@@ -147,7 +147,7 @@ local function debrisSpawner(config)
 
 	for _ = 1, smallDebrisCount do
 		local smallSize = rng:NextNumber(0.6, 0.8)
-		local piece = cleanupThrownObjects() or Instance.new("Part")
+		local piece = cleanupDebrisObjects() or Instance.new("Part")
 		piece.CFrame = config.cframe
 
 		local alignCFrame =
@@ -163,7 +163,7 @@ local function debrisSpawner(config)
 		piece.Material = config.ground.Material
 		piece.Transparency = config.ground.Transparency
 		piece:SetAttribute("CanGoThroughCamera", true)
-		piece.Parent = workspace.Thrown
+		piece.Parent = workspace.Debris
 
 		local bv = Instance.new("BodyVelocity")
 		bv.MaxForce = Vector3.new(2e9, 2e9, 2e9)
@@ -250,7 +250,7 @@ local function debrisSpawner(config)
 			pieceCFrame = pieceCFrame * CFrame.Angles(0, angle, 0)
 			pieceCFrame = pieceCFrame + pieceCFrame.LookVector * rng:NextNumber(-0.4, 0.4) * ringRadiusScale
 
-			local slab = cleanupThrownObjects() or Instance.new("Part")
+			local slab = cleanupDebrisObjects() or Instance.new("Part")
 			slab.Anchored = true
 			slab.CanCollide = false
 			slab.CanTouch = true
@@ -281,7 +281,7 @@ local function debrisSpawner(config)
 
 			slab.CFrame = slab.CFrame * CFrame.new(0, -(slab.Size.Y / 3 + slab.Size.Z / 3) / 3, 0)
 			slab.Transparency = 1
-			slab.Parent = workspace.Thrown
+			slab.Parent = workspace.Debris
 
 			local savedCFrame = slab.CFrame
 			local touching = Helpers.getTouchingPartsExceptIgnored(slab)
@@ -294,7 +294,7 @@ local function debrisSpawner(config)
 				if
 					not part:IsDescendantOf(workspace.Live)
 					and part.Name ~= "invis"
-					and part.Parent ~= workspace.Thrown
+					and part.Parent ~= workspace.Debris
 				then
 					if part.Material ~= config.ground.Material then
 						differentMaterialPart = part
@@ -468,6 +468,6 @@ end
 
 return {
 	dataTable = dataTable,
-	cleanupThrownObjects = cleanupThrownObjects,
+	cleanupDebrisObjects = cleanupDebrisObjects,
 	debrisSpawner = debrisSpawner,
 }

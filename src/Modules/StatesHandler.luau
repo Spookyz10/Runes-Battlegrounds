@@ -29,7 +29,7 @@ return {
 
 		local Bind = Instance.new("Folder")
 		Bind.Name = Tag
-		Bind.Parent = workspace.Thrown
+		Bind.Parent = workspace.Debris
 
 		local Weld = Parameters.Weld
 

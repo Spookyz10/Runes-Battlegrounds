@@ -8,7 +8,10 @@ local StunHandler = require(ServerModules.StunHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
 local iFramesService = require(ServerModules.iFramesService)
 
+local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
+
 local DURATION = 8
+local WINDUP_TIME = 0.35
 local REFLECT_DAMAGE = 10
 local SLOW_MULT = 0.55
 local INFERNO_DURATION = 3
@@ -49,16 +52,20 @@ local function applyInferno(EnemyCharacter)
 	end)
 end
 
-local function cleanUp(Character, Humanoid, baseWalkSpeed, damageLogConnection, diedConnection)
+local function cleanUp(Character, Humanoid, baseWalkSpeed, damageLogConnection, diedConnection, windupStun)
 	if damageLogConnection then
 		damageLogConnection:Disconnect()
 	end
 	if diedConnection then
 		diedConnection:Disconnect()
 	end
+	if windupStun then
+		StunHandler:Unstun(Character, windupStun)
+	end
 
 	Character:SetAttribute("Immolated", nil)
 	iFramesService:RemoveiFrames(Character, "Strong")
+	ReplicateSet:FireAllClients("Immolate", { Char = Character, Enabled = false })
 
 	if Humanoid and Humanoid.Parent then
 		Humanoid.WalkSpeed = baseWalkSpeed
@@ -86,6 +93,8 @@ return {
 
 		Character:SetAttribute("Immolated", true)
 		iFramesService:AddStrongiFrames(Character)
+		local windupStun = StunHandler:Stun(Character, WINDUP_TIME, true, 0, 0, true)
+		ReplicateSet:FireAllClients("Immolate", { Char = Character, Enabled = true, Duration = DURATION })
 		Humanoid.WalkSpeed = baseWalkSpeed * SLOW_MULT
 
 		local damageLogConnection
@@ -139,7 +148,7 @@ return {
 		end)
 
 		diedConnection = Humanoid.Died:Once(function()
-			cleanUp(Character, Humanoid, baseWalkSpeed, damageLogConnection, diedConnection)
+			cleanUp(Character, Humanoid, baseWalkSpeed, damageLogConnection, diedConnection, windupStun)
 		end)
 
 		task.delay(DURATION, function()
@@ -149,7 +158,7 @@ return {
 			if not Character:GetAttribute("Immolated") then
 				return
 			end
-			cleanUp(Character, Humanoid, baseWalkSpeed, damageLogConnection, diedConnection)
+			cleanUp(Character, Humanoid, baseWalkSpeed, damageLogConnection, diedConnection, windupStun)
 		end)
 	end,
 }

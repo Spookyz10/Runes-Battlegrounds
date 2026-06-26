@@ -25,7 +25,7 @@ return function(Params)
 			(Params.RootPart.CFrame * CFrame.new(RandomSeed:NextNumber(-1, 1), RandomSeed:NextNumber(-1, 1), 0)).Position,
 			-Params.LookVector
 		)
-		Shard.Parent = workspace.Thrown
+		Shard.Parent = workspace.Debris
 
 		local ZSize = RandomSeed:NextNumber(10, 20)
 		local TweenTime = RandomSeed:NextNumber(0.1, 0.15)

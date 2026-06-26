@@ -14,7 +14,7 @@ return function(Params)
 		for i, v in next, Params.char:GetChildren() do
 			if v:IsA("BasePart") then
 				if v.Name == limbName then
-					waterPalm.Parent = workspace.Thrown
+					waterPalm.Parent = workspace.Debris
 					waterPalm.CFrame = v.CFrame
 
 					local weld = Instance.new("Weld", waterPalm)

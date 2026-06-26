@@ -212,7 +212,7 @@ if PartCacheEnabled then
 
 	PartFolder = Instance.new("Folder")
 	PartFolder.Name = "FlyingRocksStorage"
-	PartFolder.Parent = workspace.Thrown
+	PartFolder.Parent = workspace.Debris
 
 	local TemplatePart = Instance.new("Part")
 	TemplatePart.Anchored = true

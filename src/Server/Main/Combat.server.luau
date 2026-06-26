@@ -326,6 +326,7 @@ local function M1(Player)
 
 	AnimationService:stopAnimation(Character, PreviousAnimation)
 	AnimationService:playAnimation(Character, PunchAnim)
+	AnimationService:adjustSpeed(Character, PunchAnim, 1.5)
 end
 
 local function Block(Player)

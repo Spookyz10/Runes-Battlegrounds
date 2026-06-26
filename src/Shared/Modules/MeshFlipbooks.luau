@@ -2,7 +2,7 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local ThrownFolder = workspace.Thrown
+local DebrisFolder = workspace.Debris
 
 -- Stopwatch: cronômetro simples que suporta pause/resume
 local Stopwatch = {}
@@ -484,7 +484,7 @@ function MeshFlipbook.new(meshType, textureList, weldPart, initialCFrame, meshSc
 	decal.Color3 = color
 	cframeValue.Value = self:ConvertCFrame(initialCFrame)
 
-	meshPart.Parent = ThrownFolder
+	meshPart.Parent = DebrisFolder
 	self:SetTextureFromAlpha(0)
 
 	return self

@@ -33,6 +33,7 @@ local RPModules = RS.Shared.Modules
 
 local InfoModule = require(RS.Shared.Info)
 local IndicatorService = require(script.Functions.Tasks.Shared.IndicatorService)
+local Animations = RS.Resources.Animations
 
 local gameSettings = UserSettings().GameSettings
 local Mouse = Player:GetMouse()
@@ -382,15 +383,14 @@ local function DashCheck()
 			Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
 		end)
 
-		local dashAnim = Instance.new("Animation")
+		local dashAnim
 		if currDirection == "Left" then
-			dashAnim.AnimationId = "rbxassetid://126297608126614"
+			dashAnim = Animations.Dashes.DashLeft
 		else
-			dashAnim.AnimationId = "rbxassetid://126297608126614"
+			dashAnim = Animations.Dashes.DashRight
 		end
 
 		local AnimationTrack = Animator:LoadAnimation(dashAnim)
-		dashAnim:Destroy()
 
 		local Speed = 200
 		local Mult = currDirection == "Right" and 1 or -1
@@ -459,10 +459,8 @@ local function DashCheck()
 			Character:RemoveTag("CantSideDash")
 		end)
 
-		local dashAnim = Instance.new("Animation")
-		dashAnim.AnimationId = "rbxassetid://71344244817527"
+		local dashAnim = Animations.Dashes.DashBack
 		local AnimationTrack = Animator:LoadAnimation(dashAnim)
-		dashAnim:Destroy()
 
 		gameSettings.RotationType = Enum.RotationType.CameraRelative
 
@@ -1500,42 +1498,6 @@ local function SetupLiveCharacter(GoalCharacter)
 	GoalHumanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
 	GoalHumanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming, false)
 	GoalHumanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
-
-	if GoalCharacter:IsA("Model") and GoalHumanoid then
-		GoalCharacter.Archivable = true
-		if RS.Clones:FindFirstChild(GoalCharacter.Name .. "_Clone") then
-			RS.Clones:FindFirstChild(GoalCharacter.Name .. "_Clone"):Destroy()
-		end
-		local CharacterClone = GoalCharacter:Clone()
-		CharacterClone.Name = GoalCharacter.Name .. "_Clone"
-		CharacterClone.Parent = RS.Clones
-		for i, _ in next, CharacterClone:GetAttributes() do
-			CharacterClone:SetAttribute(i, nil)
-		end
-		for _, Object in next, CharacterClone:GetDescendants() do
-			if Object:IsA("Instance") and Object.Name == "Stunned" then
-				Object:Destroy()
-			end
-			if
-				Object:IsA("Script")
-				or Object:IsA("ForceField")
-				or Object:IsA("ModuleScript")
-				or Object:IsA("LocalScript")
-				or Object:IsA("BoolValue")
-				or Object:IsA("Decal")
-				or Object:IsA("DoubleConstrainedValue")
-				or Object:IsA("RemoteEvent")
-			then
-				Object:Destroy()
-			end
-			if Object:IsA("BasePart") then
-				if Object.Name:match("Hitbox") then
-					Object:Destroy()
-				end
-				Object.CastShadow = false
-			end
-		end
-	end
 
 	local PreviousTransparencies = {}
 	GoalCharacter:GetAttributeChangedSignal("Invisible"):Connect(function()

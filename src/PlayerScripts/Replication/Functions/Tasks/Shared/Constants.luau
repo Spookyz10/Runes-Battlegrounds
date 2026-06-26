@@ -40,7 +40,7 @@ GroundRayParams.FilterDescendantsInstances = {
 
 local ExcludeRayParams = RaycastParams.new()
 ExcludeRayParams.IgnoreWater = true
-ExcludeRayParams.FilterDescendantsInstances = { workspace.Thrown }
+ExcludeRayParams.FilterDescendantsInstances = { workspace.Debris }
 ExcludeRayParams.FilterType = Enum.RaycastFilterType.Exclude
 
 local MapOverlapParams = OverlapParams.new()
@@ -48,7 +48,7 @@ MapOverlapParams.RespectCanCollide = true
 MapOverlapParams.FilterType = MapRayParams.FilterType
 MapOverlapParams.FilterDescendantsInstances = { workspace.Map }
 
-local DefaultFilter = { workspace.Live, workspace.Thrown }
+local DefaultFilter = { workspace.Live, workspace.Debris }
 
 local R6Parts = {
 	Head = true,

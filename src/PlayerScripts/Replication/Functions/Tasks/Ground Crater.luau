@@ -29,7 +29,7 @@ return function(config)
 
 	local TopDownParams = RaycastParams.new()
 	TopDownParams.FilterType = Enum.RaycastFilterType.Exclude
-	TopDownParams.FilterDescendantsInstances = { workspace.Live, workspace.Thrown }
+	TopDownParams.FilterDescendantsInstances = { workspace.Live, workspace.Debris }
 	TopDownParams.IgnoreWater = true
 
 	local TopDownResult = workspace:Raycast(hitPosition + Vector3.new(0, 6, 0), Vector3.new(0, -12, 0), TopDownParams)

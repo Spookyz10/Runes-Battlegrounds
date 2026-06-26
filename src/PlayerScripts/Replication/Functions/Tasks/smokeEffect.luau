@@ -15,7 +15,7 @@ return function(Params)
 				params.FilterDescendantsInstances = { workspace.Map }
 
 				local BodySmokez = Resources.Effects.DashSmoke:Clone()
-				BodySmokez.Parent = workspace.Thrown
+				BodySmokez.Parent = workspace.Debris
 				BodySmokez.Smoke.Enabled = true
 
 				task.delay(0.07, function()

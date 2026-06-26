@@ -185,6 +185,21 @@ shared.AddAppareance = function(Player, Character, HumanoidDescription)
 	NewOutfitApplied.Name = "NewHumanoidDescriptionApplied"
 	NewOutfitApplied.Parent = Character
 	Debris:AddItem(NewOutfitApplied, 5)
+
+	if RS.Clones:FindFirstChild(Character.Name) then
+		RS.Clones[Character.Name]:Destroy()
+	end
+
+	Character.Archivable = true
+	local CharacterClone = Character:Clone()
+	Character.Archivable = false
+
+	CharacterClone.Parent = RS.Clones
+	for _, scriptInChar in CharacterClone:GetDescendants() do
+		if scriptInChar:IsA("LocalScript") or scriptInChar:IsA("Script") then
+			scriptInChar:Destroy()
+		end
+	end
 end
 
 shared.fireAllExcept = function(RemoteEvent, Blacklist, Parameters)
@@ -474,7 +489,7 @@ local ComunicatorFunctions = {
 					CollectionService:AddTag(SmallDebris, "SmallDebris")
 					SmallDebris.Parent = Character
 
-					local DashStart = CombatAnims.Dashes.DashFront
+					local DashStart = RS.Resources.Animations.Dashes.DashFront
 					local AnimTrack = AnimationService:getAnimationTrack(Character, DashStart)
 					local HitEvents = {}
 

@@ -23,7 +23,7 @@ return function(Params)
 	local SlashClone = SlashAsset:Clone()
 	SlashClone.CFrame = HumRP.CFrame * CFrame.new(0, 0, -4.5)
 	SlashClone.Anchored = true
-	SlashClone.Parent = workspace.Thrown
+	SlashClone.Parent = workspace.Debris
 
 	ParticlesModule.Emit(SlashClone)
 	Debris:AddItem(SlashClone, 3)

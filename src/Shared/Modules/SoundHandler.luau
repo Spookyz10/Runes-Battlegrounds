@@ -1,23 +1,21 @@
 --// Services \\--
 
-local Debris = game:GetService('Debris')
+local Debris = game:GetService("Debris")
 
 local SoundsGroup = game:GetService("SoundService").Sounds
-
-
 
 --// Module \\--
 
 local module = {}
 
-local ThrownFolder = workspace.Thrown or workspace:WaitForChild('Thrown', 5)
-
-
+local DebrisFolder = workspace.Debris or workspace:WaitForChild("Debris", 5)
 
 --// Module Functions \\--
 
 function module:AddSound(Sound: Sound, SoundParam, Parameters): Sound
-	if typeof(Sound) ~= "Instance" or not Sound:IsA("Sound") or typeof(SoundParam) == "string" then return end
+	if typeof(Sound) ~= "Instance" or not Sound:IsA("Sound") or typeof(SoundParam) == "string" then
+		return
+	end
 
 	Parameters = Parameters or {}
 
@@ -26,7 +24,6 @@ function module:AddSound(Sound: Sound, SoundParam, Parameters): Sound
 	if typeof(Sound) == "Instance" then
 		Sound = Sound:Clone()
 		Sound.SoundGroup = SoundsGroup
-
 	elseif typeof(Sound) == "number" or typeof(Sound) == "string" then
 		local RealSound = Instance.new("Sound")
 		RealSound.SoundGroup = SoundsGroup
@@ -37,26 +34,23 @@ function module:AddSound(Sound: Sound, SoundParam, Parameters): Sound
 		RealSound.RollOffMode = Parameters.RollOffMode or Enum.RollOffMode.InverseTapered
 
 		Sound = RealSound
-
 	end
 
 	local SoundParent
 
 	if SoundParam == nil or (ParameterType ~= "Vector3" and ParameterType ~= "CFrame") then
 		SoundParent = SoundParam or workspace
-
-	elseif ParameterType == 'Vector3' or ParameterType == "CFrame" then
+	elseif ParameterType == "Vector3" or ParameterType == "CFrame" then
 		local PositionName = "WorldPosition"
 		if ParameterType == "CFrame" then
 			PositionName = "WorldCFrame"
 		end
 
-		local SoundPart = Instance.new('Attachment')
+		local SoundPart = Instance.new("Attachment")
 		SoundPart.Parent = workspace.Terrain
 		SoundPart[PositionName] = SoundParam
 
 		SoundParent = SoundPart
-
 	end
 
 	Sound.Ended:Once(function()

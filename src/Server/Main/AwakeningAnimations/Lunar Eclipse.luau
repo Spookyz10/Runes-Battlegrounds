@@ -114,7 +114,7 @@ local function fireProjectile(Character, Origin, Direction)
 	Projectile.Anchored = true
 	Projectile.Massless = true
 	Projectile.CFrame = CFrame.new(Origin, Origin + Direction)
-	Projectile.Parent = workspace.Thrown
+	Projectile.Parent = workspace.Debris
 
 	Debris:AddItem(Projectile, PROJECTILE_LIFETIME + 1)
 

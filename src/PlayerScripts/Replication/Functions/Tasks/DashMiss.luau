@@ -17,7 +17,7 @@ return function(Params)
 
 	local SmokeBack = Resources.Effects.SmokeBack:Clone()
 	SmokeBack.CFrame = PrimaryPart.CFrame * CFrame.new(0, -3, 0) * CFrame.Angles(0, YAngle, 0)
-	SmokeBack.Parent = workspace.Thrown
+	SmokeBack.Parent = workspace.Debris
 	SmokeBack.SmokeBack.Smoke.Color = ColorSequence.new(GroundRay.Instance.Color)
 	ParticlesModule.Emit(SmokeBack)
 	Debris:AddItem(SmokeBack, 3)

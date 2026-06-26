@@ -4,7 +4,7 @@ local Debris = Constants.Debris
 local Resources = Constants.Resources
 
 return function(Params)
-	for _, v in workspace.Thrown:GetChildren() do
+	for _, v in workspace.Debris:GetChildren() do
 		if v.Name == LocalPlayer.UserId .. " Hitbox" then
 			v:Destroy()
 		end
@@ -20,6 +20,6 @@ return function(Params)
 		Visualizer.Size = Vector3.one * Params.Size
 	end
 
-	Visualizer.Parent = workspace.Thrown
+	Visualizer.Parent = workspace.Debris
 	Debris:AddItem(Visualizer, 0.1)
 end

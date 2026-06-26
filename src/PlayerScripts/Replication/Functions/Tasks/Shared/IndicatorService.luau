@@ -9,7 +9,7 @@ local MAX_RAYCAST_DIST = 1500
 
 local ExcludeRayParams = RaycastParams.new()
 ExcludeRayParams.FilterType = Enum.RaycastFilterType.Exclude
-ExcludeRayParams.FilterDescendantsInstances = { workspace.Live, workspace.Thrown }
+ExcludeRayParams.FilterDescendantsInstances = { workspace.Live, workspace.Debris }
 ExcludeRayParams.IgnoreWater = true
 
 local IndicatorService = {}
@@ -41,7 +41,7 @@ function IndicatorService:Create(params)
 	if isAttachment then
 		indicator.Parent = workspace
 	else
-		indicator.Parent = workspace.Thrown
+		indicator.Parent = workspace.Debris
 	end
 
 	local startTime = os.clock()

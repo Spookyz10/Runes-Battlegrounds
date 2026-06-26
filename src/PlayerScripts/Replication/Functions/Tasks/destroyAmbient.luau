@@ -44,7 +44,7 @@ return function(Params)
 		Clone.CanTouch = false
 		Clone.CanQuery = false
 		Clone.CollisionGroup = "NonPColDebri"
-		Clone.Parent = workspace.Thrown
+		Clone.Parent = workspace.Debris
 		Clone.Anchored = false
 		Clone.AssemblyAngularVelocity = Vector3.new(math.random(-5, 5), math.random(-5, 5), math.random(-5, 5))
 		Debris:AddItem(Clone, 5)

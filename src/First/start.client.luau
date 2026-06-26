@@ -82,7 +82,7 @@ shared.ray = function(params)
 		or params.Ignore
 		or {
 			workspace.Live,
-			workspace.Thrown,
+			workspace.Debris,
 		}
 
 	if params.Whitelist then
