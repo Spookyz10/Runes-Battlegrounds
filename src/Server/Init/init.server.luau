@@ -650,6 +650,11 @@ local ComunicatorFunctions = {
 					end)
 
 					HitEvents["freeze"] = AnimTrack:GetMarkerReachedSignal("freeze"):Once(function()
+						if Ended then
+							AnimTrack:AdjustSpeed(1)
+							return
+						end
+
 						AnimTrack:AdjustSpeed(0)
 					end)
 
@@ -727,6 +732,15 @@ local ComunicatorFunctions = {
 
 						if not Ended then
 							endDash()
+						else
+							AnimTrack:AdjustSpeed(1)
+						end
+					end)
+
+					task.delay(1.25, function()
+						if Stun and Stun.Parent == Character then
+							AnimTrack:AdjustSpeed(1)
+							StunHandler:Unstun(Character, Stun)
 						end
 					end)
 

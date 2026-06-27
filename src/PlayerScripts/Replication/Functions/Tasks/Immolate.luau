@@ -2,7 +2,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Debris = game:GetService("Debris")
 
-local TEXTURE_ID = "rbxassetid://95599664835536"
+local TEXTURE_ID = "rbxassetid://94083001751844"
+local OVERLAY_TEXTURE_ID = 94083001751844
 local ACTIVE = {}
 
 local function getImmolateFolder()
@@ -67,6 +68,74 @@ local function stop(Character)
 	if data.clone then
 		data.clone:Destroy()
 	end
+	if data.auraObjects then
+		for _, auraObject in data.auraObjects do
+			auraObject:Destroy()
+		end
+	end
+	if data.characterMeshes then
+		for characterMesh, overlayTextureId in data.characterMeshes do
+			if characterMesh.Parent then
+				characterMesh.OverlayTextureId = overlayTextureId
+			end
+		end
+	end
+	if data.transparencies then
+		for object, transparency in data.transparencies do
+			if object.Parent then
+				object.Transparency = transparency
+			end
+		end
+	end
+end
+
+local function applyCharacterMeshOverlay(Character, data)
+	data.characterMeshes = {}
+
+	for _, descendant in Character:GetDescendants() do
+		if descendant:IsA("CharacterMesh") then
+			data.characterMeshes[descendant] = descendant.OverlayTextureId
+			descendant.OverlayTextureId = OVERLAY_TEXTURE_ID
+		end
+	end
+end
+
+local function applyOriginalInvisibility(Character, data)
+	data.transparencies = {}
+
+	for _, descendant in Character:GetDescendants() do
+		if descendant:IsA("BasePart") and not string.find(descendant.Name, "Hitbox") then
+			data.transparencies[descendant] = descendant.Transparency
+			descendant.Transparency = 1
+		elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
+			data.transparencies[descendant] = descendant.Transparency
+			descendant.Transparency = 1
+		end
+	end
+end
+
+local function applyAura(Character, data)
+	local resources = ReplicatedStorage:FindFirstChild("Resources")
+	local auras = resources and resources:FindFirstChild("Auras")
+	local immolatedAura = auras and auras:FindFirstChild("Immolated")
+	if not immolatedAura then
+		return
+	end
+
+	data.auraObjects = {}
+
+	for _, bodyPart in Character:GetDescendants() do
+		if bodyPart:IsA("BasePart") and not string.find(bodyPart.Name, "Hitbox") then
+			for _, auraObject in immolatedAura:GetDescendants() do
+				if auraObject:IsA("ParticleEmitter") then
+					local auraClone = auraObject:Clone()
+					auraClone.Enabled = true
+					auraClone.Parent = bodyPart
+					table.insert(data.auraObjects, auraClone)
+				end
+			end
+		end
+	end
 end
 
 local function prepClone(Character, Clone)
@@ -89,6 +158,8 @@ local function prepClone(Character, Clone)
 			descendant:Destroy()
 		elseif descendant:IsA("SpecialMesh") then
 			descendant.TextureId = TEXTURE_ID
+		elseif descendant:IsA("CharacterMesh") then
+			descendant.OverlayTextureId = OVERLAY_TEXTURE_ID
 		elseif descendant:IsA("BasePart") then
 			local sourcePart = findByPath(Character, getPath(descendant, Clone))
 			descendant.Anchored = false
@@ -116,24 +187,27 @@ local function start(Character, Duration)
 		return
 	end
 
-	local clonesFolder = ReplicatedStorage:FindFirstChild("Clones")
-	local sourceClone = clonesFolder and clonesFolder:FindFirstChild(Character.Name)
-	if not sourceClone then
-		return
-	end
-
-	local Clone = sourceClone:Clone()
-	Clone.Name = Character.Name .. "_Immolate"
-	prepClone(Character, Clone)
-	Clone.Parent = getImmolateFolder()
-
 	local Humanoid = Character:FindFirstChildOfClass("Humanoid")
 	local data = {
-		clone = Clone,
+		clone = nil,
 	}
 
+	applyCharacterMeshOverlay(Character, data)
+	applyOriginalInvisibility(Character, data)
+	applyAura(Character, data)
+
+	local clonesFolder = ReplicatedStorage:FindFirstChild("Clones")
+	local sourceClone = clonesFolder and clonesFolder:FindFirstChild(Character.Name)
+	if sourceClone then
+		local Clone = sourceClone:Clone()
+		Clone.Name = Character.Name .. "_Immolate"
+		prepClone(Character, Clone)
+		Clone.Parent = getImmolateFolder()
+		data.clone = Clone
+	end
+
 	data.connection = RunService.RenderStepped:Connect(function()
-		if not Character.Parent or not Clone.Parent then
+		if not Character.Parent then
 			stop(Character)
 			return
 		end
@@ -143,7 +217,9 @@ local function start(Character, Duration)
 	end)
 
 	ACTIVE[Character] = data
-	Debris:AddItem(Clone, (Duration or 8) + 1)
+	if data.clone then
+		Debris:AddItem(data.clone, (Duration or 8) + 1)
+	end
 
 	task.delay(Duration or 8, function()
 		stop(Character)

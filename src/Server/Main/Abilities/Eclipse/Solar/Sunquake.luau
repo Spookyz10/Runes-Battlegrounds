@@ -14,11 +14,11 @@ local PerfectKnockback = require(ServerModules.PerfectKnockback)
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
-local HITBOX_SIZE = Vector3.new(20, 10, 20)
-local HITBOX_OFFSET = CFrame.new(0, -2, 0)
+local HITBOX_SIZE = Vector3.new(30, 30, 30)
+local HITBOX_OFFSET = CFrame.new(0, 0, 0)
 local DAMAGE = 22
 local STUN_TIME = 0.4
-local INFERNO_DURATION = 4
+local INFERNO_DURATION = 10
 
 local function applyInferno(EnemyCharacter)
 	local existing = EnemyCharacter:GetAttribute("Inferno")
