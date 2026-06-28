@@ -397,15 +397,22 @@ local function DashCheck()
 
 		gameSettings.RotationType = Enum.RotationType.CameraRelative
 
+		local stopLoop = nil
+
 		local DashVelocity = Instance.new("BodyVelocity")
 		DashVelocity.MaxForce = Character:HasTag("Slowed") and Vector3.new(10000, 0, 10000)
 			or Vector3.new(50000, 0, 50000)
 		DashVelocity.Parent = HumRP
 
 		AnimationTrack.Stopped:Once(function()
+			if stopLoop then
+				stopLoop()
+			end
 			if DashVelocity and DashVelocity.Parent then
 				DashVelocity:Destroy()
 			end
+
+			HumRP.AssemblyLinearVelocity = Vector3.new(0, HumRP.AssemblyLinearVelocity.Y, 0)
 			gameSettings.RotationType = Enum.RotationType.MovementRelative
 		end)
 
@@ -415,7 +422,6 @@ local function DashCheck()
 
 		AnimationTrack:Play()
 
-		local stopLoop = nil
 		stopLoop = shared.loop(function()
 			if Speed > 5 and DashVelocity.Parent then
 				Speed *= 0.91
@@ -423,6 +429,11 @@ local function DashCheck()
 				DashVelocity.Velocity = (HumRP.CFrame.RightVector * Mult) * Speed
 			else
 				stopLoop()
+				if DashVelocity and DashVelocity.Parent then
+					DashVelocity:Destroy()
+				end
+
+				HumRP.AssemblyLinearVelocity = Vector3.new(0, HumRP.AssemblyLinearVelocity.Y, 0)
 				gameSettings.RotationType = Enum.RotationType.MovementRelative
 			end
 		end)
