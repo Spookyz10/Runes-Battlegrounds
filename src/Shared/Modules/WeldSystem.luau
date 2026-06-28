@@ -1,21 +1,30 @@
-local Debris = game:GetService('Debris')
-local Players = game:GetService('Players')
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
+local Debris = game:GetService("Debris")
 
+local RunService = game:GetService("RunService")
 
 local ReplicateSet = game.ReplicatedStorage.Remotes.Replicate.Set
-local AnimationService = require(game.ServerStorage.Modules.AnimationService)
-
 
 local function clearVelocities(Part: Part, Ignore: BodyVelocity?)
 	for _, Velocity in Part:GetDescendants() do
-		if Velocity ~= Ignore and (Velocity:IsA("BodyVelocity") or Velocity:IsA("LinearVelocity") or Velocity:IsA("BodyPosition") or Velocity:IsA("BodyGyro") or Velocity:IsA("BodyAngularVelocity") or Velocity:IsA("BodyMover") or Velocity:IsA("BodyForce") or Velocity:IsA("BodyThrust") or Velocity:IsA("AngularVelocity") or Velocity:IsA("VelocityMotor")) then
+		if
+			Velocity ~= Ignore
+			and (
+				Velocity:IsA("BodyVelocity")
+				or Velocity:IsA("LinearVelocity")
+				or Velocity:IsA("BodyPosition")
+				or Velocity:IsA("BodyAngularVelocity")
+				or Velocity:IsA("BodyMover")
+				or Velocity:IsA("BodyForce")
+				or Velocity:IsA("BodyThrust")
+				or Velocity:IsA("AngularVelocity")
+				or Velocity:IsA("VelocityMotor")
+				or Velocity:IsA("BodyGyro")
+			)
+		then
 			Velocity:Destroy()
 		end
 	end
 end
-
 
 local WSys = {}
 WSys.__index = WSys
@@ -25,17 +34,19 @@ function WSys.new(Part0, Part1, Offset, LifeTime)
 		Part0 = Part0,
 		Part1 = Part1,
 		Offset = Offset,
-		LifeTime = LifeTime
+		LifeTime = LifeTime,
 	}, WSys)
 end
 
-function WSys:Start(TweenTime: number, Player: Player)
-	if not self.Part1 then return end
+function WSys:Start(TweenTime, Player)
+	if not self.Part1 then
+		return
+	end
 
 	TweenTime = TweenTime or 0.25
 
-	local Part0: Part = self.Part0
-	local Part1: Part = self.Part1
+	local Part0 = self.Part0
+	local Part1 = self.Part1
 
 	local Bind = Instance.new("Folder")
 	Bind.Name = "#WeldBind_" .. Part0.Parent.Name .. "_" .. Part1.Parent.Name .. "_" .. tostring(os.clock())
@@ -45,7 +56,7 @@ function WSys:Start(TweenTime: number, Player: Player)
 	Part1.Massless = true
 
 	if Part1.Parent:FindFirstChild("Humanoid") then
-		for _,v in Part1.Parent:GetChildren() do
+		for _, v in Part1.Parent:GetChildren() do
 			if v:IsA("BasePart") then
 				v.Massless = true
 			end
@@ -60,21 +71,23 @@ function WSys:Start(TweenTime: number, Player: Player)
 
 	Part1.Parent:AddTag("WeldedToReplicated")
 
-	self.Weld = Instance.new('WeldConstraint')
+	self.Weld = Instance.new("WeldConstraint")
 	self.Weld.Name = "GrabWeld"
 	if self.Lifetime then
 		Debris:AddItem(self.Weld, self.Lifetime)
 	end
 
 	self.Weld.Destroying:Once(function()
-		if not self then return end
+		if not self then
+			return
+		end
 
 		if Part1 and Part1.Parent then
 			Part1.Parent:RemoveTag("WeldedToReplicated")
 			Part1.Massless = false
 
 			if Part1.Parent:FindFirstChild("Humanoid") then
-				for _,v in Part1.Parent:GetChildren() do
+				for _, v in Part1.Parent:GetChildren() do
 					if v:IsA("BasePart") then
 						v.Massless = false
 					end
@@ -108,10 +121,15 @@ function WSys:Start(TweenTime: number, Player: Player)
 
 			clearVelocities(Part1)
 
-			ReplicateSet:FireClient(Player, "smoothweld", { Character = Part0.Parent, EnemyCharacter = Part1.Parent, TweenTime = TweenTime, Offset = self.Offset, Bind = Bind })
+			ReplicateSet:FireClient(Player, "smoothweld", {
+				Character = Part0.Parent,
+				EnemyCharacter = Part1.Parent,
+				TweenTime = TweenTime,
+				Offset = self.Offset,
+				Bind = Bind,
+			})
 
 			task.wait(TweenTime)
-
 		end
 
 		Part1.CFrame = Part0.CFrame * self.Offset
@@ -129,7 +147,7 @@ function WSys:Stop(dontDelete)
 			self.Weld.Part1.Massless = false
 
 			if self.Weld.Part1.Parent:FindFirstChild("Humanoid") then
-				for _,v in self.Weld.Part1.Parent:GetChildren() do
+				for _, v in self.Weld.Part1.Parent:GetChildren() do
 					if v:IsA("BasePart") then
 						v.Massless = false
 					end

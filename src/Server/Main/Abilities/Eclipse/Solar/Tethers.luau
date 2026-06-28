@@ -1,29 +1,38 @@
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
-local Debris = game:GetService("Debris")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 local ServerModules = ServerStorage.Modules
 local ReplicatedModules = ReplicatedStorage.Shared.Modules
 
 local StunHandler = require(ServerModules.StunHandler)
+local HitboxHandler = require(ServerModules.HitboxHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
+local AnimationService = require(ServerModules.AnimationService)
 local iFramesService = require(ServerModules.iFramesService)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local BodymoverService = require(ServerModules.BodymoverService)
 local PerfectKnockback = require(ServerModules.PerfectKnockback)
 local WeldSystem = require(ReplicatedModules.WeldSystem)
 
+local MoveAnims = ServerStorage.Assets.Animations.Moves
+local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
+
 local SEARCH_RADIUS = 300
-local DAMAGE = 20
+local DAMAGE = 1
 local INFERNO_DURATION = 3.5
 local KICK_VELOCITY = Vector3.new(0, 30, 0)
 local KICK_HORIZONTAL_FORCE = 85
 local WELD_OFFSET = CFrame.new(0, 0, -3) * CFrame.Angles(0, math.pi, 0)
 local PULL_OFFSET = Vector3.new(0, 0, -4)
-local PULL_TIME = 0.35
+local PULL_TIME = 0.5
 local WELD_TIME = 0.15
+local MAX_PULL_WAIT = 6
+local CLOSE_DISTANCE = 5
+local HITBOX_SIZE = Vector3.new(10, 10, 10)
+local HITBOX_OFFSET = CFrame.new(0, 0, -5)
 
 local function isInAir(EnemyCharacter)
 	if EnemyCharacter:FindFirstChild("inAir") then
@@ -111,6 +120,58 @@ local function applyInferno(EnemyCharacter)
 	end)
 end
 
+local function doHitEffects(
+	Character,
+	HumRP,
+	closestEnemy,
+	EnemyHumanoid,
+	EnemyHumRP,
+	EnemyPlayer,
+	CasterStun,
+	VictimStun,
+	Tool
+)
+	StunHandler:Unstun(closestEnemy, VictimStun)
+	iFramesService:RemoveAlliFrames(closestEnemy)
+	closestEnemy:RemoveTag("CantRotate")
+	closestEnemy:RemoveTag("Knockbacked")
+
+	DamageHandler:TakeDamage(Character, EnemyHumanoid, DAMAGE, nil, nil, true, true, true, true, true, nil, nil)
+
+	EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
+	EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
+
+	local kickDir = HumRP.CFrame.LookVector
+	local kickFlat = Vector3.new(kickDir.X, 0, kickDir.Z)
+	if kickFlat.Magnitude < 0.1 then
+		kickFlat = Vector3.new(0, 0, -1)
+	else
+		kickFlat = kickFlat.Unit
+	end
+
+	RagdollHandler.ragdoll(EnemyHumanoid, 2, nil, nil, nil, nil, true)
+
+	task.defer(function()
+		if not closestEnemy or not closestEnemy.Parent then
+			return
+		end
+		BodymoverService:Knockback(closestEnemy, {
+			KnockbackType = "Velocity",
+			MaxForce = Vector3.new(1, 1, 1) * 100000,
+			Velocity = kickFlat * KICK_HORIZONTAL_FORCE + KICK_VELOCITY,
+		})
+	end)
+
+	applyInferno(closestEnemy)
+
+	if EnemyPlayer then
+		ReplicateSet:FireClient(EnemyPlayer, "ShakeCamera", { Intensity = 4, Last = 0.4 })
+	end
+
+	iFramesService:RemoveAlliFrames(Character)
+	StunHandler:Unstun(Character, CasterStun)
+end
+
 return {
 	Start = function(Player, Tool)
 		local Character = Player.Character
@@ -127,183 +188,412 @@ return {
 		local CasterStun = StunHandler:Stun(Character, nil, true, 0, 0, true)
 		iFramesService:AddAlliFrames(Character)
 
-		task.wait(0.2)
+		local UserAnimation = MoveAnims.Eclipse.Solar.Tethers
+		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
 
 		local closestEnemy = nil
-		local closestDist = math.huge
+		local EnemyHumanoid = nil
+		local EnemyHumRP = nil
+		local EnemyPlayer = nil
+		local VictimStun = nil
 
-		local overlapParams = OverlapParams.new()
-		overlapParams.FilterType = Enum.RaycastFilterType.Include
-		overlapParams.FilterDescendantsInstances = { workspace.Live }
-
-		local parts = workspace:GetPartBoundsInRadius(HumRP.Position, SEARCH_RADIUS, overlapParams)
-
-		for _, part in parts do
-			local char = part.Parent
-			if not char or char == Character then
-				continue
-			end
-			local hum = char:FindFirstChild("Humanoid")
-			local hrp = char:FindFirstChild("HumanoidRootPart")
-			if not hum or not hrp then
-				continue
-			end
-			if hum.Health <= 0 or hum:GetState() == Enum.HumanoidStateType.Dead then
-				continue
-			end
-			if iFramesService:HasiFrame(char, Tool.Name) then
-				continue
-			end
-			if not isInAir(char) then
-				continue
-			end
-
-			local dist = (hrp.Position - HumRP.Position).Magnitude
-			if dist < closestDist then
-				closestDist = dist
-				closestEnemy = char
-			end
-		end
-
-		if not closestEnemy then
-			iFramesService:RemoveAlliFrames(Character)
-			StunHandler:Unstun(Character, CasterStun)
-			return
-		end
-
-		local EnemyHumanoid = closestEnemy:FindFirstChild("Humanoid")
-		local EnemyHumRP = closestEnemy:FindFirstChild("HumanoidRootPart")
-		local EnemyPlayer = Players:GetPlayerFromCharacter(closestEnemy)
-
-		if not EnemyHumanoid or not EnemyHumRP then
-			iFramesService:RemoveAlliFrames(Character)
-			StunHandler:Unstun(Character, CasterStun)
-			return
-		end
-
-		cancelAllKnockbackStates(closestEnemy)
-
-		local VictimStun = StunHandler:Stun(closestEnemy, nil, true, 0, 0, true)
-		iFramesService:AddAlliFrames(closestEnemy)
-		closestEnemy:AddTag("CantRotate")
-		closestEnemy:AddTag("Knockbacked")
-
-		HumRP.CFrame =
-			CFrame.lookAt(HumRP.Position, Vector3.new(EnemyHumRP.Position.X, HumRP.Position.Y, EnemyHumRP.Position.Z))
-
-		local PullTarget = (HumRP.CFrame * CFrame.new(PULL_OFFSET)).Position
-
-		pcall(function()
-			EnemyHumRP:SetNetworkOwner(nil)
-		end)
-
-		local PullAnchor = Instance.new("Part")
-		PullAnchor.Name = "FlarewhipPullAnchor"
-		PullAnchor.Anchored = true
-		PullAnchor.CanCollide = false
-		PullAnchor.CanTouch = false
-		PullAnchor.CanQuery = false
-		PullAnchor.Transparency = 1
-		PullAnchor.Size = Vector3.new(0.1, 0.1, 0.1)
-		PullAnchor.CFrame = EnemyHumRP.CFrame
-		PullAnchor.Parent = workspace
-
-		local PullOffset = PullAnchor.CFrame:ToObjectSpace(EnemyHumRP.CFrame)
-		local PullWeld = WeldSystem.new(PullAnchor, EnemyHumRP, PullOffset, -1)
-		PullWeld:Start(PULL_TIME + WELD_TIME + 0.5, EnemyPlayer, Player)
-
+		local pullDone = false
+		local hitDone = false
 		local Weld = nil
+		local rotateConn = nil
 
-		local function doKick()
+		local function stopRotation()
+			if rotateConn then
+				rotateConn:Disconnect()
+				rotateConn = nil
+			end
+		end
+
+		local function startRotation()
+			stopRotation()
+			rotateConn = RunService.Heartbeat:Connect(function()
+				if not HumRP or not HumRP.Parent or not EnemyHumRP or not EnemyHumRP.Parent then
+					stopRotation()
+					return
+				end
+				local targetPos = EnemyHumRP.Position
+				local myPos = HumRP.Position
+				local dir = targetPos - myPos
+				if dir.Magnitude > 0.1 then
+					HumRP.CFrame = CFrame.lookAt(myPos, targetPos) * CFrame.new(0, 0, 0)
+				end
+			end)
+		end
+
+		local function cleanupWeld()
 			if Weld then
 				pcall(function()
 					Weld:Stop()
 				end)
 				Weld = nil
 			end
+		end
 
-			if not closestEnemy or not closestEnemy.Parent then
-				return
-			end
+		table.insert(
+			UserEvents,
+			UserTrack:GetMarkerReachedSignal("pull"):Once(function()
+				UserTrack:AdjustSpeed(0)
 
-			StunHandler:Unstun(closestEnemy, VictimStun)
-			iFramesService:RemoveAlliFrames(closestEnemy)
-			closestEnemy:RemoveTag("CantRotate")
-			closestEnemy:RemoveTag("Knockbacked")
+				task.wait(0.2)
 
-			DamageHandler:TakeDamage(Character, EnemyHumanoid, DAMAGE, nil, nil, true, true, true, true, true, nil, nil)
+				local overlapParams = OverlapParams.new()
+				overlapParams.FilterType = Enum.RaycastFilterType.Include
+				overlapParams.FilterDescendantsInstances = { workspace.Live }
 
-			EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
-			EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
+				local parts = workspace:GetPartBoundsInRadius(HumRP.Position, SEARCH_RADIUS, overlapParams)
+				local closestDist = math.huge
 
-			local kickDir = HumRP.CFrame.LookVector
-			local kickFlat = Vector3.new(kickDir.X, 0, kickDir.Z)
+				for _, part in parts do
+					local char = part.Parent
+					if not char or char == Character then
+						continue
+					end
+					local hum = char:FindFirstChild("Humanoid")
+					local hrp = char:FindFirstChild("HumanoidRootPart")
+					if not hum or not hrp then
+						continue
+					end
+					if hum.Health <= 0 or hum:GetState() == Enum.HumanoidStateType.Dead then
+						continue
+					end
+					if iFramesService:HasiFrame(char, Tool.Name) then
+						continue
+					end
+					if not isInAir(char) then
+						continue
+					end
 
-			if kickFlat.Magnitude < 0.1 then
-				kickFlat = Vector3.new(0, 0, -1)
-			else
-				kickFlat = kickFlat.Unit
-			end
+					local dist = (hrp.Position - HumRP.Position).Magnitude
+					if dist < closestDist then
+						closestDist = dist
+						closestEnemy = char
+					end
+				end
 
-			RagdollHandler.ragdoll(EnemyHumanoid, 2, nil, nil, nil, nil, true)
-
-			task.defer(function()
-				if not closestEnemy or not closestEnemy.Parent then
+				if not closestEnemy then
+					iFramesService:RemoveAlliFrames(Character)
+					StunHandler:Unstun(Character, CasterStun)
+					UserTrack:Stop()
 					return
 				end
 
-				BodymoverService:Knockback(closestEnemy, {
-					KnockbackType = "Velocity",
-					MaxForce = Vector3.new(1, 1, 1) * 100000,
-					Velocity = kickFlat * KICK_HORIZONTAL_FORCE + KICK_VELOCITY,
+				EnemyHumanoid = closestEnemy:FindFirstChild("Humanoid")
+				EnemyHumRP = closestEnemy:FindFirstChild("HumanoidRootPart")
+				EnemyPlayer = Players:GetPlayerFromCharacter(closestEnemy)
+
+				if not EnemyHumanoid or not EnemyHumRP then
+					closestEnemy = nil
+					iFramesService:RemoveAlliFrames(Character)
+					StunHandler:Unstun(Character, CasterStun)
+					UserTrack:Stop()
+					return
+				end
+
+				cancelAllKnockbackStates(closestEnemy)
+
+				VictimStun = StunHandler:Stun(closestEnemy, nil, true, 0, 0, true)
+				iFramesService:AddAlliFrames(closestEnemy)
+				closestEnemy:AddTag("CantRotate")
+				closestEnemy:AddTag("Knockbacked")
+
+				pcall(function()
+					HumRP:SetNetworkOwner(nil)
+				end)
+
+				startRotation()
+
+				ReplicateSet:FireAllClients("TethersVFX_Start", {
+					casterChar = Character,
+					victimChar = closestEnemy,
 				})
-			end)
 
-			applyInferno(closestEnemy)
+				local PullTarget = (HumRP.CFrame * CFrame.new(PULL_OFFSET)).Position
 
-			if EnemyPlayer then
-				ReplicatedStorage.Remotes.Replicate.Set:FireClient(
-					EnemyPlayer,
-					"ShakeCamera",
-					{ Intensity = 4, Last = 0.4 }
+				local PullAnchor = Instance.new("Part")
+				PullAnchor.Name = "FlarewhipPullAnchor"
+				PullAnchor.Anchored = true
+				PullAnchor.CanCollide = false
+				PullAnchor.CanTouch = false
+				PullAnchor.CanQuery = false
+				PullAnchor.Transparency = 1
+				PullAnchor.Size = Vector3.new(0.1, 0.1, 0.1)
+				PullAnchor.CFrame = EnemyHumRP.CFrame
+				PullAnchor.Parent = workspace
+
+				local PullOffset = PullAnchor.CFrame:ToObjectSpace(EnemyHumRP.CFrame)
+				local PullWeld = WeldSystem.new(PullAnchor, EnemyHumRP, PullOffset, -1)
+				PullWeld:Start(PULL_TIME + WELD_TIME + 0.5, EnemyPlayer, Player)
+
+				local PullTween = TweenService:Create(
+					PullAnchor,
+					TweenInfo.new(PULL_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+					{ CFrame = CFrame.new(PullTarget, PullTarget + HumRP.CFrame.LookVector) }
 				)
+
+				local function onVictimArrived()
+					if pullDone then
+						return
+					end
+					pullDone = true
+
+					ReplicateSet:FireAllClients("TethersVFX_Stop", {
+						casterChar = Character,
+						victimChar = closestEnemy,
+					})
+
+					pcall(function()
+						PullWeld:Stop()
+					end)
+					if PullAnchor and PullAnchor.Parent then
+						PullAnchor:Destroy()
+					end
+
+					if not closestEnemy or not closestEnemy.Parent then
+						stopRotation()
+						UserTrack:AdjustSpeed(1)
+						return
+					end
+
+					cancelAllKnockbackStates(closestEnemy)
+					closestEnemy:AddTag("CantRotate")
+					closestEnemy:AddTag("Knockbacked")
+
+					stopRotation()
+
+					HumRP.CFrame = CFrame.lookAt(
+						HumRP.Position,
+						Vector3.new(EnemyHumRP.Position.X, HumRP.Position.Y, EnemyHumRP.Position.Z)
+					)
+
+					Weld = WeldSystem.new(HumRP, EnemyHumRP, WELD_OFFSET, -1)
+					Weld:Start(WELD_TIME, EnemyPlayer, Player)
+
+					UserTrack:AdjustSpeed(1)
+				end
+
+				local proximityConn
+				local timeoutThread
+
+				timeoutThread = task.delay(MAX_PULL_WAIT, function()
+					if pullDone then
+						return
+					end
+					pullDone = true
+
+					PullTween:Cancel()
+					pcall(function()
+						PullWeld:Stop()
+					end)
+					if PullAnchor and PullAnchor.Parent then
+						PullAnchor:Destroy()
+					end
+
+					ReplicateSet:FireAllClients("TethersVFX_Stop", {
+						casterChar = Character,
+						victimChar = closestEnemy,
+					})
+
+					stopRotation()
+					UserTrack:AdjustSpeed(1)
+
+					if not hitDone then
+						hitDone = true
+						cleanupWeld()
+
+						if closestEnemy and closestEnemy.Parent and EnemyHumanoid and EnemyHumanoid.Health > 0 then
+							doHitEffects(
+								Character,
+								HumRP,
+								closestEnemy,
+								EnemyHumanoid,
+								EnemyHumRP,
+								EnemyPlayer,
+								CasterStun,
+								VictimStun,
+								Tool
+							)
+						else
+							iFramesService:RemoveAlliFrames(Character)
+							StunHandler:Unstun(Character, CasterStun)
+						end
+					end
+				end)
+
+				proximityConn = RunService.Heartbeat:Connect(function()
+					if pullDone then
+						proximityConn:Disconnect()
+						return
+					end
+					if not EnemyHumRP or not EnemyHumRP.Parent or not HumRP or not HumRP.Parent then
+						proximityConn:Disconnect()
+						return
+					end
+					if (EnemyHumRP.Position - HumRP.Position).Magnitude <= CLOSE_DISTANCE then
+						proximityConn:Disconnect()
+						if timeoutThread then
+							task.cancel(timeoutThread)
+						end
+						onVictimArrived()
+					end
+				end)
+
+				PullTween.Completed:Once(function(state)
+					if state == Enum.PlaybackState.Completed and not pullDone then
+						if proximityConn then
+							proximityConn:Disconnect()
+						end
+						if timeoutThread then
+							task.cancel(timeoutThread)
+						end
+						onVictimArrived()
+					end
+				end)
+
+				PullTween:Play()
+			end)
+		)
+
+		table.insert(
+			UserEvents,
+			UserTrack:GetMarkerReachedSignal("hit"):Once(function()
+				stopRotation()
+				cleanupWeld()
+
+				if hitDone then
+					return
+				end
+				hitDone = true
+
+				local HitList = {}
+
+				if closestEnemy and closestEnemy.Parent then
+					HitList[closestEnemy] = true
+				end
+
+				HitboxHandler:SimpleOnce(
+					HumRP,
+					HITBOX_SIZE,
+					HITBOX_OFFSET,
+					{ Character },
+					"Box",
+					nil,
+					function(EnemyCharacter)
+						if HitList[EnemyCharacter] then
+							return
+						end
+						if EnemyCharacter == closestEnemy then
+							return
+						end
+
+						local Hum = EnemyCharacter:FindFirstChild("Humanoid")
+						local Hrp = EnemyCharacter:FindFirstChild("HumanoidRootPart")
+						if not Hum or not Hrp then
+							return
+						end
+						if Hum.Health <= 0 or EnemyCharacter:HasTag("Ragdolled") then
+							return
+						end
+						if iFramesService:HasiFrame(EnemyCharacter, Tool.Name) then
+							return
+						end
+
+						HitList[EnemyCharacter] = true
+
+						local HitInfo = DamageHandler:TakeDamage(
+							Character,
+							Hum,
+							DAMAGE,
+							nil,
+							nil,
+							true,
+							true,
+							true,
+							true,
+							true,
+							nil,
+							nil
+						)
+
+						if HitInfo.Countered or HitInfo.Blocked then
+							return
+						end
+
+						Hrp.AssemblyLinearVelocity = Vector3.zero
+
+						local pushDir = (Hrp.Position - HumRP.Position)
+						pushDir = Vector3.new(pushDir.X, 0, pushDir.Z)
+						pushDir = pushDir.Magnitude > 0 and pushDir.Unit or HumRP.CFrame.LookVector
+
+						RagdollHandler.ragdoll(Hum, 2, nil, nil, nil, nil, true)
+
+						task.defer(function()
+							if not EnemyCharacter or not EnemyCharacter.Parent then
+								return
+							end
+							BodymoverService:Knockback(EnemyCharacter, {
+								KnockbackType = "Velocity",
+								MaxForce = Vector3.new(1, 1, 1) * 100000,
+								Velocity = pushDir * KICK_HORIZONTAL_FORCE + KICK_VELOCITY,
+							})
+						end)
+
+						applyInferno(EnemyCharacter)
+					end
+				)
+
+				if closestEnemy and closestEnemy.Parent and EnemyHumanoid and EnemyHumanoid.Health > 0 then
+					doHitEffects(
+						Character,
+						HumRP,
+						closestEnemy,
+						EnemyHumanoid,
+						EnemyHumRP,
+						EnemyPlayer,
+						CasterStun,
+						VictimStun,
+						Tool
+					)
+				else
+					iFramesService:RemoveAlliFrames(Character)
+					StunHandler:Unstun(Character, CasterStun)
+				end
+			end)
+		)
+
+		UserTrack.Stopped:Once(function()
+			for _, v in UserEvents do
+				v:Disconnect()
+			end
+
+			stopRotation()
+			cleanupWeld()
+
+			pcall(function()
+				HumRP:SetNetworkOwner(Player)
+			end)
+			if EnemyHumRP and EnemyHumRP.Parent then
+				pcall(function()
+					EnemyHumRP:SetNetworkOwner(EnemyPlayer)
+				end)
 			end
 
 			iFramesService:RemoveAlliFrames(Character)
 			StunHandler:Unstun(Character, CasterStun)
-		end
 
-		local function afterPull()
-			pcall(function()
-				PullWeld:Stop()
-			end)
-			PullAnchor:Destroy()
-
-			if not closestEnemy or not closestEnemy.Parent then
-				return
+			if closestEnemy and closestEnemy.Parent and VictimStun then
+				StunHandler:Unstun(closestEnemy, VictimStun)
+				iFramesService:RemoveAlliFrames(closestEnemy)
+				closestEnemy:RemoveTag("CantRotate")
+				closestEnemy:RemoveTag("Knockbacked")
 			end
+		end)
 
-			cancelAllKnockbackStates(closestEnemy)
-			closestEnemy:AddTag("CantRotate")
-			closestEnemy:AddTag("Knockbacked")
-
-			HumRP.CFrame = CFrame.lookAt(
-				HumRP.Position,
-				Vector3.new(EnemyHumRP.Position.X, HumRP.Position.Y, EnemyHumRP.Position.Z)
-			)
-
-			Weld = WeldSystem.new(HumRP, EnemyHumRP, WELD_OFFSET, -1)
-			Weld:Start(WELD_TIME, EnemyPlayer, Player)
-
-			task.delay(WELD_TIME, doKick)
-		end
-
-		local PullTween = TweenService:Create(
-			PullAnchor,
-			TweenInfo.new(PULL_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-			{ CFrame = CFrame.new(PullTarget, PullTarget + HumRP.CFrame.LookVector) }
-		)
-		PullTween.Completed:Once(afterPull)
-		PullTween:Play()
+		AnimationService:stopAll(Character)
+		AnimationService:playAnimation(Character, UserAnimation)
 	end,
 }

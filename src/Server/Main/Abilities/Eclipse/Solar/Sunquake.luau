@@ -16,7 +16,7 @@ local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
 local HITBOX_SIZE = Vector3.new(30, 30, 30)
 local HITBOX_OFFSET = CFrame.new(0, 0, 0)
-local DAMAGE = 22
+local DAMAGE = 1
 local STUN_TIME = 0.4
 local INFERNO_DURATION = 10
 
@@ -29,8 +29,8 @@ local function applyInferno(EnemyCharacter)
 
 	local tickStart = tick()
 	local duration = INFERNO_DURATION
-	local dotInterval = 0.5
-	local dotDamage = 3
+	local dotInterval = 3
+	local dotDamage = 1
 
 	task.spawn(function()
 		while EnemyCharacter and EnemyCharacter.Parent and EnemyCharacter:GetAttribute("Inferno") do
@@ -154,7 +154,7 @@ return {
 								LookFinalForce = 50,
 								LookAt = lookCF,
 								UpVelocity = Vector3.new(0, 45, 0),
-								UpVelocityTime = 0.15,
+								UpVelocityTime = 0.4,
 								GroundStunTime = 1.0,
 								FallingDetectDelay = 0.5,
 								Dot = 1,
