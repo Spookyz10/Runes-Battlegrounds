@@ -43,43 +43,60 @@ local InfoModule = require(RS.Shared.Info)
 local processedTools = {}
 
 local TWEEN_SLIDE = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+-- Main sobe/desce: posição relativa dentro do slot
 local POS_DOWN = UDim2.new(0.5, 0, 0.5, 125)
 local POS_UP = UDim2.new(0.5, 0, 0.5, 0)
 
-local activeBaseTweens: { [GuiObject]: Tween } = {}
+-- ── Helpers de hierarquia ────────────────────────────────────────────────────
+-- Hierarquia atual:  slot (ImageLabel) → Main (Frame) → Base / CooldownFrame / Icon
+-- O tween é sempre no Main, não no slot nem no Base diretamente.
 
-local function cancelTween(base: GuiObject)
-	if activeBaseTweens[base] then
-		activeBaseTweens[base]:Cancel()
-		activeBaseTweens[base] = nil
+local function getMain(slot)
+	return slot:FindFirstChild("Main")
+end
+
+local function getBase(slot)
+	local main = getMain(slot)
+	return main and main:FindFirstChild("Base")
+end
+
+local function getCooldownFrame(slot)
+	local main = getMain(slot)
+	return main and main:FindFirstChild("CooldownFrame")
+end
+
+local function getIcon(slot)
+	local main = getMain(slot)
+	return main and main:FindFirstChild("Icon")
+end
+
+-- ── Tween do Main ────────────────────────────────────────────────────────────
+local activeMainTweens: { [GuiObject]: Tween } = {}
+
+local function cancelMainTween(main: GuiObject)
+	if activeMainTweens[main] then
+		activeMainTweens[main]:Cancel()
+		activeMainTweens[main] = nil
 	end
 end
 
-local function tweenBase(base: GuiObject, goal: UDim2, tweenInfo: TweenInfo?, onComplete: (() -> ())?)
-	cancelTween(base)
+local function tweenMain(main: GuiObject, goal: UDim2, tweenInfo: TweenInfo?, onComplete: (() -> ())?)
+	cancelMainTween(main)
 	local info = tweenInfo or TWEEN_SLIDE
-	local tween = TS:Create(base, info, { Position = goal })
-	activeBaseTweens[base] = tween
+	local tween = TS:Create(main, info, { Position = goal })
+	activeMainTweens[main] = tween
 	tween.Completed:Once(function(state)
-		if activeBaseTweens[base] == tween then
-			activeBaseTweens[base] = nil
+		if activeMainTweens[main] == tween then
+			activeMainTweens[main] = nil
 		end
 		if state == Enum.PlaybackState.Completed and onComplete then
 			onComplete()
 		end
 	end)
 	tween:Play()
-
-	local slot = base.Parent
-	if slot then
-		local offsetY = goal.Y.Offset
-		local icon = slot:FindFirstChild("Icon")
-		if icon then
-			TS:Create(icon, info, { Position = UDim2.new(0, 0, 0, offsetY) }):Play()
-		end
-	end
 end
 
+-- ── Helpers gerais ───────────────────────────────────────────────────────────
 local function getCharacter()
 	return Player.Character
 end
@@ -98,7 +115,7 @@ local function tweenAllSlotsDown(onComplete: (() -> ())?)
 	local done = 0
 
 	for _, slot in HotbarFrame:GetChildren() do
-		if slot:IsA("ImageLabel") and slot:FindFirstChild("Base") then
+		if slot:IsA("ImageLabel") and getMain(slot) then
 			total += 1
 		end
 	end
@@ -111,17 +128,21 @@ local function tweenAllSlotsDown(onComplete: (() -> ())?)
 	end
 
 	for _, slot in HotbarFrame:GetChildren() do
-		if slot:IsA("ImageLabel") and slot:FindFirstChild("Base") then
-			tweenBase(slot.Base, POS_DOWN, TWEEN_SLIDE, function()
-				done += 1
-				if done == total and onComplete then
-					onComplete()
-				end
-			end)
+		if slot:IsA("ImageLabel") then
+			local main = getMain(slot)
+			if main then
+				tweenMain(main, POS_DOWN, TWEEN_SLIDE, function()
+					done += 1
+					if done == total and onComplete then
+						onComplete()
+					end
+				end)
+			end
 		end
 	end
 end
 
+-- ── Cooldown ─────────────────────────────────────────────────────────────────
 local activeCdTweens: { [GuiObject]: Tween } = {}
 
 local function cancelCdTween(cdFrame: GuiObject)
@@ -132,7 +153,8 @@ local function cancelCdTween(cdFrame: GuiObject)
 end
 
 local function shineIconEffect(slot)
-	local icon = slot:FindFirstChild("Base"):FindFirstChild("Shine")
+	local base = getBase(slot)
+	local icon = base and base:FindFirstChild("Shine")
 	if not icon then
 		return
 	end
@@ -159,8 +181,9 @@ local function shineIconEffect(slot)
 	game.Debris:AddItem(shine, 0.6)
 end
 
-local function Equip(HotbarSlot)
-	local Tool = AbilitieRemote_Get:InvokeServer(HotbarSlot.SkillName.Text)
+local function Equip(Base)
+	-- Base é o filho do Main; slot é o ImageLabel pai do Main
+	local Tool = AbilitieRemote_Get:InvokeServer(Base.SkillName.Text)
 	if not Tool then
 		return
 	end
@@ -171,12 +194,12 @@ local function Equip(HotbarSlot)
 	end
 
 	local cds = Tool:GetAttribute("CDS")
-
 	if cds ~= 0 then
-		local slot = HotbarSlot.Parent
+		-- slot = Main.Parent
+		local slot = Base.Parent.Parent
 
 		local function addCooldown()
-			local cdFrame = slot:FindFirstChild("CooldownFrame")
+			local cdFrame = getCooldownFrame(slot)
 			if not cdFrame then
 				return
 			end
@@ -192,7 +215,7 @@ local function Equip(HotbarSlot)
 					if activeCdTweens[cdFrame] == cdTween then
 						activeCdTweens[cdFrame] = nil
 					end
-					if state == Enum.PlaybackState.Completed and Tool.Name == HotbarSlot.SkillName.Text then
+					if state == Enum.PlaybackState.Completed and Tool.Name == Base.SkillName.Text then
 						shineIconEffect(slot)
 					end
 				end)
@@ -216,6 +239,7 @@ local function Equip(HotbarSlot)
 	end
 end
 
+-- ── Adicionar tool ────────────────────────────────────────────────────────────
 local function getToolKey(tool: Tool): string
 	return tool.Name .. "_" .. tostring(tool:GetAttribute("Index"))
 end
@@ -231,34 +255,47 @@ local function AddTool(Tool: Tool)
 	end
 	processedTools[key] = true
 
-	local HotbarSlot = HotbarFrame[tostring(Tool:GetAttribute("Index"))]
-	if not HotbarSlot then
+	local slot = HotbarFrame:FindFirstChild(tostring(Tool:GetAttribute("Index")))
+	if not slot then
 		return
 	end
 
-	local Base = HotbarSlot.Base
-	HotbarSlot:SetAttribute("Active", true)
+	local main = getMain(slot)
+	local base = getBase(slot)
+	if not main or not base then
+		return
+	end
 
-	tweenBase(Base, POS_DOWN, TWEEN_SLIDE, function()
-		local existing = Base:FindFirstChild("Cooldown")
+	slot:SetAttribute("Active", true)
+
+	tweenMain(main, POS_DOWN, TWEEN_SLIDE, function()
+		local existing = base:FindFirstChild("Cooldown")
 		if existing then
 			existing:Destroy()
 		end
 
-		Base.SkillName.Text = Tool.Name
-		HotbarSlot.Icon.Image = Tool:GetAttribute("Icon") or "rbxassetid://0"
-		local cdIcon = HotbarSlot.CooldownFrame:FindFirstChild("CooldownIcon")
-		if cdIcon then
-			cdIcon.Image = Tool:GetAttribute("Icon") or "rbxassetid://0"
+		base.SkillName.Text = Tool.Name
+		base.Number.Text = tostring(Tool:GetAttribute("Index"))
+
+		local icon = getIcon(slot)
+		if icon then
+			icon.Image = Tool:GetAttribute("Icon") or "rbxassetid://0"
 		end
-		Base.Number.Text = tostring(Tool:GetAttribute("Index"))
 
-		HotbarSlot.Visible = true
+		local cdFrame = getCooldownFrame(slot)
+		if cdFrame then
+			local cdIcon = cdFrame:FindFirstChild("CooldownIcon")
+			if cdIcon then
+				cdIcon.Image = Tool:GetAttribute("Icon") or "rbxassetid://0"
+			end
+		end
 
-		tweenBase(Base, POS_UP, TWEEN_SLIDE)
+		slot.Visible = true
+		tweenMain(main, POS_UP, TWEEN_SLIDE)
 	end)
 end
 
+-- ── Gradients ────────────────────────────────────────────────────────────────
 local function updateHotbarGradients()
 	local name = getGradientName()
 	local source = HotbarFrame:FindFirstChild("Gradients")
@@ -269,23 +306,26 @@ local function updateHotbarGradients()
 	local template = source:FindFirstChild(name)
 
 	for _, slot in HotbarFrame:GetChildren() do
-		if slot:IsA("ImageLabel") and slot:FindFirstChild("Base") then
-			local base = slot.Base
-			for _, child in base:GetChildren() do
-				if child:IsA("UIGradient") then
-					child:Destroy()
+		if slot:IsA("ImageLabel") then
+			local base = getBase(slot)
+			if base then
+				for _, child in base:GetChildren() do
+					if child:IsA("UIGradient") then
+						child:Destroy()
+					end
 				end
-			end
-			if template then
-				template:Clone().Parent = base
+				if template then
+					template:Clone().Parent = base
+				end
 			end
 		end
 	end
 end
 
+-- ── Init ─────────────────────────────────────────────────────────────────────
 for _, slot in HotbarFrame:GetChildren() do
 	if slot:IsA("ImageLabel") then
-		local cdFrame = slot:FindFirstChild("CooldownFrame")
+		local cdFrame = getCooldownFrame(slot)
 		if cdFrame then
 			cdFrame.Size = UDim2.fromScale(1, 0)
 		end
@@ -294,6 +334,7 @@ end
 
 updateHotbarGradients()
 
+-- ── Input teclado/gamepad ────────────────────────────────────────────────────
 UIS.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then
 		return
@@ -301,57 +342,62 @@ UIS.InputBegan:Connect(function(input, gameProcessed)
 
 	local slotKey = Keys[input.KeyCode.Name]
 	if slotKey then
-		local HotbarSlot = HotbarFrame[slotKey]
-		if HotbarSlot then
-			Equip(HotbarSlot.Base)
+		local slot = HotbarFrame:FindFirstChild(slotKey)
+		if slot then
+			local base = getBase(slot)
+			if base then
+				Equip(base)
+			end
 		end
 	end
 end)
 
-for _, HotbarSlot in HotbarFrame:GetChildren() do
-	if HotbarSlot:IsA("ImageLabel") and HotbarSlot:FindFirstChild("Base") then
-		local Base = HotbarSlot.Base
-		Base.Activated:Connect(function()
-			local char = getCharacter()
+-- ── Click / tap nos slots ────────────────────────────────────────────────────
+for _, slot in HotbarFrame:GetChildren() do
+	if slot:IsA("ImageLabel") then
+		local base = getBase(slot)
+		if base then
+			base.Activated:Connect(function()
+				local char = getCharacter()
 
-			if Player.Configuration["Auto Use"].Value == true then
-				Equip(Base)
-			else
-				if Base.SelectionObjectClipper.Visible == true then
-					Base.SelectionObjectClipper.Visible = false
-
-					if char then
-						char:RemoveTag("Move Selected")
-					end
+				if Player.Configuration["Auto Use"].Value == true then
+					Equip(base)
 				else
-					for _, Slot in HotbarFrame:GetChildren() do
-						if Slot:IsA("ImageLabel") and Slot:FindFirstChild("Base") then
-							local SlotBase = Slot.Base
-							if SlotBase ~= Base and SlotBase.SelectionObjectClipper.Visible == true then
-								SlotBase.SelectionObjectClipper.Visible = false
-								if char then
-									char:RemoveTag("Move Selected")
+					if base.SelectionObjectClipper.Visible == true then
+						base.SelectionObjectClipper.Visible = false
+						if char then
+							char:RemoveTag("Move Selected")
+						end
+					else
+						for _, otherSlot in HotbarFrame:GetChildren() do
+							if otherSlot:IsA("ImageLabel") then
+								local otherBase = getBase(otherSlot)
+								if otherBase and otherBase ~= base and otherBase.SelectionObjectClipper.Visible then
+									otherBase.SelectionObjectClipper.Visible = false
+									if char then
+										char:RemoveTag("Move Selected")
+									end
 								end
 							end
 						end
-					end
 
-					Base.SelectionObjectClipper.Visible = true
-
-					if char then
-						char:AddTag("Move Selected")
+						base.SelectionObjectClipper.Visible = true
+						if char then
+							char:AddTag("Move Selected")
+						end
 					end
 				end
-			end
-		end)
+			end)
+		end
 	end
 end
 
+-- ── Remotes ──────────────────────────────────────────────────────────────────
 MovesetHandler.OnClientEvent:Connect(function(Goal)
 	if Goal == "removeCooldowns" then
-		for _, Frame in HotbarFrame:GetChildren() do
-			if Frame:IsA("ImageLabel") then
-				local cdFrame = Frame:FindFirstChild("CooldownFrame")
+		for _, slot in HotbarFrame:GetChildren() do
+			if slot:IsA("ImageLabel") then
+				local cdFrame = getCooldownFrame(slot)
 				if cdFrame then
 					cancelCdTween(cdFrame)
 					cdFrame.Size = UDim2.fromScale(1, 0)
@@ -381,6 +427,7 @@ shared.triggerHotbar = function(State: boolean)
 	end
 end
 
+-- ── Backpack ChildAdded / ChildRemoved ───────────────────────────────────────
 Backpack.ChildAdded:Connect(AddTool)
 
 Backpack.ChildRemoved:Connect(function(Tool: Tool)
@@ -399,20 +446,26 @@ Backpack.ChildRemoved:Connect(function(Tool: Tool)
 		end
 	end
 
-	local HotbarSlot = HotbarFrame[tostring(Tool:GetAttribute("Index"))]
-	if not HotbarSlot then
+	local slot = HotbarFrame:FindFirstChild(tostring(Tool:GetAttribute("Index")))
+	if not slot then
 		return
 	end
 
-	local Base = HotbarSlot.Base
+	local main = getMain(slot)
+	local base = getBase(slot)
+	if not main then
+		return
+	end
 
 	if wasReplaced then
-		tweenBase(Base, POS_DOWN, TWEEN_SLIDE)
+		tweenMain(main, POS_DOWN, TWEEN_SLIDE)
 	else
-		tweenBase(Base, POS_DOWN, TWEEN_SLIDE, function()
-			HotbarSlot:SetAttribute("Active", false)
-			HotbarSlot.Visible = false
-			Base.SkillName.Text = "N/A"
+		tweenMain(main, POS_DOWN, TWEEN_SLIDE, function()
+			slot:SetAttribute("Active", false)
+			slot.Visible = false
+			if base then
+				base.SkillName.Text = "N/A"
+			end
 		end)
 	end
 end)
@@ -421,6 +474,7 @@ for _, Tool in Backpack:GetChildren() do
 	task.spawn(AddTool, Tool)
 end
 
+-- ── Mudança de moveset / modo ────────────────────────────────────────────────
 Player:GetAttributeChangedSignal("Moveset"):Connect(function()
 	tweenAllSlotsDown()
 	task.delay(TWEEN_SLIDE.Time, updateHotbarGradients)

@@ -34,6 +34,11 @@ local CLOSE_DISTANCE = 5
 local HITBOX_SIZE = Vector3.new(10, 10, 10)
 local HITBOX_OFFSET = CFrame.new(0, 0, -5)
 
+-- Tempo que a corrente "viaja" até o inimigo antes de travar ele (efeito visual de lançamento)
+local CHAIN_TRAVEL_TIME = 0.35
+-- Slow-fall: multiplica a velocidade Y do inimigo quando preso no ar
+local AIR_SLOW_FACTOR = 0.12
+
 local function isInAir(EnemyCharacter)
 	if EnemyCharacter:FindFirstChild("inAir") then
 		return true
@@ -45,10 +50,17 @@ local function isInAir(EnemyCharacter)
 	return false
 end
 
+--[[
+	Cancela o PerfectKnockback e limpa todos os estados de knockback do personagem.
+	Chamado quando o inimigo recebe dano ou é pego numa hitbox, para evitar a
+	animação ficar congelada no estado "freeze" do PerfectKnockback.
+]]
 local function cancelAllKnockbackStates(EnemyCharacter)
 	local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
 	local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
 
+	-- Cancela o PerfectKnockback — isso para a animação, destrói os body movers
+	-- e chama Unstun internamente, evitando o freeze da animação de knockback
 	PerfectKnockback:Cancel(EnemyCharacter)
 
 	if EnemyHumRP then
@@ -82,6 +94,10 @@ local function cancelAllKnockbackStates(EnemyCharacter)
 	end
 
 	EnemyCharacter:RemoveTag("Knockbacked")
+
+	-- Para garantir que a animação de knockback não fique congelada,
+	-- paramos todas as animações se o PerfectKnockback estava ativo
+	AnimationService:stopAll(EnemyCharacter)
 end
 
 local function applyInferno(EnemyCharacter)
@@ -294,10 +310,30 @@ return {
 					return
 				end
 
+				-- ── SLOW-FALL: reduz a velocidade vertical do inimigo no ar ─────────────
+				-- Isso dá a sensação de que as correntes "travaram" ele no ar antes de puxar
+				do
+					local currentVel = EnemyHumRP.AssemblyLinearVelocity
+					EnemyHumRP.AssemblyLinearVelocity = Vector3.new(
+						currentVel.X * 0.3,
+						math.min(currentVel.Y, 0) * AIR_SLOW_FACTOR, -- só freia queda, não sobe
+						currentVel.Z * 0.3
+					)
+
+					-- BodyVelocity temporário para segurar o inimigo no ar enquanto a corrente viaja
+					local holdBV = Instance.new("BodyVelocity")
+					holdBV.Name = "TetherHold"
+					holdBV.MaxForce = Vector3.new(100000, 100000, 100000)
+					holdBV.Velocity = Vector3.zero
+					holdBV.P = 50000
+					holdBV.Parent = EnemyHumRP
+					game:GetService("Debris"):AddItem(holdBV, CHAIN_TRAVEL_TIME + 0.05)
+				end
+
+				-- ── CANCELAR KNOCKBACK ANTES (inclui PerfectKnockback com animação freezada) ──
 				cancelAllKnockbackStates(closestEnemy)
 
 				VictimStun = StunHandler:Stun(closestEnemy, nil, true, 0, 0, true)
-				iFramesService:AddAlliFrames(closestEnemy)
 				closestEnemy:AddTag("CantRotate")
 				closestEnemy:AddTag("Knockbacked")
 
@@ -307,10 +343,28 @@ return {
 
 				startRotation()
 
+				-- ── VFX DAS CORRENTES: notifica o client para animar as correntes "viajando" ──
+				-- O client receberá travelTime para interpolar a corrente do braço do caster até o victim.
+				-- Após travelTime o client "trava" a corrente na posição final.
 				ReplicateSet:FireAllClients("TethersVFX_Start", {
 					casterChar = Character,
 					victimChar = closestEnemy,
+					travelTime = CHAIN_TRAVEL_TIME, -- novo campo: cliente usa para fazer tween
 				})
+
+				-- Espera a corrente "viajar" visualmente antes de iniciar o pull físico
+				task.wait(CHAIN_TRAVEL_TIME)
+
+				if pullDone then
+					return
+				end
+				if not closestEnemy or not closestEnemy.Parent then
+					stopRotation()
+					iFramesService:RemoveAlliFrames(Character)
+					StunHandler:Unstun(Character, CasterStun)
+					UserTrack:AdjustSpeed(1)
+					return
+				end
 
 				local PullTarget = (HumRP.CFrame * CFrame.new(PULL_OFFSET)).Position
 
@@ -503,6 +557,9 @@ return {
 						end
 
 						HitList[EnemyCharacter] = true
+
+						-- Cancela PerfectKnockback de qualquer inimigo atingido pela hitbox AoE
+						cancelAllKnockbackStates(EnemyCharacter)
 
 						local HitInfo = DamageHandler:TakeDamage(
 							Character,
