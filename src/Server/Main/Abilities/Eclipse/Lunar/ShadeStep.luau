@@ -18,12 +18,12 @@ local DASH_HIT_SIZE = Vector3.new(10, 10, DASH_RANGE)
 local DASH_DAMAGE = 18
 local DASH_STUN = 1.2
 local DASH_TWEEN_TIME = 0.12
-local DASH_WALL_OFFSET = 2.5
+local DASH_WALL_OFFSET = 3
 
-local BALL_SIZE = Vector3.new(6, 6, 6)
-local BALL_TRAVEL_TIME = 0.55
-local BALL_DAMAGE = 14
-local BALL_STUN = 0.8
+local BEAM_RANGE = 70
+local BEAM_HIT_SIZE = Vector3.new(10, 10, BEAM_RANGE)
+local BEAM_DAMAGE = 30
+local BEAM_STUN = 1.5
 
 local WallRayParams = RaycastParams.new()
 WallRayParams.FilterType = Enum.RaycastFilterType.Include
@@ -32,6 +32,16 @@ WallRayParams.FilterDescendantsInstances = {
 	workspace.Map:WaitForChild("Miscellaneous"),
 	workspace.Map:WaitForChild("Borders"),
 }
+
+local function getSafeRange(originPos, lookFlat, range)
+	local blockSize = Vector3.new(3.5, 5, 1)
+	local originCF = CFrame.new(originPos, originPos + lookFlat)
+	local result = workspace:Blockcast(originCF, blockSize, lookFlat * range, WallRayParams)
+	if result then
+		return math.max(0, result.Distance - DASH_WALL_OFFSET)
+	end
+	return range
+end
 
 return {
 	Start = function(Player, Tool)
@@ -46,56 +56,63 @@ return {
 			return
 		end
 
-		local casterStun = StunHandler:Stun(Character, nil, true, 0, 0, true)
+		local cleanupDone = false
+		local function doFullCleanup()
+			if cleanupDone then
+				return
+			end
+			cleanupDone = true
+			Humanoid.WalkSpeed = 16
+			HumRP.Anchored = false
+			Humanoid.AutoRotate = true
+			iFramesService:RemoveAlliFrames(Character)
+			if Player then
+				ReplicateSet:FireClient(Player, "StopShadestepAimControl", {})
+			end
+		end
+
 		iFramesService:AddAlliFrames(Character)
+		local dashStun = StunHandler:Stun(Character, nil, true, 0, 0, true)
 
 		ReplicateSet:FireAllClients("ShadestepBegin", { func = "ShadestepBeginStart", char = Character })
+		ReplicateSet:FireAllClients("ShadestepBeam", { func = "Startup", char = Character })
 
 		local UserAnimation = MoveAnims.Eclipse.Lunar.ShadestepBegin
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
 
+		local hitReached = false
+
 		table.insert(
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("hit"):Once(function()
+				hitReached = true
+
 				local lv = HumRP.CFrame.LookVector
 				local lookFlat = Vector3.new(lv.X, 0, lv.Z).Unit
 				local originPos = HumRP.Position
 
-				local wallHit = workspace:Raycast(originPos, lookFlat * DASH_RANGE, WallRayParams)
-				local safeRange = if wallHit
-					then math.max(0, (wallHit.Position - originPos).Magnitude - DASH_WALL_OFFSET)
-					else DASH_RANGE
-
+				local safeRange = getSafeRange(originPos, lookFlat, DASH_RANGE)
 				local endPos = originPos + lookFlat * safeRange
 				local endCFrame = CFrame.new(endPos, endPos + lookFlat)
 
-				local actualRange = safeRange
-				local dashCenter = originPos + lookFlat * (actualRange / 2)
-				local dashHitSize = Vector3.new(DASH_HIT_SIZE.X, DASH_HIT_SIZE.Y, actualRange)
+				local dashCenter = originPos + lookFlat * (safeRange / 2)
+				local dashHitSize = Vector3.new(DASH_HIT_SIZE.X, DASH_HIT_SIZE.Y, math.max(safeRange, 1))
 				local dashCF = CFrame.new(dashCenter, dashCenter + lookFlat)
 				local dashHitList = {}
 
-				HitboxHandler:SimpleOnce(
-					dashCF,
-					dashHitSize,
-					CFrame.new(0, 0, 0),
-					{ Character },
-					nil,
-					nil,
-					function(enemyChar)
-						if table.find(dashHitList, enemyChar) then
-							return
-						end
-						local EnemyHum = enemyChar:FindFirstChild("Humanoid")
-						if not EnemyHum or EnemyHum.Health <= 0 then
-							return
-						end
-						if iFramesService:HasiFrame(enemyChar, Tool.Name) then
-							return
-						end
-						table.insert(dashHitList, enemyChar)
+				HitboxHandler:SimpleOnce(dashCF, dashHitSize, CFrame.new(), { Character }, nil, nil, function(enemyChar)
+					if table.find(dashHitList, enemyChar) then
+						return
 					end
-				)
+					local EnemyHum = enemyChar:FindFirstChild("Humanoid")
+					if not EnemyHum or EnemyHum.Health <= 0 then
+						return
+					end
+					if iFramesService:HasiFrame(enemyChar, Tool.Name) then
+						return
+					end
+					table.insert(dashHitList, enemyChar)
+				end)
 
 				local dashTween = TweenService:Create(
 					HumRP,
@@ -104,6 +121,10 @@ return {
 				)
 				dashTween:Play()
 				dashTween.Completed:Wait()
+
+				ReplicateSet:FireAllClients("ShadestepBegin", { func = "ShadestepBeginEnd", char = Character })
+
+				Humanoid.WalkSpeed = 0
 
 				for _, enemyChar in dashHitList do
 					local EnemyHum = enemyChar:FindFirstChild("Humanoid")
@@ -125,78 +146,120 @@ return {
 					end
 				end
 
-				task.delay(0.6, function()
-					if not Character.Parent or not HumRP.Parent then
-						ReplicateSet:FireAllClients("ShadestepBegin", { func = "ShadestepBeginEnd", char = Character })
-						iFramesService:RemoveAlliFrames(Character)
-						StunHandler:Unstun(Character, casterStun)
+				StunHandler:Unstun(Character, dashStun)
+				ReplicateSet:FireAllClients("ShadestepBeam", { func = "DestroyStartup", char = Character })
+
+				task.spawn(function()
+					if not Character.Parent then
+						doFullCleanup()
 						return
 					end
 
-					local BallPart = Instance.new("Part")
-					BallPart.Name = "ShadestepBall"
-					BallPart.Anchored = true
-					BallPart.CanCollide = false
-					BallPart.CanTouch = false
-					BallPart.Transparency = 1
-					BallPart.Size = BALL_SIZE
-					BallPart.CFrame = endCFrame
-					BallPart.Parent = workspace
+					Humanoid.AutoRotate = false
 
-					local ballHitList = {}
+					local BeamAnimation = MoveAnims.Eclipse.Lunar.ShadestepBeam
+					local BeamTrack, BeamEvents = AnimationService:getAnimationTrack(Character, BeamAnimation)
 
-					local ballHitbox = HitboxHandler.new()
-					ballHitbox.Instance = BallPart
-					ballHitbox.Size = BALL_SIZE
-					ballHitbox.Ignore = { Character }
-					ballHitbox.ResetCharactersList = true
-					ballHitbox.onTouch = function(enemyChar)
-						if table.find(ballHitList, enemyChar) then
-							return
-						end
-						local EnemyHum = enemyChar:FindFirstChild("Humanoid")
-						if not EnemyHum or EnemyHum.Health <= 0 then
-							return
-						end
-						if iFramesService:HasiFrame(enemyChar, Tool.Name) then
-							return
-						end
-						table.insert(ballHitList, enemyChar)
+					local chargeReached = false
 
-						DamageHandler:TakeDamage(
-							Character,
-							EnemyHum,
-							BALL_DAMAGE,
-							BALL_STUN,
-							nil,
-							false,
-							false,
-							true,
-							true,
-							false,
-							nil,
-							nil
-						)
-					end
+					table.insert(
+						BeamEvents,
+						BeamTrack:GetMarkerReachedSignal("charge"):Once(function()
+							chargeReached = true
+							BeamTrack:AdjustSpeed(0)
 
-					ballHitbox:Start()
+							task.wait(1)
 
-					local ballTween = TweenService:Create(
-						BallPart,
-						TweenInfo.new(BALL_TRAVEL_TIME, Enum.EasingStyle.Linear),
-						{ CFrame = CFrame.new(originPos, originPos + lookFlat) }
+							if not Character.Parent then
+								doFullCleanup()
+								return
+							end
+
+							Humanoid.AutoRotate = false
+
+							BeamTrack:AdjustSpeed(1)
+
+							ReplicateSet:FireAllClients("ShadestepBeam", { func = "ChargeEffect", char = Character })
+
+							local AIM_DURATION = 3
+							if Player then
+								ReplicateSet:FireClient(Player, "StartShadestepAimControl", { Duration = AIM_DURATION })
+							end
+
+							task.wait(AIM_DURATION)
+
+							if not Character.Parent then
+								doFullCleanup()
+								return
+							end
+
+							local lv2 = HumRP.CFrame.LookVector
+							local lookFlat2 = Vector3.new(lv2.X, 0, lv2.Z).Unit
+							local originPos2 = HumRP.Position
+
+							local beamCenter = originPos2 + lookFlat2 * (BEAM_RANGE / 2)
+							local beamCF = CFrame.new(beamCenter, beamCenter + lookFlat2)
+
+							local beamHitList = {}
+							HitboxHandler:SimpleOnce(
+								beamCF,
+								BEAM_HIT_SIZE,
+								CFrame.new(),
+								{ Character },
+								nil,
+								nil,
+								function(enemyChar)
+									if table.find(beamHitList, enemyChar) then
+										return
+									end
+									local EnemyHum = enemyChar:FindFirstChild("Humanoid")
+									if not EnemyHum or EnemyHum.Health <= 0 then
+										return
+									end
+									if iFramesService:HasiFrame(enemyChar, Tool.Name) then
+										return
+									end
+									table.insert(beamHitList, enemyChar)
+								end
+							)
+
+							ReplicateSet:FireAllClients("ShadestepBeam", { func = "FireBeam", char = Character })
+
+							for _, enemyChar in beamHitList do
+								local EnemyHum = enemyChar:FindFirstChild("Humanoid")
+								if EnemyHum and EnemyHum.Health > 0 then
+									DamageHandler:TakeDamage(
+										Character,
+										EnemyHum,
+										BEAM_DAMAGE,
+										BEAM_STUN,
+										nil,
+										false,
+										false,
+										true,
+										true,
+										false,
+										nil,
+										nil
+									)
+								end
+							end
+
+							doFullCleanup()
+						end)
 					)
 
-					ballTween.Completed:Once(function()
-						ballHitbox:Stop()
-						BallPart:Destroy()
-
-						ReplicateSet:FireAllClients("ShadestepBegin", { func = "ShadestepBeginEnd", char = Character })
-						iFramesService:RemoveAlliFrames(Character)
-						StunHandler:Unstun(Character, casterStun)
+					BeamTrack.Stopped:Once(function()
+						for _, v in BeamEvents do
+							v:Disconnect()
+						end
+						if not chargeReached then
+							doFullCleanup()
+						end
 					end)
 
-					ballTween:Play()
+					AnimationService:stopAll(Character)
+					AnimationService:playAnimation(Character, BeamAnimation)
 				end)
 			end)
 		)
@@ -204,6 +267,9 @@ return {
 		UserTrack.Stopped:Once(function()
 			for _, v in UserEvents do
 				v:Disconnect()
+			end
+			if not hitReached then
+				doFullCleanup()
 			end
 		end)
 

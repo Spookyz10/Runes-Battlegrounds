@@ -33,6 +33,7 @@ local RPModules = RS.Shared.Modules
 
 local InfoModule = require(RS.Shared.Info)
 local IndicatorService = require(script.Functions.Tasks.Shared.IndicatorService)
+local RotationController = require(script.Functions.Tasks.Shared.RotationController)
 local Animations = RS.Resources.Animations
 
 local gameSettings = UserSettings().GameSettings
@@ -54,26 +55,7 @@ local PlayerGui = Player.PlayerGui
 local shiftlockActive = false
 local shiftlockDebounce = false
 
-local function Shiftlock()
-	if shared._lunarAimActive then
-		return
-	end
-	if not Character:HasTag("CantRotate") then
-		Humanoid.AutoRotate = false
-		HumRP.CFrame = CFrame.new(
-			HumRP.Position,
-			Vector3.new(Camera.CFrame.LookVector.X * 900000, HumRP.Position.Y, Camera.CFrame.LookVector.Z * 900000)
-		)
-		Camera.CFrame = Camera.CFrame * CFrame.new(1.75, 0, 0)
-	end
-end
-
-local lastShiftlock
-if shared.IsMobile then
-	shiftlockActive = true
-	shared.customShiftlockActive = true
-	lastShiftlock = RNS.RenderStepped:Connect(Shiftlock)
-end
+RotationController:SetCharacter(Character, HumRP, Humanoid)
 
 local function setShiftlock(enabled)
 	if shiftlockDebounce then
@@ -88,21 +70,36 @@ local function setShiftlock(enabled)
 	shared.customShiftlockActive = enabled
 
 	if enabled then
-		if not lastShiftlock then
-			lastShiftlock = RNS.RenderStepped:Connect(Shiftlock)
-		end
+		RotationController:Request("shiftlock", 1, function()
+			return workspace.CurrentCamera.CFrame.LookVector
+		end)
 		Comunicator:FireServer("SetConfig", { CN = "Shiftlock", V = true })
 	else
-		if lastShiftlock then
-			lastShiftlock:Disconnect()
-			lastShiftlock = nil
-		end
+		RotationController:Release("shiftlock")
 		if not Character:HasTag("CantRotate") then
 			Humanoid.AutoRotate = true
 		end
 		Comunicator:FireServer("SetConfig", { CN = "Shiftlock", V = false })
 	end
 end
+
+if shared.IsMobile then
+	shiftlockActive = true
+	shared.customShiftlockActive = true
+	RotationController:Request("shiftlock", 1, function()
+		return workspace.CurrentCamera.CFrame.LookVector
+	end)
+end
+
+RNS.RenderStepped:Connect(function()
+	if not HumRP or not HumRP.Parent then
+		return
+	end
+	RotationController:Step()
+	if shiftlockActive and not Character:HasTag("CantRotate") then
+		Camera.CFrame = Camera.CFrame * CFrame.new(1.75, 0, 0)
+	end
+end)
 
 Player:GetPropertyChangedSignal("Character"):Connect(function()
 	if not Player or not Player.Parent then
@@ -119,15 +116,14 @@ Player:GetPropertyChangedSignal("Character"):Connect(function()
 	Animator = Humanoid:FindFirstChild("Animator") or Humanoid:WaitForChild("Animator", 10)
 	HumRP = Character:FindFirstChild("HumanoidRootPart") or Character:WaitForChild("HumanoidRootPart", 10)
 
-	if lastShiftlock then
-		lastShiftlock:Disconnect()
-		lastShiftlock = nil
-	end
+	RotationController:SetCharacter(Character, HumRP, Humanoid)
 
 	if shared.IsMobile then
 		shiftlockActive = true
 		shared.customShiftlockActive = true
-		lastShiftlock = RNS.RenderStepped:Connect(Shiftlock)
+		RotationController:Request("shiftlock", 1, function()
+			return workspace.CurrentCamera.CFrame.LookVector
+		end)
 	end
 end)
 
@@ -510,10 +506,6 @@ local function DashCheck()
 
 	Comunicator:FireServer("Keypress", { Key = Enum.KeyCode.Q, Direction = currDirection, ClientCFrame = HumRP.CFrame })
 end
-
--- ============================================================
--- COMMUNICATION FUNCTION
--- ============================================================
 
 local function ComunicationFunction(func, params)
 	if func == "TriggerPartsCollide" then
@@ -969,10 +961,6 @@ end
 Comunicator.OnClientEvent:Connect(ComunicationFunction)
 ComRemotes.Local.Event:Connect(ComunicationFunction)
 
--- ============================================================
--- TOPBAR / ICON SETUP
--- ============================================================
-
 task.spawn(function()
 	if shared.IsMobile and (not DashButton or not PunchButton or not BlockButton or not ShiftlockButton) then
 		repeat
@@ -1290,10 +1278,6 @@ task.spawn(function()
 	loadedTopBar.Parent = Player
 end)
 
--- ============================================================
--- COMBAT KEYBINDS
--- ============================================================
-
 local Keycodes = Enum.KeyCode
 local UserInputTypes = Enum.UserInputType
 local combatKeybinds = {}
@@ -1389,10 +1373,6 @@ UIS.InputEnded:Connect(function(input, gameProccessedEvent)
 		inputChanged = nil
 	end
 end)
-
--- ============================================================
--- UTILITY / MISC
--- ============================================================
 
 shared.detectAir = function(Params)
 	local Char = Params.Char

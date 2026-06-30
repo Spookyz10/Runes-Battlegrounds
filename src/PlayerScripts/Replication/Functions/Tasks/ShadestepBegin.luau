@@ -28,7 +28,7 @@ function Handlers.ShadestepBeginStart(params)
 
 	-- Deixa todas as BaseParts semi-transparentes (exceto HumanoidRootPart)
 	for _, part in char:GetDescendants() do
-		if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+		if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" and not string.find("Hitbox", part.Name) then
 			savedTransparencies[char][part] = part.Transparency
 			part.Transparency = SHADOW_TRANSPARENCY
 		end
