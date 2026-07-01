@@ -3,12 +3,15 @@ local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ServerModules = ServerStorage.Modules
+local ReplicatedModules = ReplicatedStorage.Shared.Modules
 
 local StunHandler = require(ServerModules.StunHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local AnimationService = require(ServerModules.AnimationService)
+
+local Freeze = require(ReplicatedModules.Utility.Freeze)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
@@ -19,6 +22,10 @@ local DASH_DAMAGE = 18
 local DASH_STUN = 1.2
 local DASH_TWEEN_TIME = 0.12
 local DASH_WALL_OFFSET = 3
+
+local POST_CHARGE_FREE_TIME = 0.5 -- tempo livre depois do marker "charge" antes de travar
+local CHARGE_LOCK_TIME = 1 -- tempo travado com o efeito de charge antes de disparar o beam
+local POST_BEAM_LOCK_TIME = 1 -- tempo travado depois de disparar o beam antes de soltar o player
 
 local BEAM_RANGE = 70
 local BEAM_HIT_SIZE = Vector3.new(10, 10, BEAM_RANGE)
@@ -57,22 +64,35 @@ return {
 		end
 
 		local cleanupDone = false
+		local activeStun = nil
+		local lockAnchor = nil
+
+		local function unstunNow()
+			if activeStun then
+				StunHandler:Unstun(Character, activeStun)
+				activeStun = nil
+			end
+		end
+
 		local function doFullCleanup()
 			if cleanupDone then
 				return
 			end
 			cleanupDone = true
 			Humanoid.WalkSpeed = 16
-			HumRP.Anchored = false
-			Humanoid.AutoRotate = true
+
+			unstunNow()
+			Freeze.Release(Character, lockAnchor, false)
+			lockAnchor = nil
+
 			iFramesService:RemoveAlliFrames(Character)
-			if Player then
-				ReplicateSet:FireClient(Player, "StopShadestepAimControl", {})
-			end
 		end
 
 		iFramesService:AddAlliFrames(Character)
-		local dashStun = StunHandler:Stun(Character, nil, true, 0, 0, true)
+
+		-- Windup: travado total até o dash acontecer.
+		activeStun = StunHandler:Stun(Character, nil, true, 0, 0, true)
+		lockAnchor = Freeze.Lock(Character)
 
 		ReplicateSet:FireAllClients("ShadestepBegin", { func = "ShadestepBeginStart", char = Character })
 		ReplicateSet:FireAllClients("ShadestepBeam", { func = "Startup", char = Character })
@@ -114,6 +134,10 @@ return {
 					table.insert(dashHitList, enemyChar)
 				end)
 
+				-- Solta só a posição (mantém rotação travada) pra Tween poder mover o HRP.
+				Freeze.Release(Character, lockAnchor, true)
+				lockAnchor = nil
+
 				local dashTween = TweenService:Create(
 					HumRP,
 					TweenInfo.new(DASH_TWEEN_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
@@ -123,8 +147,6 @@ return {
 				dashTween.Completed:Wait()
 
 				ReplicateSet:FireAllClients("ShadestepBegin", { func = "ShadestepBeginEnd", char = Character })
-
-				Humanoid.WalkSpeed = 0
 
 				for _, enemyChar in dashHitList do
 					local EnemyHum = enemyChar:FindFirstChild("Humanoid")
@@ -146,16 +168,18 @@ return {
 					end
 				end
 
-				StunHandler:Unstun(Character, dashStun)
 				ReplicateSet:FireAllClients("ShadestepBeam", { func = "DestroyStartup", char = Character })
+
+				-- Dash acabou: devolve controle total pro player (posição + rotação livres)
+				-- até o beam estar prestes a disparar.
+				unstunNow()
+				Character:RemoveTag("CantRotate")
 
 				task.spawn(function()
 					if not Character.Parent then
 						doFullCleanup()
 						return
 					end
-
-					Humanoid.AutoRotate = false
 
 					local BeamAnimation = MoveAnims.Eclipse.Lunar.ShadestepBeam
 					local BeamTrack, BeamEvents = AnimationService:getAnimationTrack(Character, BeamAnimation)
@@ -166,32 +190,30 @@ return {
 						BeamEvents,
 						BeamTrack:GetMarkerReachedSignal("charge"):Once(function()
 							chargeReached = true
-							BeamTrack:AdjustSpeed(0)
 
-							task.wait(1)
+							-- Ainda com controle livre por mais um pouco.
+							task.wait(POST_CHARGE_FREE_TIME)
 
 							if not Character.Parent then
 								doFullCleanup()
 								return
 							end
 
-							Humanoid.AutoRotate = false
-
-							BeamTrack:AdjustSpeed(1)
+							-- Agora trava tudo pro efeito de charge + disparo do beam.
+							BeamTrack:AdjustSpeed(0)
+							activeStun = StunHandler:Stun(Character, nil, true, 0, 0, true)
+							lockAnchor = Freeze.Lock(Character)
 
 							ReplicateSet:FireAllClients("ShadestepBeam", { func = "ChargeEffect", char = Character })
 
-							local AIM_DURATION = 3
-							if Player then
-								ReplicateSet:FireClient(Player, "StartShadestepAimControl", { Duration = AIM_DURATION })
-							end
-
-							task.wait(AIM_DURATION)
+							task.wait(CHARGE_LOCK_TIME)
 
 							if not Character.Parent then
 								doFullCleanup()
 								return
 							end
+
+							BeamTrack:AdjustSpeed(1)
 
 							local lv2 = HumRP.CFrame.LookVector
 							local lookFlat2 = Vector3.new(lv2.X, 0, lv2.Z).Unit
@@ -245,6 +267,9 @@ return {
 								end
 							end
 
+							-- Beam disparado: segura travado por mais um pouco antes de soltar o player.
+							task.wait(POST_BEAM_LOCK_TIME)
+
 							doFullCleanup()
 						end)
 					)
@@ -260,6 +285,7 @@ return {
 
 					AnimationService:stopAll(Character)
 					AnimationService:playAnimation(Character, BeamAnimation)
+					Humanoid.WalkSpeed = 0
 				end)
 			end)
 		)
