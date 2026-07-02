@@ -15,7 +15,7 @@ return function(Params)
 		return
 	end
 
-	local SlashAsset = CharacterAssets.Eclipse.Lunar:FindFirstChild("Slash" .. Index)
+	local SlashAsset = CharacterAssets.Eclipse.Lunar.Prowl:FindFirstChild("Slash" .. Index)
 	if not SlashAsset then
 		return
 	end

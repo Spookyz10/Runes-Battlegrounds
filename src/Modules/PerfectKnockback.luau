@@ -22,25 +22,20 @@ local StartAirDetect = ServerStorage.Bindables.AirDetector
 
 Perfect.Active = {}
 
--- Força o Humanoid a sair do estado de knockback e retomar animações normais.
--- Sem isso, mesmo após stopAll, o personagem fica travado na última pose da
--- animação de knockback até o próximo input de movimento.
+local MAX_AIR_TIME = 10
+
 local function resetHumanoidState(EnemyCharacter)
 	local Humanoid = EnemyCharacter:FindFirstChild("Humanoid")
 	if not Humanoid then
 		return
 	end
 
-	-- Garante que AutoRotate volte (pode ter sido desligado pelo ragdoll/knockback)
 	Humanoid.AutoRotate = true
 
-	-- Re-habilita estados que podem ter sido desligados
 	Humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp, true)
 	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
 	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Running, true)
 
-	-- Força a transição de estado: sai do Physics/PlatformStand e volta ao Running
-	-- Isso faz o Animator reativar as animações padrão (idle/walk) corretamente
 	if
 		Humanoid:GetState() == Enum.HumanoidStateType.Physics
 		or Humanoid:GetState() == Enum.HumanoidStateType.PlatformStanding
@@ -49,25 +44,19 @@ local function resetHumanoidState(EnemyCharacter)
 		Humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
 	end
 
-	-- Toca o idle padrão do R6 explicitamente para não ficar na pose congelada.
-	-- O Animator do Roblox normalmente retoma sozinho, mas forçar garante.
 	local Animator = Humanoid:FindFirstChildOfClass("Animator")
 	if Animator then
-		-- Para qualquer track ainda rodando (inclusive no speed 0)
 		for _, track in Animator:GetPlayingAnimationTracks() do
 			track:AdjustSpeed(1)
 			track:Stop(0)
 		end
 
-		-- Carrega e toca o idle padrão do Roblox brevemente para "descongelar"
-		-- O sistema de animação padrão do personagem vai tomar controle logo em seguida
 		local idleAnim = Instance.new("Animation")
-		idleAnim.AnimationId = "rbxassetid://507766388" -- R6 Idle padrão
+		idleAnim.AnimationId = "rbxassetid://507766388"
 		local idleTrack = Animator:LoadAnimation(idleAnim)
 		idleTrack.Priority = Enum.AnimationPriority.Core
 		idleTrack:Play(0)
 
-		-- Remove o idle forçado rapidamente — o sistema padrão assume o controle
 		task.delay(0.1, function()
 			if idleTrack and idleTrack.IsPlaying then
 				idleTrack:Stop(0.15)
@@ -126,7 +115,6 @@ function Perfect:Cancel(EnemyCharacter)
 	EnemyCharacter:RemoveTag("CantRotate")
 	EnemyCharacter:RemoveTag("Knockbacked")
 
-	-- Reseta o estado do Humanoid e força saída da pose congelada
 	resetHumanoidState(EnemyCharacter)
 end
 
@@ -179,7 +167,6 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 	end
 
 	local Touched = false
-	local Falling = false
 	local StartTime = os.clock()
 
 	local BodyVelocity
@@ -253,7 +240,6 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 	}
 	Perfect.Active[EnemyCharacter] = ActiveData
 
-	-- Cancela se receber dano enquanto a animação estiver freezada (Speed == 0)
 	ActiveData.DamageConn = EnemyHumanoid.HealthChanged:Connect(function(newHealth)
 		local data = Perfect.Active[EnemyCharacter]
 		if not data or data ~= ActiveData then
@@ -292,7 +278,6 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 		EnemyCharacter:RemoveTag("CantRotate")
 		EnemyCharacter:RemoveTag("Knockbacked")
 
-		-- Reseta o estado ao fim natural da animação também
 		resetHumanoidState(EnemyCharacter)
 	end)
 
@@ -394,12 +379,6 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 		end
 	end)
 
-	task.delay(Params.FallingDetectDelay + Params.StunFloatTime, function()
-		if BodyVelocity and BodyVelocity.Parent then
-			Falling = true
-		end
-	end)
-
 	local function impact(Time)
 		if Touched then
 			return
@@ -440,9 +419,7 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 	end
 
 	local Collision
-	local frameCount = 0
 	Collision = RunService.Heartbeat:Connect(function()
-		frameCount += 1
 		local FinalTime = os.clock() - StartTime
 
 		if EnemyCharacter:GetAttribute("Stunned") == false or not EnemyCharacter.Parent then
@@ -451,26 +428,28 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 			return
 		end
 
+		if FinalTime >= MAX_AIR_TIME then
+			Collision:Disconnect()
+			impact(FinalTime)
+			return
+		end
+
+		if FinalTime < Params.FallingDetectDelay then
+			return
+		end
+
 		local RayParams = RaycastParams.new()
 		RayParams.FilterType = Enum.RaycastFilterType.Include
 		RayParams.FilterDescendantsInstances = { workspace.Map }
 
 		local rayOrigin = HumanoidRootPart.Position
-		local rayDir
-
-		if FinalTime < 1.5 then
-			rayDir = Vector3.new(0, -3.45, 0)
-		else
-			rayDir = Vector3.new(0, -27.5, 0)
-		end
+		local rayDir = Vector3.new(0, -5, 0)
 
 		local Raycast = workspace:Raycast(rayOrigin, rayDir, RayParams)
 
 		if Raycast then
-			if Falling then
-				Collision:Disconnect()
-				impact(FinalTime)
-			end
+			Collision:Disconnect()
+			impact(FinalTime)
 		end
 	end)
 

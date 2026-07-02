@@ -6,8 +6,17 @@ local BLACK_COLOR = BrickColor.new("Really black").Color
 
 local ACTIVE = {}
 
-local function shouldSkip(part)
-	return part.Name == "HumanoidRootPart" or string.find(part.Name, "Hitbox") ~= nil
+local function shouldSkip(part, character)
+	if part.Name == "HumanoidRootPart" or string.find(part.Name, "Hitbox") ~= nil then
+		return true
+	end
+
+	local EquippedRune = character:FindFirstChild("EquippedRune")
+	if EquippedRune and part:IsDescendantOf(EquippedRune) then
+		return true
+	end
+
+	return false
 end
 
 local function stop(Character)
@@ -55,7 +64,7 @@ local function applyBurntLook(Character, data)
 
 	for _, descendant in Character:GetDescendants() do
 		if descendant:IsA("BasePart") then
-			if not shouldSkip(descendant) then
+			if not shouldSkip(descendant, Character) then
 				data.colors[descendant] = descendant.Color
 				descendant.Color = BLACK_COLOR
 			end
@@ -94,7 +103,7 @@ local function applyAura(Character, data)
 	data.auraObjects = {}
 
 	for _, bodyPart in Character:GetDescendants() do
-		if bodyPart:IsA("BasePart") and not shouldSkip(bodyPart) then
+		if bodyPart:IsA("BasePart") and not shouldSkip(bodyPart, Character) then
 			for _, auraObject in immolatedAura:GetChildren() do
 				if auraObject:IsA("ParticleEmitter") then
 					local auraClone = auraObject:Clone()
