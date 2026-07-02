@@ -19,13 +19,16 @@ local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 local DASH_RANGE = 45
 local DASH_HIT_SIZE = Vector3.new(10, 10, DASH_RANGE)
 local DASH_DAMAGE = 18
-local DASH_STUN = 1.2
+local DASH_STUN = 1.8
 local DASH_TWEEN_TIME = 0.12
 local DASH_WALL_OFFSET = 3
 
-local POST_CHARGE_FREE_TIME = 0.5 -- tempo livre depois do marker "charge" antes de travar
-local CHARGE_LOCK_TIME = 1 -- tempo travado com o efeito de charge antes de disparar o beam
-local POST_BEAM_LOCK_TIME = 1 -- tempo travado depois de disparar o beam antes de soltar o player
+local PRE_DASH_CHARGE_DELAY = 0.2
+local PRE_DASH_CHARGE_LOCK_TIME = 0.3
+
+local POST_CHARGE_FREE_TIME = 0.5
+
+local POST_BEAM_LOCK_TIME = 1
 
 local BEAM_RANGE = 70
 local BEAM_HIT_SIZE = Vector3.new(10, 10, BEAM_RANGE)
@@ -67,13 +70,6 @@ return {
 		local activeStun = nil
 		local lockAnchor = nil
 
-		local function unstunNow()
-			if activeStun then
-				StunHandler:Unstun(Character, activeStun)
-				activeStun = nil
-			end
-		end
-
 		local function doFullCleanup()
 			if cleanupDone then
 				return
@@ -81,16 +77,22 @@ return {
 			cleanupDone = true
 			Humanoid.WalkSpeed = 16
 
-			unstunNow()
-			Freeze.Release(Character, lockAnchor, false)
-			lockAnchor = nil
+			if activeStun then
+				StunHandler:Unstun(Character, activeStun)
+				activeStun = nil
+			end
 
+			if lockAnchor then
+				Freeze.Release(Character, lockAnchor, false)
+				lockAnchor = nil
+			end
+
+			Character:RemoveTag("CantRotate")
 			iFramesService:RemoveAlliFrames(Character)
 		end
 
 		iFramesService:AddAlliFrames(Character)
 
-		-- Windup: travado total até o dash acontecer.
 		activeStun = StunHandler:Stun(Character, nil, true, 0, 0, true)
 		lockAnchor = Freeze.Lock(Character)
 
@@ -134,9 +136,7 @@ return {
 					table.insert(dashHitList, enemyChar)
 				end)
 
-				-- Solta só a posição (mantém rotação travada) pra Tween poder mover o HRP.
 				Freeze.Release(Character, lockAnchor, true)
-				lockAnchor = nil
 
 				local dashTween = TweenService:Create(
 					HumRP,
@@ -145,6 +145,9 @@ return {
 				)
 				dashTween:Play()
 				dashTween.Completed:Wait()
+
+				lockAnchor = nil
+				Character:RemoveTag("CantRotate")
 
 				ReplicateSet:FireAllClients("ShadestepBegin", { func = "ShadestepBeginEnd", char = Character })
 
@@ -170,10 +173,7 @@ return {
 
 				ReplicateSet:FireAllClients("ShadestepBeam", { func = "DestroyStartup", char = Character })
 
-				-- Dash acabou: devolve controle total pro player (posição + rotação livres)
-				-- até o beam estar prestes a disparar.
-				unstunNow()
-				Character:RemoveTag("CantRotate")
+				Humanoid.WalkSpeed = 16
 
 				task.spawn(function()
 					if not Character.Parent then
@@ -190,8 +190,8 @@ return {
 						BeamEvents,
 						BeamTrack:GetMarkerReachedSignal("charge"):Once(function()
 							chargeReached = true
+							BeamTrack:AdjustSpeed(0)
 
-							-- Ainda com controle livre por mais um pouco.
 							task.wait(POST_CHARGE_FREE_TIME)
 
 							if not Character.Parent then
@@ -199,19 +199,17 @@ return {
 								return
 							end
 
-							-- Agora trava tudo pro efeito de charge + disparo do beam.
-							BeamTrack:AdjustSpeed(0)
-							activeStun = StunHandler:Stun(Character, nil, true, 0, 0, true)
+							Humanoid.WalkSpeed = 0
 							lockAnchor = Freeze.Lock(Character)
 
 							ReplicateSet:FireAllClients("ShadestepBeam", { func = "ChargeEffect", char = Character })
-
-							task.wait(CHARGE_LOCK_TIME)
 
 							if not Character.Parent then
 								doFullCleanup()
 								return
 							end
+
+							task.wait(0.4)
 
 							BeamTrack:AdjustSpeed(1)
 
@@ -267,7 +265,6 @@ return {
 								end
 							end
 
-							-- Beam disparado: segura travado por mais um pouco antes de soltar o player.
 							task.wait(POST_BEAM_LOCK_TIME)
 
 							doFullCleanup()
@@ -301,5 +298,23 @@ return {
 
 		AnimationService:stopAll(Character)
 		AnimationService:playAnimation(Character, UserAnimation)
+
+		task.spawn(function()
+			task.wait(PRE_DASH_CHARGE_DELAY)
+
+			if hitReached or not Character.Parent or not UserTrack.IsPlaying then
+				return
+			end
+
+			UserTrack:AdjustSpeed(0)
+
+			task.wait(PRE_DASH_CHARGE_LOCK_TIME)
+
+			if hitReached or not Character.Parent or not UserTrack.IsPlaying then
+				return
+			end
+
+			UserTrack:AdjustSpeed(1)
+		end)
 	end,
 }

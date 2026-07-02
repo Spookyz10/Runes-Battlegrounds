@@ -75,7 +75,7 @@ function Handlers.ChargeEffect(params)
 
 	local chargePart = ShadestepAssets.ChargePart:Clone()
 	chargePart.Parent = workspace
-	chargePart.CFrame = HumRP.CFrame * CFrame.new(0, 0, -3)
+	chargePart.CFrame = HumRP.CFrame * CFrame.new(0, 0, -3) * CFrame.Angles(math.rad(90), 0, 0)
 	ParticlesModule.Emit(chargePart)
 
 	activeData[key].chargePart = chargePart
