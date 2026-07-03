@@ -43,13 +43,9 @@ local InfoModule = require(RS.Shared.Info)
 local processedTools = {}
 
 local TWEEN_SLIDE = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
--- Main sobe/desce: posição relativa dentro do slot
+
 local POS_DOWN = UDim2.new(0.5, 0, 0.5, 125)
 local POS_UP = UDim2.new(0.5, 0, 0.5, 0)
-
--- ── Helpers de hierarquia ────────────────────────────────────────────────────
--- Hierarquia atual:  slot (ImageLabel) → Main (Frame) → Base / CooldownFrame / Icon
--- O tween é sempre no Main, não no slot nem no Base diretamente.
 
 local function getMain(slot)
 	return slot:FindFirstChild("Main")
@@ -70,7 +66,6 @@ local function getIcon(slot)
 	return main and main:FindFirstChild("Icon")
 end
 
--- ── Tween do Main ────────────────────────────────────────────────────────────
 local activeMainTweens: { [GuiObject]: Tween } = {}
 
 local function cancelMainTween(main: GuiObject)

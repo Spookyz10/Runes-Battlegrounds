@@ -101,13 +101,7 @@ local function M1(Player)
 		return
 	end
 
-	local playerMoveset = Player:GetAttribute("Moveset")
-	local playerMode = Player:GetAttribute("MovesetMode_" .. (playerMoveset or ""))
-	if playerMode == "Solar" then
-		if not Character:GetAttribute("UndawnEmpowered") then
-			return
-		end
-	end
+
 
 	local HumRP = Character:FindFirstChild("HumanoidRootPart")
 	if not HumRP then

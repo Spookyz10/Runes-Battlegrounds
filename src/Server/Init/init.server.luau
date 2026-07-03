@@ -28,7 +28,6 @@ local ReplicatedHitboxes = require(SvModules.ReplicatedHitboxes)
 
 local Assets = SvSt.Assets
 local Animations = Assets.Animations
-local CombatAnims = Animations.Combat
 
 local Remotes = RS.Remotes
 local ComunicatorComms = Remotes.Comunicator
@@ -36,6 +35,7 @@ local ComSet = ComunicatorComms.Set
 local ComGet = ComunicatorComms.Get
 local Replication = Remotes.Replicate
 local ReplicateSet = Replication.Set
+local ExtraCdsSet = Remotes.ExtraCds.Set
 
 shared.playerClasses = {}
 
@@ -395,6 +395,7 @@ local ComunicatorFunctions = {
 								RagdollHandler.cancelRagdoll(Humanoid, nil, false, nil, true, true)
 
 								ReplicateSet:FireAllClients("Evasive", { Char = Character })
+								ExtraCdsSet:FireClient(Player, "Evasive", 30)
 
 								Character:SetAttribute("RagdollCancel", false)
 								task.delay(30, function()
@@ -412,6 +413,8 @@ local ComunicatorFunctions = {
 					task.delay(5, function()
 						Character:RemoveTag("DashCD")
 					end)
+
+					ExtraCdsSet:FireClient(Player, "BackDash", 5)
 
 					AnimationService:stopAnimation(Character, Animations.Other.Knockback)
 
@@ -474,6 +477,8 @@ local ComunicatorFunctions = {
 						Character:RemoveTag("CantDash")
 						Character:RemoveTag("DashCD")
 					end)
+
+					ExtraCdsSet:FireClient(Player, "FrontDash", 5)
 
 					for _, v in HumRP:GetChildren() do
 						if v:IsA("LinearVelocity") or v:IsA("BodyVelocity") then
@@ -812,6 +817,8 @@ local ComunicatorFunctions = {
 				task.delay(2, function()
 					Character:RemoveTag("SideDashCD")
 				end)
+
+				ExtraCdsSet:FireClient(Player, Direction .. "Dash", 2)
 
 				Character:AddTag("CantDash")
 				task.delay(0.6, function()
