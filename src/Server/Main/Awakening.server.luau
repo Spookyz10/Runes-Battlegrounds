@@ -2,8 +2,10 @@ local SvSt = game:GetService("ServerStorage")
 local RS = game:GetService("ReplicatedStorage")
 local TS = game:GetService("TweenService")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local InfoModule = require(RS.Shared.Info)
+local Data = require(ReplicatedStorage.Shared.Data).server
 
 local SvModules = SvSt.Modules
 
@@ -60,8 +62,8 @@ local function EndAwakening(Player, Awk0C, AwkTween, DeathConn)
 
 	local moveset = Player:GetAttribute("Moveset")
 	if moveset == "Eclipse" then
-		local playerClass = shared.playerClasses[Player.UserId]
-		local mode = playerClass and playerClass.MovesetModes["Eclipse"]
+		local playerClass = Data[Player]
+		local mode = playerClass and playerClass.MovesetModes("Eclipse")
 		if mode == "Lunar" then
 			ReplicateSet:FireAllClients("LunarAwakenEnd", { char = Character })
 		elseif mode == "Solar" then

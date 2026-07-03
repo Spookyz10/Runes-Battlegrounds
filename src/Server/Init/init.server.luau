@@ -17,15 +17,13 @@ local StunHandler = require(SvModules.StunHandler)
 local MovesetHandlerModule = require(SvModules.MovesetHandler)
 local RagdollHandler = require(SvModules.RagdollHandler)
 local CollisionsModule = require(SvModules.CollisionsModule)
-local ProfileStore = require(SvSt.ServerPackages.profilestore)
 local DamageHandler = require(SvModules.DamageHandler)
 local AnimationService = require(SvModules.AnimationService)
 local Knockback = require(SvModules.BodymoverService)
 local iFramesService = require(SvModules.iFramesService)
-local PlayerClass = require(SvModules.PlayerClass)
 local CombatUtils = require(SvModules.CombatUtils)
 local ReplicatedHitboxes = require(SvModules.ReplicatedHitboxes)
-
+local Data = require(RS.Shared.Data).server
 local Assets = SvSt.Assets
 local Animations = Assets.Animations
 
@@ -37,13 +35,7 @@ local Replication = Remotes.Replicate
 local ReplicateSet = Replication.Set
 local ExtraCdsSet = Remotes.ExtraCds.Set
 
-shared.playerClasses = {}
-
 local AnimationsTable = {}
-local Kills = {}
-
-local Profiles = {}
-local PlayerStore = ProfileStore.New("PlayerData", PlayerClass.defaultData)
 
 pcall(function()
 	PhysicsService:RegisterCollisionGroup("NonPColDebri")
@@ -288,20 +280,6 @@ local function HumanoidDied(Player)
 			end
 		end
 	end)
-end
-
-local function SaveData(userId)
-	local profile = Profiles[userId]
-	if not profile then
-		return
-	end
-
-	profile:EndSession()
-
-	Profiles[userId] = nil
-	shared.playerClasses[userId] = nil
-	Kills[userId] = nil
-	PlayerClass:RemoveClass(userId)
 end
 
 local ComunicatorFunctions = {
@@ -901,11 +879,6 @@ local ComunicatorFunctions = {
 			return
 		end
 
-		local playerClass = shared.playerClasses[Player.UserId]
-		if not playerClass then
-			return
-		end
-
 		local DamagerLog = Player.Character:FindFirstChild("DamagerLog")
 		local DamagedLog = Player.Character:FindFirstChild("DamagedLog")
 
@@ -995,9 +968,7 @@ local function AddStarterPlayer(Player)
 		return
 	end
 
-	local userId = Player.UserId
-	local playerClass = shared.playerClasses[userId]
-
+	local PlayerData = Data(Player)
 	local template = SvSt.StarterPlayer
 
 	for _, obj in template:GetChildren() do
@@ -1012,9 +983,8 @@ local function AddStarterPlayer(Player)
 		Moveset.Parent = Player
 	end
 
-	local playerClassData = shared.playerClasses[Player.UserId]
-	if playerClassData and playerClassData.MovesetModes then
-		for movesetName, mode in playerClassData.MovesetModes do
+	if PlayerData.MoveSerModes() then
+		for movesetName, mode in PlayerData.MovesetModes() do
 			Player:SetAttribute("MovesetMode_" .. movesetName, mode)
 		end
 	end
@@ -1039,25 +1009,25 @@ local function AddStarterPlayer(Player)
 	if leaderstats then
 		local Kills = leaderstats:FindFirstChild("Kills") or Instance.new("NumberValue", leaderstats)
 		Kills.Name = "Kills"
-		Kills.Value = playerClass.Kills or 0
+		Kills.Value = Data[Player].Kills()
+		Data[Player].Kills.Changed(function(kills, oldKills)
+			Kills.Value = kills
+		end)
 
 		local TotalKills = leaderstats:FindFirstChild("Total Kills") or Instance.new("NumberValue", leaderstats)
 		TotalKills.Name = "Total Kills"
-		TotalKills.Value = playerClass.TotalKills or 0
-
-		local Gold = leaderstats:FindFirstChild("Gold") or Instance.new("NumberValue", leaderstats)
-		Gold.Name = "Gold"
-		Gold.Value = playerClass.Gold or 0
+		TotalKills.Value = Data[Player].TotalKills()
+		Data[Player].TotalKills.Changed(function(kills, oldKills)
+			Kills.Value = kills
+		end)
 	end
 
 	local Moveset_attr = Player:GetAttribute("Moveset")
 	if not Moveset_attr then
-		Player:SetAttribute("Moveset", playerClass.Moveset or "Lunar")
+		Player:SetAttribute("Moveset", PlayerData.Moveset() or "Lunar")
 	else
 		Player:SetAttribute("Moveset", Moveset_attr)
 	end
-
-	Player:SetAttribute("Gold", playerClass.Gold or 0)
 
 	CombatUtils.AddValue(Player, "NumberValue", 6, "RespawnTime")
 	CombatUtils.AddValue(Player, "BoolValue", true, "CanRespawn")
@@ -1075,38 +1045,6 @@ local function PlayerAdded(Player)
 		return
 	end
 	Player:SetAttribute("Added", true)
-
-	local userId = Player.UserId
-
-	local profile = PlayerStore:StartSessionAsync("Player_" .. userId, {
-		Cancel = function()
-			return not Players:GetPlayerByUserId(userId)
-		end,
-	})
-
-	if not profile then
-		Player:Kick("Não foi possível carregar seus dados. Tente novamente.")
-		return
-	end
-
-	profile:Reconcile()
-
-	profile.OnSessionEnd:Connect(function()
-		Profiles[userId] = nil
-		shared.playerClasses[userId] = nil
-		Player:Kick("Sua sessão foi encerrada.")
-	end)
-
-	Profiles[userId] = profile
-
-	local playerClass = PlayerClass.new(Player, profile.Data)
-
-	if not playerClass then
-		Player:Kick("Erro ao carregar dados. Contate um staff.")
-		return
-	end
-
-	shared.playerClasses[userId] = playerClass
 
 	local ok, err = pcall(AddStarterPlayer, Player)
 	if not ok then
@@ -1213,11 +1151,6 @@ function CharacterAdded(Character)
 	Character:SetAttribute("Moveset", Player:GetAttribute("Moveset"))
 end
 
-function PlayerRemoving(Player)
-	local userId = Player.UserId
-	SaveData(userId)
-end
-
 for _, v in Players:GetPlayers() do
 	if not v:GetAttribute("Added") then
 		task.spawn(function()
@@ -1227,15 +1160,6 @@ for _, v in Players:GetPlayers() do
 end
 
 Players.PlayerAdded:Connect(PlayerAdded)
-Players.PlayerRemoving:Connect(PlayerRemoving)
-
-game:BindToClose(function()
-	if RNS:IsStudio() then
-		for userId in shared.playerClasses do
-			SaveData(userId)
-		end
-	end
-end)
 
 CollectionService:GetInstanceAddedSignal("CantRotate"):Connect(function(Character)
 	local Humanoid = Character:FindFirstChild("Humanoid")

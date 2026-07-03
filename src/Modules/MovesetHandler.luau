@@ -6,12 +6,14 @@ local Movesets = SvSt.Movesets
 local module = {}
 module.__index = module
 
+local Data = require(ReplicatedStorage.Shared.Data).server
+
 local function resolveFolder(Player, Moveset)
 	local movesetInfo = InfoModule.Movesets[Moveset]
 
 	if movesetInfo and movesetInfo.Modes then
-		local playerClass = shared.playerClasses[Player.UserId]
-		local currentMode = (playerClass and playerClass.MovesetModes[Moveset]) or movesetInfo.DefaultMode
+		local playerClass = Data[Player]
+		local currentMode = playerClass.MovesetModes[Moveset]() or movesetInfo.DefaultMode
 
 		local root = Movesets:FindFirstChild(Moveset)
 		return root and root:FindFirstChild(currentMode)
@@ -64,8 +66,8 @@ function module:AddAwakeningMoveset(Player, Moveset)
 	local folder
 
 	if movesetInfo and movesetInfo.Modes then
-		local playerClass = shared.playerClasses[Player.UserId]
-		local currentMode = (playerClass and playerClass.MovesetModes[Moveset]) or movesetInfo.DefaultMode
+		local playerClass = Data[Player]
+		local currentMode = playerClass.MovesetModes[Moveset]() or movesetInfo.DefaultMode
 
 		local root = Movesets:FindFirstChild(Moveset)
 		local modeFolder = root and root:FindFirstChild(currentMode)

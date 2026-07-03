@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local RPModules = RS.Shared.Modules
 local SvModules = script.Parent
@@ -7,6 +8,7 @@ local SvModules = script.Parent
 local StunHandler = require(SvModules.StunHandler)
 local CombatLogger = require(script.CombatLogger)
 local Utility = require(RPModules.Utility)
+local Data = require(ReplicatedStorage.Shared.Data).server
 local AnimationService = require(SvModules.AnimationService)
 local AntiTeamingHandler = require(SvModules.AntiTeamingHandler)
 
@@ -193,15 +195,13 @@ function module:TakeDamage(
 								return
 							end
 
-							local Kills = DamagerPlayer.leaderstats:FindFirstChild("Kills", true)
-							if Kills then
-								Kills.Value += 1
-							end
+							Data[Damager].Kills(function(k)
+								return k + 1
+							end)
 
-							local TotalKills = DamagerPlayer.leaderstats:FindFirstChild("Total Kills", true)
-							if TotalKills then
-								TotalKills.Value += 1
-							end
+							Data[Damager].TotalKills(function(k)
+								return k + 1
+							end)
 
 							Damager:SetAttribute("Streak", (Damager:GetAttribute("Streak") or 0) + 1)
 						end
@@ -265,15 +265,13 @@ Players.PlayerRemoving:Connect(function(DamagedPlayer)
 		return
 	end
 
-	local Kills = DamagerPlayer.leaderstats:FindFirstChild("Kills", true)
-	if Kills then
-		Kills.Value += 1
-	end
+	Data[Damager].Kills(function(k)
+		return k + 1
+	end)
 
-	local TotalKills = DamagerPlayer.leaderstats:FindFirstChild("Total Kills", true)
-	if TotalKills then
-		TotalKills.Value += 1
-	end
+	Data[Damager].TotalKills(function(k)
+		return k + 1
+	end)
 
 	Damager:SetAttribute("Streak", (Damager:GetAttribute("Streak") or 0) + 1)
 end)

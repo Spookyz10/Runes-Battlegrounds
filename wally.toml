@@ -7,4 +7,4 @@ realm = "shared"
 [dependencies]
 
 [server-dependencies]
-profilestore = "2jammers/profilestore@0.1.0"
+dataservicetyped = "leifstout/dataservicetyped@1.0.3"
