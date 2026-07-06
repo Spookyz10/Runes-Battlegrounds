@@ -37,6 +37,21 @@ local ExtraCdsSet = Remotes.ExtraCds.Set
 
 local AnimationsTable = {}
 
+local function getHitStyle(Character)
+	local moveset = Character:GetAttribute("Moveset") or "Default"
+	if moveset == "Eclipse" then
+		local Player = Players:GetPlayerFromCharacter(Character)
+		local mode = Player and Player:GetAttribute("MovesetMode_Eclipse")
+		if mode == "Solar" then
+			return "Solar"
+		end
+		if mode == "Lunar" then
+			return "Lunar"
+		end
+	end
+	return nil
+end
+
 pcall(function()
 	PhysicsService:RegisterCollisionGroup("NonPColDebri")
 end)
@@ -605,11 +620,9 @@ local ComunicatorFunctions = {
 								ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 2 })
 							end
 
-							ReplicateSet:FireAllClients("DashHit", {
-								Char = Character,
+							ReplicateSet:FireAllClients("HitEffect", {
 								EChar = EnemyCharacter,
-								RootPart = EnemyHumRP,
-								LookVector = HumRP.CFrame.LookVector,
+								Style = getHitStyle(Character),
 							})
 
 							if dashingForward then

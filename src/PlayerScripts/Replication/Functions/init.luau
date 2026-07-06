@@ -29,6 +29,7 @@ function Interface:Start()
 
 	local function repfire(replicateName, params)
 		local ReplicateFunc = ClientTasks[replicateName]
+		print("ReplicateName: ", replicateName, " Params: ", params)
 		if ReplicateFunc then
 			coroutine.wrap(function()
 				ReplicateFunc(params)

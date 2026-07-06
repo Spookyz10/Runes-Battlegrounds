@@ -1,4 +1,3 @@
-local TS = game:GetService("TweenService")
 local RS = game:GetService("ReplicatedStorage")
 local SvSt = game:GetService("ServerStorage")
 local Players = game:GetService("Players")
@@ -6,24 +5,17 @@ local Debris = game:GetService("Debris")
 
 local Remotes = RS.Remotes
 
-local CombatGet = Remotes.Combat.Get
 local CombatSet = Remotes.Combat.Set
 local CombatSetEvent = CombatSet.OnServerEvent
-
-local ReplicateSet = Remotes.Replicate.Set
-local Comunicator = Remotes.Comunicator.Set
 
 local SvModules = SvSt.Modules
 
 local DamageHandler = require(SvModules.DamageHandler)
 local HitboxHandler = require(SvModules.HitboxHandler)
 local RagdollHandler = require(SvModules.RagdollHandler)
-local StunHandler = require(SvModules.StunHandler)
 local AnimationService = require(SvModules.AnimationService)
 local NewKnockback = require(SvModules.BodymoverService)
 local iFramesService = require(SvModules.iFramesService)
-local StatesHandler = require(SvModules.StatesHandler)
-local KnockbackModule = require(SvModules.KnockbackModule)
 local SoundsModule = require(SvModules.SoundsModule)
 
 local Assets = SvSt.Assets
@@ -31,6 +23,7 @@ local Animations = Assets.Animations
 local CombatAnims = Animations.Combat
 local Sounds = Assets.Sounds
 local CombatSounds = Sounds.Combat
+local ReplicateSet = Remotes.Replicate.Set
 
 local LastPunch = {}
 local MaxCombo = 4
@@ -40,6 +33,21 @@ local M1Damage = {
 	[3] = 2,
 	[4] = 4,
 }
+
+local function getHitStyle(Character)
+	local moveset = Character:GetAttribute("Moveset") or "Default"
+	if moveset == "Eclipse" then
+		local Player = Players:GetPlayerFromCharacter(Character)
+		local mode = Player and Player:GetAttribute("MovesetMode_Eclipse")
+		if mode == "Solar" then
+			return "Solar"
+		end
+		if mode == "Lunar" then
+			return "Lunar"
+		end
+	end
+	return nil
+end
 
 local function ChangeCombo(Char)
 	if not Char:GetAttribute("Combo") then
@@ -100,8 +108,6 @@ local function M1(Player)
 	if not Character or Character:GetAttribute("doPunch") ~= true then
 		return
 	end
-
-
 
 	local HumRP = Character:FindFirstChild("HumanoidRootPart")
 	if not HumRP then
@@ -211,6 +217,13 @@ local function M1(Player)
 					Hit = true
 
 					Character:SetAttribute("LastM1Hit", EnemyCharacter.Name)
+
+					if CurrentType ~= "Downslam" and CurrentType ~= "Uppercut" then
+						ReplicateSet:FireAllClients("HitEffect", {
+							EChar = EnemyCharacter,
+							Style = getHitStyle(Character),
+						})
+					end
 
 					if CurrentCombo >= MaxCombo then
 						RagdollHandler.ragdoll(EnemyHumanoid, 2, nil, nil, nil, nil, true)
