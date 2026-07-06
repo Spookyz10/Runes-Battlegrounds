@@ -398,6 +398,7 @@ local ComunicatorFunctions = {
 
 					StunHandler:Stun(Character, 1.017, true, 0, 0, true)
 
+					-- DEPOIS:
 					task.delay(0.05, function()
 						iFramesService:AddBaseiFrames(Character)
 						task.delay(0.75, function()
@@ -409,10 +410,12 @@ local ComunicatorFunctions = {
 						SmallDebris.Parent = Character
 
 						ReplicateSet:FireAllClients("smokeEffect", { time = 0.2, char = Character })
+						ReplicateSet:FireAllClients("DashDebris", { time = 0.2, char = Character })
 					end)
 
 					task.delay(0.5, function()
 						ReplicateSet:FireAllClients("smokeEffect", { time = 0.35, char = Character })
+						ReplicateSet:FireAllClients("DashDebris", { time = 0.35, char = Character })
 
 						local SmallDebris = Jantior:Add(shared.cfolder({ Name = "SmallDebris" }, 0.4))
 						SmallDebris:AddTag("SmallDebris")
@@ -549,7 +552,6 @@ local ComunicatorFunctions = {
 							Offset = CFrame.new(0, 1, -4),
 							Voxels = true,
 						})
-						ReplicateSet:FireAllClients("DashMiss", { PrimaryPart = HumRP, YAngle = math.pi })
 
 						local Hitbox = ReplicatedHitboxes.new(Player)
 						Hitbox.Size = Vector3.new(8, 8, 8)
@@ -719,6 +721,13 @@ local ComunicatorFunctions = {
 						end
 
 						StunHandler:Unstun(Character, Stun)
+
+						if not Hit then
+							ReplicateSet:FireAllClients(
+								"DashMiss",
+								{ PrimaryPart = HumRP, YAngle = math.pi, Front = true }
+							)
+						end
 					end)
 
 					AnimationService:stopAll(Character)
@@ -1003,12 +1012,6 @@ local function AddStarterPlayer(Player)
 		Moveset = Instance.new("Folder")
 		Moveset.Name = "Moveset"
 		Moveset.Parent = Player
-	end
-
-	if PlayerData.MovesetModes() then
-		for movesetName, mode in PlayerData.MovesetModes() do
-			Player:SetAttribute("MovesetMode_" .. movesetName, mode)
-		end
 	end
 
 	local AwakeningProgress = Player:FindFirstChild("AwakeningProgress")

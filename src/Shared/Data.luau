@@ -2,23 +2,10 @@ local ServerStorage = game:GetService("ServerStorage")
 local playerClass = {}
 playerClass.__index = playerClass
 
-local InfoModule = require(game.ReplicatedStorage.Shared.Info)
 local DataServiceTyped = require(ServerStorage.ServerPackages.dataservicetyped)
-
-local function buildDefaultModes()
-	local modes = {}
-	for name, info in InfoModule.Movesets do
-		if info.DefaultMode then
-			modes[name] = info.DefaultMode
-		end
-	end
-	return modes
-end
 
 local template = {
 	Moveset = "Eclipse",
-
-	MovesetModes = buildDefaultModes(),
 
 	Emotes = {
 		["1"] = "Crush",

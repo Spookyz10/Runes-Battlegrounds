@@ -1,9 +1,10 @@
 local Debris = game:GetService("Debris")
 local TweenService = game:GetService("TweenService")
 local Resources = game:GetService("ReplicatedStorage"):WaitForChild("Resources")
+
 return function(Params)
-	local Ring = Resources.Misc.Ring:Clone()
-	Ring.Parent = workspace.Thrown
+	local Ring = Resources.Effects.Ring:Clone()
+	Ring.Parent = workspace.Debris
 	Ring.CFrame = Params.CF
 
 	for Prop, Value in Params.FirstProps do

@@ -6,28 +6,12 @@ local Movesets = SvSt.Movesets
 local module = {}
 module.__index = module
 
-local Data = require(ReplicatedStorage.Shared.Data).server
-
 local function getCurrentMode(Player, Moveset, movesetInfo)
-	local playerClass = Data[Player]
-	local movesetModes = playerClass.MovesetModes
-
-	if typeof(movesetModes) ~= "table" then
-		warn("[MovesetHandler] MovesetModes corrompido para", Player.Name, "- resetando pro default")
-		return movesetInfo.DefaultMode
+	local mode = Player:GetAttribute("MovesetMode_" .. Moveset)
+	if typeof(mode) == "string" and table.find(movesetInfo.Modes, mode) then
+		return mode
 	end
-
-	local modeEntry = movesetModes[Moveset]
-	if typeof(modeEntry) ~= "function" then
-		return movesetInfo.DefaultMode
-	end
-
-	local ok, currentMode = pcall(modeEntry)
-	if not ok or not currentMode then
-		return movesetInfo.DefaultMode
-	end
-
-	return currentMode
+	return movesetInfo.DefaultMode
 end
 
 local function resolveFolder(Player, Moveset)

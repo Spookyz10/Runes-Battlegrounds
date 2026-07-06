@@ -1,7 +1,6 @@
 local SpecialsHandler = {}
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Data = require(ReplicatedStorage.Shared.Data).server
 local InfoModule = require(ReplicatedStorage.Shared.Info)
 
 local Cooldowns = {}
@@ -36,17 +35,11 @@ SpecialActions["SwapMode"] = function(Player, MovesetHandler, isUlt)
 		return false
 	end
 
-	local playerClass = Data[Player]
-	if not playerClass then
-		return false
-	end
-
 	local modes = movesetInfo.Modes
-	local current = playerClass.MovesetModes[moveset]() or movesetInfo.DefaultMode
+	local current = Player:GetAttribute("MovesetMode_" .. moveset) or movesetInfo.DefaultMode
 	local currentIdx = table.find(modes, current) or 1
 	local nextMode = modes[(currentIdx % #modes) + 1]
 
-	playerClass.MovesetModes[moveset](nextMode)
 	Player:SetAttribute("MovesetMode_" .. moveset, nextMode)
 
 	if isUlt then
