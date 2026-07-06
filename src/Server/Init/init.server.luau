@@ -398,7 +398,13 @@ local ComunicatorFunctions = {
 
 					StunHandler:Stun(Character, 1.017, true, 0, 0, true)
 
-					-- DEPOIS:
+					StunHandler:Stun(Character, 1.017, true, 0, 0, true)
+
+					ReplicateSet:FireAllClients("DashDebris", { func = "Start", char = Character })
+					task.delay(1.017, function()
+						ReplicateSet:FireAllClients("DashDebris", { func = "Stop", char = Character })
+					end)
+
 					task.delay(0.05, function()
 						iFramesService:AddBaseiFrames(Character)
 						task.delay(0.75, function()
@@ -410,12 +416,10 @@ local ComunicatorFunctions = {
 						SmallDebris.Parent = Character
 
 						ReplicateSet:FireAllClients("smokeEffect", { time = 0.2, char = Character })
-						ReplicateSet:FireAllClients("DashDebris", { time = 0.2, char = Character })
 					end)
 
 					task.delay(0.5, function()
 						ReplicateSet:FireAllClients("smokeEffect", { time = 0.35, char = Character })
-						ReplicateSet:FireAllClients("DashDebris", { time = 0.35, char = Character })
 
 						local SmallDebris = Jantior:Add(shared.cfolder({ Name = "SmallDebris" }, 0.4))
 						SmallDebris:AddTag("SmallDebris")
@@ -517,6 +521,8 @@ local ComunicatorFunctions = {
 						Ended = true
 
 						Character:SetAttribute("Dashing", false)
+
+						ReplicateSet:FireAllClients("DashDebris", { func = "Stop", char = Character })
 
 						dashVelocity:Destroy()
 
@@ -734,6 +740,7 @@ local ComunicatorFunctions = {
 					AnimationService:playAnimation(Character, DashStart)
 
 					Character:SetAttribute("Dashing", true)
+					ReplicateSet:FireAllClients("DashDebris", { func = "Start", char = Character })
 
 					ReplicateSet:FireAllClients("DashMiss", { PrimaryPart = HumRP })
 
