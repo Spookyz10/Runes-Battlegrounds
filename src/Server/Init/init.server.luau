@@ -23,6 +23,7 @@ local Knockback = require(SvModules.BodymoverService)
 local iFramesService = require(SvModules.iFramesService)
 local CombatUtils = require(SvModules.CombatUtils)
 local ReplicatedHitboxes = require(SvModules.ReplicatedHitboxes)
+local CheckBehind = require(Shared.Utility.CheckBehind)
 local Data = require(RS.Shared.Data).server
 local Assets = SvSt.Assets
 local Animations = Assets.Animations
@@ -508,6 +509,8 @@ local ComunicatorFunctions = {
 					local DetectedEnemy
 					local Hit = false
 					local Ended = false
+					local PreventVelocity = false
+					local KnockbackApplied = false
 					local Time = time()
 					local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true)
 					local NearEnemys = {}
@@ -547,6 +550,10 @@ local ComunicatorFunctions = {
 								table.insert(NearEnemys, CloseEnemy)
 							end
 						end
+					end
+
+					if #NearEnemys > 0 then
+						PreventVelocity = true
 					end
 
 					HitEvents["hit"] = AnimTrack:GetMarkerReachedSignal("hit"):Once(function()
@@ -614,40 +621,66 @@ local ComunicatorFunctions = {
 								Debris:AddItem(dashingForward, 0.1)
 							end
 
-							if Ragdolled or table.find(NearEnemys, EnemyCharacter) then
-								if Ragdolled then
-									RagdollHandler.cancelRagdoll(EnemyHumanoid, nil, false, nil, false, true)
+							local isNearEnemy = table.find(NearEnemys, EnemyCharacter) ~= nil
+							local isBehindHitOk, isBehindHit = pcall(CheckBehind, HumRP, EnemyHumRP)
+							isBehindHit = isBehindHitOk and isBehindHit or false
+
+							if Ragdolled or isNearEnemy or isBehindHit then
+								if not PreventVelocity then
+									PreventVelocity = true
+
+									if dashVelocity.Parent then
+										dashVelocity:Destroy()
+									end
+
+									HumRP.AssemblyLinearVelocity = Vector3.new()
 								end
 
-								EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
+								if not KnockbackApplied then
+									KnockbackApplied = true
 
-								local selfToOtherChar = (EnemyHumRP.Position - HumRP.Position).Unit
-								local lookVector = Character.HumanoidRootPart.CFrame.LookVector
-								local dotProduct = lookVector:Dot(selfToOtherChar)
+									if Ragdolled then
+										RagdollHandler.cancelRagdoll(EnemyHumanoid, nil, false, nil, false, true)
+									end
 
-								if EnemyHumanoid.FloorMaterial ~= Enum.Material.Air then
-									dotProduct = 1
+									EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
+
+									local selfToOtherChar = (EnemyHumRP.Position - HumRP.Position).Unit
+									local lookVector = Character.HumanoidRootPart.CFrame.LookVector
+									local dotProduct = lookVector:Dot(selfToOtherChar)
+
+									if EnemyHumanoid.FloorMaterial ~= Enum.Material.Air then
+										dotProduct = 1
+									end
+
+									local at = Character.HumanoidRootPart.Position
+									local forward = Character.HumanoidRootPart.CFrame.LookVector
+									local lookposition = CFrame.lookAt(at, at + Vector3.new(forward.X, 0, forward.Z))
+
+									local knockbackOk, knockbackErr = pcall(function()
+										require(SvModules.PerfectKnockback).KnockBack(nil, EnemyCharacter, {
+											LookVector = lookposition.LookVector,
+											LookForce = 58.5,
+											LookFinalForce = 55,
+											LookAt = lookposition,
+											DestroyRagdoll = true,
+											GroundStunTime = 0.95,
+											Escapable = false,
+											FallingDetectDelay = 0.2,
+											Dot = dotProduct,
+											DotParams = { 0.4, 1 },
+											canHitWall = true,
+										}, Character)
+									end)
+
+									if not knockbackOk then
+										warn(
+											"[ShadeStep FrontDash] PerfectKnockback failed: " .. tostring(knockbackErr)
+										)
+									end
+
+									Knockback:makeEnemyFaceCharacter(EnemyCharacter, Character)
 								end
-
-								local at = Character.HumanoidRootPart.Position
-								local forward = Character.HumanoidRootPart.CFrame.LookVector
-								local lookposition = CFrame.lookAt(at, at + Vector3.new(forward.X, 0, forward.Z))
-
-								require(SvModules.PerfectKnockback).KnockBack(nil, EnemyCharacter, {
-									LookVector = lookposition.LookVector,
-									LookForce = 58.5,
-									LookFinalForce = 55,
-									LookAt = lookposition,
-									DestroyRagdoll = true,
-									GroundStunTime = 0.95,
-									Escapable = false,
-									FallingDetectDelay = 0.2,
-									Dot = dotProduct,
-									DotParams = { 0.4, 1 },
-									canHitWall = true,
-								}, Character)
-
-								Knockback:makeEnemyFaceCharacter(EnemyCharacter, Character)
 							end
 						end
 
@@ -670,6 +703,10 @@ local ComunicatorFunctions = {
 					end)
 
 					HitEvents["jump"] = AnimTrack:GetMarkerReachedSignal("jump"):Once(function()
+						if PreventVelocity then
+							return
+						end
+
 						dashVelocity.Parent = HumRP
 						Debris:AddItem(dashVelocity, 0.85)
 
