@@ -29,14 +29,14 @@ function Interface:Start()
 
 	local function repfire(replicateName, params)
 		local ReplicateFunc = ClientTasks[replicateName]
-		print("ReplicateName: ", replicateName, " Params: ", params)
-		if ReplicateFunc then
-			coroutine.wrap(function()
-				ReplicateFunc(params)
-			end)()
-		else
+		if not ReplicateFunc then
 			warn(replicateName .. " does not exist for replication.")
+			return
 		end
+
+		coroutine.wrap(function()
+			ReplicateFunc(params or {})
+		end)()
 	end
 
 	Replicate_Set.OnClientEvent:Connect(repfire)

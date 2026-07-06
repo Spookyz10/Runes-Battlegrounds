@@ -37,21 +37,6 @@ local ExtraCdsSet = Remotes.ExtraCds.Set
 
 local AnimationsTable = {}
 
-local function getHitStyle(Character)
-	local moveset = Character:GetAttribute("Moveset") or "Default"
-	if moveset == "Eclipse" then
-		local Player = Players:GetPlayerFromCharacter(Character)
-		local mode = Player and Player:GetAttribute("MovesetMode_Eclipse")
-		if mode == "Solar" then
-			return "Solar"
-		end
-		if mode == "Lunar" then
-			return "Lunar"
-		end
-	end
-	return nil
-end
-
 pcall(function()
 	PhysicsService:RegisterCollisionGroup("NonPColDebri")
 end)
@@ -622,7 +607,7 @@ local ComunicatorFunctions = {
 
 							ReplicateSet:FireAllClients("HitEffect", {
 								EChar = EnemyCharacter,
-								Style = getHitStyle(Character),
+								HitChar = Character,
 							})
 
 							if dashingForward then
@@ -1069,9 +1054,13 @@ local function AddStarterPlayer(Player)
 
 	local Moveset_attr = Player:GetAttribute("Moveset")
 	if not Moveset_attr then
-		Player:SetAttribute("Moveset", PlayerData.Moveset() or "Lunar")
+		Player:SetAttribute("Moveset", PlayerData.Moveset() or "Eclipse")
 	else
 		Player:SetAttribute("Moveset", Moveset_attr)
+	end
+
+	if Player:GetAttribute("Moveset") == "Eclipse" then
+		Player:SetAttribute("MovesetMode_Eclipse", "Lunar")
 	end
 
 	CombatUtils.AddValue(Player, "NumberValue", 6, "RespawnTime")

@@ -34,21 +34,6 @@ local M1Damage = {
 	[4] = 4,
 }
 
-local function getHitStyle(Character)
-	local moveset = Character:GetAttribute("Moveset") or "Default"
-	if moveset == "Eclipse" then
-		local Player = Players:GetPlayerFromCharacter(Character)
-		local mode = Player and Player:GetAttribute("MovesetMode_Eclipse")
-		if mode == "Solar" then
-			return "Solar"
-		end
-		if mode == "Lunar" then
-			return "Lunar"
-		end
-	end
-	return nil
-end
-
 local function ChangeCombo(Char)
 	if not Char:GetAttribute("Combo") then
 		Char:SetAttribute("Combo", 0)
@@ -221,7 +206,7 @@ local function M1(Player)
 					if CurrentType ~= "Downslam" and CurrentType ~= "Uppercut" then
 						ReplicateSet:FireAllClients("HitEffect", {
 							EChar = EnemyCharacter,
-							Style = getHitStyle(Character),
+							HitChar = Character,
 						})
 					end
 
