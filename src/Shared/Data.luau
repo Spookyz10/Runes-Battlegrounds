@@ -77,4 +77,4 @@ local template = {
 	},
 }
 
-return DataServiceTyped({ template = template })
+return DataServiceTyped({ template = template, profileStoreIndex = "PlayerData" })

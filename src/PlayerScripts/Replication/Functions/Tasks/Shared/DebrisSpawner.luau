@@ -234,13 +234,22 @@ local function debrisSpawner(config)
 		local ringRadiusScale = ringRadius / baseRingRadius
 		local ringSizeScale = ringSizeGrowth ^ (ringIndex - 1)
 
-		local pieceCount = math.max(4, math.floor((basePieceCount / ringCount) * ringRadiusScale))
+		local pieceCount = math.max(3, math.floor((basePieceCount / ringCount) * ringRadiusScale * 0.6))
 
 		local ringRotationOffset = math.rad(rng:NextNumber(-360, 360))
 		local ringCFrame = baseCFrame * CFrame.Angles(0, ringRotationOffset, 0)
 
-		for i = 1, pieceCount do
-			local angle = (i / pieceCount) * (math.pi * 2) + rng:NextNumber(-0.12, 0.12)
+		local slotIndex = 1
+		while slotIndex <= pieceCount do
+			local mergeCount = 1
+			if rng:NextNumber() < 0.35 and slotIndex + 1 <= pieceCount then
+				mergeCount = rng:NextInteger(2, math.min(3, pieceCount - slotIndex + 1))
+			end
+
+			local anglePerSlot = (math.pi * 2) / pieceCount
+			local startAngle = ((slotIndex - 1) / pieceCount) * (math.pi * 2)
+			local spanAngle = anglePerSlot * mergeCount
+			local angle = startAngle + spanAngle / 2 + rng:NextNumber(-0.05, 0.05)
 
 			local radiusJitter = ringRadius * rng:NextNumber(1 - ringGap, 1 + ringGap)
 			local offsetX = radiusJitter * math.sin(angle)
@@ -258,26 +267,35 @@ local function debrisSpawner(config)
 			slab.Color = config.ground.Color
 
 			local widthScale = ringSizeScale
-			local slabWidth = rng:NextNumber(debrisSizeMin, debrisSizeMax) * widthScale * sizeMult
+			local arcChordLength = 2 * ringRadius * math.sin(spanAngle / 2)
+			local slabWidth = math.max(arcChordLength * rng:NextNumber(0.7, 0.95), debrisSizeMin * widthScale)
+				* sizeMult
 			local slabHeight = rng:NextNumber(debrisHeightMin, debrisHeightMax)
 				* (1 + (ringSizeScale - 1) * 0.35)
 				* sizeMult
-			local slabDepth = randomRange(debrisSizeMin, debrisSizeMax) * widthScale * sizeMult
+			local slabDepth = randomRange(debrisSizeMin, debrisSizeMax) * 0.55 * widthScale * sizeMult
 			slab.Size = Vector3.new(slabWidth, slabHeight, slabDepth)
 
 			slab.CFrame = pieceCFrame
 
-			local randomYaw = math.rad(rng:NextNumber(-25, 25))
+			local randomYaw = math.rad(rng:NextNumber(-12, 12))
 			local outwardPitch = 0
 			if outwardTilt then
-				outwardPitch = math.rad(rng:NextNumber(8, 38) * (0.6 + 0.4 * ringRadiusScale))
+				local minTilt, maxTilt = 8, 34
+				if rng:NextNumber() < 0.3 then
+					minTilt, maxTilt = 42, 68
+				end
+				outwardPitch = math.rad(rng:NextNumber(minTilt, maxTilt) * (0.6 + 0.4 * ringRadiusScale))
 			end
-			local randomPitch = math.rad(rng:NextNumber(-14, 14))
-			local randomRoll = math.rad(rng:NextNumber(-22, 22))
+			local randomPitch = math.rad(rng:NextNumber(-10, 10))
+			local rollRange = mergeCount > 1 and 8 or 20
+			local randomRoll = math.rad(rng:NextNumber(-rollRange, rollRange))
 
 			slab.CFrame = slab.CFrame * CFrame.Angles(-outwardPitch + randomPitch, randomYaw, randomRoll)
 
 			local originalCFrame = slab.CFrame
+
+			slotIndex += mergeCount
 
 			slab.CFrame = slab.CFrame * CFrame.new(0, -(slab.Size.Y / 3 + slab.Size.Z / 3) / 3, 0)
 			slab.Transparency = 1

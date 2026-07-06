@@ -8,12 +8,33 @@ module.__index = module
 
 local Data = require(ReplicatedStorage.Shared.Data).server
 
+local function getCurrentMode(Player, Moveset, movesetInfo)
+	local playerClass = Data[Player]
+	local movesetModes = playerClass.MovesetModes
+
+	if typeof(movesetModes) ~= "table" then
+		warn("[MovesetHandler] MovesetModes corrompido para", Player.Name, "- resetando pro default")
+		return movesetInfo.DefaultMode
+	end
+
+	local modeEntry = movesetModes[Moveset]
+	if typeof(modeEntry) ~= "function" then
+		return movesetInfo.DefaultMode
+	end
+
+	local ok, currentMode = pcall(modeEntry)
+	if not ok or not currentMode then
+		return movesetInfo.DefaultMode
+	end
+
+	return currentMode
+end
+
 local function resolveFolder(Player, Moveset)
 	local movesetInfo = InfoModule.Movesets[Moveset]
 
 	if movesetInfo and movesetInfo.Modes then
-		local playerClass = Data[Player]
-		local currentMode = playerClass.MovesetModes[Moveset]() or movesetInfo.DefaultMode
+		local currentMode = getCurrentMode(Player, Moveset, movesetInfo)
 
 		local root = Movesets:FindFirstChild(Moveset)
 		return root and root:FindFirstChild(currentMode)
@@ -66,8 +87,7 @@ function module:AddAwakeningMoveset(Player, Moveset)
 	local folder
 
 	if movesetInfo and movesetInfo.Modes then
-		local playerClass = Data[Player]
-		local currentMode = playerClass.MovesetModes[Moveset]() or movesetInfo.DefaultMode
+		local currentMode = getCurrentMode(Player, Moveset, movesetInfo)
 
 		local root = Movesets:FindFirstChild(Moveset)
 		local modeFolder = root and root:FindFirstChild(currentMode)

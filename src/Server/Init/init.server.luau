@@ -468,6 +468,28 @@ local ComunicatorFunctions = {
 					dashVelocity.Name = "FrontDashVelocity"
 					dashVelocity.MaxForce = Vector3.new(40000, 0, 40000)
 
+					task.delay(0.1, function()
+						ReplicateSet:FireAllClients("Ring", {
+							FirstProps = {
+								Size = Vector3.new(2.589, 0.896, 2.589),
+								Transparency = 0.25,
+							},
+
+							CF = HumRP.CFrame * CFrame.Angles(1.5707963267948966, 0, 0),
+
+							TN_Info = {
+								Time = 0.3,
+								Style = "Quad",
+								Direction = "Out",
+							},
+
+							FinalProps = {
+								Size = Vector3.new(9.874, 0.1, 9.874),
+								Transparency = 1,
+							},
+						})
+					end)
+
 					local SmallDebris = shared.cfolder({ Name = "SmallDebris" }, 1)
 					CollectionService:AddTag(SmallDebris, "SmallDebris")
 					SmallDebris.Parent = Character
@@ -968,7 +990,7 @@ local function AddStarterPlayer(Player)
 		return
 	end
 
-	local PlayerData = Data(Player)
+	local PlayerData = Data.Service:waitForData(Player)
 	local template = SvSt.StarterPlayer
 
 	for _, obj in template:GetChildren() do
@@ -983,7 +1005,7 @@ local function AddStarterPlayer(Player)
 		Moveset.Parent = Player
 	end
 
-	if PlayerData.MoveSerModes() then
+	if PlayerData.MovesetModes() then
 		for movesetName, mode in PlayerData.MovesetModes() do
 			Player:SetAttribute("MovesetMode_" .. movesetName, mode)
 		end

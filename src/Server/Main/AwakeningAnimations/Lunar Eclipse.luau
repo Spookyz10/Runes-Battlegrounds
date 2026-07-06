@@ -200,12 +200,12 @@ local function triggerLandingImpact(Character, Position)
 
 	ReplicateSet:FireAllClients("Ground Crater", {
 		Seed = math.random(1, 2147483647),
-		amount = 80,
+		amount = 70,
 		start = Position + Vector3.new(0, 4, 0),
 		["end"] = Vector3.new(0, -20, 0),
-		rings = 2,
-		ringSpacing = 60,
-		ringSizeGrowth = 1.4,
+		rings = 3,
+		ringSpacing = 16,
+		ringSizeGrowth = 1.5,
 		ringGap = 0.20,
 		outwardTilt = true,
 		debrisSizeMin = 4,
@@ -214,7 +214,7 @@ local function triggerLandingImpact(Character, Position)
 		debrisHeightMax = 9,
 		sizemult = 1.3,
 		tiltMin = 5,
-		tiltMax = 30,
+		tiltMax = 20,
 	})
 
 	task.delay(0.4, function()
@@ -319,22 +319,22 @@ function module:Activate(Player)
 		local LiftRay = workspace:Raycast(HumRP.Position, Vector3.new(0, -6, 0), MapRayParams)
 		if LiftRay then
 			ReplicateSet:FireAllClients("Ground Crater", {
-				nodebris = true,
-				nosmoke = true,
 				Seed = math.random(1, 2147483647),
-				amount = 30,
-				start = LiftRay.Position + Vector3.new(0, 1, 0),
-				["end"] = Vector3.new(0, -10, 0),
-				rings = 2,
-				ringSpacing = 12,
-				ringSizeGrowth = 1.4,
+				amount = 70,
+				start = LiftRay.Position + Vector3.new(0, 4, 0),
+				["end"] = Vector3.new(0, -20, 0),
+				rings = 3,
+				ringSpacing = 16,
+				ringSizeGrowth = 1.5,
 				ringGap = 0.20,
 				outwardTilt = true,
-				debrisSizeMin = 3,
-				debrisSizeMax = 8,
-				debrisHeightMin = 2,
-				debrisHeightMax = 5,
-				sizemult = 0.8,
+				debrisSizeMin = 4,
+				debrisSizeMax = 12,
+				debrisHeightMin = 4,
+				debrisHeightMax = 9,
+				sizemult = 1.3,
+				tiltMin = 5,
+				tiltMax = 20,
 			})
 		end
 
