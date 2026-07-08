@@ -7,7 +7,7 @@ return function(Params)
 	local id = Params.id
 	local asset = Params.asset
 	local ownerId = Params.ownerId
-	local originOffset = Params.originOffset or Vector3.new(0, 70, 0)
+	local originOffset = Params.originOffset or Vector3.new(0, 3, 0)
 
 	if not character or not character.Parent then
 		return
@@ -21,8 +21,8 @@ return function(Params)
 		return
 	end
 
-	local HumRP = character:FindFirstChild("HumanoidRootPart")
-	if not HumRP then
+	local Torso = character:FindFirstChild("Torso")
+	if not Torso then
 		return
 	end
 
@@ -34,13 +34,13 @@ return function(Params)
 		character = character,
 		ownerId = ownerId,
 		getRayOrigin = function()
-			return HumRP and HumRP.Parent and (HumRP.Position + originOffset)
+			return Torso and Torso.Parent and (Torso.Position + originOffset)
 		end,
 		getDirection = function()
 			if isOwner then
 				return workspace.CurrentCamera.CFrame.LookVector
 			end
-			return HumRP and HumRP.Parent and HumRP.CFrame.LookVector or Vector3.new(0, 0, -1)
+			return Torso and Torso.Parent and Torso.CFrame.LookVector or Vector3.new(0, 0, -1)
 		end,
 	})
 end

@@ -22,6 +22,10 @@ return function(Params)
 	end
 
 	local Moon = data.moon
+
+	data.moon = nil
+	State.launchedMoons[Character] = Moon
+
 	local direction = Params.direction
 	local speed = 80
 	local launchConn
@@ -29,13 +33,14 @@ return function(Params)
 	launchConn = RunService.Heartbeat:Connect(function(dt)
 		if not Moon or not Moon.Parent then
 			launchConn:Disconnect()
-			if data then
-				data.moonLaunchConn = nil
-			end
 			return
 		end
 		Moon.CFrame = Moon.CFrame + direction * speed * dt
 	end)
 
-	data.moonLaunchConn = launchConn
+	Moon.AncestryChanged:Once(function(_, parent)
+		if not parent then
+			launchConn:Disconnect()
+		end
+	end)
 end

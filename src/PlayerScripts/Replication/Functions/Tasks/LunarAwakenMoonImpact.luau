@@ -5,28 +5,33 @@ local Debris = Constants.Debris
 
 return function(Params)
 	local Character = Params.char
+	local impactPosition = Params.position
+
+	-- Destroi a lua lançada de verdade (agora vive em State.launchedMoons)
+	local LaunchedMoon = State.launchedMoons[Character]
+	if LaunchedMoon then
+		if not impactPosition and LaunchedMoon.Parent then
+			impactPosition = LaunchedMoon.Position
+		end
+		if LaunchedMoon.Parent then
+			LaunchedMoon:Destroy()
+		end
+		State.launchedMoons[Character] = nil
+	end
+
+	-- Limpeza de segurança, caso ainda exista algo pendente em lunarData
 	local data = State.lunarData[Character]
-	if not data then
-		return
+	if data then
+		if data.moonConn then
+			data.moonConn:Disconnect()
+			data.moonConn = nil
+		end
+		if data.moon and data.moon.Parent then
+			data.moon:Destroy()
+			data.moon = nil
+		end
+		State.lunarData[Character] = nil
 	end
-
-	if data.moonConn then
-		data.moonConn:Disconnect()
-		data.moonConn = nil
-	end
-	if data.moonLaunchConn then
-		data.moonLaunchConn:Disconnect()
-		data.moonLaunchConn = nil
-	end
-
-	local impactPosition = Params.position or (data.moon and data.moon.Position)
-
-	if data.moon and data.moon.Parent then
-		data.moon:Destroy()
-		data.moon = nil
-	end
-
-	State.lunarData[Character] = nil
 
 	if impactPosition then
 		local ImpactAsset = CharacterAssets.Eclipse.Lunar.Awaken:FindFirstChild("Impact")

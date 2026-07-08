@@ -75,8 +75,8 @@ return function(Params)
 	if not Character or not Character.Parent then
 		return
 	end
-	local HumRP = Character:FindFirstChild("HumanoidRootPart")
-	if not HumRP then
+	local Torso = Character:FindFirstChild("Torso")
+	if not Torso then
 		return
 	end
 
@@ -87,23 +87,21 @@ return function(Params)
 		State.lunarData[Character] = data
 	end
 
-	-- Destrói fog agora que a moon vai aparecer no céu
-
 	local LunarAwaken = CharacterAssets.Eclipse.Lunar.Awaken
 
 	local Moon = LunarAwaken.Moon:Clone()
 	Moon.Anchored = true
-	Moon.CFrame = CFrame.new(HumRP.Position + Vector3.new(0, 70, 0))
+	Moon.CFrame = CFrame.new(Torso.Position + Vector3.new(0, 70, 0))
 	Moon.Parent = workspace
 
 	tweenParticleSizes(Moon, 4)
 
-	-- Segue o HumRP enquanto o player está carregando
+	-- Segue o Torso (acompanha a animação, já que o HumRP não se move)
 	local moonConn = RunService.RenderStepped:Connect(function()
-		if not HumRP or not HumRP.Parent then
+		if not Torso or not Torso.Parent then
 			return
 		end
-		Moon.CFrame = CFrame.new(HumRP.Position + Vector3.new(0, 70, 0))
+		Moon.CFrame = CFrame.new(Torso.Position + Vector3.new(0, 70, 0))
 	end)
 
 	data.moon = Moon

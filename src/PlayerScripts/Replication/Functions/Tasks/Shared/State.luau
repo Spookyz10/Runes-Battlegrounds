@@ -5,6 +5,7 @@ local TS = Constants.TS
 local state = {
 	lunarData = {},
 	solarData = {},
+	launchedMoons = {},
 	lunarNightCount = 0,
 	nightTween = nil,
 	dayTween = nil,
