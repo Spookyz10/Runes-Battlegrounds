@@ -7,10 +7,12 @@ local RNS = game:GetService("RunService")
 local Debris = game:GetService("Debris")
 local CollectionService = game:GetService("CollectionService")
 local PhysicsService = game:GetService("PhysicsService")
+local ServerStorage = game:GetService("ServerStorage")
 
 local Shared = RS.Shared.Modules
 local SvModules = SvSt.Modules
 
+local PerfectKnockback = require(ServerStorage.Modules.PerfectKnockback)
 local Trove = require(Shared.Trove)
 
 local StunHandler = require(SvModules.StunHandler)
@@ -658,7 +660,7 @@ local ComunicatorFunctions = {
 									local lookposition = CFrame.lookAt(at, at + Vector3.new(forward.X, 0, forward.Z))
 
 									local knockbackOk, knockbackErr = pcall(function()
-										require(SvModules.PerfectKnockback).KnockBack(nil, EnemyCharacter, {
+										PerfectKnockback:KnockBack(nil, EnemyCharacter, {
 											LookVector = lookposition.LookVector,
 											LookForce = 58.5,
 											LookFinalForce = 55,
@@ -674,9 +676,7 @@ local ComunicatorFunctions = {
 									end)
 
 									if not knockbackOk then
-										warn(
-											"[ShadeStep FrontDash] PerfectKnockback failed: " .. tostring(knockbackErr)
-										)
+										warn("PerfectKnockback failed: " .. tostring(knockbackErr))
 									end
 
 									Knockback:makeEnemyFaceCharacter(EnemyCharacter, Character)

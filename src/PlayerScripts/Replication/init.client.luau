@@ -34,6 +34,8 @@ local RPModules = RS.Shared.Modules
 local InfoModule = require(RS.Shared.Info)
 local IndicatorService = require(script.Functions.Tasks.Shared.IndicatorService)
 local RotationController = require(script.Functions.Tasks.Shared.RotationController)
+local CutsceneController = require(script.Functions.CutsceneController)
+
 local Animations = RS.Resources.Animations
 
 local gameSettings = UserSettings().GameSettings
@@ -56,6 +58,7 @@ local shiftlockActive = false
 local shiftlockDebounce = false
 
 RotationController:SetCharacter(Character, HumRP, Humanoid)
+CutsceneController:Listen()
 
 local function setShiftlock(enabled)
 	if shiftlockDebounce then
