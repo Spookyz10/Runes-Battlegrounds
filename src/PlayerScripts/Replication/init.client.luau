@@ -94,12 +94,17 @@ if shared.IsMobile then
 	end)
 end
 
-RNS.RenderStepped:Connect(function()
+local CAMERA_PRIORITY = Enum.RenderPriority.Camera.Value
+
+RNS:BindToRenderStep("RotationControllerStep", CAMERA_PRIORITY - 2, function()
 	if not HumRP or not HumRP.Parent then
 		return
 	end
 	RotationController:Step()
-	if shiftlockActive and not Character:HasTag("CantRotate") then
+end)
+
+RNS:BindToRenderStep("ShiftlockOffset", CAMERA_PRIORITY + 1, function()
+	if HumRP and HumRP.Parent and shiftlockActive and not Character:HasTag("CantRotate") then
 		Camera.CFrame = Camera.CFrame * CFrame.new(1.75, 0, 0)
 	end
 end)

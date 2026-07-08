@@ -40,7 +40,7 @@ local PROJECTILE_LIFETIME = 10
 local PROJECTILE_SIZE = Vector3.new(2, 2, 2)
 local EXPLOSION_SIZE = Vector3.new(100, 100, 100)
 
-local AIM_CONTROL_MAX_DURATION = 30 -- segurança, é encerrado manualmente no marker "throw"
+local AIM_CONTROL_MAX_DURATION = 30
 local THROW_DELAY = 1
 local TPDOWN_IMPACT_DELAY = 0.3
 
@@ -192,10 +192,14 @@ function module:Activate(Player)
 	end
 
 	local Humanoid = Character:FindFirstChild("Humanoid")
+
 	local HumRP = Character:FindFirstChild("HumanoidRootPart")
 	if not Humanoid or not HumRP or Humanoid.Health <= 0 then
 		return
 	end
+
+	Humanoid.WalkSpeed = 0
+	HumRP.Anchored = true
 
 	local indicatorId = "LunarAwaken_" .. Player.UserId
 
@@ -210,7 +214,6 @@ function module:Activate(Player)
 	ReplicateSet:FireAllClients("HideHotbar")
 	ReplicateSet:FireAllClients("HideAwkbar")
 
-	-- tpup: equivalente ao "jump" antigo (fog/night) + crater + LunarImpact (teleport out)
 	table.insert(
 		AnimEvents,
 		AnimTrack:GetMarkerReachedSignal("tpup"):Connect(function()
@@ -335,6 +338,8 @@ function module:Activate(Player)
 
 	AnimTrack.Stopped:Once(function()
 		ReplicateSet:FireAllClients("LunarAwakenEnd", { char = Character })
+		Humanoid.WalkSpeed = 16
+		HumRP.Anchored = false
 	end)
 
 	AnimationService:playAnimation(Character, LunarEclipseAnim)

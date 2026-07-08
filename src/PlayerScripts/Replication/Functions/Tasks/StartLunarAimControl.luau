@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local BIND_NAME = "LunarAimCameraFollow"
+local CAMERA_PRIORITY = Enum.RenderPriority.Camera.Value
 
 return function(Params)
 	shared._lunarAimActive = true
@@ -17,7 +18,7 @@ return function(Params)
 
 	local Anchor = nil
 
-	if Torso and HumRP and Humanoid then
+	if HumRP and Torso and Humanoid then
 		Anchor = Instance.new("Part")
 		Anchor.Name = "LunarAimCameraAnchor"
 		Anchor.Anchored = true
@@ -28,15 +29,10 @@ return function(Params)
 		Anchor.Size = Vector3.new(0.2, 0.2, 0.2)
 		Anchor.Parent = workspace
 
-		-- Roda ANTES do módulo de câmera nativo (Camera priority), pra não
-		-- ter 1 frame de atraso e evitar jitter.
-		RunService:BindToRenderStep(BIND_NAME, Enum.RenderPriority.Camera.Value - 1, function()
-			if not Torso or not Torso.Parent or not HumRP or not HumRP.Parent then
+		RunService:BindToRenderStep(BIND_NAME, CAMERA_PRIORITY - 1, function()
+			if not HumRP or not HumRP.Parent or not Torso or not Torso.Parent then
 				return
 			end
-			-- Posição real do Torso (segue a animação), mas ROTAÇÃO do
-			-- HumanoidRootPart (estável, só muda via RotationController).
-			-- Isso evita que a câmera "sinta" a rotação dos ossos animados.
 			Anchor.CFrame = CFrame.new(Torso.Position) * (HumRP.CFrame - HumRP.Position)
 		end)
 

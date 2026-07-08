@@ -53,7 +53,10 @@ function RotationController:Step()
 
 	local dir = best.getDirection()
 	if dir then
-		HumRP.CFrame = CFrame.new(HumRP.Position, HumRP.Position + dir)
+		local flatDir = Vector3.new(dir.X, 0, dir.Z)
+		if flatDir.Magnitude > 0.001 then
+			HumRP.CFrame = CFrame.new(HumRP.Position, HumRP.Position + flatDir)
+		end
 	end
 end
 
