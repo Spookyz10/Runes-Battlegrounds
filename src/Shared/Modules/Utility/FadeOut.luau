@@ -343,10 +343,6 @@ function FadeOut.In(target, duration, callback)
 	animateFadeWithTokens(leaves, fromAlpha, 1, duration, callback)
 end
 
---[[
-	FadeOut.OutAndDestroy(target, fadeDuration, destroyDelay?)
-	Fade out e depois destroça. destroyDelay é adicional após o fade (default 0).
-]]
 function FadeOut.OutAndDestroy(target, fadeDuration, destroyDelay)
 	destroyDelay = destroyDelay or 0
 	FadeOut.Out(target, fadeDuration, function()
