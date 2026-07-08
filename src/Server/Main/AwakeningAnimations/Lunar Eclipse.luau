@@ -40,7 +40,7 @@ local PROJECTILE_LIFETIME = 10
 local PROJECTILE_SIZE = Vector3.new(2, 2, 2)
 local EXPLOSION_SIZE = Vector3.new(100, 100, 100)
 
-local AIM_CONTROL_MAX_DURATION = 30 -- segurança, é encerrado manualmente no marker "throw"
+local AIM_CONTROL_MAX_DURATION = 30
 local THROW_DELAY = 1
 local TPDOWN_IMPACT_DELAY = 0.3
 
@@ -210,7 +210,6 @@ function module:Activate(Player)
 	ReplicateSet:FireAllClients("HideHotbar")
 	ReplicateSet:FireAllClients("HideAwkbar")
 
-	-- tpup: equivalente ao "jump" antigo (fog/night) + crater + LunarImpact (teleport out)
 	table.insert(
 		AnimEvents,
 		AnimTrack:GetMarkerReachedSignal("tpup"):Connect(function()
@@ -246,7 +245,6 @@ function module:Activate(Player)
 		end)
 	)
 
-	-- charge: sem freeze de animação, lua crescendo normalmente + aura
 	table.insert(
 		AnimEvents,
 		AnimTrack:GetMarkerReachedSignal("charge"):Connect(function()
@@ -260,16 +258,6 @@ function module:Activate(Player)
 		end)
 	)
 
-	-- startthrow: finaliza cutscene, devolve câmera, começa mira (indicator + rotação)
-	--
-	-- IMPORTANTE: a ordem dos FireClient importa. StartLunarAimControl precisa
-	-- rodar ANTES do "End" da cutscene, porque ele é quem seta o CameraSubject
-	-- pro Anchor. Se o "End" rodar primeiro, o StopRig reseta o CameraSubject
-	-- pro Humanoid (câmera desce pra altura da RootPart) e só depois o Anchor
-	-- assume (câmera sobe de novo) — causando o "pulo" visual.
-	-- Por isso disparamos StartLunarAimControl primeiro e passamos
-	-- SkipCameraSubject = true pro End, pra ele não mexer no CameraSubject
-	-- (que já está correto) e só restaurar o CameraType.
 	table.insert(
 		AnimEvents,
 		AnimTrack:GetMarkerReachedSignal("startthrow"):Connect(function()
@@ -294,7 +282,7 @@ function module:Activate(Player)
 	table.insert(
 		AnimEvents,
 		AnimTrack:GetMarkerReachedSignal("throw"):Connect(function()
-			ReplicateSet:FireClient(Player, "StopLunarAimControl", {})
+			ReplicateSet:FireClient(Player, "StopLunarAimControl", { RestoreCamera = false })
 
 			local launchPosition = IndicatorService:GetPosition(Player, indicatorId)
 			IndicatorService:Destroy(indicatorId)
@@ -330,7 +318,6 @@ function module:Activate(Player)
 		end)
 	)
 
-	-- tpdown: espera 0.3s e dispara o LunarImpact (teleport de volta)
 	table.insert(
 		AnimEvents,
 		AnimTrack:GetMarkerReachedSignal("tpdown"):Connect(function()
@@ -344,6 +331,7 @@ function module:Activate(Player)
 	)
 
 	AnimTrack.Stopped:Once(function()
+		ReplicateSet:FireClient(Player, "LunarAimRestoreCamera", {})
 		ReplicateSet:FireAllClients("LunarAwakenEnd", { char = Character })
 	end)
 

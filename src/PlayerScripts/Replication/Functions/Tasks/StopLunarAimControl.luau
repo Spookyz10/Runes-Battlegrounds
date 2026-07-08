@@ -4,8 +4,10 @@ return function(Params)
 	shared._lunarAimActive = false
 	RotationController:Release("lunarAim")
 
-	if shared._lunarAimRestoreCamera then
-		shared._lunarAimRestoreCamera()
-		shared._lunarAimRestoreCamera = nil
+	if Params.RestoreCamera ~= false then
+		if shared._lunarAimRestoreCamera then
+			shared._lunarAimRestoreCamera()
+			shared._lunarAimRestoreCamera = nil
+		end
 	end
 end

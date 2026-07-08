@@ -468,7 +468,11 @@ Heartbeat = RNS.RenderStepped:Connect(function(deltaTime)
 	end
 
 	if Head and HumRP and Torso then
-		if Camera.CameraType ~= Enum.CameraType.Scriptable then
+		if
+			Camera.CameraType ~= Enum.CameraType.Scriptable
+			and not shared._lunarAimActive
+			and not shared._solarAimActive
+		then
 			local defaultOffset = Vector3.new(0 + xShake, -1.25 + yShake, 0 + zShake)
 			local camOffset = defaultOffset
 
