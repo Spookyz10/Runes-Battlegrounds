@@ -5,7 +5,7 @@ function Module.Start(Character, Params, Controller)
 end
 
 function Module.End(Params, Controller)
-	Controller:StopRig()
+	Controller:StopRig(Params and Params.SkipCameraSubject)
 end
 
 function Module.EndEarly(Controller)

@@ -91,7 +91,11 @@ function Controller:PlayRig(name, Character, params)
 	return Rig, Track
 end
 
-function Controller:StopRig()
+-- skipCameraSubject: se true, restaura apenas o CameraType (volta pra Custom)
+-- mas NÃO mexe no CameraSubject. Usado quando outro sistema (ex: LunarAimControl)
+-- já assumiu o CameraSubject (Anchor) antes desse StopRig rodar, evitando o
+-- "pulo" da câmera passando pelo Humanoid antes de ir pro Anchor.
+function Controller:StopRig(skipCameraSubject)
 	if rigConnection then
 		rigConnection:Disconnect()
 		rigConnection = nil
@@ -109,7 +113,7 @@ function Controller:StopRig()
 
 	local Camera = workspace.CurrentCamera
 	Camera.CameraType = previousCameraType or Enum.CameraType.Custom
-	if previousCameraSubject then
+	if not skipCameraSubject and previousCameraSubject then
 		Camera.CameraSubject = previousCameraSubject
 	end
 	previousCameraType = nil

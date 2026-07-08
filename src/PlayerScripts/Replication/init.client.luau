@@ -94,17 +94,18 @@ if shared.IsMobile then
 	end)
 end
 
-local CAMERA_PRIORITY = Enum.RenderPriority.Camera.Value
-
-RNS:BindToRenderStep("RotationControllerStep", CAMERA_PRIORITY - 2, function()
+RNS.RenderStepped:Connect(function()
 	if not HumRP or not HumRP.Parent then
 		return
 	end
 	RotationController:Step()
-end)
 
-RNS:BindToRenderStep("ShiftlockOffset", CAMERA_PRIORITY + 1, function()
-	if HumRP and HumRP.Parent and shiftlockActive and not Character:HasTag("CantRotate") then
+	if
+		shiftlockActive
+		and not Character:HasTag("CantRotate")
+		and not shared._lunarAimActive
+		and not shared._solarAimActive
+	then
 		Camera.CFrame = Camera.CFrame * CFrame.new(1.75, 0, 0)
 	end
 end)

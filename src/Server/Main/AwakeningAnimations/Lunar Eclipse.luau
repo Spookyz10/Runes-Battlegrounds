@@ -40,7 +40,7 @@ local PROJECTILE_LIFETIME = 10
 local PROJECTILE_SIZE = Vector3.new(2, 2, 2)
 local EXPLOSION_SIZE = Vector3.new(100, 100, 100)
 
-local AIM_CONTROL_MAX_DURATION = 30
+local AIM_CONTROL_MAX_DURATION = 30 -- segurança, é encerrado manualmente no marker "throw"
 local THROW_DELAY = 1
 local TPDOWN_IMPACT_DELAY = 0.3
 
@@ -192,14 +192,10 @@ function module:Activate(Player)
 	end
 
 	local Humanoid = Character:FindFirstChild("Humanoid")
-
 	local HumRP = Character:FindFirstChild("HumanoidRootPart")
 	if not Humanoid or not HumRP or Humanoid.Health <= 0 then
 		return
 	end
-
-	Humanoid.WalkSpeed = 0
-	HumRP.Anchored = true
 
 	local indicatorId = "LunarAwaken_" .. Player.UserId
 
@@ -214,6 +210,7 @@ function module:Activate(Player)
 	ReplicateSet:FireAllClients("HideHotbar")
 	ReplicateSet:FireAllClients("HideAwkbar")
 
+	-- tpup: equivalente ao "jump" antigo (fog/night) + crater + LunarImpact (teleport out)
 	table.insert(
 		AnimEvents,
 		AnimTrack:GetMarkerReachedSignal("tpup"):Connect(function()
@@ -264,16 +261,26 @@ function module:Activate(Player)
 	)
 
 	-- startthrow: finaliza cutscene, devolve câmera, começa mira (indicator + rotação)
+	--
+	-- IMPORTANTE: a ordem dos FireClient importa. StartLunarAimControl precisa
+	-- rodar ANTES do "End" da cutscene, porque ele é quem seta o CameraSubject
+	-- pro Anchor. Se o "End" rodar primeiro, o StopRig reseta o CameraSubject
+	-- pro Humanoid (câmera desce pra altura da RootPart) e só depois o Anchor
+	-- assume (câmera sobe de novo) — causando o "pulo" visual.
+	-- Por isso disparamos StartLunarAimControl primeiro e passamos
+	-- SkipCameraSubject = true pro End, pra ele não mexer no CameraSubject
+	-- (que já está correto) e só restaurar o CameraType.
 	table.insert(
 		AnimEvents,
 		AnimTrack:GetMarkerReachedSignal("startthrow"):Connect(function()
-			CutscenesSet:FireClient(Player, "LunarAwaken", "End", {})
-
 			if not Character or not Character.Parent or Humanoid.Health <= 0 then
+				CutscenesSet:FireClient(Player, "LunarAwaken", "End", {})
 				return
 			end
 
 			ReplicateSet:FireClient(Player, "StartLunarAimControl", { Duration = AIM_CONTROL_MAX_DURATION })
+
+			CutscenesSet:FireClient(Player, "LunarAwaken", "End", { SkipCameraSubject = true })
 
 			IndicatorService:Create({
 				id = indicatorId,
@@ -338,8 +345,6 @@ function module:Activate(Player)
 
 	AnimTrack.Stopped:Once(function()
 		ReplicateSet:FireAllClients("LunarAwakenEnd", { char = Character })
-		Humanoid.WalkSpeed = 16
-		HumRP.Anchored = false
 	end)
 
 	AnimationService:playAnimation(Character, LunarEclipseAnim)
