@@ -30,6 +30,7 @@ local EXPLOSION_DAMAGE = 30
 local EXPLOSION_KNOCKUP = 1000
 local RAGDOLL_DURATION = 10
 local CYLINDER_SIZE = Vector3.new(260.573, 110, 110)
+local CFrameToTp
 
 local module = {}
 
@@ -260,6 +261,7 @@ function module:Activate(Player)
 
 			ReplicateSet:FireAllClients("GivePlayerAura", { Char = Character, AuraName = "Solar Eclipse" })
 			triggerPillar(Character, HumRP.Position)
+			CFrameToTp = Character.Torso.CFrame
 		end)
 	)
 
@@ -273,9 +275,13 @@ function module:Activate(Player)
 			return
 		end
 
-		task.spawn(function()
-			Character.HumanoidRootPart.CFrame = Character.HumanoidRootPart.CFrame + Vector3.new(0, 60, 0)
-		end)
+		CutscenesSet:FireClient(Player, "SolarAwaken", "End", {})
+
+		Character.HumanoidRootPart.CFrame = CFrameToTp
+		CFrameToTp = nil
+		Character.HumanoidRootPart.Anchored = true
+		task.wait(1)
+		Character.HumanoidRootPart.Anchored = false
 
 		watchForLanding(Character, Humanoid, HumRP, function(LandPosition)
 			if LandPosition then
@@ -285,8 +291,6 @@ function module:Activate(Player)
 			ReplicateSet:FireAllClients("SolarAwakenEnd", { char = Character })
 			ReplicateSet:FireAllClients("ShowHotbar")
 			ReplicateSet:FireAllClients("ShowAwkbar")
-
-			CutscenesSet:FireClient(Player, "SolarAwaken", "End", {})
 
 			restoreControl()
 		end)

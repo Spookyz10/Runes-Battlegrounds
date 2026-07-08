@@ -5,7 +5,7 @@ local CharacterAssets = ReplicatedStorage.Resources.CharacterAssets
 local FadeOut = require(ReplicatedStorage.Shared.Modules.Utility.FadeOut)
 
 local FADE_DURATION = 1.2
-local VISUAL_LIFETIME = 7
+local VISUAL_LIFETIME = 7.8
 
 return function(params)
 	local position = params.position
