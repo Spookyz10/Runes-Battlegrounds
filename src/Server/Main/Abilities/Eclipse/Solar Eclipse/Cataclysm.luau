@@ -160,6 +160,9 @@ return {
 						return
 					end
 
+					ReplicateSet:FireAllClients("SolarHit", { char = Character })
+					ReplicateSet:FireAllClients("Cataclysm", { char = Character })
+
 					DamageHandler:TakeDamage(
 						Character,
 						EnemyHumanoid,
