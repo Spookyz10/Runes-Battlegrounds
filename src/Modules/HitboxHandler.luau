@@ -2,7 +2,7 @@ local RNS = game:GetService("RunService")
 local RS = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
-local DebugHitboxes = false
+local DebugHitboxes = true
 
 local Remotes = RS.Remotes
 local ReplicateSet = Remotes.Replicate.Set

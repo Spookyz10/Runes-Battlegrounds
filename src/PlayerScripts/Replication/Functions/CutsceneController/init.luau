@@ -35,8 +35,15 @@ function Controller:PlayRig(name, Character, params)
 		return nil
 	end
 
-	local HumRP = Character:FindFirstChild("HumanoidRootPart")
-	if not HumRP then
+	local goalPart
+
+	if params.GoalPart then
+		goalPart = params.goalPart
+	else
+		goalPart = Character:FindFirstChild("HumanoidRootPart")
+	end
+
+	if not goalPart then
 		return nil
 	end
 
@@ -50,9 +57,9 @@ function Controller:PlayRig(name, Character, params)
 	Rig.Parent = workspace
 
 	if params.Offset then
-		Rig:PivotTo(HumRP.CFrame * params.Offset)
+		Rig:PivotTo(goalPart.CFrame * params.Offset)
 	else
-		Rig:PivotTo(HumRP.CFrame)
+		Rig:PivotTo(goalPart.CFrame)
 	end
 
 	local AnimController = Rig:FindFirstChildOfClass("AnimationController") or Rig:FindFirstChildOfClass("Humanoid")
@@ -86,15 +93,17 @@ function Controller:PlayRig(name, Character, params)
 	activeRig = Rig
 	activeRigTrack = Track
 
+	Track.Stopped:Once(function()
+		if activeRigTrack == Track then
+			Controller:StopRig()
+		end
+	end)
+
 	Track:Play()
 
 	return Rig, Track
 end
 
--- skipCameraSubject: se true, restaura apenas o CameraType (volta pra Custom)
--- mas NÃO mexe no CameraSubject. Usado quando outro sistema (ex: LunarAimControl)
--- já assumiu o CameraSubject (Anchor) antes desse StopRig rodar, evitando o
--- "pulo" da câmera passando pelo Humanoid antes de ir pro Anchor.
 function Controller:StopRig(skipCameraSubject)
 	if rigConnection then
 		rigConnection:Disconnect()
@@ -102,8 +111,9 @@ function Controller:StopRig(skipCameraSubject)
 	end
 
 	if activeRigTrack then
-		activeRigTrack:Stop()
+		local Track = activeRigTrack
 		activeRigTrack = nil
+		Track:Stop()
 	end
 
 	if activeRig and activeRig.Parent then

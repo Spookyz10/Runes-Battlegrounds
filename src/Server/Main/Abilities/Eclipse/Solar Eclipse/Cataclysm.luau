@@ -39,6 +39,8 @@ local SPLASH_DAMAGE = 30
 local SPLASH_KNOCKUP_FORCE = 300
 local SPLASH_RAGDOLL_TIME = 10
 
+local WALKSPEED_FREEZE_DELAY = 0.2
+
 return {
 	Start = function(Player, Tool)
 		local Character = Player.Character
@@ -52,9 +54,17 @@ return {
 			return
 		end
 
+		local OriginalWalkSpeed = Humanoid.WalkSpeed
+
 		local CasterStun = StunHandler:Stun(Character, nil, true, 0, 0, true)
 		iFramesService:AddAlliFrames(Character)
-		local CasterLock = Freeze.Lock(Character)
+
+		Humanoid.WalkSpeed = 0
+
+		local CasterLock = nil
+		local FreezeDelayThread = task.delay(WALKSPEED_FREEZE_DELAY, function()
+			CasterLock = Freeze.Lock(Character)
+		end)
 
 		local HitCharacter = nil
 		local VictimStun = nil
@@ -67,6 +77,11 @@ return {
 			end
 			Cleaned = true
 
+			if FreezeDelayThread then
+				task.cancel(FreezeDelayThread)
+				FreezeDelayThread = nil
+			end
+
 			if CasterLock then
 				Freeze.Release(Character, CasterLock, true)
 				CasterLock = nil
@@ -74,6 +89,11 @@ return {
 
 			iFramesService:RemoveAlliFrames(Character)
 			StunHandler:Unstun(Character, CasterStun)
+
+			if Humanoid and Humanoid.Parent then
+				Humanoid.WalkSpeed = OriginalWalkSpeed
+				Humanoid.AutoRotate = true
+			end
 		end
 
 		local function cleanupVictim()
@@ -93,12 +113,17 @@ return {
 		end
 
 		local function startCutscene()
-			CutscenesSet:FireClient(Player, "Cataclysm", "Start", { Offset = CFrame.new(0, -6, 0) })
+			CutscenesSet:FireClient(Player, "Cataclysm", "Start", { Offset = CFrame.new(0, -6, 0), goalPart = HumRP })
 
 			if HitCharacter and HitCharacter.Parent then
 				local VictimPlayer = Players:GetPlayerFromCharacter(HitCharacter)
 				if VictimPlayer then
-					CutscenesSet:FireClient(VictimPlayer, "Cataclysm", "Start", { Offset = CFrame.new(0, -6, 0) })
+					CutscenesSet:FireClient(
+						VictimPlayer,
+						"Cataclysm",
+						"Start",
+						{ Offset = CFrame.new(0, -6, 0), goalPart = HumRP }
+					)
 				end
 			end
 		end
@@ -235,13 +260,6 @@ return {
 				end)
 			)
 
-			table.insert(
-				UserEvents,
-				UserTrack:GetMarkerReachedSignal("startCutscene"):Once(function()
-					startCutscene()
-				end)
-			)
-
 			UserTrack.Stopped:Once(function()
 				for _, v in UserEvents do
 					v:Disconnect()
@@ -289,6 +307,8 @@ return {
 
 			HitCharacter = FoundVictim
 
+			startCutscene()
+
 			local EnemyHumanoid = HitCharacter.Humanoid
 			local EnemyHumRP = HitCharacter.HumanoidRootPart
 
@@ -316,13 +336,27 @@ return {
 			local targetPosition = HumRP.Position + lookFlat * VICTIM_TWEEN_DISTANCE
 			local targetCFrame = CFrame.new(targetPosition, targetPosition + lookFlat)
 
-			TweenService
-				:Create(
-					EnemyHumRP,
-					TweenInfo.new(VICTIM_TWEEN_TIME, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-					{ CFrame = targetCFrame }
-				)
-				:Play()
+			Freeze.Release(HitCharacter, VictimLock, true)
+			VictimLock = nil
+
+			local VictimTween = TweenService:Create(
+				EnemyHumRP,
+				TweenInfo.new(VICTIM_TWEEN_TIME, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+				{ CFrame = targetCFrame }
+			)
+
+			VictimTween.Completed:Once(function(state)
+				if not HitCharacter or not HitCharacter.Parent then
+					return
+				end
+				if state ~= Enum.PlaybackState.Completed then
+					return
+				end
+
+				VictimLock = Freeze.Lock(HitCharacter)
+			end)
+
+			VictimTween:Play()
 
 			playMainAnimation()
 		end
