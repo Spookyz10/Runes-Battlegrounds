@@ -253,6 +253,25 @@ return {
 							end
 						end
 					)
+
+					local HitCharacterForDelay = HitCharacter
+					task.delay(1, function()
+						if not HitCharacterForDelay or not HitCharacterForDelay.Parent then
+							return
+						end
+
+						AnimationService:stopAll(HitCharacterForDelay)
+
+						local VictimHumRP = HitCharacterForDelay:FindFirstChild("HumanoidRootPart")
+						local VictimTorso = HitCharacterForDelay:FindFirstChild("Torso")
+						local CasterTorso = Character and Character.Parent and Character:FindFirstChild("Torso")
+
+						if VictimHumRP and VictimTorso and CasterTorso then
+							VictimHumRP.CFrame = CFrame.new(
+								Vector3.new(VictimTorso.Position.X, VictimHumRP.Position.Y, CasterTorso.Position.Z)
+							)
+						end
+					end)
 				end)
 			)
 

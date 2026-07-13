@@ -20,4 +20,9 @@ return function(Params)
 		end
 		State.solarData[Character] = nil
 	end
+
+	State.lunarNightCount = math.max(0, State.lunarNightCount - 1)
+	if State.lunarNightCount <= 0 then
+		State:tweenToDay()
+	end
 end
