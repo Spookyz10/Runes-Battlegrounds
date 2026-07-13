@@ -1274,3 +1274,9 @@ ComSet.OnServerEvent:Connect(function(Player, _Function, Params)
 		ComunicatorFunctions[_Function](Player, Params)
 	end
 end)
+
+for _, part in workspace.Map.Destroyables:GetDescendants() do
+	if part:IsA("BasePart") then
+		part:SetAttribute("Destroyable", true)
+	end
+end

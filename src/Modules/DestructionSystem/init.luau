@@ -17,12 +17,23 @@ local DEBRIS_COLLISION_GROUP = "NonPColDebri"
 local DEFAULT_TRACK_DURATION = 5
 local DEFAULT_TRACK_HITBOX_SIZE = Vector3.new(6, 6, 6)
 
+local MAX_CHUNKS_PER_IMPACT = 40
+local NEIGHBOR_MARGIN = 1.2
+local INTEGRITY_SEARCH_RADIUS = 40
+
 local FORCE_TIERS = {
-	{ MinForce = 0, Radius = 6, VoxelSize = 1.5 },
-	{ MinForce = 30, Radius = 14, VoxelSize = 3 },
-	{ MinForce = 70, Radius = 30, VoxelSize = 6 },
-	{ MinForce = 110, Radius = 50, VoxelSize = 10 },
+	{ MinForce = 0, Radius = 5, VoxelSize = 3 },
+	{ MinForce = 30, Radius = 8, VoxelSize = 4 },
+	{ MinForce = 70, Radius = 12, VoxelSize = 6 },
+	{ MinForce = 110, Radius = 18, VoxelSize = 8 },
 }
+
+local GROUND_INSTANCES = {
+	workspace.Map.Arena.Island.Ground,
+	workspace.Map.Arena.Island.Ground2,
+}
+
+local DESTROYABLES_ROOT = workspace:FindFirstChild("Destroyables")
 
 local function dprint(...)
 	if DEBUG then
@@ -38,6 +49,198 @@ local function getTier(Force)
 		end
 	end
 	return chosen
+end
+
+local function isDestroyablePart(part)
+	if not part:IsA("BasePart") then
+		return false
+	end
+	if part:GetAttribute("Destroyable") == true then
+		return true
+	end
+	local model = part:FindFirstAncestorOfClass("Model")
+	while model do
+		if model:GetAttribute("Destroyable") == true then
+			return true
+		end
+		model = model.Parent and model.Parent:FindFirstAncestorOfClass("Model")
+	end
+	return false
+end
+
+local function collectNearbyDestroyableParts(Center, Radius)
+	local result = {}
+	if not DESTROYABLES_ROOT then
+		return result
+	end
+
+	for _, desc in DESTROYABLES_ROOT:GetDescendants() do
+		if desc:IsA("BasePart") and desc.Parent and isDestroyablePart(desc) then
+			if (desc.Position - Center).Magnitude <= Radius then
+				table.insert(result, desc)
+			end
+		end
+	end
+
+	return result
+end
+
+local function touchesGround(part, groundParams)
+	local expanded = part.Size + Vector3.one * NEIGHBOR_MARGIN
+	local touching = workspace:GetPartBoundsInBox(part.CFrame, expanded, groundParams)
+	return #touching > 0
+end
+
+local function getNeighbors(part, candidateSet, neighborParams)
+	local expanded = part.Size + Vector3.one * NEIGHBOR_MARGIN
+	local touching = workspace:GetPartBoundsInBox(part.CFrame, expanded, neighborParams)
+
+	local neighbors = {}
+	for _, other in touching do
+		if other ~= part and candidateSet[other] then
+			table.insert(neighbors, other)
+		end
+	end
+	return neighbors
+end
+
+function DestructionService:CheckIntegrity(ImpactPosition, ImpactDirection)
+	local parts = collectNearbyDestroyableParts(ImpactPosition, INTEGRITY_SEARCH_RADIUS)
+	if #parts == 0 then
+		return
+	end
+
+	local candidateSet = {}
+	for _, p in parts do
+		candidateSet[p] = true
+	end
+
+	local groundParams = OverlapParams.new()
+	groundParams.FilterType = Enum.RaycastFilterType.Include
+	groundParams.FilterDescendantsInstances = GROUND_INSTANCES
+
+	local neighborParams = OverlapParams.new()
+	neighborParams.FilterType = Enum.RaycastFilterType.Include
+	neighborParams.FilterDescendantsInstances = parts
+
+	local supported = {}
+	local queue = {}
+
+	for _, part in parts do
+		if touchesGround(part, groundParams) then
+			supported[part] = true
+			table.insert(queue, part)
+		end
+	end
+
+	local head = 1
+	while head <= #queue do
+		local current = queue[head]
+		head += 1
+
+		for _, neighbor in getNeighbors(current, candidateSet, neighborParams) do
+			if not supported[neighbor] then
+				supported[neighbor] = true
+				table.insert(queue, neighbor)
+			end
+		end
+	end
+
+	local unsupported = {}
+	for _, part in parts do
+		if not supported[part] then
+			table.insert(unsupported, part)
+		end
+	end
+
+	if #unsupported == 0 then
+		return
+	end
+
+	local unsupportedSet = {}
+	for _, p in unsupported do
+		unsupportedSet[p] = true
+	end
+
+	local visited = {}
+	local clusters = {}
+
+	for _, part in unsupported do
+		if visited[part] then
+			continue
+		end
+
+		local cluster = {}
+		local clusterQueue = { part }
+		visited[part] = true
+
+		local qHead = 1
+		while qHead <= #clusterQueue do
+			local current = clusterQueue[qHead]
+			qHead += 1
+			table.insert(cluster, current)
+
+			for _, neighbor in getNeighbors(current, unsupportedSet, neighborParams) do
+				if not visited[neighbor] then
+					visited[neighbor] = true
+					table.insert(clusterQueue, neighbor)
+				end
+			end
+		end
+
+		table.insert(clusters, cluster)
+	end
+
+	for _, cluster in clusters do
+		self:CollapseCluster(cluster, ImpactPosition, ImpactDirection)
+	end
+end
+
+function DestructionService:CollapseCluster(clusterParts, ImpactPosition, ImpactDirection)
+	if #clusterParts == 0 then
+		return
+	end
+
+	dprint("Cluster desconectado caindo:", #clusterParts, "parts")
+
+	ImpactDirection = ImpactDirection or Vector3.new(0, 0, 0)
+
+	for _, part in clusterParts do
+		if not part.Parent then
+			continue
+		end
+
+		part:SetAttribute("Destroyable", nil)
+		part.Anchored = false
+		part.CanCollide = true
+
+		local away = part.Position - ImpactPosition
+		local awayDir = away.Magnitude > 0.01 and away.Unit or Vector3.new(0, 1, 0)
+
+		local combinedDir = (ImpactDirection * 0.7 + awayDir * 0.5) + Vector3.new(0, 0.35, 0)
+		if combinedDir.Magnitude > 0.01 then
+			combinedDir = combinedDir.Unit
+		else
+			combinedDir = Vector3.new(0, 1, 0)
+		end
+
+		local mass = part:GetMass()
+		local speed = math.clamp(18 / math.sqrt(math.max(mass, 1)) + 6, 4, 30)
+
+		part.AssemblyLinearVelocity = combinedDir * speed
+		part.AssemblyAngularVelocity =
+			Vector3.new(math.random(-150, 150) / 100, math.random(-150, 150) / 100, math.random(-150, 150) / 100)
+
+		pcall(function()
+			part.CollisionGroup = DEBRIS_COLLISION_GROUP
+		end)
+
+		DebrisDamage:Track(part, nil)
+	end
+end
+
+function DestructionService:NotifyPartRemoved(RemovedPartPosition, Direction)
+	self:CheckIntegrity(RemovedPartPosition, Direction)
 end
 
 local function applySplat(chunk)
@@ -60,11 +263,12 @@ local function applySplat(chunk)
 	end
 end
 
-function DestructionService:_LaunchChunk(chunk, ImpactPosition, Force, OwnerPlayer)
+function DestructionService:_LaunchChunk(chunk, ImpactPosition, Force, OwnerPlayer, Direction)
 	if not chunk or not chunk.Parent then
-		dprint("_LaunchChunk abortado: chunk nil ou sem Parent")
 		return
 	end
+
+	chunk:SetAttribute("Destroyable", nil)
 
 	applySplat(chunk)
 
@@ -73,21 +277,24 @@ function DestructionService:_LaunchChunk(chunk, ImpactPosition, Force, OwnerPlay
 	chunk.CanTouch = true
 	chunk.CanQuery = true
 
-	local groupOk, groupErr = pcall(function()
+	pcall(function()
 		chunk.CollisionGroup = DEBRIS_COLLISION_GROUP
 	end)
-	if not groupOk then
-		dprint("AVISO: falha ao setar CollisionGroup", DEBRIS_COLLISION_GROUP, "-", groupErr)
-	end
 
 	local away = chunk.Position - ImpactPosition
 	local dist = away.Magnitude
-	local direction = dist > 0.01 and away.Unit or Vector3.new(0, 1, 0)
+	local awayDir = dist > 0.01 and away.Unit or Vector3.new(0, 1, 0)
+
+	local dir = awayDir
+	if Direction and Direction.Magnitude > 0.01 then
+		dir = (awayDir * 0.5 + Direction.Unit * 0.7)
+		dir = dir.Magnitude > 0.01 and dir.Unit or awayDir
+	end
 
 	local mass = chunk:GetMass()
 	local launchSpeed = math.clamp(Force * 3.2 / math.sqrt(math.max(mass, 1)), 2, 45)
 
-	chunk.AssemblyLinearVelocity = direction * launchSpeed * 0.35 + Vector3.new(0, launchSpeed * 0.55, 0)
+	chunk.AssemblyLinearVelocity = dir * launchSpeed * 0.7 + Vector3.new(0, launchSpeed * 0.45, 0)
 	chunk.AssemblyAngularVelocity =
 		Vector3.new(math.random(-200, 200) / 100, math.random(-200, 200) / 100, math.random(-200, 200) / 100)
 
@@ -99,101 +306,90 @@ function DestructionService:_LaunchChunk(chunk, ImpactPosition, Force, OwnerPlay
 
 	local lifetime = math.clamp(chunk.Size.Magnitude * 0.5, 6, 25)
 	Debris:AddItem(chunk, lifetime)
-
-	dprint("Chunk lançado - Size:", chunk.Size, "- Mass:", mass, "- Speed:", launchSpeed, "- Lifetime:", lifetime)
 end
 
-function DestructionService:ApplyImpact(Position, Force, OwnerPlayer)
-	dprint(
-		"ApplyImpact chamado - Position:",
-		Position,
-		"Force:",
-		Force,
-		"Owner:",
-		OwnerPlayer and OwnerPlayer.Name or "nil"
-	)
+function DestructionService:ApplyImpact(Position, Force, OwnerPlayer, HitPart, Direction)
+	if not HitPart or not HitPart.Parent then
+		return
+	end
 
 	local tier = getTier(Force)
-	dprint("Tier selecionado - Radius:", tier.Radius, "VoxelSize:", tier.VoxelSize, "MinForce:", tier.MinForce)
 
-	local hitboxSize = Vector3.one * tier.Radius * 2
+	local allVoxels = {}
 
-	local ok, voxels = pcall(function()
-		return VoxBreaker:CreateHitbox(hitboxSize, CFrame.new(Position), Enum.PartType.Ball, tier.VoxelSize, -1)
+	local localRadius = math.clamp(tier.Radius * 0.4, 2.5, 6)
+	local localSize = Vector3.one * localRadius
+
+	local localParams = OverlapParams.new()
+	localParams.FilterType = Enum.RaycastFilterType.Include
+	localParams.FilterDescendantsInstances = { HitPart }
+
+	local ok1, localVoxels = pcall(function()
+		return VoxBreaker:CreateHitbox(
+			localSize,
+			CFrame.new(Position),
+			Enum.PartType.Ball,
+			tier.VoxelSize,
+			-1,
+			localParams
+		)
 	end)
 
-	if not ok then
-		warn("[DestructionService] VoxBreaker falhou:", voxels)
-		return
+	if ok1 and localVoxels then
+		for _, v in localVoxels do
+			table.insert(allVoxels, v)
+		end
 	end
 
-	if not voxels then
-		dprint("VoxBreaker retornou nil")
-		return
-	end
+	local hitboxSize = Vector3.one * tier.Radius
 
-	dprint("VoxBreaker retornou", #voxels, "voxels")
+	local areaParams = OverlapParams.new()
+	areaParams.FilterType = Enum.RaycastFilterType.Exclude
+	areaParams.FilterDescendantsInstances = { HitPart }
 
-	if #voxels == 0 then
-		dprint(
-			"NENHUM voxel encontrado. Possíveis causas: nenhuma part com atributo Destroyable=true dentro do raio ("
-				.. tier.Radius
-				.. " studs), ou parts não estão Anchored, ou hitbox não alcançou o alvo."
+	local ok2, voxels = pcall(function()
+		return VoxBreaker:CreateHitbox(
+			hitboxSize,
+			CFrame.new(Position),
+			Enum.PartType.Ball,
+			tier.VoxelSize,
+			-1,
+			areaParams
 		)
-		return
+	end)
+
+	if ok2 and voxels then
+		for _, v in voxels do
+			table.insert(allVoxels, v)
+		end
 	end
 
-	for i, chunk in voxels do
-		dprint("Processando chunk", i, "-", chunk and chunk.Name or "nil")
-		self:_LaunchChunk(chunk, Position, Force, OwnerPlayer)
+	if #allVoxels > MAX_CHUNKS_PER_IMPACT then
+		for i = #allVoxels, MAX_CHUNKS_PER_IMPACT + 1, -1 do
+			local extra = allVoxels[i]
+			if extra and extra.Parent then
+				extra:Destroy()
+			end
+			allVoxels[i] = nil
+		end
 	end
 
-	ReplicateSet:FireAllClients("DebrisSmoke", { Position = Position, Size = hitboxSize })
+	for _, chunk in allVoxels do
+		self:_LaunchChunk(chunk, Position, Force, OwnerPlayer, Direction)
+	end
 
-	ReplicateSet:FireAllClients("Ground Crater", {
-		Seed = math.random(1, 2147483647),
-		amount = math.clamp(Force, 20, 90),
-		start = Position + Vector3.new(0, 4, 0),
-		["end"] = Vector3.new(0, -tier.Radius, 0),
-		rings = Force > 70 and 3 or 2,
-		ringSpacing = tier.Radius * 0.7,
-		ringSizeGrowth = 1.5,
-		ringGap = 0.2,
-		outwardTilt = true,
-		debrisSizeMin = tier.VoxelSize,
-		debrisSizeMax = tier.VoxelSize * 2.5,
-		debrisHeightMin = 4,
-		debrisHeightMax = 9,
-		sizemult = math.clamp(Force / 50, 0.5, 3),
-	})
-
-	dprint("ApplyImpact concluído")
+	task.defer(function()
+		self:CheckIntegrity(Position, Direction)
+	end)
 end
 
--- Hitbox ativa (via Heartbeat + GetPartBoundsInBox) que segue o personagem
--- durante o voo. Independente de física/Touched, então funciona mesmo com
--- BodyVelocity ou o personagem se movendo rápido demais pra gerar Touched.
--- HitboxSize é por-skill: Prowl usa (6,6,6), skills maiores podem passar algo
--- maior (ex: (12,12,12) pra socos mais fortes).
 function DestructionService:TrackCharacterImpacts(Character, Force, OwnerPlayer, Duration, HitboxSize)
 	local HumRP = Character and Character:FindFirstChild("HumanoidRootPart")
 	if not HumRP then
-		dprint("TrackCharacterImpacts abortado: sem HumanoidRootPart")
 		return function() end
 	end
 
 	HitboxSize = HitboxSize or DEFAULT_TRACK_HITBOX_SIZE
-
-	dprint(
-		"TrackCharacterImpacts iniciado para",
-		Character.Name,
-		"- Force:",
-		Force,
-		"- Duration:",
-		Duration or DEFAULT_TRACK_DURATION,
-		"- HitboxSize:",
-		HitboxSize
-	)
 
 	local overlapParams = OverlapParams.new()
 	overlapParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -212,6 +408,12 @@ function DestructionService:TrackCharacterImpacts(Character, Force, OwnerPlayer,
 		end
 
 		local touching = workspace:GetPartBoundsInBox(HumRP.CFrame, HitboxSize, overlapParams)
+		local direction = HumRP.AssemblyLinearVelocity
+		if direction.Magnitude > 0.01 then
+			direction = direction.Unit
+		else
+			direction = HumRP.CFrame.LookVector
+		end
 
 		for _, part in touching do
 			if hitParts[part] then
@@ -222,9 +424,7 @@ function DestructionService:TrackCharacterImpacts(Character, Force, OwnerPlayer,
 			end
 
 			hitParts[part] = true
-			dprint(Character.Name, "hitbox de destruição tocou parte destrutível:", part:GetFullName())
-
-			self:ApplyImpact(HumRP.Position, Force, OwnerPlayer)
+			self:ApplyImpact(HumRP.Position, Force, OwnerPlayer, part, direction)
 		end
 	end)
 
@@ -239,7 +439,6 @@ function DestructionService:TrackCharacterImpacts(Character, Force, OwnerPlayer,
 			conn:Disconnect()
 			conn = nil
 		end
-		dprint("TrackCharacterImpacts encerrado para", Character.Name)
 	end
 
 	task.delay(Duration or DEFAULT_TRACK_DURATION, stop)

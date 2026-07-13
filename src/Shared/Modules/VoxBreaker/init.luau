@@ -891,7 +891,7 @@ function VoxBreaker:CreateHitbox(Size, Cframe, Shape, MinimumVoxelSize, TimeToRe
 		partTable = GetTouchingParts(part, Params)
 
 		for i, v in pairs(partTable) do
-			if v:IsA("Part") and v:GetAttribute(TagName) then
+			if v:IsA("BasePart") and v:GetAttribute(TagName) then
 				if
 					math.floor(v.Size.X) > minimum
 					or math.floor(v.Size.Y) > minimum
@@ -906,7 +906,7 @@ function VoxBreaker:CreateHitbox(Size, Cframe, Shape, MinimumVoxelSize, TimeToRe
 
 		if check == false then
 			for i, v in pairs(partTable) do
-				if v:IsA("Part") and v:GetAttribute(TagName) then
+				if v:IsA("BasePart") and v:GetAttribute(TagName) then
 					DivideBlock(v, minimum, nil, timetoreset)
 				end
 			end
@@ -998,7 +998,7 @@ function VoxBreaker.CreateMoveableHitbox(
 							local check = true
 
 							for i, v in pairs(touching) do
-								if v:IsA("Part") and v:GetAttribute(TagName) then
+								if v:IsA("BasePart") and v:GetAttribute(TagName) then
 									DivideBlock(v, minimum, nil, timetoreset)
 								end
 							end
@@ -1014,7 +1014,7 @@ function VoxBreaker.CreateMoveableHitbox(
 							end
 
 							for i, v in pairs(partTable) do
-								if v:IsA("Part") and v:GetAttribute(TagName) then
+								if v:IsA("BasePart") and v:GetAttribute(TagName) then
 									if
 										math.floor(v.Size.X) > minimum
 										or math.floor(v.Size.Y) > minimum
@@ -1069,7 +1069,7 @@ function VoxBreaker.CreateMoveableHitbox(
 							local check = true
 
 							for i, v in pairs(touching) do
-								if v:IsA("Part") and v:GetAttribute(TagName) then
+								if v:IsA("BasePart") and v:GetAttribute(TagName) then
 									DivideBlock(v, minimum, nil, timetoreset)
 								end
 							end
@@ -1085,7 +1085,7 @@ function VoxBreaker.CreateMoveableHitbox(
 							end
 
 							for i, v in pairs(partTable) do
-								if v:IsA("Part") and v:GetAttribute(TagName) then
+								if v:IsA("BasePart") and v:GetAttribute(TagName) then
 									if
 										math.floor(v.Size.X) > minimum
 										or math.floor(v.Size.Y) > minimum
