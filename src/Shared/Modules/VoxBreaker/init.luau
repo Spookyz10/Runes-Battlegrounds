@@ -269,7 +269,9 @@ local function CopyProperties(PartOne: Part, PartTwo: Part)
 	PartTwo.Name = PartOne.Name
 	PartTwo.Size = PartOne.Size
 	PartTwo.Material = PartOne.Material
-	PartTwo.Shape = PartOne.Shape
+	if PartOne:IsA("Part") then
+		PartTwo.Shape = PartOne.Shape
+	end
 	PartTwo.CollisionGroup = PartOne.CollisionGroup
 	PartTwo.MaterialVariant = PartOne.MaterialVariant
 	PartTwo.BottomSurface = PartOne.BottomSurface
@@ -801,7 +803,7 @@ local function GetTouchingParts(part: BasePart, Params: OverlapParams) --Used to
 	end
 
 	for i, v in pairs(touching) do
-		if v:IsA("Part") then
+		if v:IsA("BasePart") then
 			if v:GetAttribute(TagName) == true then
 				table.insert(results, v)
 			end

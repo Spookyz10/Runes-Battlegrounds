@@ -31,15 +31,9 @@ return function(Params)
 		end
 
 		local Clone = Part:Clone()
-		if
-			Part:IsDescendantOf(workspace.Map.Destroyables.Buildings)
-			and Clone.CanCollide == true
-			and math.random(1, 2) == 1
-		then
-			Clone.CanCollide = true
-		else
-			Clone.CanCollide = false
-		end
+
+		Clone.CanCollide = false
+
 		CollectionService:RemoveTag(Clone, "WindShake")
 		Clone.CanTouch = false
 		Clone.CanQuery = false

@@ -62,8 +62,6 @@ MapRayParams.FilterType = Enum.RaycastFilterType.Include
 MapRayParams.FilterDescendantsInstances = {
 	workspace.Map:WaitForChild("Arena"),
 	workspace.Map:WaitForChild("Miscellaneous"),
-	workspace.Map.Borders,
-	workspace.Map:WaitForChild("Destroyables"):WaitForChild("Buildings"),
 }
 
 local function setOwnershipAll(Character, Owner)

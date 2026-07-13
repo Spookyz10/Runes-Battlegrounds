@@ -26,16 +26,12 @@ MapRayParams.FilterType = Enum.RaycastFilterType.Include
 MapRayParams.FilterDescendantsInstances = {
 	workspace.Map:WaitForChild("Arena"),
 	workspace.Map:WaitForChild("Miscellaneous"),
-	workspace.Map.Borders,
-	workspace.Map:WaitForChild("Destroyables"):WaitForChild("Buildings"),
 }
 
 local GroundRayParams = RaycastParams.new()
 GroundRayParams.FilterType = Enum.RaycastFilterType.Include
 GroundRayParams.FilterDescendantsInstances = {
 	workspace.Map.Arena,
-	workspace.Map.Borders,
-	workspace.Map.Destroyables.Buildings,
 }
 
 local ExcludeRayParams = RaycastParams.new()

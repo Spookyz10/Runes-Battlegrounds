@@ -13,12 +13,15 @@ local DamageHandler = require(ServerModules.DamageHandler)
 local AnimationService = require(ServerModules.AnimationService)
 local iFramesService = require(ServerModules.iFramesService)
 local PerfectKnockback = require(ServerModules.PerfectKnockback)
+local DestructionService = require(ServerModules.DestructionSystem)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 local ReplicateSet = RemotesContainer.Replicate.Set
 
 local HIT_DAMAGE = { 8, 10 }
 local PUNCH_DAMAGE = 22
+local PUNCH_DESTRUCTION_FORCE = 35
+local PUNCH_DESTRUCTION_MAX_TRACK_TIME = 4
 
 local HIT_SIZE = Vector3.new(8, 8, 9)
 local HIT_OFFSET = CFrame.new(0, 0, -4.5)
@@ -170,7 +173,7 @@ return {
 						local lookFlat = HumRP.CFrame.LookVector
 						lookFlat = Vector3.new(lookFlat.X, 0, lookFlat.Z).Unit
 
-						PerfectKnockback:KnockBack(nil, EnemyCharacter, {
+						local knockbackResult = PerfectKnockback:KnockBack(nil, EnemyCharacter, {
 							LookVector = lookFlat,
 							LookForce = 30,
 							LookFinalForce = 25,
@@ -182,6 +185,20 @@ return {
 							Dot = 1,
 							DontFreeze = false,
 						}, Character)
+
+						local stopTracking = DestructionService:TrackCharacterImpacts(
+							EnemyCharacter,
+							PUNCH_DESTRUCTION_FORCE,
+							Player,
+							PUNCH_DESTRUCTION_MAX_TRACK_TIME,
+							Vector3.new(6, 6, 6)
+						)
+
+						if knockbackResult and knockbackResult[1] then
+							knockbackResult[1].Stopped:Once(function()
+								stopTracking()
+							end)
+						end
 
 						if EnemyPlayer then
 							ReplicateSet:FireClient(EnemyPlayer, "ShakeCamera", { Intensity = 10, Last = 0.6 })
