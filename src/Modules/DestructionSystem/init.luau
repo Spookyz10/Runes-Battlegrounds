@@ -12,14 +12,18 @@ local DestructionService = {}
 
 local DEBUG = true
 
+local COLLIDE_SIZE_THRESHOLD = 3
 local INSTAKILL_SIZE = 100
 local DEBRIS_COLLISION_GROUP = "NonPColDebri"
 local DEFAULT_TRACK_DURATION = 5
 local DEFAULT_TRACK_HITBOX_SIZE = Vector3.new(6, 6, 6)
 
+local DEBRIS_LIFETIME = 10
+local DEBRIS_FADE_TIME = 3
 local MAX_CHUNKS_PER_IMPACT = 40
-local NEIGHBOR_MARGIN = 1.2
+local NEIGHBOR_MARGIN = 2.5
 local INTEGRITY_SEARCH_RADIUS = 40
+local NO_VOXEL_RESET_TIME = 20
 
 local FORCE_TIERS = {
 	{ MinForce = 0, Radius = 5, VoxelSize = 3 },
@@ -33,7 +37,7 @@ local GROUND_INSTANCES = {
 	workspace.Map.Arena.Island.Ground2,
 }
 
-local DESTROYABLES_ROOT = workspace:FindFirstChild("Destroyables")
+local DESTROYABLES_ROOT = workspace.Map:FindFirstChild("Destroyables")
 
 local function dprint(...)
 	if DEBUG then
@@ -212,12 +216,15 @@ function DestructionService:CollapseCluster(clusterParts, ImpactPosition, Impact
 
 		part:SetAttribute("Destroyable", nil)
 		part.Anchored = false
-		part.CanCollide = true
+		local bigEnough = part.Size.X >= COLLIDE_SIZE_THRESHOLD
+			and part.Size.Y >= COLLIDE_SIZE_THRESHOLD
+			and part.Size.Z >= COLLIDE_SIZE_THRESHOLD
+		part.CanCollide = bigEnough
 
 		local away = part.Position - ImpactPosition
 		local awayDir = away.Magnitude > 0.01 and away.Unit or Vector3.new(0, 1, 0)
 
-		local combinedDir = (ImpactDirection * 0.7 + awayDir * 0.5) + Vector3.new(0, 0.35, 0)
+		local combinedDir = (ImpactDirection * 1.0 + awayDir * 0.25) + Vector3.new(0, 0.35, 0)
 		if combinedDir.Magnitude > 0.01 then
 			combinedDir = combinedDir.Unit
 		else
@@ -273,7 +280,10 @@ function DestructionService:_LaunchChunk(chunk, ImpactPosition, Force, OwnerPlay
 	applySplat(chunk)
 
 	chunk.Anchored = false
-	chunk.CanCollide = true
+	local bigEnough = chunk.Size.X >= COLLIDE_SIZE_THRESHOLD
+		and chunk.Size.Y >= COLLIDE_SIZE_THRESHOLD
+		and chunk.Size.Z >= COLLIDE_SIZE_THRESHOLD
+	chunk.CanCollide = bigEnough
 	chunk.CanTouch = true
 	chunk.CanQuery = true
 
@@ -287,7 +297,7 @@ function DestructionService:_LaunchChunk(chunk, ImpactPosition, Force, OwnerPlay
 
 	local dir = awayDir
 	if Direction and Direction.Magnitude > 0.01 then
-		dir = (awayDir * 0.5 + Direction.Unit * 0.7)
+		dir = (awayDir * 0.25 + Direction.Unit * 1.0)
 		dir = dir.Magnitude > 0.01 and dir.Unit or awayDir
 	end
 
@@ -304,8 +314,20 @@ function DestructionService:_LaunchChunk(chunk, ImpactPosition, Force, OwnerPlay
 
 	DebrisDamage:Track(chunk, OwnerPlayer)
 
-	local lifetime = math.clamp(chunk.Size.Magnitude * 0.5, 6, 25)
-	Debris:AddItem(chunk, lifetime)
+	task.delay(DEBRIS_LIFETIME - DEBRIS_FADE_TIME, function()
+		if not chunk or not chunk.Parent then
+			return
+		end
+		pcall(function()
+			TweenService:Create(chunk, TweenInfo.new(DEBRIS_FADE_TIME, Enum.EasingStyle.Linear), { Transparency = 1 })
+				:Play()
+		end)
+		task.delay(DEBRIS_FADE_TIME, function()
+			if chunk and chunk.Parent then
+				chunk:Destroy()
+			end
+		end)
+	end)
 end
 
 function DestructionService:ApplyImpact(Position, Force, OwnerPlayer, HitPart, Direction)
@@ -380,6 +402,54 @@ function DestructionService:ApplyImpact(Position, Force, OwnerPlayer, HitPart, D
 
 	task.defer(function()
 		self:CheckIntegrity(Position, Direction)
+	end)
+end
+
+function DestructionService:_ApplyNoVoxelImpact(part, Force, OwnerPlayer, Direction)
+	if not part or not part.Parent then
+		return
+	end
+
+	local originalCFrame = part.CFrame
+	local originalAnchored = part.Anchored
+	local originalCollide = part.CanCollide
+	local originalCollisionGroup = part.CollisionGroup
+
+	part.Anchored = false
+	part.CanCollide = true
+
+	local dir = Direction
+	if not dir or dir.Magnitude < 0.01 then
+		dir = Vector3.new(0, 1, 0)
+	else
+		dir = dir.Unit
+	end
+
+	local mass = part:GetMass()
+	local launchSpeed = math.clamp(Force * 3.2 / math.sqrt(math.max(mass, 1)), 2, 45)
+
+	part.AssemblyLinearVelocity = dir * launchSpeed * 0.7 + Vector3.new(0, launchSpeed * 0.45, 0)
+	part.AssemblyAngularVelocity =
+		Vector3.new(math.random(-150, 150) / 100, math.random(-150, 150) / 100, math.random(-150, 150) / 100)
+
+	pcall(function()
+		part.CollisionGroup = DEBRIS_COLLISION_GROUP
+	end)
+
+	DebrisDamage:Track(part, OwnerPlayer)
+
+	task.delay(NO_VOXEL_RESET_TIME, function()
+		if not part or not part.Parent then
+			return
+		end
+		part.AssemblyLinearVelocity = Vector3.zero
+		part.AssemblyAngularVelocity = Vector3.zero
+		part.CFrame = originalCFrame
+		part.Anchored = originalAnchored
+		part.CanCollide = originalCollide
+		pcall(function()
+			part.CollisionGroup = originalCollisionGroup
+		end)
 	end)
 end
 

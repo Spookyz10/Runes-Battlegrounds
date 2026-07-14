@@ -199,6 +199,7 @@ local miniumCubeSize = 2 --Default Minimum possible size that divided cubes can 
 local voxelFolder = workspace --Where the voxels are stored. Workspace by default.
 local AutoStartMoveable = false --Toggle this to true if you want your moveable hitboxes to activate automatically without having to use :Start()
 local PartCacheEnabled = true --Enables PartCache. This significantly improves performance so I reccommend keeping it on.
+local CF_VOX_GHOST_AWAY = CFrame.new(0, 20000, 0)
 
 ----[ RESOURCES ]------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -385,10 +386,15 @@ local function CutPartinHalf(block: Part, TimeToReset: number) --Cuts part into 
 		block:SetAttribute("Query", block.CanQuery)
 	end
 
+	if block:GetAttribute("VoxOriginalCFrame") == nil then
+		block:SetAttribute("VoxOriginalCFrame", block.CFrame)
+	end
+
 	block.Transparency = 1
 	block.CanCollide = false
 	block.CanQuery = false
 	block:SetAttribute(TagName, false)
+	block.CFrame = CF_VOX_GHOST_AWAY
 
 	for i, v in block:GetChildren() do
 		task.spawn(function()
@@ -437,6 +443,12 @@ local function CutPartinHalf(block: Part, TimeToReset: number) --Cuts part into 
 				block.CanCollide = block:GetAttribute("Collide")
 			end
 
+			local originalCFrame = block:GetAttribute("VoxOriginalCFrame")
+			if originalCFrame then
+				block.CFrame = originalCFrame
+				block:SetAttribute("VoxOriginalCFrame", nil)
+			end
+
 			block:SetAttribute(TagName, true)
 		end
 	end)
@@ -477,7 +489,7 @@ local function GetTableMode(Table: { Part })
 	end
 end
 
-local function DivideBlock(block: Part, MinimumVoxelSize: number, Parent: Instance, TimeToReset: number) --Divides part into evenly shaped cubes.
+local function DivideBlock(block, MinimumVoxelSize, Parent, TimeToReset) --Divides part into evenly shaped cubes.
 	--MinimumvVoxelSize Parameter is used to describe the minimum possible size that the parts can be divided. To avoid confusion, this is not the size that the parts will be divided into, but rather the minimum allowed
 	--You CANNOT change the size of the resulting parts. They are dependent on the size of the original part.
 
@@ -667,10 +679,15 @@ local function DivideBlock(block: Part, MinimumVoxelSize: number, Parent: Instan
 					block:SetAttribute("Query", block.CanQuery)
 				end
 
+				if block:GetAttribute("VoxOriginalCFrame") == nil then
+					block:SetAttribute("VoxOriginalCFrame", block.CFrame)
+				end
+
 				block.Transparency = 1
 				block.CanCollide = false
 				block.CanQuery = false
 				block:SetAttribute(TagName, false)
+				block.CFrame = CF_VOX_GHOST_AWAY
 
 				for i, v in block:GetChildren() do
 					task.spawn(function()
@@ -719,6 +736,12 @@ local function DivideBlock(block: Part, MinimumVoxelSize: number, Parent: Instan
 							block.CanCollide = block:GetAttribute("Collide")
 						end
 
+						local originalCFrame = block:GetAttribute("VoxOriginalCFrame")
+						if originalCFrame then
+							block.CFrame = originalCFrame
+							block:SetAttribute("VoxOriginalCFrame", nil)
+						end
+
 						block:SetAttribute(TagName, true)
 					end
 				end)
@@ -747,10 +770,15 @@ local function DivideBlock(block: Part, MinimumVoxelSize: number, Parent: Instan
 			Destroy(clone, TimeToReset)
 		end
 
+		if block:GetAttribute("VoxOriginalCFrame") == nil then
+			block:SetAttribute("VoxOriginalCFrame", block.CFrame)
+		end
+
 		block.Transparency = 1
 		block.CanCollide = false
 		block.CanQuery = false
 		block:SetAttribute(TagName, false)
+		block.CFrame = CF_VOX_GHOST_AWAY
 
 		for i, v in block:GetChildren() do
 			task.spawn(function()
@@ -784,6 +812,12 @@ local function DivideBlock(block: Part, MinimumVoxelSize: number, Parent: Instan
 			end
 			if block:GetAttribute("Collide") then
 				block.CanCollide = block:GetAttribute("Collide")
+			end
+
+			local originalCFrame = block:GetAttribute("VoxOriginalCFrame")
+			if originalCFrame then
+				block.CFrame = originalCFrame
+				block:SetAttribute("VoxOriginalCFrame", nil)
 			end
 
 			block:SetAttribute(TagName, true)
