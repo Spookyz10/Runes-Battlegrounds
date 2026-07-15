@@ -7,7 +7,7 @@ return function(Params)
 	local id = Params.id
 	local asset = Params.asset
 	local ownerId = Params.ownerId
-	local originOffset = Params.originOffset or Vector3.new(0, 3, 0)
+	local originOffset = Params.originOffset or Vector3.new(0, 70, 0)
 
 	if not character or not character.Parent then
 		return

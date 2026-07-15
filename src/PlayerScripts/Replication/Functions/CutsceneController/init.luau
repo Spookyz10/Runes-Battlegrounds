@@ -48,8 +48,8 @@ function Controller:PlayRig(name, Character, params)
 
 	local goalPart
 
-	if params.GoalPart then
-		goalPart = params.goalPart
+	if params.goalPart or params.GoalPart then
+		goalPart = params.goalPart or params.GoalPart
 	else
 		goalPart = Character:FindFirstChild("HumanoidRootPart")
 	end
@@ -73,7 +73,7 @@ function Controller:PlayRig(name, Character, params)
 		Rig:PivotTo(goalPart.CFrame)
 	end
 
-	if params.Weld then
+	if params.weld then
 		local RigPrimary = Rig.PrimaryPart or Rig:FindFirstChildWhichIsA("BasePart", true)
 		if RigPrimary then
 			local Weld = Instance.new("WeldConstraint")

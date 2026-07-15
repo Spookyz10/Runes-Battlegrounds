@@ -18,7 +18,6 @@ local DestructionService = require(SvModules.DestructionSystem)
 
 local Remotes = ReplicatedStorage.Remotes
 local ReplicateSet = Remotes.Replicate.Set
-local CutscenesSet = Remotes.Cutscenes.Set
 
 local Assets = ServerStorage.Assets
 local Animations = Assets.Animations
@@ -44,8 +43,7 @@ local EXPLOSION_SIZE = Vector3.new(100, 100, 100)
 
 local AIM_CONTROL_MAX_DURATION = 30
 local THROW_DELAY = 1
-local TP_LIFT_HEIGHT = 300
-local TP_EFFECT_DELAY = 0.2
+local TP_LIFT_HEIGHT = 200
 
 local MOON_IMPACT_FORCE = 130
 local MOON_DESTROY_SEARCH_RADIUS = 25
@@ -299,7 +297,8 @@ function module:Activate(Player)
 	ReplicateSet:FireAllClients("HideHotbar")
 	ReplicateSet:FireAllClients("HideAwkbar")
 
-	local CutsceneSession = CutsceneManager:PlayCutscene(Player, "LunarAwaken", { Offset = CFrame.new(0, -3, 0) })
+	local CutsceneSession =
+		CutsceneManager:PlayCutscene(Player, "LunarAwaken", { Offset = CFrame.new(0, -3, 0), weld = true })
 	local cutsceneEnded = false
 	local isAirborne = false
 
@@ -329,14 +328,13 @@ function module:Activate(Player)
 
 			ReplicateSet:FireAllClients("LunarAwakenStart", { char = Character })
 			spawnCrater(OriginPosition, { amount = 70, tiltMin = 30, tiltMax = 50 })
+			ReplicateSet:FireAllClients("LunarImpact", { char = Character })
 
-			task.wait(TP_EFFECT_DELAY)
+			task.wait(0.3)
 
 			if not Character or not Character.Parent then
 				return
 			end
-
-			ReplicateSet:FireAllClients("LunarImpact", { char = Character })
 
 			local pivot = Character:GetPivot()
 			Character:PivotTo(CFrame.new(OriginPosition + Vector3.new(0, TP_LIFT_HEIGHT, 0)) * (pivot - pivot.Position))

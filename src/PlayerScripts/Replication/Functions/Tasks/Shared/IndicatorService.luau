@@ -76,8 +76,7 @@ function IndicatorService:Create(params)
 			end
 
 			if not landPos then
-				local projected = origin + direction * MAX_RAYCAST_DIST
-				landPos = Vector3.new(projected.X, 0, projected.Z)
+				landPos = lastPosition
 			end
 		end
 
