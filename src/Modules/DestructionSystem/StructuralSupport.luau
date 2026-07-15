@@ -1,6 +1,6 @@
 local StructuralSupport = {}
 
-local CHECK_MARGIN = 0.15 -- folga pra detectar toque entre parts vizinhas
+local CHECK_MARGIN = 0.15
 
 local function getNeighbors(part, candidateParts, params)
 	local expandedSize = part.Size + Vector3.one * CHECK_MARGIN
@@ -21,18 +21,19 @@ local function touchesGround(part, groundParams)
 	return #touching > 0
 end
 
--- StructureParts: array de BaseParts pertencentes à mesma estrutura (ex: todas as parts do Model "Totem")
--- GroundInstances: array de instances que contam como "chão"/ancoragem (ex: {workspace.Terrain, workspace.Map.Foundations})
-function StructuralSupport:CheckAndCollapse(StructureParts, GroundInstances, onCollapseGroup)
-	if #StructureParts == 0 then
-		return
-	end
-
+-- StructureParts: array de BaseParts candidatas
+-- GroundInstances: array de instances que contam como ancoragem
+-- Retorna array de "clusters" desconectados (cada cluster é um array de parts), já separados por conectividade
+function StructuralSupport:FindUnsupportedClusters(StructureParts, GroundInstances)
 	local candidateParts = {}
 	for _, p in StructureParts do
 		if p and p.Parent then
 			candidateParts[p] = true
 		end
+	end
+
+	if next(candidateParts) == nil then
+		return {}
 	end
 
 	local overlapParams = OverlapParams.new()
@@ -46,7 +47,6 @@ function StructuralSupport:CheckAndCollapse(StructureParts, GroundInstances, onC
 	local supported = {}
 	local queue = {}
 
-	-- Ponto de partida do flood fill: tudo que toca o chão diretamente
 	for part in candidateParts do
 		if touchesGround(part, groundParams) then
 			supported[part] = true
@@ -54,14 +54,12 @@ function StructuralSupport:CheckAndCollapse(StructureParts, GroundInstances, onC
 		end
 	end
 
-	-- Propaga suporte pelos vizinhos conectados
 	local head = 1
 	while head <= #queue do
 		local current = queue[head]
 		head += 1
 
-		local neighbors = getNeighbors(current, candidateParts, overlapParams)
-		for neighbor in neighbors do
+		for neighbor in getNeighbors(current, candidateParts, overlapParams) do
 			if not supported[neighbor] then
 				supported[neighbor] = true
 				table.insert(queue, neighbor)
@@ -69,19 +67,68 @@ function StructuralSupport:CheckAndCollapse(StructureParts, GroundInstances, onC
 		end
 	end
 
-	-- Tudo que sobrou sem suporte cai
-	local unsupportedGroup = {}
+	local unsupportedSet = {}
+	local unsupportedList = {}
 	for part in candidateParts do
 		if not supported[part] then
-			table.insert(unsupportedGroup, part)
+			unsupportedSet[part] = true
+			table.insert(unsupportedList, part)
 		end
 	end
 
-	if #unsupportedGroup > 0 and onCollapseGroup then
-		onCollapseGroup(unsupportedGroup)
+	if #unsupportedList == 0 then
+		return {}
 	end
 
-	return unsupportedGroup
+	-- Agrupa os desconectados em clusters (cada cluster cai junto, com sua própria direção de queda)
+	local visited = {}
+	local clusters = {}
+
+	for _, part in unsupportedList do
+		if visited[part] then
+			continue
+		end
+
+		local cluster = {}
+		local clusterQueue = { part }
+		visited[part] = true
+
+		local qHead = 1
+		while qHead <= #clusterQueue do
+			local current = clusterQueue[qHead]
+			qHead += 1
+			table.insert(cluster, current)
+
+			for neighbor in getNeighbors(current, unsupportedSet, overlapParams) do
+				if not visited[neighbor] then
+					visited[neighbor] = true
+					table.insert(clusterQueue, neighbor)
+				end
+			end
+		end
+
+		table.insert(clusters, cluster)
+	end
+
+	return clusters
+end
+
+-- Mantido por compatibilidade / uso direto simples (collapse único sem sub-clusters)
+function StructuralSupport:CheckAndCollapse(StructureParts, GroundInstances, onCollapseGroup)
+	local clusters = self:FindUnsupportedClusters(StructureParts, GroundInstances)
+
+	local flat = {}
+	for _, cluster in clusters do
+		for _, part in cluster do
+			table.insert(flat, part)
+		end
+	end
+
+	if #flat > 0 and onCollapseGroup then
+		onCollapseGroup(flat)
+	end
+
+	return flat
 end
 
 return StructuralSupport

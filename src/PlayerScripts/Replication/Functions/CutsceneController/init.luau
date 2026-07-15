@@ -7,15 +7,19 @@ local LocalPlayer = Players.LocalPlayer
 local CameraRigs = ReplicatedStorage.Resources.CameraRigs
 local CutsceneAnimations = ReplicatedStorage.Resources.Animations.Cutscenes
 local CutscenesSet = ReplicatedStorage.Remotes.Cutscenes.Set
+local CutscenesEnded = ReplicatedStorage.Remotes.Cutscenes.Ended
 
 local Controller = {}
 
 local activeName = nil
 local activeCutscene = nil
 
+local activeCutsceneId = nil
+
 local activeRig = nil
 local activeRigTrack = nil
 local rigConnection = nil
+local activeWeld = nil
 
 local previousCameraType = nil
 local previousCameraSubject = nil
@@ -25,6 +29,13 @@ local cutscenes = {}
 for _, module in script.Cutscenes:GetDescendants() do
 	if module:IsA("ModuleScript") then
 		cutscenes[module.Name] = require(module)
+	end
+end
+
+function Controller:ReportEnded()
+	if activeCutsceneId then
+		CutscenesEnded:FireServer(activeCutsceneId)
+		activeCutsceneId = nil
 	end
 end
 
@@ -60,6 +71,17 @@ function Controller:PlayRig(name, Character, params)
 		Rig:PivotTo(goalPart.CFrame * params.Offset)
 	else
 		Rig:PivotTo(goalPart.CFrame)
+	end
+
+	if params.Weld then
+		local RigPrimary = Rig.PrimaryPart or Rig:FindFirstChildWhichIsA("BasePart", true)
+		if RigPrimary then
+			local Weld = Instance.new("WeldConstraint")
+			Weld.Part0 = RigPrimary
+			Weld.Part1 = goalPart
+			Weld.Parent = RigPrimary
+			activeWeld = Weld
+		end
 	end
 
 	local AnimController = Rig:FindFirstChildOfClass("AnimationController") or Rig:FindFirstChildOfClass("Humanoid")
@@ -116,6 +138,11 @@ function Controller:StopRig(skipCameraSubject)
 		Track:Stop()
 	end
 
+	if activeWeld then
+		activeWeld:Destroy()
+		activeWeld = nil
+	end
+
 	if activeRig and activeRig.Parent then
 		activeRig:Destroy()
 	end
@@ -128,6 +155,7 @@ function Controller:StopRig(skipCameraSubject)
 	end
 	previousCameraType = nil
 	previousCameraSubject = nil
+	Controller:ReportEnded()
 end
 
 function Controller:Start(name, Character, Params)
@@ -143,6 +171,7 @@ function Controller:Start(name, Character, Params)
 
 	activeName = name
 	activeCutscene = CutsceneModule
+	activeCutsceneId = Params and Params.CutsceneId
 
 	if CutsceneModule.Start then
 		CutsceneModule.Start(Character, Params or {}, Controller)

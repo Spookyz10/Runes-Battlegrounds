@@ -13,6 +13,8 @@ local HitboxHandler = require(SvModules.HitboxHandler)
 local RagdollHandler = require(SvModules.RagdollHandler)
 local AnimationService = require(SvModules.AnimationService)
 local IndicatorService = require(SvModules.IndicatorService)
+local CutsceneManager = require(SvModules.CutsceneManager)
+local DestructionService = require(SvModules.DestructionSystem)
 
 local Remotes = ReplicatedStorage.Remotes
 local ReplicateSet = Remotes.Replicate.Set
@@ -37,12 +39,16 @@ ProjectileOverlapParams.FilterDescendantsInstances = { workspace.Live }
 
 local PROJECTILE_SPEED = 80
 local PROJECTILE_LIFETIME = 10
-local PROJECTILE_SIZE = Vector3.new(2, 2, 2)
+local PROJECTILE_SIZE = Vector3.new(20, 20, 20)
 local EXPLOSION_SIZE = Vector3.new(100, 100, 100)
 
 local AIM_CONTROL_MAX_DURATION = 30
 local THROW_DELAY = 1
-local TPDOWN_IMPACT_DELAY = 0.3
+local TP_LIFT_HEIGHT = 300
+local TP_EFFECT_DELAY = 0.2
+
+local MOON_IMPACT_FORCE = 130
+local MOON_DESTROY_SEARCH_RADIUS = 25
 
 local module = {}
 
@@ -50,6 +56,31 @@ local function radialKnockback(Character, EnemyCharacter, EnemyHumanoid, Explosi
 	DamageHandler:TakeDamage(Character, EnemyHumanoid, Damage, 1, nil, false, false, true, true, true, nil, nil)
 	RagdollHandler.ragdoll(EnemyHumanoid, 5)
 	KnockbackService:Knockback(EnemyCharacter, Vector3.new(0, BaseForce, 0), nil, nil, nil, nil, nil, false, false)
+end
+
+local function findNearestDestroyablePart(Position, SearchRadius)
+	local DestroyablesRoot = workspace.Map:FindFirstChild("Destroyables")
+	if not DestroyablesRoot then
+		return nil
+	end
+
+	local overlapParams = OverlapParams.new()
+	overlapParams.FilterType = Enum.RaycastFilterType.Include
+	overlapParams.FilterDescendantsInstances = { DestroyablesRoot }
+
+	local parts = workspace:GetPartBoundsInRadius(Position, SearchRadius, overlapParams)
+
+	local closest, closestDist = nil, math.huge
+	for _, part in parts do
+		if part:GetAttribute("Destroyable") then
+			local dist = (part.Position - Position).Magnitude
+			if dist < closestDist then
+				closest, closestDist = part, dist
+			end
+		end
+	end
+
+	return closest
 end
 
 local function explode(Character, Position)
@@ -92,6 +123,11 @@ local function explode(Character, Position)
 
 	if Player then
 		ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 10, Last = 1 })
+	end
+
+	local HitPart = findNearestDestroyablePart(Position, MOON_DESTROY_SEARCH_RADIUS)
+	if HitPart then
+		DestructionService:ApplyImpact(Position, MOON_IMPACT_FORCE, Player, HitPart, Vector3.new(0, -1, 0))
 	end
 
 	HitboxHandler:SimpleOnce(Position, EXPLOSION_SIZE, nil, { Character }, "Box", nil, function(EnemyCharacter)
@@ -185,6 +221,58 @@ local function fireProjectile(Character, Origin, Direction)
 	end)
 end
 
+local function spawnCrater(Position, opts)
+	local LiftRay = workspace:Raycast(Position, Vector3.new(0, -6, 0), MapRayParams)
+	local CraterPosition = (LiftRay and LiftRay.Position) or Position
+
+	local params = {
+		Seed = math.random(1, 2147483647),
+		amount = opts.amount or 65,
+		start = CraterPosition + Vector3.new(0, 4, 0),
+		["end"] = Vector3.new(0, -20, 0),
+		rings = 3,
+		ringSpacing = 16,
+		ringSizeGrowth = 1.5,
+		ringGap = 0.2,
+		outwardTilt = true,
+		debrisSizeMin = 4,
+		debrisSizeMax = 12,
+		debrisHeightMin = 4,
+		debrisHeightMax = 9,
+		sizemult = 1.3,
+	}
+	for k, v in opts do
+		params[k] = v
+	end
+
+	ReplicateSet:FireAllClients("Ground Crater", params)
+end
+
+local function lockAirborne(Humanoid, HumRP)
+	Humanoid.AutoRotate = false
+	Humanoid.PlatformStand = true
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp, false)
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+	Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+	HumRP.AssemblyLinearVelocity = Vector3.zero
+	HumRP.Anchored = true
+end
+
+local function restoreGroundControl(Humanoid, HumRP)
+	HumRP.Anchored = false
+	Humanoid.PlatformStand = false
+	Humanoid.AutoRotate = true
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp, true)
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
+	if Humanoid.Health > 0 then
+		Humanoid:ChangeState(Enum.HumanoidStateType.Running)
+	end
+end
+
 function module:Activate(Player)
 	local Character = Player.Character
 	if not Character or not Character.Parent then
@@ -193,7 +281,8 @@ function module:Activate(Player)
 
 	local Humanoid = Character:FindFirstChild("Humanoid")
 	local HumRP = Character:FindFirstChild("HumanoidRootPart")
-	if not Humanoid or not HumRP or Humanoid.Health <= 0 then
+	local Torso = Character:FindFirstChild("Torso")
+	if not Humanoid or not HumRP or not Torso or Humanoid.Health <= 0 then
 		return
 	end
 
@@ -210,6 +299,25 @@ function module:Activate(Player)
 	ReplicateSet:FireAllClients("HideHotbar")
 	ReplicateSet:FireAllClients("HideAwkbar")
 
+	local CutsceneSession = CutsceneManager:PlayCutscene(Player, "LunarAwaken", { Offset = CFrame.new(0, -3, 0) })
+	local cutsceneEnded = false
+	local isAirborne = false
+
+	task.spawn(function()
+		CutsceneSession:WaitTilEnd()
+		cutsceneEnded = true
+
+		if Character and Character.Parent and Humanoid.Health > 0 then
+			ReplicateSet:FireClient(Player, "StartLunarAimControl", { Duration = AIM_CONTROL_MAX_DURATION })
+			IndicatorService:Create({
+				id = indicatorId,
+				character = Character,
+				ownerId = Player.UserId,
+				asset = LunarIndicatorAsset,
+			})
+		end
+	end)
+
 	table.insert(
 		AnimEvents,
 		AnimTrack:GetMarkerReachedSignal("tpup"):Connect(function()
@@ -217,31 +325,24 @@ function module:Activate(Player)
 				return
 			end
 
+			local OriginPosition = HumRP.Position
+
 			ReplicateSet:FireAllClients("LunarAwakenStart", { char = Character })
+			spawnCrater(OriginPosition, { amount = 70, tiltMin = 30, tiltMax = 50 })
 
-			local LiftRay = workspace:Raycast(HumRP.Position, Vector3.new(0, -6, 0), MapRayParams)
-			local CraterPosition = (LiftRay and LiftRay.Position) or HumRP.Position
+			task.wait(TP_EFFECT_DELAY)
 
-			ReplicateSet:FireAllClients("Ground Crater", {
-				Seed = math.random(1, 2147483647),
-				amount = 70,
-				start = CraterPosition + Vector3.new(0, 4, 0),
-				["end"] = Vector3.new(0, -20, 0),
-				rings = 3,
-				ringSpacing = 16,
-				ringSizeGrowth = 1.5,
-				ringGap = 0.20,
-				outwardTilt = true,
-				debrisSizeMin = 4,
-				debrisSizeMax = 12,
-				debrisHeightMin = 4,
-				debrisHeightMax = 9,
-				sizemult = 1.3,
-				tiltMin = 5,
-				tiltMax = 20,
-			})
+			if not Character or not Character.Parent then
+				return
+			end
 
 			ReplicateSet:FireAllClients("LunarImpact", { char = Character })
+
+			local pivot = Character:GetPivot()
+			Character:PivotTo(CFrame.new(OriginPosition + Vector3.new(0, TP_LIFT_HEIGHT, 0)) * (pivot - pivot.Position))
+
+			lockAirborne(Humanoid, HumRP)
+			isAirborne = true
 		end)
 	)
 
@@ -260,60 +361,45 @@ function module:Activate(Player)
 
 	table.insert(
 		AnimEvents,
-		AnimTrack:GetMarkerReachedSignal("startthrow"):Connect(function()
+		AnimTrack:GetMarkerReachedSignal("throw"):Connect(function()
 			if not Character or not Character.Parent or Humanoid.Health <= 0 then
-				CutscenesSet:FireClient(Player, "LunarAwaken", "End", {})
 				return
 			end
 
-			ReplicateSet:FireClient(Player, "StartLunarAimControl", { Duration = AIM_CONTROL_MAX_DURATION })
+			local LaunchOrigin = Torso.Position + Vector3.new(0, 70, 0)
+			local LaunchDirection
 
-			CutscenesSet:FireClient(Player, "LunarAwaken", "End", { SkipCameraSubject = true })
+			if cutsceneEnded then
+				ReplicateSet:FireClient(Player, "StopLunarAimControl", { RestoreCamera = false })
 
-			IndicatorService:Create({
-				id = indicatorId,
-				character = Character,
-				ownerId = Player.UserId,
-				asset = LunarIndicatorAsset,
-			})
-		end)
-	)
+				local launchPosition = IndicatorService:GetPosition(Player, indicatorId)
+				IndicatorService:Destroy(indicatorId)
 
-	table.insert(
-		AnimEvents,
-		AnimTrack:GetMarkerReachedSignal("throw"):Connect(function()
-			ReplicateSet:FireClient(Player, "StopLunarAimControl", { RestoreCamera = false })
-
-			local launchPosition = IndicatorService:GetPosition(Player, indicatorId)
-			IndicatorService:Destroy(indicatorId)
-
-			task.delay(THROW_DELAY, function()
-				if not Character or not Character.Parent then
-					return
-				end
-
-				local Torso = Character:FindFirstChild("Torso")
-				if not Torso then
-					return
-				end
-
-				local LaunchDirection = HumRP.CFrame.LookVector
-				local LaunchOrigin = Torso.Position + Vector3.new(0, 70, 0)
-
+				LaunchDirection = HumRP.CFrame.LookVector
 				if launchPosition then
-					local toTarget = (launchPosition - LaunchOrigin)
+					local toTarget = launchPosition - LaunchOrigin
 					if toTarget.Magnitude > 0.01 then
 						LaunchDirection = toTarget.Unit
 					end
 				end
+			else
+				warn("[LunarEclipse] throw antes do fim da cutscene, usando fallback para", Character.Name)
+				CutsceneSession:ForceEnd()
+				cutsceneEnded = true
+				IndicatorService:Destroy(indicatorId)
+				LaunchDirection = Vector3.new(0, -1, 0)
+			end
 
-				ReplicateSet:FireAllClients("LunarAwakenMoonLaunch", {
-					char = Character,
-					direction = LaunchDirection,
-					ownerId = Player.UserId,
-				})
+			ReplicateSet:FireAllClients("LunarAwakenMoonLaunch", {
+				char = Character,
+				direction = LaunchDirection,
+				ownerId = Player.UserId,
+			})
 
-				fireProjectile(Character, LaunchOrigin, LaunchDirection)
+			task.delay(THROW_DELAY, function()
+				if Character and Character.Parent then
+					fireProjectile(Character, LaunchOrigin, LaunchDirection)
+				end
 			end)
 		end)
 	)
@@ -321,22 +407,55 @@ function module:Activate(Player)
 	table.insert(
 		AnimEvents,
 		AnimTrack:GetMarkerReachedSignal("tpdown"):Connect(function()
-			task.delay(TPDOWN_IMPACT_DELAY, function()
-				if not Character or not Character.Parent then
-					return
-				end
-				ReplicateSet:FireAllClients("LunarImpact", { char = Character })
-			end)
+			if not Character or not Character.Parent then
+				return
+			end
+
+			local CurrentPosition = HumRP.Position
+			local pivot = Character:GetPivot()
+
+			if isAirborne then
+				HumRP.Anchored = false
+			end
+
+			Character:PivotTo(
+				CFrame.new(CurrentPosition - Vector3.new(0, TP_LIFT_HEIGHT, 0)) * (pivot - pivot.Position)
+			)
+			HumRP.AssemblyLinearVelocity = Vector3.zero
+
+			if isAirborne then
+				restoreGroundControl(Humanoid, HumRP)
+				isAirborne = false
+			end
+
+			task.wait()
+
+			if not Character or not Character.Parent then
+				return
+			end
+
+			ReplicateSet:FireAllClients("LunarImpact", { char = Character })
+			spawnCrater(HumRP.Position, { amount = 60, debrisSizeMin = 5, debrisSizeMax = 14, sizemult = 1.4 })
 		end)
 	)
 
 	AnimTrack.Stopped:Once(function()
+		if isAirborne then
+			HumRP.Anchored = false
+			restoreGroundControl(Humanoid, HumRP)
+			isAirborne = false
+		end
+
+		CutsceneSession:ForceEnd()
+		if not cutsceneEnded then
+			ReplicateSet:FireClient(Player, "StopLunarAimControl", { RestoreCamera = false })
+		end
+		IndicatorService:Destroy(indicatorId)
 		ReplicateSet:FireClient(Player, "LunarAimRestoreCamera", {})
 		ReplicateSet:FireAllClients("LunarAwakenEnd", { char = Character })
 	end)
 
 	AnimationService:playAnimation(Character, LunarEclipseAnim)
-	CutscenesSet:FireClient(Player, "LunarAwaken", "Start", { Offset = CFrame.new(0, -3, 0) })
 	AnimTrack.Stopped:Wait()
 	ReplicateSet:FireAllClients("ShowHotbar")
 	ReplicateSet:FireAllClients("ShowAwkbar")

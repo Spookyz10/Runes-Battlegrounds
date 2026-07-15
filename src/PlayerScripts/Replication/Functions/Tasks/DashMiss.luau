@@ -14,7 +14,6 @@ return function(Params)
 
 	local GroundRay = Helpers.raycast(PrimaryPart.Position, Vector3.new(0, -4, 0), MapRayParams)
 	if not GroundRay then
-		print("DashMiss: No ground ray found")
 		return
 	end
 

@@ -13,6 +13,7 @@ local Shared = RS.Shared.Modules
 local SvModules = SvSt.Modules
 
 local PerfectKnockback = require(ServerStorage.Modules.PerfectKnockback)
+local _WindCollapseTicker = require(ServerStorage.Modules.WindCollapseTicker)
 local Trove = require(Shared.Trove)
 
 local StunHandler = require(SvModules.StunHandler)
@@ -24,6 +25,7 @@ local AnimationService = require(SvModules.AnimationService)
 local Knockback = require(SvModules.BodymoverService)
 local iFramesService = require(SvModules.iFramesService)
 local CombatUtils = require(SvModules.CombatUtils)
+
 local ReplicatedHitboxes = require(SvModules.ReplicatedHitboxes)
 local CheckBehind = require(Shared.Utility.CheckBehind)
 local Data = require(RS.Shared.Data).server

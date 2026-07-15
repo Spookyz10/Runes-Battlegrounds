@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VoxBreaker = require(ReplicatedStorage.Shared.Modules.VoxBreaker)
 local DebrisDamage = require(script.DebrisDamage)
+local StructuralSupport = require(script.StructuralSupport)
 
 local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
@@ -20,7 +21,7 @@ local DEFAULT_TRACK_HITBOX_SIZE = Vector3.new(6, 6, 6)
 local DEBRIS_LIFETIME = 10
 local DEBRIS_FADE_TIME = 3
 local MAX_CHUNKS_PER_IMPACT = 40
-local NEIGHBOR_MARGIN = 2.5
+
 local INTEGRITY_SEARCH_RADIUS = 40
 local NO_VOXEL_RESET_TIME = 20
 
@@ -108,111 +109,13 @@ local function collectNearbyDestroyableParts(Center, Radius)
 	return result
 end
 
-local function touchesGround(part, groundParams)
-	local expanded = part.Size + Vector3.one * NEIGHBOR_MARGIN
-	local touching = workspace:GetPartBoundsInBox(part.CFrame, expanded, groundParams)
-	return #touching > 0
-end
-
-local function getNeighbors(part, candidateSet, neighborParams)
-	local expanded = part.Size + Vector3.one * NEIGHBOR_MARGIN
-	local touching = workspace:GetPartBoundsInBox(part.CFrame, expanded, neighborParams)
-
-	local neighbors = {}
-	for _, other in touching do
-		if other ~= part and candidateSet[other] then
-			table.insert(neighbors, other)
-		end
-	end
-	return neighbors
-end
-
 function DestructionService:CheckIntegrity(ImpactPosition, ImpactDirection)
 	local parts = collectNearbyDestroyableParts(ImpactPosition, INTEGRITY_SEARCH_RADIUS)
 	if #parts == 0 then
 		return
 	end
 
-	local candidateSet = {}
-	for _, p in parts do
-		candidateSet[p] = true
-	end
-
-	local groundParams = OverlapParams.new()
-	groundParams.FilterType = Enum.RaycastFilterType.Include
-	groundParams.FilterDescendantsInstances = GROUND_INSTANCES
-
-	local neighborParams = OverlapParams.new()
-	neighborParams.FilterType = Enum.RaycastFilterType.Include
-	neighborParams.FilterDescendantsInstances = parts
-
-	local supported = {}
-	local queue = {}
-
-	for _, part in parts do
-		if touchesGround(part, groundParams) then
-			supported[part] = true
-			table.insert(queue, part)
-		end
-	end
-
-	local head = 1
-	while head <= #queue do
-		local current = queue[head]
-		head += 1
-
-		for _, neighbor in getNeighbors(current, candidateSet, neighborParams) do
-			if not supported[neighbor] then
-				supported[neighbor] = true
-				table.insert(queue, neighbor)
-			end
-		end
-	end
-
-	local unsupported = {}
-	for _, part in parts do
-		if not supported[part] then
-			table.insert(unsupported, part)
-		end
-	end
-
-	if #unsupported == 0 then
-		return
-	end
-
-	local unsupportedSet = {}
-	for _, p in unsupported do
-		unsupportedSet[p] = true
-	end
-
-	local visited = {}
-	local clusters = {}
-
-	for _, part in unsupported do
-		if visited[part] then
-			continue
-		end
-
-		local cluster = {}
-		local clusterQueue = { part }
-		visited[part] = true
-
-		local qHead = 1
-		while qHead <= #clusterQueue do
-			local current = clusterQueue[qHead]
-			qHead += 1
-			table.insert(cluster, current)
-
-			for _, neighbor in getNeighbors(current, unsupportedSet, neighborParams) do
-				if not visited[neighbor] then
-					visited[neighbor] = true
-					table.insert(clusterQueue, neighbor)
-				end
-			end
-		end
-
-		table.insert(clusters, cluster)
-	end
+	local clusters = StructuralSupport:FindUnsupportedClusters(parts, GROUND_INSTANCES)
 
 	for _, cluster in clusters do
 		self:CollapseCluster(cluster, ImpactPosition, ImpactDirection)
