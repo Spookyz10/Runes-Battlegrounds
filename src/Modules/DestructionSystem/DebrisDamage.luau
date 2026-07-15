@@ -129,4 +129,63 @@ function DebrisDamage:Track(Part, OwnerPlayer)
 	end)
 end
 
+function DebrisDamage:TrackFall(Part, OwnerPlayer)
+	local hasHit = {}
+	local DamagerCharacter = OwnerPlayer and OwnerPlayer.Character
+
+	Part.Touched:Connect(function(hit)
+		local character = hit.Parent
+		if not character then
+			return
+		end
+
+		local humanoid = character:FindFirstChild("Humanoid")
+		if not humanoid or humanoid.Health <= 0 then
+			return
+		end
+		if hasHit[character] then
+			return
+		end
+		if DamagerCharacter and character == DamagerCharacter then
+			return
+		end
+
+		hasHit[character] = true
+
+		local damage = getDebrisDamage(Part)
+		local damageDealer = DamagerCharacter or character
+
+		cancelKnockbackState(character)
+
+		local ok, err = pcall(function()
+			DamageHandler:TakeDamage(
+				damageDealer,
+				humanoid,
+				damage,
+				nil,
+				nil,
+				false,
+				false,
+				true,
+				false,
+				false,
+				nil,
+				nil
+			)
+		end)
+
+		if not ok then
+			pcall(function()
+				humanoid:TakeDamage(damage)
+			end)
+		end
+
+		if humanoid.Health > 0 then
+			pcall(function()
+				RagdollHandler.ragdoll(humanoid, IMPACT_RAGDOLL_DURATION, false, damageDealer, nil, nil, false)
+			end)
+		end
+	end)
+end
+
 return DebrisDamage

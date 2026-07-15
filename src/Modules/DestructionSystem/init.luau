@@ -1,4 +1,3 @@
-local Debris = game:GetService("Debris")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -25,6 +24,23 @@ local NEIGHBOR_MARGIN = 2.5
 local INTEGRITY_SEARCH_RADIUS = 40
 local NO_VOXEL_RESET_TIME = 20
 
+local LEVITATE_RISE_SPEED = 6
+local LEVITATE_RISE_ACCEL = 4
+local LEVITATE_MAX_RISE_SPEED = 40
+local LEVITATE_SPIN_RANGE = 1
+
+local FAKE_DEBRIS_MIN_SIZE = 5
+local FAKE_DEBRIS_MAX_SIZE = 15
+local FAKE_DEBRIS_COLORS = {
+	Color3.fromRGB(90, 90, 90),
+	Color3.fromRGB(120, 120, 120),
+	Color3.fromRGB(60, 100, 60),
+	Color3.fromRGB(80, 120, 80),
+}
+local FAKE_DEBRIS_RISE_SPEED = 6
+local FAKE_DEBRIS_SPIN_RANGE = 1
+local FAKE_DEBRIS_FALL_CLEANUP_TIME = 10
+
 local FORCE_TIERS = {
 	{ MinForce = 0, Radius = 5, VoxelSize = 3 },
 	{ MinForce = 30, Radius = 8, VoxelSize = 4 },
@@ -38,6 +54,9 @@ local GROUND_INSTANCES = {
 }
 
 local DESTROYABLES_ROOT = workspace.Map:FindFirstChild("Destroyables")
+
+local LEVITATION_ACTIVE = {}
+local FAKE_DEBRIS_ACTIVE = {}
 
 local function dprint(...)
 	if DEBUG then
@@ -514,6 +533,345 @@ function DestructionService:TrackCharacterImpacts(Character, Force, OwnerPlayer,
 	task.delay(Duration or DEFAULT_TRACK_DURATION, stop)
 
 	return stop
+end
+
+function DestructionService:LevitateArea(Center, Radius, OwnerPlayer)
+	local parts = collectNearbyDestroyableParts(Center, Radius)
+	if #parts == 0 then
+		return nil
+	end
+
+	local id = tostring(Center) .. "_" .. tostring(tick()) .. "_" .. tostring(math.random(1, 999999))
+
+	local entries = {}
+
+	for _, part in parts do
+		if not part.Parent then
+			continue
+		end
+
+		local originalAnchored = part.Anchored
+		local originalCollide = part.CanCollide
+		local originalCollisionGroup = part.CollisionGroup
+
+		part.Anchored = false
+		part.CanCollide = false
+		part.CanTouch = false
+		pcall(function()
+			part.CollisionGroup = DEBRIS_COLLISION_GROUP
+		end)
+
+		local Bodymover = Instance.new("BodyVelocity")
+		Bodymover.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+		Bodymover.P = 10000
+		Bodymover.Velocity = Vector3.new(0, LEVITATE_RISE_SPEED, 0)
+		Bodymover.Parent = part
+
+		local riseStart = os.clock()
+		local riseAccelConn
+		riseAccelConn = RunService.Heartbeat:Connect(function()
+			if not Bodymover or not Bodymover.Parent then
+				if riseAccelConn then
+					riseAccelConn:Disconnect()
+				end
+				return
+			end
+
+			local elapsed = os.clock() - riseStart
+			local speed = math.min(LEVITATE_RISE_SPEED + LEVITATE_RISE_ACCEL * elapsed, LEVITATE_MAX_RISE_SPEED)
+			Bodymover.Velocity = Vector3.new(0, speed, 0)
+		end)
+
+		local AngularMover = Instance.new("BodyAngularVelocity")
+		AngularMover.MaxTorque = Vector3.new(4000, 4000, 4000)
+		AngularMover.AngularVelocity = Vector3.new(
+			(math.random(-100, 100) / 100) * LEVITATE_SPIN_RANGE,
+			(math.random(-100, 100) / 100) * LEVITATE_SPIN_RANGE,
+			(math.random(-100, 100) / 100) * LEVITATE_SPIN_RANGE
+		)
+		AngularMover.Parent = part
+
+		table.insert(entries, {
+			part = part,
+			bodyVelocity = Bodymover,
+			bodyAngularVelocity = AngularMover,
+			riseAccelConn = riseAccelConn,
+			originalAnchored = originalAnchored,
+			originalCollide = originalCollide,
+			originalCollisionGroup = originalCollisionGroup,
+		})
+	end
+
+	LEVITATION_ACTIVE[id] = {
+		entries = entries,
+		ownerPlayer = OwnerPlayer,
+		center = Center,
+	}
+
+	return id
+end
+
+function DestructionService:DropArea(id)
+	local data = LEVITATION_ACTIVE[id]
+	if not data then
+		return
+	end
+
+	LEVITATION_ACTIVE[id] = nil
+
+	for _, entry in data.entries do
+		local part = entry.part
+		if not part or not part.Parent then
+			continue
+		end
+
+		if entry.bodyVelocity and entry.bodyVelocity.Parent then
+			entry.bodyVelocity:Destroy()
+		end
+		if entry.bodyAngularVelocity and entry.bodyAngularVelocity.Parent then
+			entry.bodyAngularVelocity:Destroy()
+		end
+		if entry.riseAccelConn then
+			entry.riseAccelConn:Disconnect()
+		end
+
+		part.CanCollide = entry.originalCollide
+		part.CanTouch = true
+		part.CanQuery = true
+
+		DebrisDamage:TrackFall(part, data.ownerPlayer)
+		ReplicateSet:FireAllClients("DebrisFallImpact", { Position = part.Position })
+	end
+end
+
+function DestructionService:CancelLevitation(id)
+	local data = LEVITATION_ACTIVE[id]
+	if not data then
+		return
+	end
+
+	LEVITATION_ACTIVE[id] = nil
+
+	for _, entry in data.entries do
+		local part = entry.part
+		if not part or not part.Parent then
+			continue
+		end
+
+		if entry.bodyVelocity and entry.bodyVelocity.Parent then
+			entry.bodyVelocity:Destroy()
+		end
+		if entry.bodyAngularVelocity and entry.bodyAngularVelocity.Parent then
+			entry.bodyAngularVelocity:Destroy()
+		end
+		if entry.riseAccelConn then
+			entry.riseAccelConn:Disconnect()
+		end
+		part.Anchored = entry.originalAnchored
+		part.CanCollide = entry.originalCollide
+		part.CanTouch = true
+		part.CanQuery = true
+		pcall(function()
+			part.CollisionGroup = entry.originalCollisionGroup
+		end)
+	end
+end
+
+local function resolveAnchorPosition(anchor)
+	if typeof(anchor) == "Instance" then
+		if anchor:IsA("Model") then
+			local primary = anchor.PrimaryPart
+				or anchor:FindFirstChild("HumanoidRootPart")
+				or anchor:FindFirstChild("Torso")
+			return primary and primary.Position or nil, primary
+		elseif anchor:IsA("BasePart") then
+			return anchor.Position, anchor
+		end
+	elseif typeof(anchor) == "Vector3" then
+		return anchor, nil
+	end
+	return nil, nil
+end
+
+function DestructionService:SpawnFakeDebris(Anchor, Config)
+	Config = Config or {}
+
+	local MinRadius = Config.MinRadius or 100
+	local MaxRadius = Config.MaxRadius or 200
+	local Interval = Config.Interval or 0.2
+	local MinSize = Config.MinSize or FAKE_DEBRIS_MIN_SIZE
+	local MaxSize = Config.MaxSize or FAKE_DEBRIS_MAX_SIZE
+	local Colors = Config.Colors or FAKE_DEBRIS_COLORS
+	local RiseSpeed = Config.RiseSpeed or FAKE_DEBRIS_RISE_SPEED
+	local SpinRange = Config.SpinRange or FAKE_DEBRIS_SPIN_RANGE
+	local PerTick = Config.PerTick or 1
+	local OwnerPlayer = Config.OwnerPlayer
+	local RiseAcceleration = Config.RiseAcceleration or 0
+	local MaxRiseSpeed = Config.MaxRiseSpeed or (RiseSpeed * 3)
+
+	local groundRaycastParams = RaycastParams.new()
+	groundRaycastParams.FilterType = Enum.RaycastFilterType.Include
+	groundRaycastParams.FilterDescendantsInstances = GROUND_INSTANCES
+
+	local id = tostring(Anchor) .. "_fake_" .. tostring(tick()) .. "_" .. tostring(math.random(1, 999999))
+
+	local data = {
+		entries = {},
+		ownerPlayer = OwnerPlayer,
+		running = true,
+	}
+
+	FAKE_DEBRIS_ACTIVE[id] = data
+
+	local function spawnOne()
+		local centerPos = resolveAnchorPosition(Anchor)
+		if not centerPos then
+			return
+		end
+
+		local angle = math.random() * math.pi * 2
+		local dist = MinRadius + math.random() * (MaxRadius - MinRadius)
+		local offset = Vector3.new(math.cos(angle) * dist, 0, math.sin(angle) * dist)
+		local origin = centerPos + offset + Vector3.new(0, 50, 0)
+
+		local groundHit = workspace:Raycast(origin, Vector3.new(0, -150, 0), groundRaycastParams)
+		if not groundHit then
+			return
+		end
+
+		local size = math.random(MinSize, MaxSize)
+
+		local Rock = Instance.new("Part")
+		Rock.Name = "FakeAwakeningDebris"
+		Rock.Size = Vector3.new(size, size, size)
+		Rock.Material = Enum.Material.Rock
+		Rock.Color = Colors[math.random(1, #Colors)]
+		Rock.Anchored = false
+		Rock.CanCollide = false
+		Rock.CanTouch = false
+		Rock.CanQuery = false
+		Rock.CFrame = CFrame.new(groundHit.Position - Vector3.new(0, size / 2, 0))
+			* CFrame.Angles(
+				math.rad(math.random(-360, 360)),
+				math.rad(math.random(-360, 360)),
+				math.rad(math.random(-360, 360))
+			)
+		pcall(function()
+			Rock.CollisionGroup = DEBRIS_COLLISION_GROUP
+		end)
+		Rock.Parent = workspace.Debris
+
+		local Bodymover = Instance.new("BodyVelocity")
+		Bodymover.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+		Bodymover.P = 10000
+		Bodymover.Velocity = Vector3.new(0, RiseSpeed * math.random(80, 120) / 100, 0)
+		Bodymover.Parent = Rock
+
+		local rockRiseStart = os.clock()
+		local rockAccelConn
+		rockAccelConn = RunService.Heartbeat:Connect(function()
+			if not Bodymover or not Bodymover.Parent then
+				if rockAccelConn then
+					rockAccelConn:Disconnect()
+				end
+				return
+			end
+
+			local elapsed = os.clock() - rockRiseStart
+			local speed = math.min(RiseSpeed + RiseAcceleration * elapsed, MaxRiseSpeed)
+			Bodymover.Velocity = Vector3.new(0, speed, 0)
+		end)
+
+		local AngularMover = Instance.new("BodyAngularVelocity")
+		AngularMover.MaxTorque = Vector3.new(4000, 4000, 4000)
+		AngularMover.AngularVelocity = Vector3.new(
+			(math.random(-100, 100) / 100) * SpinRange,
+			(math.random(-100, 100) / 100) * SpinRange,
+			(math.random(-100, 100) / 100) * SpinRange
+		)
+		AngularMover.Parent = Rock
+
+		table.insert(data.entries, {
+			part = Rock,
+			bodyVelocity = Bodymover,
+			bodyAngularVelocity = AngularMover,
+			rockAccelConn = rockAccelConn,
+		})
+	end
+
+	task.spawn(function()
+		while data.running do
+			for _ = 1, PerTick do
+				if not data.running then
+					break
+				end
+				spawnOne()
+			end
+			task.wait(Interval)
+		end
+	end)
+
+	return id
+end
+
+function DestructionService:DropFakeDebris(id)
+	local data = FAKE_DEBRIS_ACTIVE[id]
+	if not data then
+		return
+	end
+
+	data.running = false
+	FAKE_DEBRIS_ACTIVE[id] = nil
+
+	for _, entry in data.entries do
+		local part = entry.part
+		if not part or not part.Parent then
+			continue
+		end
+
+		if entry.bodyVelocity and entry.bodyVelocity.Parent then
+			entry.bodyVelocity:Destroy()
+		end
+		if entry.bodyAngularVelocity and entry.bodyAngularVelocity.Parent then
+			entry.bodyAngularVelocity:Destroy()
+		end
+		if entry.rockAccelConn then
+			entry.rockAccelConn:Disconnect()
+		end
+
+		part.CanCollide = true
+		part.CanTouch = true
+		part.CanQuery = true
+
+		DebrisDamage:TrackFall(part, data.ownerPlayer)
+		ReplicateSet:FireAllClients("DebrisFallImpact", { Position = part.Position })
+
+		task.delay(FAKE_DEBRIS_FALL_CLEANUP_TIME, function()
+			if part and part.Parent then
+				part:Destroy()
+			end
+		end)
+	end
+end
+
+function DestructionService:CancelFakeDebris(id)
+	local data = FAKE_DEBRIS_ACTIVE[id]
+	if not data then
+		return
+	end
+
+	data.running = false
+	FAKE_DEBRIS_ACTIVE[id] = nil
+
+	for _, entry in data.entries do
+		local part = entry.part
+		if part and part.Parent then
+			if entry.rockAccelConn then
+				entry.rockAccelConn:Disconnect()
+			end
+			part:Destroy()
+		end
+	end
 end
 
 return DestructionService

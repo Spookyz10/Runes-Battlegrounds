@@ -10,6 +10,7 @@ local KnockbackService = require(SvModules.KnockbackModule)
 local iFramesService = require(SvModules.iFramesService)
 local RagdollHandler = require(SvModules.RagdollHandler)
 local AnimationService = require(SvModules.AnimationService)
+local DestructionService = require(SvModules.DestructionSystem)
 
 local Remotes = ReplicatedStorage.Remotes
 local ReplicateSet = Remotes.Replicate.Set
@@ -23,8 +24,30 @@ local EXPLOSION_DAMAGE = 30
 local EXPLOSION_KNOCKUP = 1000
 local RAGDOLL_DURATION = 10
 local CYLINDER_SIZE = Vector3.new(260.573, 110, 110)
+local LEVITATE_RADIUS = CYLINDER_SIZE.X
 
 local module = {}
+
+local function triggerJumpCrater(Character, Position)
+	ReplicateSet:FireAllClients("Ground Crater", {
+		Seed = math.random(1, 2147483647),
+		amount = 70,
+		start = Position + Vector3.new(0, 4, 0),
+		["end"] = Vector3.new(0, -20, 0),
+		rings = 3,
+		ringSpacing = 16 * 3,
+		ringSizeGrowth = 1.5,
+		ringGap = 0.20,
+		outwardTilt = true,
+		debrisSizeMin = 4 * 3,
+		debrisSizeMax = 12 * 3,
+		debrisHeightMin = 4 * 1.5,
+		debrisHeightMax = 9 * 1.5,
+		sizemult = 1.3 * 3,
+		tiltMin = 5,
+		tiltMax = 20,
+	})
+end
 
 local function triggerExplosion(Character, Position)
 	local Player = Players:GetPlayerFromCharacter(Character)
@@ -118,25 +141,7 @@ local function triggerLandingImpact(Character, Position)
 	local ImpactStun = StunHandler:Stun(Character, 0.4, true, 0, 0, true)
 
 	ReplicateSet:FireAllClients("SolarImpact", { char = Character })
-
-	ReplicateSet:FireAllClients("Ground Crater", {
-		Seed = math.random(1, 2147483647),
-		amount = 80,
-		start = Position + Vector3.new(0, 4, 0),
-		["end"] = Vector3.new(0, -20, 0),
-		rings = 2,
-		ringSpacing = 60,
-		ringSizeGrowth = 1.4,
-		ringGap = 0.20,
-		outwardTilt = true,
-		debrisSizeMin = 4,
-		debrisSizeMax = 12,
-		debrisHeightMin = 4,
-		debrisHeightMax = 9,
-		sizemult = 1.3,
-		tiltMin = 5,
-		tiltMax = 30,
-	})
+	triggerJumpCrater(Character, Position)
 
 	task.delay(0.4, function()
 		if Character and Character.Parent then
@@ -165,6 +170,9 @@ function module:Activate(Player)
 		return
 	end
 
+	local levitationId = nil
+	local fakeDebrisId = nil
+
 	ReplicateSet:FireAllClients("HideHotbar")
 	ReplicateSet:FireAllClients("HideAwkbar")
 
@@ -173,6 +181,17 @@ function module:Activate(Player)
 		AnimTrack:GetMarkerReachedSignal("jump"):Connect(function()
 			ReplicateSet:FireAllClients("SolarAwakenStart", { char = Character })
 			ReplicateSet:FireAllClients("SolarImpact", { char = Character })
+			triggerJumpCrater(Character, HumRP.Position)
+			levitationId = DestructionService:LevitateArea(HumRP.Position, LEVITATE_RADIUS, Player)
+			fakeDebrisId = DestructionService:SpawnFakeDebris(Character, {
+				MinRadius = 100,
+				MaxRadius = 200,
+				Interval = 0.2,
+				PerTick = 1,
+				OwnerPlayer = Player,
+				RiseAcceleration = 4,
+				MaxRiseSpeed = 40,
+			})
 		end)
 	)
 
@@ -191,6 +210,14 @@ function module:Activate(Player)
 		AnimEvents,
 		AnimTrack:GetMarkerReachedSignal("clear"):Connect(function()
 			ReplicateSet:FireAllClients("SolarAwakenExplosion", { func = "Stop", id = Player.UserId })
+			if levitationId then
+				DestructionService:DropArea(levitationId)
+				levitationId = nil
+			end
+			if fakeDebrisId then
+				DestructionService:DropFakeDebris(fakeDebrisId)
+				fakeDebrisId = nil
+			end
 		end)
 	)
 
@@ -205,6 +232,14 @@ function module:Activate(Player)
 	)
 
 	AnimTrack.Stopped:Once(function()
+		if levitationId then
+			DestructionService:CancelLevitation(levitationId)
+			levitationId = nil
+		end
+		if fakeDebrisId then
+			DestructionService:CancelFakeDebris(fakeDebrisId)
+			fakeDebrisId = nil
+		end
 		CutscenesSet:FireClient(Player, "SolarAwaken", "End", {})
 		ReplicateSet:FireAllClients("SolarAwakenEnd", { char = Character })
 	end)
