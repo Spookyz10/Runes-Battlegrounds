@@ -45,40 +45,13 @@ local AIM_CONTROL_MAX_DURATION = 30
 local THROW_DELAY = 1
 local TP_LIFT_HEIGHT = 200
 
-local MOON_IMPACT_FORCE = 130
-local MOON_DESTROY_SEARCH_RADIUS = 25
-
+local MOON_IMPACT_FORCE = 400
 local module = {}
 
 local function radialKnockback(Character, EnemyCharacter, EnemyHumanoid, ExplosionPosition, BaseForce, Damage)
 	DamageHandler:TakeDamage(Character, EnemyHumanoid, Damage, 1, nil, false, false, true, true, true, nil, nil)
 	RagdollHandler.ragdoll(EnemyHumanoid, 5)
 	KnockbackService:Knockback(EnemyCharacter, Vector3.new(0, BaseForce, 0), nil, nil, nil, nil, nil, false, false)
-end
-
-local function findNearestDestroyablePart(Position, SearchRadius)
-	local DestroyablesRoot = workspace.Map:FindFirstChild("Destroyables")
-	if not DestroyablesRoot then
-		return nil
-	end
-
-	local overlapParams = OverlapParams.new()
-	overlapParams.FilterType = Enum.RaycastFilterType.Include
-	overlapParams.FilterDescendantsInstances = { DestroyablesRoot }
-
-	local parts = workspace:GetPartBoundsInRadius(Position, SearchRadius, overlapParams)
-
-	local closest, closestDist = nil, math.huge
-	for _, part in parts do
-		if part:GetAttribute("Destroyable") then
-			local dist = (part.Position - Position).Magnitude
-			if dist < closestDist then
-				closest, closestDist = part, dist
-			end
-		end
-	end
-
-	return closest
 end
 
 local function explode(Character, Position)
@@ -123,10 +96,7 @@ local function explode(Character, Position)
 		ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 10, Last = 1 })
 	end
 
-	local HitPart = findNearestDestroyablePart(Position, MOON_DESTROY_SEARCH_RADIUS)
-	if HitPart then
-		DestructionService:ApplyImpact(Position, MOON_IMPACT_FORCE, Player, HitPart, Vector3.new(0, -1, 0))
-	end
+	DestructionService:ApplyBoxImpact(Position, EXPLOSION_SIZE, MOON_IMPACT_FORCE, Player, Vector3.new(0, -1, 0))
 
 	HitboxHandler:SimpleOnce(Position, EXPLOSION_SIZE, nil, { Character }, "Box", nil, function(EnemyCharacter)
 		local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
@@ -388,15 +358,14 @@ function module:Activate(Player)
 				LaunchDirection = Vector3.new(0, -1, 0)
 			end
 
-			ReplicateSet:FireAllClients("LunarAwakenMoonLaunch", {
-				char = Character,
-				direction = LaunchDirection,
-				ownerId = Player.UserId,
-			})
-
 			task.delay(THROW_DELAY, function()
 				if Character and Character.Parent then
 					fireProjectile(Character, LaunchOrigin, LaunchDirection)
+					ReplicateSet:FireAllClients("LunarAwakenMoonLaunch", {
+						char = Character,
+						direction = LaunchDirection,
+						ownerId = Player.UserId,
+					})
 				end
 			end)
 		end)
@@ -410,15 +379,12 @@ function module:Activate(Player)
 			end
 
 			local CurrentPosition = HumRP.Position
-			local pivot = Character:GetPivot()
 
 			if isAirborne then
 				HumRP.Anchored = false
 			end
 
-			Character:PivotTo(
-				CFrame.new(CurrentPosition - Vector3.new(0, TP_LIFT_HEIGHT, 0)) * (pivot - pivot.Position)
-			)
+			HumRP.Position = CurrentPosition - Vector3.new(0, TP_LIFT_HEIGHT, 0)
 			HumRP.AssemblyLinearVelocity = Vector3.zero
 
 			if isAirborne then

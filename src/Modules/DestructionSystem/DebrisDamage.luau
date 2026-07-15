@@ -7,17 +7,9 @@ local RagdollHandler = require(SvModules.RagdollHandler)
 
 local DebrisDamage = {}
 
-local DEBUG = true
-
 local MIN_SPEED_TO_HURT = 5
 local INSTAKILL_DAMAGE = math.huge
 local IMPACT_RAGDOLL_DURATION = 2
-
-local function dprint(...)
-	if DEBUG then
-		print("[DebrisDamage]", ...)
-	end
-end
 
 local function getDebrisDamage(part)
 	if part:GetAttribute("InstaKill") then
@@ -28,12 +20,9 @@ local function getDebrisDamage(part)
 end
 
 local function cancelKnockbackState(character)
-	local cancelOk, cancelErr = pcall(function()
+	pcall(function()
 		PerfectKnockback:Cancel(character)
 	end)
-	if not cancelOk then
-		dprint("AVISO: falha ao cancelar PerfectKnockback -", cancelErr)
-	end
 
 	character:RemoveTag("Knockbacked")
 	character:RemoveTag("CantRotate")
@@ -58,8 +47,6 @@ function DebrisDamage:Track(Part, OwnerPlayer)
 	local hasHit = {}
 	local DamagerCharacter = OwnerPlayer and OwnerPlayer.Character
 
-	dprint("Tracking iniciado para", Part.Name, "- Owner:", OwnerPlayer and OwnerPlayer.Name or "nil")
-
 	Part.Touched:Connect(function(hit)
 		local character = hit.Parent
 		if not character then
@@ -79,7 +66,6 @@ function DebrisDamage:Track(Part, OwnerPlayer)
 
 		local speed = Part.AssemblyLinearVelocity.Magnitude
 		if speed < MIN_SPEED_TO_HURT and not Part:GetAttribute("InstaKill") then
-			dprint("Touched ignorado - velocidade baixa demais:", speed)
 			return
 		end
 
@@ -88,11 +74,9 @@ function DebrisDamage:Track(Part, OwnerPlayer)
 		local damage = getDebrisDamage(Part)
 		local damageDealer = DamagerCharacter or character
 
-		dprint("Impacto em", character.Name, "- Dano:", damage, "- Speed:", speed)
-
 		cancelKnockbackState(character)
 
-		local ok, err = pcall(function()
+		local ok = pcall(function()
 			DamageHandler:TakeDamage(
 				damageDealer,
 				humanoid,
@@ -110,21 +94,15 @@ function DebrisDamage:Track(Part, OwnerPlayer)
 		end)
 
 		if not ok then
-			dprint("AVISO: DamageHandler falhou -", err, "- aplicando fallback direto")
 			pcall(function()
 				humanoid:TakeDamage(damage == math.huge and humanoid.Health or damage)
 			end)
 		end
 
 		if humanoid.Health > 0 then
-			local ragdollOk, ragdollErr = pcall(function()
+			pcall(function()
 				RagdollHandler.ragdoll(humanoid, IMPACT_RAGDOLL_DURATION, false, damageDealer, nil, nil, false)
 			end)
-			if not ragdollOk then
-				dprint("AVISO: falha ao aplicar ragdoll -", ragdollErr)
-			else
-				dprint("Ragdoll de", IMPACT_RAGDOLL_DURATION, "s aplicado em", character.Name)
-			end
 		end
 	end)
 end
@@ -157,7 +135,7 @@ function DebrisDamage:TrackFall(Part, OwnerPlayer)
 
 		cancelKnockbackState(character)
 
-		local ok, err = pcall(function()
+		local ok = pcall(function()
 			DamageHandler:TakeDamage(
 				damageDealer,
 				humanoid,

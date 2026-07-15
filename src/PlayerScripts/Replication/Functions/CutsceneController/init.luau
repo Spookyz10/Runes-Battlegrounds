@@ -19,7 +19,10 @@ local activeCutsceneId = nil
 local activeRig = nil
 local activeRigTrack = nil
 local rigConnection = nil
-local activeWeld = nil
+
+local activeGoalPart = nil
+local activeOffset = nil
+local activeRigPrimary = nil
 
 local previousCameraType = nil
 local previousCameraSubject = nil
@@ -67,22 +70,26 @@ function Controller:PlayRig(name, Character, params)
 	local Rig = RigTemplate:Clone()
 	Rig.Parent = workspace
 
+	local Offset = params.Offset or CFrame.new()
+
 	if params.Offset then
 		Rig:PivotTo(goalPart.CFrame * params.Offset)
 	else
 		Rig:PivotTo(goalPart.CFrame)
 	end
 
-	if params.weld then
-		local RigPrimary = Rig.PrimaryPart or Rig:FindFirstChildWhichIsA("BasePart", true)
-		if RigPrimary then
-			local Weld = Instance.new("WeldConstraint")
-			Weld.Part0 = RigPrimary
-			Weld.Part1 = goalPart
-			Weld.Parent = RigPrimary
-			activeWeld = Weld
-		end
+	local RigPrimary = Rig.PrimaryPart or Rig:FindFirstChildWhichIsA("BasePart", true)
+	if not RigPrimary then
+		warn("[CutsceneController] Rig não possui PrimaryPart nem BasePart")
+		Rig:Destroy()
+		return nil
 	end
+
+	-- Teleport manual (em vez de WeldConstraint) — necessário pois a PrimaryPart
+	-- do rig costuma estar Anchored, o que faz o WeldConstraint não ter efeito algum.
+	activeGoalPart = goalPart
+	activeOffset = Offset
+	activeRigPrimary = RigPrimary
 
 	local AnimController = Rig:FindFirstChildOfClass("AnimationController") or Rig:FindFirstChildOfClass("Humanoid")
 	local Animator = AnimController and AnimController:FindFirstChildOfClass("Animator")
@@ -107,6 +114,14 @@ function Controller:PlayRig(name, Character, params)
 	Camera.CameraType = Enum.CameraType.Scriptable
 
 	rigConnection = RunService.RenderStepped:Connect(function()
+		if activeGoalPart and activeGoalPart.Parent and activeRigPrimary and activeRigPrimary.Parent then
+			local currentPivot = Rig:GetPivot()
+			local targetCFrame = activeGoalPart.CFrame * activeOffset
+			-- Preserva o offset entre PrimaryPart e o pivot do modelo (caso não sejam coincidentes)
+			local pivotOffset = activeRigPrimary.CFrame:ToObjectSpace(currentPivot)
+			Rig:PivotTo(targetCFrame * pivotOffset)
+		end
+
 		if RigCamera and RigCamera.Parent then
 			Camera.CFrame = RigCamera.CFrame
 		end
@@ -138,10 +153,9 @@ function Controller:StopRig(skipCameraSubject)
 		Track:Stop()
 	end
 
-	if activeWeld then
-		activeWeld:Destroy()
-		activeWeld = nil
-	end
+	activeGoalPart = nil
+	activeOffset = nil
+	activeRigPrimary = nil
 
 	if activeRig and activeRig.Parent then
 		activeRig:Destroy()

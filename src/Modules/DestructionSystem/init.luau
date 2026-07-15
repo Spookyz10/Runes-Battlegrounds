@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VoxBreaker = require(ReplicatedStorage.Shared.Modules.VoxBreaker)
 local DebrisDamage = require(script.DebrisDamage)
 local StructuralSupport = require(script.StructuralSupport)
+local propagateDestroyableAttribute = require(script.PropagateDestroyableAttribute)
 
 local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
@@ -56,6 +57,12 @@ local GROUND_INSTANCES = {
 
 local DESTROYABLES_ROOT = workspace.Map:FindFirstChild("Destroyables")
 
+if DESTROYABLES_ROOT then
+	propagateDestroyableAttribute(DESTROYABLES_ROOT)
+else
+	warn("[DestructionSystem] workspace.Map.Destroyables não encontrado no boot")
+end
+
 local LEVITATION_ACTIVE = {}
 local FAKE_DEBRIS_ACTIVE = {}
 
@@ -103,6 +110,27 @@ local function collectNearbyDestroyableParts(Center, Radius)
 			if (desc.Position - Center).Magnitude <= Radius then
 				table.insert(result, desc)
 			end
+		end
+	end
+
+	return result
+end
+
+local function collectDestroyablePartsInBox(CFrameCenter, Size)
+	local result = {}
+	if not DESTROYABLES_ROOT then
+		return result
+	end
+
+	local boxParams = OverlapParams.new()
+	boxParams.FilterType = Enum.RaycastFilterType.Include
+	boxParams.FilterDescendantsInstances = { DESTROYABLES_ROOT }
+
+	local parts = workspace:GetPartBoundsInBox(CFrameCenter, Size, boxParams)
+
+	for _, part in parts do
+		if part:IsA("BasePart") and part.Parent and isDestroyablePart(part) then
+			table.insert(result, part)
 		end
 	end
 
@@ -327,7 +355,136 @@ function DestructionService:ApplyImpact(Position, Force, OwnerPlayer, HitPart, D
 	end)
 end
 
-function DestructionService:_ApplyNoVoxelImpact(part, Force, OwnerPlayer, Direction)
+function DestructionService:ApplyRadialImpact(Position, Radius, Force, OwnerPlayer, Direction)
+	local candidateParts = collectNearbyDestroyableParts(Position, Radius)
+	if #candidateParts == 0 then
+		dprint("ApplyRadialImpact: nenhuma part destrutível encontrada no raio", Radius, "em", Position)
+		return
+	end
+
+	local tier = getTier(Force)
+
+	local areaParams = OverlapParams.new()
+	areaParams.FilterType = Enum.RaycastFilterType.Include
+	areaParams.FilterDescendantsInstances = candidateParts
+
+	local allVoxels = {}
+
+	local ok, voxels = pcall(function()
+		return VoxBreaker:CreateHitbox(
+			Vector3.one * Radius,
+			CFrame.new(Position),
+			Enum.PartType.Ball,
+			tier.VoxelSize,
+			-1,
+			areaParams
+		)
+	end)
+
+	if ok and voxels then
+		for _, v in voxels do
+			table.insert(allVoxels, v)
+		end
+	else
+		dprint("ApplyRadialImpact: VoxBreaker falhou -", voxels)
+	end
+
+	if #allVoxels > MAX_CHUNKS_PER_IMPACT then
+		for i = #allVoxels, MAX_CHUNKS_PER_IMPACT + 1, -1 do
+			local extra = allVoxels[i]
+			if extra and extra.Parent then
+				extra:Destroy()
+			end
+			allVoxels[i] = nil
+		end
+	end
+
+	dprint(
+		"ApplyRadialImpact: destruindo",
+		#allVoxels,
+		"voxels em raio",
+		Radius,
+		"-",
+		#candidateParts,
+		"parts candidatas"
+	)
+
+	for _, chunk in allVoxels do
+		self:_LaunchChunk(chunk, Position, Force, OwnerPlayer, Direction)
+	end
+
+	task.defer(function()
+		self:CheckIntegrity(Position, Direction)
+	end)
+end
+
+function DestructionService:ApplyBoxImpact(Position, Size, Force, OwnerPlayer, Direction)
+	local CenterCFrame = CFrame.new(Position)
+
+	local candidateParts = collectDestroyablePartsInBox(CenterCFrame, Size)
+	if #candidateParts == 0 then
+		dprint("ApplyBoxImpact: nenhuma part destrutível encontrada na box", Size, "em", Position)
+		return
+	end
+
+	for _, p in candidateParts do
+		dprint("ApplyBoxImpact candidata:", p:GetFullName(), "- Size:", p.Size)
+	end
+
+	local tier = getTier(Force)
+
+	local areaParams = OverlapParams.new()
+	areaParams.FilterType = Enum.RaycastFilterType.Include
+	areaParams.FilterDescendantsInstances = candidateParts
+
+	local allVoxels = {}
+
+	local ok, voxels = pcall(function()
+		return VoxBreaker:CreateHitbox(Size, CenterCFrame, Enum.PartType.Block, tier.VoxelSize, -1, areaParams)
+	end)
+
+	if ok and voxels then
+		for _, v in voxels do
+			table.insert(allVoxels, v)
+		end
+	else
+		dprint("ApplyBoxImpact: VoxBreaker falhou -", voxels)
+	end
+
+	if #allVoxels == 0 then
+		dprint("ApplyBoxImpact: 0 voxels gerados, aplicando fallback direto em", #candidateParts, "parts")
+		for _, part in candidateParts do
+			self:_ApplyNoVoxelImpact(part, Position, Force, OwnerPlayer, Direction)
+		end
+
+		task.defer(function()
+			self:CheckIntegrity(Position, Direction)
+		end)
+		return
+	end
+
+	if #allVoxels > MAX_CHUNKS_PER_IMPACT then
+		for i = #allVoxels, MAX_CHUNKS_PER_IMPACT + 1, -1 do
+			local extra = allVoxels[i]
+			if extra and extra.Parent then
+				extra:Destroy()
+			end
+			allVoxels[i] = nil
+		end
+	end
+
+	dprint("ApplyBoxImpact: destruindo", #allVoxels, "voxels na box", Size, "-", #candidateParts, "parts candidatas")
+
+	for _, chunk in allVoxels do
+		self:_LaunchChunk(chunk, Position, Force, OwnerPlayer, Direction)
+	end
+
+	task.defer(function()
+		self:CheckIntegrity(Position, Direction)
+	end)
+end
+
+function DestructionService:_ApplyNoVoxelImpact(part, ImpactPosition, Force, OwnerPlayer, Direction)
 	if not part or not part.Parent then
 		return
 	end
@@ -340,11 +497,15 @@ function DestructionService:_ApplyNoVoxelImpact(part, Force, OwnerPlayer, Direct
 	part.Anchored = false
 	part.CanCollide = true
 
+	local away = part.Position - ImpactPosition
+	local awayDir = away.Magnitude > 0.01 and away.Unit or Vector3.new(0, 1, 0)
+
 	local dir = Direction
 	if not dir or dir.Magnitude < 0.01 then
-		dir = Vector3.new(0, 1, 0)
+		dir = awayDir
 	else
-		dir = dir.Unit
+		dir = (awayDir * 1.0 + dir.Unit * 0.25)
+		dir = dir.Magnitude > 0.01 and dir.Unit or awayDir
 	end
 
 	local mass = part:GetMass()
