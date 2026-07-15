@@ -46,6 +46,7 @@ local THROW_DELAY = 1
 local TP_LIFT_HEIGHT = 200
 
 local MOON_IMPACT_FORCE = 400
+local MOON_IMPACT_RADIUS = 50
 local module = {}
 
 local function radialKnockback(Character, EnemyCharacter, EnemyHumanoid, ExplosionPosition, BaseForce, Damage)
@@ -96,9 +97,9 @@ local function explode(Character, Position)
 		ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 10, Last = 1 })
 	end
 
-	DestructionService:ApplyBoxImpact(Position, EXPLOSION_SIZE, MOON_IMPACT_FORCE, Player, Vector3.new(0, -1, 0))
+	DestructionService:ApplyRadialImpact(Position, MOON_IMPACT_RADIUS, MOON_IMPACT_FORCE, Player, Vector3.new(0, -1, 0))
 
-	HitboxHandler:SimpleOnce(Position, EXPLOSION_SIZE, nil, { Character }, "Box", nil, function(EnemyCharacter)
+	HitboxHandler:SimpleOnce(Position, MOON_IMPACT_RADIUS, nil, { Character }, "Radius", nil, function(EnemyCharacter)
 		local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
 		if not EnemyHumanoid or EnemyHumanoid.Health <= 0 then
 			return
@@ -300,7 +301,7 @@ function module:Activate(Player)
 			spawnCrater(OriginPosition, { amount = 70, tiltMin = 30, tiltMax = 50 })
 			ReplicateSet:FireAllClients("LunarImpact", { char = Character })
 
-			task.wait(0.3)
+			task.wait(0.1)
 
 			if not Character or not Character.Parent then
 				return

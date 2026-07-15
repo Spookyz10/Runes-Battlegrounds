@@ -345,9 +345,10 @@ local function CutPartinHalf(block: Part, TimeToReset: number) --Cuts part into 
 	end
 
 	local model
+	local parent = block.Parent
 
-	if block.Parent:IsA("Model") and block.Parent:GetAttribute("VoxelHolder") then
-		model = block.Parent
+	if parent and parent:IsA("Model") and parent:GetAttribute("VoxelHolder") then
+		model = parent
 	else
 		model = Instance.new("Model")
 		model.Name = "VoxelHolder"
@@ -434,13 +435,22 @@ local function CutPartinHalf(block: Part, TimeToReset: number) --Cuts part into 
 			until model:HasTag("Destroying")
 
 			if block:GetAttribute("Transparency") then
-				block.Transparency = block:GetAttribute("Transparency")
+				local transparency = block:GetAttribute("Transparency")
+				if typeof(transparency) == "number" then
+					block.Transparency = transparency
+				end
 			end
-			if block:GetAttribute("CanQuery") then
-				block.CanQuery = block:GetAttribute("Query")
+			if block:GetAttribute("Query") ~= nil then
+				local canQuery = block:GetAttribute("Query")
+				if typeof(canQuery) == "boolean" then
+					block.CanQuery = canQuery
+				end
 			end
-			if block:GetAttribute("Collide") then
-				block.CanCollide = block:GetAttribute("Collide")
+			if block:GetAttribute("Collide") ~= nil then
+				local canCollide = block:GetAttribute("Collide")
+				if typeof(canCollide) == "boolean" then
+					block.CanCollide = canCollide
+				end
 			end
 
 			local originalCFrame = block:GetAttribute("VoxOriginalCFrame")
@@ -487,6 +497,7 @@ local function GetTableMode(Table: { Part })
 		end)
 		return Array[1][1]
 	end
+	return nil
 end
 
 local function DivideBlock(block, MinimumVoxelSize, Parent, TimeToReset) --Divides part into evenly shaped cubes.
@@ -501,8 +512,9 @@ local function DivideBlock(block, MinimumVoxelSize, Parent, TimeToReset) --Divid
 			partTable = CutPartinHalf(block, TimeToReset)
 		else
 			local model
-			if block.Parent and block.Parent:IsA("Model") and block.Parent:GetAttribute("VoxelHolder") then
-				model = block.Parent
+			local parent = block.Parent
+			if parent and parent:IsA("Model") and parent:GetAttribute("VoxelHolder") then
+				model = parent
 			else
 				model = Instance.new("Model")
 				model.Name = "VoxelHolder"
@@ -805,13 +817,22 @@ local function DivideBlock(block, MinimumVoxelSize, Parent, TimeToReset) --Divid
 			task.wait(TimeToReset)
 
 			if block:GetAttribute("Transparency") then
-				block.Transparency = block:GetAttribute("Transparency")
+				local transparency = block:GetAttribute("Transparency")
+				if typeof(transparency) == "number" then
+					block.Transparency = transparency
+				end
 			end
-			if block:GetAttribute("CanQuery") then
-				block.CanQuery = block:GetAttribute("Query")
+			if block:GetAttribute("Query") ~= nil then
+				local canQuery = block:GetAttribute("Query")
+				if typeof(canQuery) == "boolean" then
+					block.CanQuery = canQuery
+				end
 			end
-			if block:GetAttribute("Collide") then
-				block.CanCollide = block:GetAttribute("Collide")
+			if block:GetAttribute("Collide") ~= nil then
+				local canCollide = block:GetAttribute("Collide")
+				if typeof(canCollide) == "boolean" then
+					block.CanCollide = canCollide
+				end
 			end
 
 			local originalCFrame = block:GetAttribute("VoxOriginalCFrame")
@@ -827,13 +848,18 @@ local function DivideBlock(block, MinimumVoxelSize, Parent, TimeToReset) --Divid
 	return partTable --Returns resulting parts
 end
 
-local function GetTouchingParts(part: BasePart, Params: OverlapParams) --Used to get all the parts within a part.
+local function GetTouchingParts(part: BasePart, Params: OverlapParams?) --Used to get all the parts within a part.
 	local results = {}
 	local touching
 	if Params then
 		touching = workspace:GetPartsInPart(part, Params)
 	else
 		touching = workspace:GetPartsInPart(part)
+	end
+
+	print(("[VoxDebug] overlap bruto: %d parts"):format(#touching))
+	for _, v in pairs(touching) do
+		print(("[VoxDebug]   -> %s | Destroyable=%s"):format(v:GetFullName(), tostring(v:GetAttribute(TagName))))
 	end
 
 	for i, v in pairs(touching) do
@@ -881,8 +907,8 @@ function VoxBreaker:CreateHitbox(Size, Cframe, Shape, MinimumVoxelSize, TimeToRe
 	local DefaultShape = Enum.PartType.Block -- Default Shape of hitbox
 	local DefaultTimeToReset = 50 --Default time in seconds it takes for divided parts to reset
 
-	local size = Size or DefaultSize
-	local shape = Shape or DefaultShape
+	local _size = Size or DefaultSize
+	local _shape = Shape or DefaultShape
 	local minimum = MinimumVoxelSize or miniumCubeSize
 	local timetoreset = TimeToReset or DefaultTimeToReset
 
@@ -915,8 +941,9 @@ function VoxBreaker:CreateHitbox(Size, Cframe, Shape, MinimumVoxelSize, TimeToRe
 		minimum = largest * ratio
 	end
 
-	if Visualizer then
-		part.Parent = game.Workspace
+	part.Parent = voxelFolder
+	if not Visualizer then
+		part.Transparency = 1
 	end
 
 	repeat
@@ -948,6 +975,8 @@ function VoxBreaker:CreateHitbox(Size, Cframe, Shape, MinimumVoxelSize, TimeToRe
 
 	until check == true
 
+	print(("[VoxDebug] CreateHitbox retornou %d voxels (minimum=%s)"):format(#partTable, tostring(minimum)))
+
 	if PartCacheEnabled then
 		local mode = GetTableMode(partTable)
 		for i, v in pairs(partTable) do
@@ -977,8 +1006,8 @@ function VoxBreaker.CreateMoveableHitbox(
 	local DefaultShape = Enum.PartType.Block -- Default Shape of hitbox
 	local DefaultTimeToReset = 50 --Default time in seconds it takes for divided parts to reset
 
-	local size = Size or DefaultSize
-	local shape = Shape or DefaultShape
+	local _size = Size or DefaultSize
+	local _shape = Shape or DefaultShape
 	local minimum = MinimumVoxelSize or miniumCubeSize
 	local timetoreset = TimeToReset or DefaultTimeToReset
 
@@ -1009,8 +1038,9 @@ function VoxBreaker.CreateMoveableHitbox(
 	part.Material = Enum.Material.Neon
 	part.Color = Color3.fromRGB(255, 0, 0)
 
-	if Visualizer then
-		part.Parent = game.Workspace
+	part.Parent = voxelFolder
+	if not Visualizer then
+		part.Transparency = 1
 	end
 
 	task.spawn(function()
@@ -1027,7 +1057,7 @@ function VoxBreaker.CreateMoveableHitbox(
 					if touching[1] ~= nil then
 						local partTable: { Part } = {}
 						repeat
-							local touching = GetTouchingParts(part, Params) --Initial check
+							touching = GetTouchingParts(part, Params) --Initial check
 
 							local check = true
 
@@ -1098,7 +1128,7 @@ function VoxBreaker.CreateMoveableHitbox(
 					if touching[1] ~= nil then
 						local partTable: { Part } = {}
 						repeat
-							local touching = GetTouchingParts(part, Params) --Initial check
+							touching = GetTouchingParts(part, Params) --Initial check
 
 							local check = true
 
@@ -1162,12 +1192,23 @@ function VoxBreaker.CreateMoveableHitbox(
 	return setmetatable(self, VoxBreaker)
 end
 
-function VoxBreaker:Start() -- Use to start moveable hitbox.
-	self.Part:SetAttribute("Active", true)
-end
+function VoxBreaker.GetTouchingParts(module, part: BasePart?) -- Returns all parts touching moveable hitbox OR specified part
+	local targetPart = part or module.Part
+	if not targetPart then
+		return {}
+	end
 
-function VoxBreaker:Stop() -- Use to stop moveable hitbox
-	self.Part:SetAttribute("Active", false)
+	if module.Part then
+		module.Part:SetAttribute("Active", true)
+	end
+
+	local touching = GetTouchingParts(targetPart, nil)
+
+	if module.Part then
+		module.Part:SetAttribute("Active", false)
+	end
+
+	return touching
 end
 
 function VoxBreaker:Destroy() -- Use to destroy moveable hitbox
@@ -1223,14 +1264,6 @@ function VoxBreaker:UnWeld() -- Unwelds the hitbox
 		task.wait(0.1)
 		self.Part:SetAttribute("Unweld", nil)
 	end)
-end
-
-function VoxBreaker:GetTouchingParts(part: Part) -- Returns all parts touching moveable hitbox OR specified part
-	if part then
-		return GetTouchingParts(part)
-	else
-		return GetTouchingParts(self.Part)
-	end
 end
 
 function VoxBreaker:CutInHalf(Part: Part, TimeToReset: number) -- Cuts a specified part into two pieces. Include parent if you want to change the parent of the parts.

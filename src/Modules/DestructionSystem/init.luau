@@ -21,7 +21,7 @@ local DEFAULT_TRACK_HITBOX_SIZE = Vector3.new(6, 6, 6)
 
 local DEBRIS_LIFETIME = 10
 local DEBRIS_FADE_TIME = 3
-local MAX_CHUNKS_PER_IMPACT = 40
+local MAX_CHUNKS_PER_IMPACT = 150
 
 local INTEGRITY_SEARCH_RADIUS = 40
 local NO_VOXEL_RESET_TIME = 20
@@ -82,6 +82,12 @@ local function getTier(Force)
 	return chosen
 end
 
+local function getBoundedVoxelSize(hitboxSize: Vector3, tier)
+	local largest = math.max(hitboxSize.X, hitboxSize.Y, hitboxSize.Z)
+	local relativeMinimum = largest / 10
+	return math.max(tier.VoxelSize, relativeMinimum)
+end
+
 local function isDestroyablePart(part)
 	if not part:IsA("BasePart") then
 		return false
@@ -139,13 +145,16 @@ end
 
 function DestructionService:CheckIntegrity(ImpactPosition, ImpactDirection)
 	local parts = collectNearbyDestroyableParts(ImpactPosition, INTEGRITY_SEARCH_RADIUS)
+	dprint("CheckIntegrity: parts candidatos =", #parts)
 	if #parts == 0 then
 		return
 	end
 
 	local clusters = StructuralSupport:FindUnsupportedClusters(parts, GROUND_INSTANCES)
+	dprint("CheckIntegrity: clusters desconectados =", #clusters)
 
 	for _, cluster in clusters do
+		dprint("  -> cluster com", #cluster, "parts")
 		self:CollapseCluster(cluster, ImpactPosition, ImpactDirection)
 	end
 end
@@ -287,10 +296,11 @@ function DestructionService:ApplyImpact(Position, Force, OwnerPlayer, HitPart, D
 
 	local tier = getTier(Force)
 
-	local allVoxels = {}
-
 	local localRadius = math.clamp(tier.Radius * 0.4, 2.5, 6)
 	local localSize = Vector3.one * localRadius
+	local localVoxelSize = getBoundedVoxelSize(localSize, tier)
+
+	local allVoxels = {}
 
 	local localParams = OverlapParams.new()
 	localParams.FilterType = Enum.RaycastFilterType.Include
@@ -301,7 +311,7 @@ function DestructionService:ApplyImpact(Position, Force, OwnerPlayer, HitPart, D
 			localSize,
 			CFrame.new(Position),
 			Enum.PartType.Ball,
-			tier.VoxelSize,
+			localVoxelSize,
 			-1,
 			localParams
 		)
@@ -363,10 +373,11 @@ function DestructionService:ApplyRadialImpact(Position, Radius, Force, OwnerPlay
 	end
 
 	local tier = getTier(Force)
+	local radialVoxelSize = getBoundedVoxelSize(Vector3.one * Radius, tier)
 
 	local areaParams = OverlapParams.new()
-	areaParams.FilterType = Enum.RaycastFilterType.Include
-	areaParams.FilterDescendantsInstances = candidateParts
+	areaParams.FilterType = Enum.RaycastFilterType.Exclude
+	areaParams.FilterDescendantsInstances = { workspace.Live, workspace.Debris }
 
 	local allVoxels = {}
 
@@ -375,7 +386,7 @@ function DestructionService:ApplyRadialImpact(Position, Radius, Force, OwnerPlay
 			Vector3.one * Radius,
 			CFrame.new(Position),
 			Enum.PartType.Ball,
-			tier.VoxelSize,
+			radialVoxelSize,
 			-1,
 			areaParams
 		)
@@ -418,8 +429,19 @@ function DestructionService:ApplyRadialImpact(Position, Radius, Force, OwnerPlay
 	end)
 end
 
-function DestructionService:ApplyBoxImpact(Position, Size, Force, OwnerPlayer, Direction)
-	local CenterCFrame = CFrame.new(Position)
+function DestructionService:ApplyBoxImpact(CFrameOrPosition, Size, Force, OwnerPlayer, Direction)
+	local CenterCFrame
+	if typeof(CFrameOrPosition) == "CFrame" then
+		CenterCFrame = CFrameOrPosition
+	else
+		local Position = CFrameOrPosition
+		if Direction and Direction.Magnitude > 0.01 then
+			CenterCFrame = CFrame.lookAt(Position, Position + Direction.Unit)
+		else
+			CenterCFrame = CFrame.new(Position)
+		end
+	end
+	local Position = CenterCFrame.Position
 
 	local candidateParts = collectDestroyablePartsInBox(CenterCFrame, Size)
 	if #candidateParts == 0 then
@@ -432,15 +454,16 @@ function DestructionService:ApplyBoxImpact(Position, Size, Force, OwnerPlayer, D
 	end
 
 	local tier = getTier(Force)
+	local boxVoxelSize = getBoundedVoxelSize(Size, tier)
 
 	local areaParams = OverlapParams.new()
-	areaParams.FilterType = Enum.RaycastFilterType.Include
-	areaParams.FilterDescendantsInstances = candidateParts
+	areaParams.FilterType = Enum.RaycastFilterType.Exclude
+	areaParams.FilterDescendantsInstances = { workspace.Live, workspace.Debris }
 
 	local allVoxels = {}
 
 	local ok, voxels = pcall(function()
-		return VoxBreaker:CreateHitbox(Size, CenterCFrame, Enum.PartType.Block, tier.VoxelSize, -1, areaParams)
+		return VoxBreaker:CreateHitbox(Size, CenterCFrame, Enum.PartType.Block, boxVoxelSize, -1, areaParams)
 	end)
 
 	if ok and voxels then
@@ -510,6 +533,16 @@ function DestructionService:_ApplyNoVoxelImpact(part, ImpactPosition, Force, Own
 
 	local mass = part:GetMass()
 	local launchSpeed = math.clamp(Force * 3.2 / math.sqrt(math.max(mass, 1)), 2, 45)
+
+	print(
+		("[DebugLaunch] %s | Size=%s | mass=%.1f | Force=%.1f | launchSpeed=%.2f"):format(
+			part.Name,
+			tostring(part.Size),
+			mass,
+			Force,
+			launchSpeed
+		)
+	)
 
 	part.AssemblyLinearVelocity = dir * launchSpeed * 0.7 + Vector3.new(0, launchSpeed * 0.45, 0)
 	part.AssemblyAngularVelocity =
