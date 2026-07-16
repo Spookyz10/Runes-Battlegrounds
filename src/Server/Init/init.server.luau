@@ -13,7 +13,7 @@ local Shared = RS.Shared.Modules
 local SvModules = SvSt.Modules
 
 local PerfectKnockback = require(ServerStorage.Modules.PerfectKnockback)
-local _WindCollapseTicker = require(ServerStorage.Modules.WindCollapseTicker)
+
 local Trove = require(Shared.Trove)
 
 local StunHandler = require(SvModules.StunHandler)

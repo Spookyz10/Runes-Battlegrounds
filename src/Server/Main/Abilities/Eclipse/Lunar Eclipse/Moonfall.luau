@@ -382,6 +382,7 @@ end
 local module = {}
 
 function module:Activate(Player)
+	print("Starting Lunar Strike for", Player.Name)
 	local Character = Player.Character
 	if not Character or not Character.Parent then
 		return

@@ -4,13 +4,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VoxBreaker = require(ReplicatedStorage.Shared.Modules.VoxBreaker)
 local DebrisDamage = require(script.DebrisDamage)
-local StructuralSupport = require(script.StructuralSupport)
 
 local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
 local DestructionService = {}
 
-local DEBUG = true
+local DEBUG = false
 
 local COLLIDE_SIZE_THRESHOLD = 3
 local INSTAKILL_SIZE = 100
@@ -58,6 +57,19 @@ local DESTROYABLES_ROOT = workspace.Map:FindFirstChild("Destroyables")
 
 local LEVITATION_ACTIVE = {}
 local FAKE_DEBRIS_ACTIVE = {}
+
+local WATCH_SET = {}
+local WATCH_QUEUE = {}
+
+local FALL_CHECK_RAY_DIST = 2.5
+local FALL_CHECK_BATCH_SIZE = 30
+local FALL_CHECK_UNSUPPORTED_STRIKES = 2
+local WATCH_MAX_AGE = 15
+local WATCH_TICK_INTERVAL = 0.5
+
+local groundRayParams = RaycastParams.new()
+groundRayParams.FilterType = Enum.RaycastFilterType.Include
+groundRayParams.FilterDescendantsInstances = GROUND_INSTANCES
 
 local function dprint(...)
 	if DEBUG then
@@ -136,140 +148,131 @@ local function collectDestroyablePartsInBox(CFrameCenter, Size)
 	return result
 end
 
-function DestructionService:CheckIntegrity(ImpactPosition, ImpactDirection)
-	local parts = collectNearbyDestroyableParts(ImpactPosition, INTEGRITY_SEARCH_RADIUS)
-	dprint("CheckIntegrity: parts candidatos =", #parts)
-	if #parts == 0 then
-		return
-	end
-
-	local clusters = StructuralSupport:FindUnsupportedClusters(parts, GROUND_INSTANCES)
-	dprint("CheckIntegrity: clusters desconectados =", #clusters)
-
-	for _, cluster in clusters do
-		dprint("  -> cluster com", #cluster, "parts")
-		self:CollapseCluster(cluster, ImpactPosition, ImpactDirection)
-	end
+local function closestPointOnPart(part, point)
+	local relative = part.CFrame:PointToObjectSpace(point)
+	local halfSize = part.Size * 0.5
+	local clamped = Vector3.new(
+		math.clamp(relative.X, -halfSize.X, halfSize.X),
+		math.clamp(relative.Y, -halfSize.Y, halfSize.Y),
+		math.clamp(relative.Z, -halfSize.Z, halfSize.Z)
+	)
+	return part.CFrame:PointToWorldSpace(clamped)
 end
 
-function DestructionService:CollapseCluster(clusterParts, ImpactPosition, ImpactDirection)
-	if #clusterParts == 0 then
-		return
+local function isPartSupported(part)
+	local rayDist = (part.Size.Y * 0.5) + FALL_CHECK_RAY_DIST
+	local result = workspace:Raycast(part.Position, Vector3.new(0, -rayDist, 0), groundRayParams)
+	if result then
+		return true
 	end
 
-	dprint("Cluster desconectado caindo (rígido):", #clusterParts, "parts")
+	local touchParams = OverlapParams.new()
+	touchParams.FilterType = Enum.RaycastFilterType.Exclude
+	touchParams.FilterDescendantsInstances = { part }
 
-	ImpactDirection = ImpactDirection or Vector3.new(0, 0, 0)
+	local expandedSize = part.Size + Vector3.new(0.6, 0.6, 0.6)
+	local touching = workspace:GetPartBoundsInBox(part.CFrame, expandedSize, touchParams)
 
-	-- Escolhe a maior part como root pra weldar o resto nela (vira o "PrimaryPart" do cluster)
-	local root = clusterParts[1]
-	local rootVolume = root.Size.X * root.Size.Y * root.Size.Z
-	for _, part in clusterParts do
-		local vol = part.Size.X * part.Size.Y * part.Size.Z
-		if vol > rootVolume then
-			root = part
-			rootVolume = vol
+	for _, other in touching do
+		if other.Anchored and other ~= part then
+			return true
 		end
 	end
 
-	local welds = {}
+	return false
+end
 
-	for _, part in clusterParts do
-		if not part.Parent then
+function DestructionService:WatchPart(part)
+	if not part or not part.Parent then
+		return
+	end
+	if not part.Anchored then
+		return
+	end
+	if WATCH_SET[part] then
+		return
+	end
+
+	WATCH_SET[part] = { strikes = 0, addedAt = os.clock() }
+	table.insert(WATCH_QUEUE, part)
+end
+
+function DestructionService:WatchNearby(Position, Radius)
+	for _, part in collectNearbyDestroyableParts(Position, Radius or INTEGRITY_SEARCH_RADIUS) do
+		self:WatchPart(part)
+	end
+end
+
+function DestructionService:_DropUnsupportedPart(part)
+	if not part or not part.Parent then
+		return
+	end
+
+	part:SetAttribute("Destroyable", nil)
+	part.Anchored = false
+
+	local bigEnough = part.Size.X >= COLLIDE_SIZE_THRESHOLD
+		and part.Size.Y >= COLLIDE_SIZE_THRESHOLD
+		and part.Size.Z >= COLLIDE_SIZE_THRESHOLD
+	part.CanCollide = bigEnough
+
+	pcall(function()
+		part.CollisionGroup = DEBRIS_COLLISION_GROUP
+	end)
+
+	part.AssemblyAngularVelocity =
+		Vector3.new(math.random(-40, 40) / 100, math.random(-40, 40) / 100, math.random(-40, 40) / 100)
+
+	DebrisDamage:TrackFall(part, nil)
+	ReplicateSet:FireAllClients("DebrisFallImpact", { Position = part.Position })
+end
+
+function DestructionService:_ProcessWatchBatch()
+	local processed = 0
+	local i = 1
+
+	while i <= #WATCH_QUEUE and processed < FALL_CHECK_BATCH_SIZE do
+		local part = WATCH_QUEUE[i]
+		local data = part and WATCH_SET[part]
+
+		if not data or not part.Parent or not part.Anchored then
+			table.remove(WATCH_QUEUE, i)
+			if part then
+				WATCH_SET[part] = nil
+			end
 			continue
 		end
 
-		part:SetAttribute("Destroyable", nil)
-		part.Anchored = false
-		local bigEnough = part.Size.X >= COLLIDE_SIZE_THRESHOLD
-			and part.Size.Y >= COLLIDE_SIZE_THRESHOLD
-			and part.Size.Z >= COLLIDE_SIZE_THRESHOLD
-		part.CanCollide = bigEnough
-
-		pcall(function()
-			part.CollisionGroup = DEBRIS_COLLISION_GROUP
-		end)
-
-		if part ~= root then
-			local weld = Instance.new("WeldConstraint")
-			weld.Part0 = root
-			weld.Part1 = part
-			weld.Parent = part
-			table.insert(welds, weld)
-		end
-	end
-
-	-- Velocidade/rotação únicas pro corpo inteiro (soma de massa dos welds já conta em :GetMass())
-	local away = root.Position - ImpactPosition
-	local awayDir = away.Magnitude > 0.01 and away.Unit or Vector3.new(0, 1, 0)
-	local combinedDir = (ImpactDirection * 1.0 + awayDir * 0.25) + Vector3.new(0, 0.35, 0)
-	if combinedDir.Magnitude > 0.01 then
-		combinedDir = combinedDir.Unit
-	else
-		combinedDir = Vector3.new(0, 1, 0)
-	end
-
-	local mass = root:GetMass()
-	local speed = math.clamp(18 / math.sqrt(math.max(mass, 1)) + 6, 4, 30)
-
-	root.AssemblyLinearVelocity = combinedDir * speed
-	root.AssemblyAngularVelocity =
-		Vector3.new(math.random(-40, 40) / 100, math.random(-40, 40) / 100, math.random(-40, 40) / 100)
-
-	-- Quando QUALQUER part do cluster tocar algo de fora, desmancha os welds
-	-- e cada peça vira debris individual (com um pequeno impulso de espalhamento)
-	local hasShattered = false
-	local touchConns = {}
-
-	local function shatter(hitPart)
-		if hasShattered then
-			return
-		end
-		hasShattered = true
-
-		for _, c in touchConns do
-			c:Disconnect()
+		if os.clock() - data.addedAt > WATCH_MAX_AGE then
+			table.remove(WATCH_QUEUE, i)
+			WATCH_SET[part] = nil
+			continue
 		end
 
-		for _, w in welds do
-			if w.Parent then
-				w:Destroy()
+		processed += 1
+
+		if isPartSupported(part) then
+			data.strikes = 0
+			i += 1
+		else
+			data.strikes += 1
+			if data.strikes >= FALL_CHECK_UNSUPPORTED_STRIKES then
+				table.remove(WATCH_QUEUE, i)
+				WATCH_SET[part] = nil
+				self:_DropUnsupportedPart(part)
+			else
+				i += 1
 			end
 		end
-
-		local impactPos = (hitPart and hitPart.Position) or root.Position
-
-		for _, part in clusterParts do
-			if not part.Parent then
-				continue
-			end
-			local scatterDir = part.Position - impactPos
-			scatterDir = scatterDir.Magnitude > 0.01 and scatterDir.Unit or Vector3.new(0, 1, 0)
-			part.AssemblyLinearVelocity = part.AssemblyLinearVelocity * 0.3 + scatterDir * 6
-			DebrisDamage:Track(part, nil)
-		end
 	end
-
-	for _, part in clusterParts do
-		local conn
-		conn = part.Touched:Connect(function(hit)
-			if hasShattered or table.find(clusterParts, hit) then
-				return -- ignora toques internas do próprio cluster
-			end
-			shatter(hit)
-		end)
-		table.insert(touchConns, conn)
-	end
-
-	-- Fallback: se por algum motivo nunca tocar em nada (ficou preso/flutuando), quebra sozinho
-	task.delay(8, function()
-		shatter(nil)
-	end)
 end
 
-function DestructionService:NotifyPartRemoved(RemovedPartPosition, Direction)
-	self:CheckIntegrity(RemovedPartPosition, Direction)
-end
+task.spawn(function()
+	while true do
+		task.wait(WATCH_TICK_INTERVAL)
+		DestructionService:_ProcessWatchBatch()
+	end
+end)
 
 local function applySplat(chunk)
 	local originalSize = chunk.Size
@@ -422,19 +425,13 @@ function DestructionService:ApplyImpact(Position, Force, OwnerPlayer, HitPart, D
 		self:_LaunchChunk(chunk, Position, Force, OwnerPlayer, Direction)
 	end
 
-	-- DestructionSystem.luau, no fim de ApplyBoxImpact/ApplyRadialImpact/ApplyImpact
-	task.defer(function()
-		self:CheckIntegrity(Position, Direction)
-		task.delay(0.5, function()
-			self:CheckIntegrity(Position, Direction)
-		end)
-	end)
+	self:WatchNearby(Position, INTEGRITY_SEARCH_RADIUS)
 end
 
 function DestructionService:ApplyRadialImpact(Position, Radius, Force, OwnerPlayer, Direction)
 	local candidateParts = collectNearbyDestroyableParts(Position, Radius)
 	if #candidateParts == 0 then
-		dprint("ApplyRadialImpact: nenhuma part destrutível encontrada no raio", Radius, "em", Position)
+		dprint("ApplyRadialImpact: nenhuma part destrutivel encontrada no raio", Radius, "em", Position)
 		return
 	end
 
@@ -476,27 +473,13 @@ function DestructionService:ApplyRadialImpact(Position, Radius, Force, OwnerPlay
 		end
 	end
 
-	dprint(
-		"ApplyRadialImpact: destruindo",
-		#allVoxels,
-		"voxels em raio",
-		Radius,
-		"-",
-		#candidateParts,
-		"parts candidatas"
-	)
+	dprint("ApplyRadialImpact: destruindo", #allVoxels, "voxels em raio", Radius)
 
 	for _, chunk in allVoxels do
 		self:_LaunchChunk(chunk, Position, Force, OwnerPlayer, Direction)
 	end
 
-	-- DestructionSystem.luau, no fim de ApplyBoxImpact/ApplyRadialImpact/ApplyImpact
-	task.defer(function()
-		self:CheckIntegrity(Position, Direction)
-		task.delay(0.5, function()
-			self:CheckIntegrity(Position, Direction)
-		end)
-	end)
+	self:WatchNearby(Position, math.max(Radius, INTEGRITY_SEARCH_RADIUS))
 end
 
 function DestructionService:ApplyBoxImpact(CFrameOrPosition, Size, Force, OwnerPlayer, Direction)
@@ -515,12 +498,8 @@ function DestructionService:ApplyBoxImpact(CFrameOrPosition, Size, Force, OwnerP
 
 	local candidateParts = collectDestroyablePartsInBox(CenterCFrame, Size)
 	if #candidateParts == 0 then
-		dprint("ApplyBoxImpact: nenhuma part destrutível encontrada na box", Size, "em", Position)
+		dprint("ApplyBoxImpact: nenhuma part destrutivel encontrada na box", Size, "em", Position)
 		return
-	end
-
-	for _, p in candidateParts do
-		dprint("ApplyBoxImpact candidata:", p:GetFullName(), "- Size:", p.Size)
 	end
 
 	local tier = getTier(Force)
@@ -549,14 +528,7 @@ function DestructionService:ApplyBoxImpact(CFrameOrPosition, Size, Force, OwnerP
 		for _, part in candidateParts do
 			self:_ApplyNoVoxelImpact(part, Position, Force, OwnerPlayer, Direction)
 		end
-
-		-- DestructionSystem.luau, no fim de ApplyBoxImpact/ApplyRadialImpact/ApplyImpact
-		task.defer(function()
-			self:CheckIntegrity(Position, Direction)
-			task.delay(0.5, function()
-				self:CheckIntegrity(Position, Direction)
-			end)
-		end)
+		self:WatchNearby(Position, INTEGRITY_SEARCH_RADIUS)
 		return
 	end
 
@@ -570,19 +542,13 @@ function DestructionService:ApplyBoxImpact(CFrameOrPosition, Size, Force, OwnerP
 		end
 	end
 
-	dprint("ApplyBoxImpact: destruindo", #allVoxels, "voxels na box", Size, "-", #candidateParts, "parts candidatas")
+	dprint("ApplyBoxImpact: destruindo", #allVoxels, "voxels na box", Size)
 
 	for _, chunk in allVoxels do
 		self:_LaunchChunk(chunk, Position, Force, OwnerPlayer, Direction)
 	end
 
-	-- DestructionSystem.luau, no fim de ApplyBoxImpact/ApplyRadialImpact/ApplyImpact
-	task.defer(function()
-		self:CheckIntegrity(Position, Direction)
-		task.delay(0.5, function()
-			self:CheckIntegrity(Position, Direction)
-		end)
-	end)
+	self:WatchNearby(Position, INTEGRITY_SEARCH_RADIUS)
 end
 
 function DestructionService:_ApplyNoVoxelImpact(part, ImpactPosition, Force, OwnerPlayer, Direction)
@@ -612,16 +578,6 @@ function DestructionService:_ApplyNoVoxelImpact(part, ImpactPosition, Force, Own
 	local mass = part:GetMass()
 	local launchSpeed = math.clamp(Force * 3.2 / math.sqrt(math.max(mass, 1)), 2, 45)
 
-	print(
-		("[DebugLaunch] %s | Size=%s | mass=%.1f | Force=%.1f | launchSpeed=%.2f"):format(
-			part.Name,
-			tostring(part.Size),
-			mass,
-			Force,
-			launchSpeed
-		)
-	)
-
 	part.AssemblyLinearVelocity = dir * launchSpeed * 0.7 + Vector3.new(0, launchSpeed * 0.45, 0)
 	part.AssemblyAngularVelocity =
 		Vector3.new(math.random(-150, 150) / 100, math.random(-150, 150) / 100, math.random(-150, 150) / 100)
@@ -644,6 +600,7 @@ function DestructionService:_ApplyNoVoxelImpact(part, ImpactPosition, Force, Own
 		pcall(function()
 			part.CollisionGroup = originalCollisionGroup
 		end)
+		part:SetAttribute("Destroyable", true)
 	end)
 end
 
@@ -683,12 +640,13 @@ function DestructionService:TrackCharacterImpacts(Character, Force, OwnerPlayer,
 			if hitParts[part] then
 				continue
 			end
-			if not part:GetAttribute("Destroyable") then
+			if not isDestroyablePart(part) then
 				continue
 			end
 
 			hitParts[part] = true
-			self:ApplyImpact(HumRP.Position, Force, OwnerPlayer, part, direction)
+			local impactPosition = closestPointOnPart(part, HumRP.Position)
+			self:ApplyImpact(impactPosition, Force, OwnerPlayer, part, direction)
 		end
 	end)
 
@@ -884,10 +842,6 @@ function DestructionService:SpawnFakeDebris(Anchor, Config)
 	local RiseAcceleration = Config.RiseAcceleration or 0
 	local MaxRiseSpeed = Config.MaxRiseSpeed or (RiseSpeed * 3)
 
-	local groundRaycastParams = RaycastParams.new()
-	groundRaycastParams.FilterType = Enum.RaycastFilterType.Include
-	groundRaycastParams.FilterDescendantsInstances = GROUND_INSTANCES
-
 	local id = tostring(Anchor) .. "_fake_" .. tostring(tick()) .. "_" .. tostring(math.random(1, 999999))
 
 	local data = {
@@ -909,7 +863,7 @@ function DestructionService:SpawnFakeDebris(Anchor, Config)
 		local offset = Vector3.new(math.cos(angle) * dist, 0, math.sin(angle) * dist)
 		local origin = centerPos + offset + Vector3.new(0, 50, 0)
 
-		local groundHit = workspace:Raycast(origin, Vector3.new(0, -150, 0), groundRaycastParams)
+		local groundHit = workspace:Raycast(origin, Vector3.new(0, -150, 0), groundRayParams)
 		if not groundHit then
 			return
 		end

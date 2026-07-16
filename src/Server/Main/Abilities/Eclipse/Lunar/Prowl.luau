@@ -4,7 +4,6 @@ local Players = game:GetService("Players")
 
 local ServerModules = ServerStorage.Modules
 
-local ReplicatedModules = ReplicatedStorage.Shared.Modules
 local RemotesContainer = ReplicatedStorage.Remotes
 
 local StunHandler = require(ServerModules.StunHandler)
@@ -19,7 +18,7 @@ local MoveAnims = ServerStorage.Assets.Animations.Moves
 local ReplicateSet = RemotesContainer.Replicate.Set
 
 local HIT_DAMAGE = { 8, 10 }
-local PUNCH_DAMAGE = 22
+local PUNCH_DAMAGE = 1
 local PUNCH_DESTRUCTION_FORCE = 35
 local PUNCH_DESTRUCTION_MAX_TRACK_TIME = 4
 
@@ -191,7 +190,7 @@ return {
 							PUNCH_DESTRUCTION_FORCE,
 							Player,
 							PUNCH_DESTRUCTION_MAX_TRACK_TIME,
-							Vector3.new(6, 6, 6)
+							Vector3.new(20, 20, 20)
 						)
 
 						if knockbackResult and knockbackResult[1] then
