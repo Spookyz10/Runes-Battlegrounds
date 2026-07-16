@@ -219,6 +219,11 @@ local function debrisSpawner(config)
 	local debrisSizeMax = config.debrisSizeMax or 5
 	local debrisHeightMin = config.debrisHeightMin or 1.9
 	local debrisHeightMax = config.debrisHeightMax or 3.2
+	-- Teto opcional de altura por pedaço, independente do sizemult/ringSizeGrowth.
+	-- Evita que anéis externos (que escalam com ringSizeGrowth) fiquem altos
+	-- demais e atrapalhem a movimentação. Sem config.maxDebrisHeight, mantém
+	-- o comportamento antigo (sem limite).
+	local maxDebrisHeight = config.maxDebrisHeight or math.huge
 
 	local basePieceCount = config.amount or 24
 
@@ -273,6 +278,7 @@ local function debrisSpawner(config)
 			local slabHeight = rng:NextNumber(debrisHeightMin, debrisHeightMax)
 				* (1 + (ringSizeScale - 1) * 0.35)
 				* sizeMult
+			slabHeight = math.min(slabHeight, maxDebrisHeight)
 			local slabDepth = randomRange(debrisSizeMin, debrisSizeMax) * 0.55 * widthScale * sizeMult
 			slab.Size = Vector3.new(slabWidth, slabHeight, slabDepth)
 

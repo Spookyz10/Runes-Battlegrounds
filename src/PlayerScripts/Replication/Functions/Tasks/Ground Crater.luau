@@ -27,17 +27,24 @@ return function(config)
 		return
 	end
 
-	local TopDownParams = RaycastParams.new()
-	TopDownParams.FilterType = Enum.RaycastFilterType.Exclude
-	TopDownParams.FilterDescendantsInstances = { workspace.Live, workspace.Debris }
-	TopDownParams.IgnoreWater = true
+	-- Realinhamento "top-down": bom pra chão inclinado, ruim pra impactos em
+	-- paredes/montanhas (faz a cratera se comportar como se tivesse saído do chão).
+	-- Passe config.NoGroundAlign = true pra pular essa etapa quando o impacto
+	-- pode acontecer em qualquer superfície (ex: ilha caindo numa montanha).
+	if not config.NoGroundAlign then
+		local TopDownParams = RaycastParams.new()
+		TopDownParams.FilterType = Enum.RaycastFilterType.Exclude
+		TopDownParams.FilterDescendantsInstances = { workspace.Live, workspace.Debris }
+		TopDownParams.IgnoreWater = true
 
-	local TopDownResult = workspace:Raycast(hitPosition + Vector3.new(0, 6, 0), Vector3.new(0, -12, 0), TopDownParams)
+		local TopDownResult =
+			workspace:Raycast(hitPosition + Vector3.new(0, 6, 0), Vector3.new(0, -12, 0), TopDownParams)
 
-	if TopDownResult and TopDownResult.Position.Y >= hitPosition.Y - 0.05 then
-		hitPart = TopDownResult.Instance
-		hitPosition = TopDownResult.Position
-		hitNormal = TopDownResult.Normal
+		if TopDownResult and TopDownResult.Position.Y >= hitPosition.Y - 0.05 then
+			hitPart = TopDownResult.Instance
+			hitPosition = TopDownResult.Position
+			hitNormal = TopDownResult.Normal
+		end
 	end
 
 	local surfaceAlignment =
@@ -83,6 +90,7 @@ return function(config)
 			debrisSizeMax = config.debrisSizeMax,
 			debrisHeightMin = config.debrisHeightMin,
 			debrisHeightMax = config.debrisHeightMax,
+			maxDebrisHeight = config.maxDebrisHeight,
 		})
 	end
 end

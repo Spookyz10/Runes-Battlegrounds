@@ -32,6 +32,11 @@ local IslandsInUse = {}
 local GRAVITY_HALF_SIZE = Vector3.new(15, 15, 15)
 local GRAVITY_STUN_TICK = 0.5
 local JUMP_HEIGHT = 400
+-- Offset horizontal aplicado quando o jogador é teleportado pra cima, pra ele
+-- sair da coluna vertical por onde a ilha desce depois (evita a ilha
+-- atravessando o jogador no meio da queda). A ilha continua pairando sobre a
+-- posição ORIGINAL (sem offset), então visualmente ela fica "acima da cabeça".
+local JUMP_X_OFFSET = 50
 local ISLAND_HOVER_HEIGHT = 200
 local ISLAND_TRAVEL_TIME = 1.6
 local ISLAND_THROW_TIME = 1.1
@@ -239,16 +244,25 @@ local function impactIsland(data, impactPosition)
 		amount = 80,
 		start = impactPosition + Vector3.new(0, 6, 0),
 		["end"] = Vector3.new(0, -20, 0),
+		-- Impede o realinhamento "top-down" do Ground Crater, que forçava a
+		-- cratera a se comportar como se tivesse saído do chão mesmo quando o
+		-- impacto acontece contra uma parede/montanha.
+		NoGroundAlign = true,
 		rings = 4,
-		ringSpacing = 20,
-		ringSizeGrowth = 1.9,
+		ringSpacing = 18,
+		-- Reduzido de 1.9 -> 1.5: menos crescimento de altura por anel.
+		ringSizeGrowth = 1.5,
 		ringGap = 0.24,
 		outwardTilt = true,
 		debrisSizeMin = 8,
-		debrisSizeMax = 20,
-		debrisHeightMin = 5,
-		debrisHeightMax = 10,
-		sizemult = 1.8,
+		debrisSizeMax = 18,
+		-- Altura reduzida (era 5-10): mantém o impacto largo/grande sem virar
+		-- parede pro jogador atravessar.
+		debrisHeightMin = 2.5,
+		debrisHeightMax = 4,
+		-- Teto absoluto de altura por pedaço, independente de sizemult/anel.
+		maxDebrisHeight = 5,
+		sizemult = 1.5,
 	})
 
 	if Player then
@@ -285,7 +299,15 @@ local function travelIslandToPlayer(data, Character, HumRP)
 	local Island = data.Island
 	local startPos = Island:GetPivot().Position
 	local startRot = Island:GetPivot().Rotation
-	local targetPos = HumRP.Position + Vector3.new(0, ISLAND_HOVER_HEIGHT, 0)
+
+	if Island:FindFirstChild("LunarHightlight") then
+		Island.LunarHighlight.Enabled = true
+	end
+
+	ReplicateSet:FireAllClients("EnableVFX", { container = Island })
+
+	local basePos = data.GroundReturnPosition or HumRP.Position
+	local targetPos = Vector3.new(basePos.X, HumRP.Position.Y + ISLAND_HOVER_HEIGHT, basePos.Z)
 
 	local hitSet = {}
 	local overlapParams = OverlapParams.new()
@@ -361,6 +383,7 @@ local function throwIslandToGravity(data)
 		Island:PivotTo(CFrame.new(pos) * startRot)
 
 		if t >= 1 then
+			ReplicateSet:FireAllClients("IslandExplosion", { position = targetPos })
 			completed = true
 		end
 	end)
@@ -474,13 +497,6 @@ return {
 				end
 				iFramesService:AddAlliFrames(Character)
 				startGravityField(data, HumRP.Position)
-				AnimTrack:AdjustSpeed(0)
-				task.delay(0.6, function()
-					if data.Cancelled or not Character.Parent or Humanoid.Health <= 0 then
-						return
-					end
-					AnimTrack:AdjustSpeed(1)
-				end)
 			end)
 		)
 
@@ -492,7 +508,9 @@ return {
 				end
 				ReplicateSet:FireAllClients("LunarImpact", { position = ActiveState[Character].GravityPos })
 				task.wait(0.1)
-				HumRP.CFrame = HumRP.CFrame + Vector3.new(0, JUMP_HEIGHT, 0)
+				-- Offset em X pra tirar o jogador da coluna vertical por onde a
+				-- ilha desce depois (evita atravessar o jogador na queda).
+				HumRP.CFrame = HumRP.CFrame + Vector3.new(JUMP_X_OFFSET, JUMP_HEIGHT, 0)
 				lockAirborne(Humanoid, HumRP)
 				data.IsAirborne = true
 			end)
@@ -576,7 +594,9 @@ return {
 			if not data.Cancelled then
 				if Character and Character.Parent and data.GroundReturnPosition then
 					local groundY = findGroundY(data.GroundReturnPosition)
-					HumRP.CFrame = CFrame.new(Vector3.new(HumRP.Position.X, groundY + 3, HumRP.Position.Z))
+
+					HumRP.CFrame =
+						CFrame.new(Vector3.new(data.GroundReturnPosition.X, groundY + 3, data.GroundReturnPosition.Z))
 					ReplicateSet:FireAllClients("LunarImpact", { position = ActiveState[Character].GravityPos })
 				end
 
