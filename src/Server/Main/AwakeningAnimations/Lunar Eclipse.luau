@@ -254,6 +254,7 @@ function module:Activate(Player)
 	end
 
 	local indicatorId = "LunarAwaken_" .. Player.UserId
+	local OriginPosition = HumRP.Position
 
 	AnimationService:stopAll(Character)
 
@@ -293,13 +294,9 @@ function module:Activate(Player)
 				return
 			end
 
-			local OriginPosition = HumRP.Position
-
 			ReplicateSet:FireAllClients("LunarAwakenStart", { char = Character })
 			spawnCrater(OriginPosition, { amount = 70, tiltMin = 30, tiltMax = 50 })
-			ReplicateSet:FireAllClients("LunarImpact", { char = Character })
-
-			task.wait(0.1)
+			ReplicateSet:FireAllClients("LunarImpact", { position = OriginPosition })
 
 			if not Character or not Character.Parent then
 				return
@@ -397,7 +394,7 @@ function module:Activate(Player)
 				return
 			end
 
-			ReplicateSet:FireAllClients("LunarImpact", { char = Character })
+			ReplicateSet:FireAllClients("LunarImpact", { position = OriginPosition })
 			spawnCrater(HumRP.Position, { amount = 60, debrisSizeMin = 5, debrisSizeMax = 14, sizemult = 1.4 })
 		end)
 	)

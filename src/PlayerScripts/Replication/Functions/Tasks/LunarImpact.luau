@@ -4,13 +4,8 @@ local ParticlesModule = Constants.ParticlesModule
 local CharacterAssets = Constants.CharacterAssets
 
 return function(Params)
-	local Character = Params.char
-	if not Character or not Character.Parent then
-		return
-	end
-
-	local HumRP = Character:FindFirstChild("HumanoidRootPart")
-	if not HumRP then
+	local Position = Params.position
+	if not Position then
 		return
 	end
 
@@ -27,11 +22,11 @@ return function(Params)
 
 	local Clone = ImpactAsset:Clone()
 	Clone.Parent = workspace
-	Clone.Position = HumRP.Position + Vector3.new(0, -3, 0)
+	Clone.Position = Position + Vector3.new(0, -3, 0)
 
 	local TpClone = TeleportAsset:Clone()
 	TpClone.Parent = workspace
-	TpClone.Position = HumRP.Position
+	TpClone.Position = Position
 
 	ParticlesModule.Emit(TpClone)
 	ParticlesModule.Emit(Clone)

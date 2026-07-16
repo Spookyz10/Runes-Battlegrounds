@@ -19,7 +19,7 @@ function Handlers.start(params)
 
 	local gravityVFX = Assets.Gravity:Clone()
 	gravityVFX.Parent = workspace
-	gravityVFX.CFrame = CFrame.new(pos.X, pos.Y, pos.Z)
+	gravityVFX:PivotTo(CFrame.new(pos))
 
 	table.insert(activeGravity[char], gravityVFX)
 end

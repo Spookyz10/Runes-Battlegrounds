@@ -16,7 +16,6 @@ local DestructionSystem = require(SvModules.DestructionSystem)
 
 local Remotes = ReplicatedStorage.Remotes
 local ReplicateSet = Remotes.Replicate.Set
-local CutscenesSet = Remotes.Cutscenes.Set
 
 local Animations = ServerStorage.Assets.Animations.Moves
 local StrikeAnim = Animations.Eclipse.Lunar.Awakening.Moonfall
@@ -41,10 +40,6 @@ local IMPACT_SIZE = Vector3.new(45, 45, 45)
 local IMPACT_DAMAGE = 30
 
 local ActiveState = {}
-
-local function dprint(...)
-	print("[LunarStrike]", ...)
-end
 
 local function isDestroyablePart(part)
 	if not part:IsA("BasePart") then
@@ -474,23 +469,28 @@ return {
 		table.insert(
 			AnimEvents,
 			AnimTrack:GetMarkerReachedSignal("clap"):Connect(function()
-				print("Clap started")
 				if data.Cancelled or not Character.Parent or Humanoid.Health <= 0 then
 					return
 				end
 				iFramesService:AddAlliFrames(Character)
 				startGravityField(data, HumRP.Position)
+				AnimTrack:AdjustSpeed(0)
+				task.delay(0.6, function()
+					if data.Cancelled or not Character.Parent or Humanoid.Health <= 0 then
+						return
+					end
+					AnimTrack:AdjustSpeed(1)
+				end)
 			end)
 		)
 
 		table.insert(
 			AnimEvents,
 			AnimTrack:GetMarkerReachedSignal("jump"):Connect(function()
-				print("Jump started")
 				if data.Cancelled or not Character.Parent or Humanoid.Health <= 0 then
 					return
 				end
-				ReplicateSet:FireAllClients("LunarImpact", { char = Character })
+				ReplicateSet:FireAllClients("LunarImpact", { position = ActiveState[Character].GravityPos })
 				task.wait(0.1)
 				HumRP.CFrame = HumRP.CFrame + Vector3.new(0, JUMP_HEIGHT, 0)
 				lockAirborne(Humanoid, HumRP)
@@ -501,7 +501,6 @@ return {
 		table.insert(
 			AnimEvents,
 			AnimTrack:GetMarkerReachedSignal("start"):Connect(function()
-				print("Start started")
 				if data.Cancelled or not Character.Parent or Humanoid.Health <= 0 then
 					return
 				end
@@ -531,12 +530,30 @@ return {
 		table.insert(
 			AnimEvents,
 			AnimTrack:GetMarkerReachedSignal("throw"):Connect(function()
-				print("Throw started")
 				if data.Cancelled or not data.Island then
 					return
 				end
+
+				AnimTrack:AdjustSpeed(0)
+
 				task.spawn(function()
-					throwIslandToGravity(data)
+					local Finished = false
+
+					task.spawn(function()
+						throwIslandToGravity(data)
+						Finished = true
+					end)
+
+					local StartWait = os.clock()
+					repeat
+						task.wait()
+					until Finished or data.Cancelled or (os.clock() - StartWait) >= 10
+
+					if data.Cancelled then
+						return
+					end
+
+					AnimTrack:AdjustSpeed(1)
 				end)
 			end)
 		)
@@ -560,7 +577,7 @@ return {
 				if Character and Character.Parent and data.GroundReturnPosition then
 					local groundY = findGroundY(data.GroundReturnPosition)
 					HumRP.CFrame = CFrame.new(Vector3.new(HumRP.Position.X, groundY + 3, HumRP.Position.Z))
-					ReplicateSet:FireAllClients("LunarImpact", { char = Character })
+					ReplicateSet:FireAllClients("LunarImpact", { position = ActiveState[Character].GravityPos })
 				end
 
 				if Humanoid then
@@ -574,6 +591,5 @@ return {
 		end)
 
 		AnimationService:playAnimation(Character, StrikeAnim)
-		CutscenesSet:FireClient(Player, "LunarAwaken", "Start", { Offset = CFrame.new(0, -3, 0) })
 	end,
 }
