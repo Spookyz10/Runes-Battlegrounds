@@ -13,8 +13,8 @@ return function(Params)
 	local Clone = ImpactAsset:Clone()
 	Clone.Parent = workspace
 	Clone.Position = Params.position
-
-	ParticlesModule.Emit(Clone)
-
+	for i = 1, 3 do
+		ParticlesModule.Emit(Clone)
+	end
 	Debris:AddItem(Clone, 6)
 end

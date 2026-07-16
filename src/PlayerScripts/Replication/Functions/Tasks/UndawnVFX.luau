@@ -1,8 +1,8 @@
+local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 
 local FadeOut = require(ReplicatedStorage.Shared.Modules.Utility.FadeOut)
+local Particles = require(ReplicatedStorage.Shared.Modules.Utility.Particles)
 
 local UndawnAssets = ReplicatedStorage.Resources.CharacterAssets.Eclipse.Solar.Undawn
 
@@ -48,11 +48,7 @@ function Handlers.IndicatorRemove(params)
 				desc.Enabled = false
 			end
 		end
-		task.delay(3, function()
-			if indicator and indicator.Parent then
-				indicator:Destroy()
-			end
-		end)
+		Debris:AddItem(indicator, 3)
 	end
 
 	activeIndicators[char] = nil
@@ -112,73 +108,13 @@ function Handlers.Beam(params)
 	end
 
 	for _, beamPos in beamPositions do
-		local beamModel = UndawnAssets.UndawnBeam:Clone()
+		local beamModel = UndawnAssets.UndawnExplosion:Clone()
 		local originCF = CFrame.new(beamPos.X, beamPos.Y, beamPos.Z)
 		beamModel:PivotTo(originCF)
 		beamModel.Parent = workspace
+		Particles.Emit(beamModel)
 
-		local spinParts = {}
-		local headPart = beamModel:FindFirstChild("Head", true)
-
-		for _, part in beamModel:GetDescendants() do
-			if part:IsA("BasePart") and part.Name == "SpinPart" then
-				part.Size = Vector3.new(1, part.Size.Y, part.Size.Z)
-				table.insert(spinParts, part)
-			end
-		end
-
-		local fixedX = beamPos.X
-		local fixedZ = beamPos.Z
-		local fixedBaseY = beamPos.Y
-
-		local headCurrentY = fixedBaseY + 3
-		local headTargetY = fixedBaseY + 25
-		local tweenDuration = 0.3
-		local elapsed = 0
-
-		local headAngle = 0
-
-		for _, part in spinParts do
-			TweenService:Create(
-				part,
-				TweenInfo.new(tweenDuration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-				{ Size = Vector3.new(60, part.Size.Y, part.Size.Z) }
-			):Play()
-		end
-
-		local originalRotation
-
-		if headPart then
-			originalRotation = headPart.CFrame - headPart.Position
-			headPart.Position = Vector3.new(fixedX, headCurrentY, fixedZ)
-		end
-
-		local spinConn
-		spinConn = RunService.Heartbeat:Connect(function(dt)
-			if not beamModel or not beamModel.Parent then
-				spinConn:Disconnect()
-				return
-			end
-
-			beamModel:PivotTo(beamModel:GetPivot() * CFrame.Angles(0, math.rad(360) * dt, 0))
-
-			elapsed = math.min(elapsed + dt, tweenDuration)
-			local t = elapsed / tweenDuration
-
-			t = 1 - (1 - t) * (1 - t)
-			headCurrentY = (fixedBaseY + 3) + ((headTargetY - (fixedBaseY + 3)) * t)
-
-			headAngle = headAngle + math.rad(360) * dt
-
-			if headPart and headPart.Parent then
-				headPart.Position = Vector3.new(fixedX, headCurrentY, fixedZ)
-			end
-		end)
-
-		task.delay(2, function()
-			spinConn:Disconnect()
-			FadeOut.OutAndDestroy(beamModel, 0.5)
-		end)
+		Debris:AddItem(beamModel, 2)
 	end
 end
 
