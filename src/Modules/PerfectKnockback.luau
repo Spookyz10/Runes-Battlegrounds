@@ -11,6 +11,7 @@ local SvModules = ServerStorage.Modules
 local StunHandler = require(SvModules.StunHandler)
 local AnimationService = require(SvModules.AnimationService)
 local KnockbackService = require(SvModules.BodymoverService)
+local RagdollHandler = require(SvModules.RagdollHandler)
 
 local Assets = ServerStorage.Assets
 local Animations = Assets.Animations
@@ -127,6 +128,12 @@ function Perfect:Cancel(EnemyCharacter)
 	resetHumanoidState(EnemyCharacter)
 end
 
+RagdollHandler.RegisterActiveKnockbackCanceller(function(Character)
+	if Perfect.Active[Character] then
+		Perfect:Cancel(Character)
+	end
+end)
+
 function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 	dprint(
 		"KnockBack() called. Enemy:",
@@ -148,6 +155,17 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 	if not HumanoidRootPart then
 		dprint("ABORT: no HumanoidRootPart on", EnemyCharacter.Name)
 		return
+	end
+
+	local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
+	if not EnemyHumanoid then
+		dprint("ABORT: no Humanoid on", EnemyCharacter.Name)
+		return
+	end
+
+	if EnemyCharacter:HasTag("Ragdolled") then
+		dprint("Enemy is Ragdolled, cancelling ragdoll before knockback so the animation can actually play")
+		RagdollHandler.cancelRagdoll(EnemyHumanoid, nil, false, nil, false, true, true)
 	end
 
 	Perfect:Cancel(EnemyCharacter)
@@ -191,8 +209,6 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 		"FallingDetectDelay:",
 		Params.FallingDetectDelay
 	)
-
-	local EnemyHumanoid = EnemyCharacter.Humanoid
 
 	if EnemyHumanoid.Health <= 0 then
 		dprint("ABORT: EnemyHumanoid.Health <= 0 (", EnemyHumanoid.Health, ")")
@@ -525,7 +541,6 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 			Collision:Disconnect()
 			impact(FinalTime)
 		elseif not hasWarnedNoMap then
-			-- Only warn once per knockback so we don't spam every frame while airborne.
 			hasWarnedNoMap = true
 			dprint(
 				"Heartbeat: ground raycast MISSED at FinalTime",

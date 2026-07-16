@@ -24,6 +24,18 @@ local SoundsModule = require(SvModules.SoundsModule)
 
 local Ragdoll = {}
 
+local ActiveKnockbackCancellers = {}
+
+function Ragdoll.RegisterActiveKnockbackCanceller(fn)
+	table.insert(ActiveKnockbackCancellers, fn)
+end
+
+local function cancelActiveKnockbacks(Character)
+	for _, fn in ActiveKnockbackCancellers do
+		pcall(fn, Character)
+	end
+end
+
 local JointMotor6D = {
 	["RootJoint"] = {
 		C0 = CFrame.new(0, 0, 0) * CFrame.Angles(math.rad(90), math.rad(180), 0),
@@ -267,6 +279,8 @@ function Ragdoll.ragdoll(Humanoid, Duration, HardRagdoll, Ragdoller, _, _, check
 
 	local HumRP = Character.HumanoidRootPart
 	local WasRagdolled = Character:HasTag("Ragdolled")
+
+	cancelActiveKnockbacks(Character)
 
 	Character:AddTag("Ragdolled")
 	Character:SetAttribute("Ragdolled", true)

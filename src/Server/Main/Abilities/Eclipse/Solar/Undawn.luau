@@ -20,6 +20,7 @@ local PILLAR_STUN = 1.5
 
 local EMPOWERED_DAMAGE = 22
 local EMPOWERED_STUN = 0.35
+local EMPOWERED_COMBO_REQUIRED = 4
 
 local function fireVFX(func, params)
 	params.func = func
@@ -45,6 +46,10 @@ local function setupEmpoweredM1s(Character, Tool, chargesLeft)
 		local remaining = Character:GetAttribute("UndawnCharges") or 0
 		if remaining <= 0 then
 			connection:Disconnect()
+			return
+		end
+
+		if Character:GetAttribute("Combo") ~= EMPOWERED_COMBO_REQUIRED then
 			return
 		end
 
@@ -201,7 +206,6 @@ return {
 					beamPositions = beamPositions,
 				})
 
-				-- hitbox só depois do Beam ser disparado
 				HitboxHandler:SimpleOnce(
 					HumRP,
 					PILLAR_SEARCH_RADIUS,

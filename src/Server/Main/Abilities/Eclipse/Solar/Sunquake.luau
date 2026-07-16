@@ -108,7 +108,7 @@ return {
 							if not EnemyHumanoid or not EnemyHumRP then
 								return
 							end
-							if EnemyHumanoid.Health <= 0 or EnemyCharacter:HasTag("Ragdolled") then
+							if EnemyHumanoid.Health <= 0 then
 								return
 							end
 							if iFramesService:HasiFrame(EnemyCharacter, Tool.Name) then

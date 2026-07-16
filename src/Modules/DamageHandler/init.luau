@@ -69,13 +69,18 @@ function module:TakeDamage(
 		doFinisher = true
 	end
 
+	local DamagerPlayer = Players:GetPlayerFromCharacter(Damager)
+	local Damaged = Hum.Parent
+
 	local mult = AntiTeamingHandler:GetDamageMultiplier(Damager)
 	if mult ~= 1 then
 		Damage = math.round(Damage * mult)
 	end
 
-	local DamagerPlayer = Players:GetPlayerFromCharacter(Damager)
-	local Damaged = Hum.Parent
+	local damageTakenMult = Damaged:GetAttribute("DamageTakenMult") or 1
+	if damageTakenMult ~= 1 then
+		Damage = math.round(Damage * damageTakenMult)
+	end
 
 	local returnValue = {
 		CouldHit = false,
