@@ -1,8 +1,14 @@
 local RNS = game:GetService("RunService")
 local RS = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
+local ServerScriptService = game:GetService("ServerScriptService")
 
-local DebugHitboxes = false
+local HitboxBool = ServerScriptService.Hitboxes
+local DebugHitboxes = HitboxBool.Value
+
+HitboxBool.Changed:Connect(function()
+	DebugHitboxes = HitboxBool.Value
+end)
 
 local Remotes = RS.Remotes
 local ReplicateSet = Remotes.Replicate.Set

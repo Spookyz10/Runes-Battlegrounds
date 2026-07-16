@@ -61,8 +61,6 @@ local function cleanupDebrisObjects()
 	end
 end
 
--- Constrói um CFrame que tem a mesma rotação que 'cf' mas a posição deslocada
--- em world-space por 'worldOffset' (Vector3).
 local function shiftCFrameWorldY(cf, dy)
 	return CFrame.new(cf.Position + Vector3.new(0, dy, 0)) * cf.Rotation
 end
@@ -219,10 +217,6 @@ local function debrisSpawner(config)
 	local debrisSizeMax = config.debrisSizeMax or 5
 	local debrisHeightMin = config.debrisHeightMin or 1.9
 	local debrisHeightMax = config.debrisHeightMax or 3.2
-	-- Teto opcional de altura por pedaço, independente do sizemult/ringSizeGrowth.
-	-- Evita que anéis externos (que escalam com ringSizeGrowth) fiquem altos
-	-- demais e atrapalhem a movimentação. Sem config.maxDebrisHeight, mantém
-	-- o comportamento antigo (sem limite).
 	local maxDebrisHeight = config.maxDebrisHeight or math.huge
 
 	local basePieceCount = config.amount or 24
@@ -271,15 +265,13 @@ local function debrisSpawner(config)
 			slab.Material = config.ground.Material
 			slab.Color = config.ground.Color
 
-			local widthScale = ringSizeScale
 			local arcChordLength = 2 * ringRadius * math.sin(spanAngle / 2)
-			local slabWidth = math.max(arcChordLength * rng:NextNumber(0.7, 0.95), debrisSizeMin * widthScale)
-				* sizeMult
+			local slabWidth = math.max(arcChordLength * rng:NextNumber(0.7, 0.95), debrisSizeMin) * sizeMult
 			local slabHeight = rng:NextNumber(debrisHeightMin, debrisHeightMax)
 				* (1 + (ringSizeScale - 1) * 0.35)
 				* sizeMult
 			slabHeight = math.min(slabHeight, maxDebrisHeight)
-			local slabDepth = randomRange(debrisSizeMin, debrisSizeMax) * 0.55 * widthScale * sizeMult
+			local slabDepth = randomRange(debrisSizeMin, debrisSizeMax) * 0.55 * sizeMult
 			slab.Size = Vector3.new(slabWidth, slabHeight, slabDepth)
 
 			slab.CFrame = pieceCFrame
@@ -411,13 +403,10 @@ local function debrisSpawner(config)
 
 			slab:SetAttribute("OGCframe", restCFrame)
 
-			-- Posição inicial: enterrado no chão em world-space (Y negativo suficiente
-			-- pra esconder o slab por completo), mesma rotação do restCFrame.
 			local buriedDepth = slab.Size.Y + slab.Size.Z * 0.5 + 2
 			local buriedCFrame = CFrame.new(restCFrame.Position + Vector3.new(0, -buriedDepth, 0)) * restCFrame.Rotation
 			slab.CFrame = buriedCFrame
 
-			-- Atraso por anel pra dar efeito de onda emergindo do centro pra fora
 			local emergeDelay = rng:NextNumber(0, 0.12) + (ringIndex - 1) * 0.07
 			local emergeTime = rng:NextNumber(0.28, 0.45)
 

@@ -21,5 +21,5 @@ return function(Params)
 	end
 
 	Visualizer.Parent = workspace.Debris
-	Debris:AddItem(Visualizer, 0.1)
+	Debris:AddItem(Visualizer, 1)
 end

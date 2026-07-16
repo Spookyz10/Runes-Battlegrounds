@@ -1196,21 +1196,6 @@ task.spawn(function()
 			end),
 
 		Icon.new()
-			:setLabel("Auto Run")
-			:setImage(getBoolConfigLabel("Auto Run"))
-			:autoDeselect(true)
-			:bindEvent("selected", function(icon)
-				icon:deselect()
-				if ConfigFolder["Auto Run"].Value == true then
-					icon:setImage(RedSquareId)
-					Comunicator:FireServer("SetConfig", { CN = "Auto Run", V = false })
-				else
-					icon:setImage(GreenSquareId)
-					Comunicator:FireServer("SetConfig", { CN = "Auto Run", V = true })
-				end
-			end),
-
-		Icon.new()
 			:setLabel("Awakening Music")
 			:setImage(getBoolConfigLabel("Awakening Music"))
 			:autoDeselect(true)
@@ -1484,8 +1469,8 @@ CollectionService:GetInstanceRemovedSignal("Ragdolled"):Connect(function(EnemyCh
 	EnemyHumanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
 end)
 
-game.SoundService.Sounds.Volume = tonumber(string.format("%.1f", math.clamp(ConfigFolder.Volume.Value, 0.1, 1)))
-game.SoundService["Emote Music"].Volume = ConfigFolder["Emote Music"].Value == false and 0 or 1
+game.SoundService.Sounds.Volume = 1
+game.SoundService["Emote Music"].Volume = 1
 
 local function SetupLiveCharacter(GoalCharacter)
 	local GoalHumanoid = GoalCharacter:WaitForChild("Humanoid", 5)

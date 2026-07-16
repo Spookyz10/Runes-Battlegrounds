@@ -13,6 +13,7 @@ local RagdollHandler = require(SvModules.RagdollHandler)
 local AnimationService = require(SvModules.AnimationService)
 local StunHandler = require(SvModules.StunHandler)
 local DestructionSystem = require(SvModules.DestructionSystem)
+local SceneObjectReservation = require(SvModules.SceneObjectReservation)
 
 local Remotes = ReplicatedStorage.Remotes
 local ReplicateSet = Remotes.Replicate.Set
@@ -27,22 +28,20 @@ MapRayParams.RespectCanCollide = true
 MapRayParams.IgnoreWater = true
 
 local IslandsFolder = workspace.Map.Islands
-local IslandsInUse = {}
 
 local GRAVITY_HALF_SIZE = Vector3.new(15, 15, 15)
 local GRAVITY_STUN_TICK = 0.5
 local JUMP_HEIGHT = 400
--- Offset horizontal aplicado quando o jogador é teleportado pra cima, pra ele
--- sair da coluna vertical por onde a ilha desce depois (evita a ilha
--- atravessando o jogador no meio da queda). A ilha continua pairando sobre a
--- posição ORIGINAL (sem offset), então visualmente ela fica "acima da cabeça".
 local JUMP_X_OFFSET = 50
 local ISLAND_HOVER_HEIGHT = 200
+local ISLAND_RISE_HEIGHT = 100
+local ISLAND_RISE_TIME = 0.4
 local ISLAND_TRAVEL_TIME = 1.6
 local ISLAND_THROW_TIME = 1.1
-local ISLAND_DESTROY_FORCE = 90
-local IMPACT_SIZE = Vector3.new(45, 45, 45)
+local ISLAND_DESTROY_FORCE = 200
+local IMPACT_SIZE = Vector3.new(100, 300, 100)
 local IMPACT_DAMAGE = 30
+local ISLAND_RESERVE_DURATION = 20
 
 local ActiveState = {}
 
@@ -74,7 +73,7 @@ end
 local function pickIsland(nearPosition)
 	local best, bestDist = nil, math.huge
 	for _, model in IslandsFolder:GetChildren() do
-		if model:IsA("Model") and not IslandsInUse[model] then
+		if model:IsA("Model") and not SceneObjectReservation:IsReserved(model) then
 			local pivotPos = model:GetPivot().Position
 			local dist = (pivotPos - nearPosition).Magnitude
 			if dist < bestDist then
@@ -129,6 +128,7 @@ function ActiveState.new(Character, Player)
 		GravityActive = false,
 		GravityConn = nil,
 		Island = nil,
+		IslandOriginal = nil,
 		IslandConn = nil,
 		OriginalWalkSpeed = nil,
 		PreviousiFrameLevel = 0,
@@ -212,64 +212,23 @@ local function startGravityField(data, position)
 	end)
 end
 
-local function destroyIsland(data, withFade)
-	local Island = data.Island
-	data.Island = nil
-	if data.IslandConn then
-		data.IslandConn:Disconnect()
-		data.IslandConn = nil
-	end
-	if Island then
-		IslandsInUse[Island] = nil
-		if Island.Parent then
-			if withFade then
-				task.delay(0.05, function()
-					if Island and Island.Parent then
-						Island:Destroy()
-					end
-				end)
-			else
-				Island:Destroy()
-			end
-		end
-	end
-end
-
-local function impactIsland(data, impactPosition)
+local function applyGravityFieldCompensationDamage(data)
 	local Character = data.Character
 	local Player = data.Player
+	local position = data.GravityPos
 
-	ReplicateSet:FireAllClients("Ground Crater", {
-		Seed = math.random(1, 2147483647),
-		amount = 80,
-		start = impactPosition + Vector3.new(0, 6, 0),
-		["end"] = Vector3.new(0, -20, 0),
-		-- Impede o realinhamento "top-down" do Ground Crater, que forçava a
-		-- cratera a se comportar como se tivesse saído do chão mesmo quando o
-		-- impacto acontece contra uma parede/montanha.
-		NoGroundAlign = true,
-		rings = 4,
-		ringSpacing = 18,
-		-- Reduzido de 1.9 -> 1.5: menos crescimento de altura por anel.
-		ringSizeGrowth = 1.5,
-		ringGap = 0.24,
-		outwardTilt = true,
-		debrisSizeMin = 8,
-		debrisSizeMax = 18,
-		-- Altura reduzida (era 5-10): mantém o impacto largo/grande sem virar
-		-- parede pro jogador atravessar.
-		debrisHeightMin = 2.5,
-		debrisHeightMax = 4,
-		-- Teto absoluto de altura por pedaço, independente de sizemult/anel.
-		maxDebrisHeight = 5,
-		sizemult = 1.5,
-	})
-
-	if Player then
-		ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 12, Last = 1 })
+	if not position then
+		return
 	end
 
-	HitboxHandler:SimpleOnce(impactPosition, IMPACT_SIZE, nil, { Character }, "Box", nil, function(EnemyCharacter)
+	ReplicateSet:FireAllClients("LunarImpact", { position = position })
+
+	if Player then
+		ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 10, Last = 0.8 })
+	end
+
+	HitboxHandler:SimpleOnce(position, IMPACT_SIZE, nil, { Character }, "Box", nil, function(EnemyCharacter)
+		print("Applying compensation damage to", EnemyCharacter.Name)
 		local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
 		if not EnemyHumanoid or EnemyHumanoid.Health <= 0 then
 			return
@@ -291,7 +250,77 @@ local function impactIsland(data, impactPosition)
 		RagdollHandler.ragdoll(EnemyHumanoid, 3)
 	end)
 
-	destroyIsland(data, false)
+	DestructionSystem:ApplyBoxImpact(position, IMPACT_SIZE, ISLAND_DESTROY_FORCE, Player, Vector3.new(0, -1, 0))
+
+	stopGravityField(data)
+end
+
+local function destroyIsland(data)
+	local Clone = data.Island
+	data.Island = nil
+	data.IslandOriginal = nil
+	if data.IslandConn then
+		data.IslandConn:Disconnect()
+		data.IslandConn = nil
+	end
+	if Clone and Clone.Parent then
+		Clone:Destroy()
+	end
+end
+
+local function impactIsland(data, impactPosition)
+	local Character = data.Character
+	local Player = data.Player
+
+	ReplicateSet:FireAllClients("Ground Crater", {
+		Seed = math.random(1, 2147483647),
+		amount = 80,
+		start = impactPosition + Vector3.new(0, 6, 0),
+		["end"] = Vector3.new(0, -20, 0),
+		NoGroundAlign = true,
+		rings = 4,
+		ringSpacing = 18,
+		ringSizeGrowth = 1.5,
+		ringGap = 0.24,
+		outwardTilt = true,
+		debrisSizeMin = 8,
+		debrisSizeMax = 18,
+		debrisHeightMin = 2.5,
+		debrisHeightMax = 4,
+		maxDebrisHeight = 5,
+		sizemult = 1.5,
+	})
+
+	if Player then
+		ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 12, Last = 1 })
+	end
+
+	HitboxHandler:SimpleOnce(impactPosition, IMPACT_SIZE, nil, { Character }, "Box", nil, function(EnemyCharacter)
+		print("damage")
+		local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
+		if not EnemyHumanoid or EnemyHumanoid.Health <= 0 then
+			return
+		end
+		DamageHandler:TakeDamage(
+			Character,
+			EnemyHumanoid,
+			IMPACT_DAMAGE,
+			1.5,
+			nil,
+			false,
+			false,
+			true,
+			true,
+			true,
+			nil,
+			nil
+		)
+		RagdollHandler.ragdoll(EnemyHumanoid, 3)
+	end)
+
+	DestructionSystem:ApplyBoxImpact(impactPosition, IMPACT_SIZE, ISLAND_DESTROY_FORCE, Player, Vector3.new(0, -1, 0))
+
+	destroyIsland(data)
 	stopGravityField(data)
 end
 
@@ -308,6 +337,7 @@ local function travelIslandToPlayer(data, Character, HumRP)
 
 	local basePos = data.GroundReturnPosition or HumRP.Position
 	local targetPos = Vector3.new(basePos.X, HumRP.Position.Y + ISLAND_HOVER_HEIGHT, basePos.Z)
+	local risenPos = startPos + Vector3.new(0, ISLAND_RISE_HEIGHT, 0)
 
 	local hitSet = {}
 	local overlapParams = OverlapParams.new()
@@ -316,44 +346,87 @@ local function travelIslandToPlayer(data, Character, HumRP)
 
 	local islandSize = getModelSize(Island) + Vector3.new(6, 6, 6)
 
-	local startTime = os.clock()
-	local completed = false
-
-	data.IslandConn = RunService.Heartbeat:Connect(function()
-		if data.Cancelled or not Island.Parent then
-			completed = true
-			return
-		end
-
-		local t = math.clamp((os.clock() - startTime) / ISLAND_TRAVEL_TIME, 0, 1)
-		local eased = 1 - (1 - t) ^ 3
-		local pos = startPos:Lerp(targetPos, eased)
+	local function applyDestructionAt(pos, direction)
 		local pivot = CFrame.new(pos) * startRot
-		Island:PivotTo(pivot)
-
 		local touching = workspace:GetPartBoundsInBox(pivot, islandSize, overlapParams)
-		local direction = (targetPos - startPos)
-		direction = direction.Magnitude > 0.01 and direction.Unit or Vector3.new(0, 1, 0)
-
 		for _, part in touching do
 			if not hitSet[part] and isDestroyablePart(part) then
 				hitSet[part] = true
 				DestructionSystem:ApplyImpact(pos, ISLAND_DESTROY_FORCE, data.Player, part, direction)
 			end
 		end
+	end
 
-		if t >= 1 then
-			completed = true
+	task.wait(2)
+
+	if not data.Cancelled and Island.Parent then
+		local startTime = os.clock()
+		local completed = false
+
+		data.IslandConn = RunService.Heartbeat:Connect(function()
+			if data.Cancelled or not Island.Parent then
+				completed = true
+				return
+			end
+
+			local t = math.clamp((os.clock() - startTime) / ISLAND_RISE_TIME, 0, 1)
+			local eased = 1 - (1 - t) ^ 2
+			local pos = startPos:Lerp(risenPos, eased)
+			Island:PivotTo(CFrame.new(pos) * startRot)
+
+			applyDestructionAt(pos, Vector3.new(0, 1, 0))
+
+			if t >= 1 then
+				completed = true
+			end
+		end)
+
+		repeat
+			task.wait()
+		until completed or data.Cancelled
+
+		if data.IslandConn then
+			data.IslandConn:Disconnect()
+			data.IslandConn = nil
 		end
-	end)
+	end
 
-	repeat
-		task.wait()
-	until completed or data.Cancelled
+	if data.Cancelled or not Island.Parent then
+		return
+	end
 
-	if data.IslandConn then
-		data.IslandConn:Disconnect()
-		data.IslandConn = nil
+	do
+		local startTime = os.clock()
+		local completed = false
+
+		data.IslandConn = RunService.Heartbeat:Connect(function()
+			if data.Cancelled or not Island.Parent then
+				completed = true
+				return
+			end
+
+			local t = math.clamp((os.clock() - startTime) / ISLAND_TRAVEL_TIME, 0, 1)
+			local eased = 1 - (1 - t) ^ 3
+			local pos = risenPos:Lerp(targetPos, eased)
+			Island:PivotTo(CFrame.new(pos) * startRot)
+
+			local direction = (targetPos - risenPos)
+			direction = direction.Magnitude > 0.01 and direction.Unit or Vector3.new(0, 1, 0)
+			applyDestructionAt(pos, direction)
+
+			if t >= 1 then
+				completed = true
+			end
+		end)
+
+		repeat
+			task.wait()
+		until completed or data.Cancelled
+
+		if data.IslandConn then
+			data.IslandConn:Disconnect()
+			data.IslandConn = nil
+		end
 	end
 end
 
@@ -419,7 +492,7 @@ local function cleanup(data)
 	end
 
 	stopGravityField(data)
-	destroyIsland(data, true)
+	destroyIsland(data)
 
 	if Character and Character.Parent then
 		local Humanoid = Character:FindFirstChild("Humanoid")
@@ -508,8 +581,6 @@ return {
 				end
 				ReplicateSet:FireAllClients("LunarImpact", { position = ActiveState[Character].GravityPos })
 				task.wait(0.1)
-				-- Offset em X pra tirar o jogador da coluna vertical por onde a
-				-- ilha desce depois (evita atravessar o jogador na queda).
 				HumRP.CFrame = HumRP.CFrame + Vector3.new(JUMP_X_OFFSET, JUMP_HEIGHT, 0)
 				lockAirborne(Humanoid, HumRP)
 				data.IsAirborne = true
@@ -525,15 +596,22 @@ return {
 
 				AnimTrack:AdjustSpeed(0)
 
-				local Island = pickIsland(HumRP.Position)
-				if not Island then
-					warn("[LunarStrike] Nenhuma ilha disponível em workspace.Map.Islands")
+				local IslandOriginal = pickIsland(HumRP.Position)
+				local Clone = IslandOriginal
+					and SceneObjectReservation:Reserve(IslandOriginal, "LunarStrike", Player, ISLAND_RESERVE_DURATION)
+
+				if not Clone then
+					warn(
+						"[LunarStrike] Nenhuma ilha disponível em workspace.Map.Islands, aplicando compensação de dano"
+					)
+					applyGravityFieldCompensationDamage(data)
 					AnimTrack:AdjustSpeed(1)
 					return
 				end
 
-				IslandsInUse[Island] = true
-				data.Island = Island
+				Clone.Parent = workspace
+				data.Island = Clone
+				data.IslandOriginal = IslandOriginal
 
 				travelIslandToPlayer(data, Character, HumRP)
 

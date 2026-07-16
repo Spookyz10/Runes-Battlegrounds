@@ -187,17 +187,7 @@ local function CheckWalkDirection()
 	end
 
 	if Humanoid.MoveDirection ~= Vector3.zero and math.abs(RightVector) < 0.85 and LookVector >= -0.1 then
-		if ConfigFolder["Auto Run"].Value == false then
-			RunningPhase += 1
-			task.delay(0.25, function()
-				RunningPhase = 0
-			end)
-			if RunningPhase == 2 then
-				isRunning()
-			end
-		else
-			isRunning()
-		end
+		isRunning()
 	else
 		Character:SetAttribute("Running", false)
 

@@ -73,7 +73,7 @@ return function(Params)
 		end)
 	end
 
-	if Params.Voxels == true and LocalPlayer.Configuration["Destruction Physics"].Value == true then
+	if Params.Voxels == true then
 		local DestroyableOverlapParams = OverlapParams.new()
 		DestroyableOverlapParams.FilterType = Enum.RaycastFilterType.Include
 		DestroyableOverlapParams.FilterDescendantsInstances = { workspace.Map.Destroyables }

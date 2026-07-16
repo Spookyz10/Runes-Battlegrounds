@@ -310,7 +310,7 @@ function DestructionService:_LaunchChunk(chunk, ImpactPosition, Force, OwnerPlay
 	local bigEnough = chunk.Size.X >= COLLIDE_SIZE_THRESHOLD
 		and chunk.Size.Y >= COLLIDE_SIZE_THRESHOLD
 		and chunk.Size.Z >= COLLIDE_SIZE_THRESHOLD
-	chunk.CanCollide = bigEnough
+	chunk.CanCollide = true
 	chunk.CanTouch = true
 	chunk.CanQuery = true
 
@@ -381,7 +381,7 @@ function DestructionService:ApplyImpact(Position, Force, OwnerPlayer, HitPart, D
 			CFrame.new(Position),
 			Enum.PartType.Ball,
 			localVoxelSize,
-			-1,
+			20,
 			localParams,
 			localBudget
 		)
@@ -405,7 +405,7 @@ function DestructionService:ApplyImpact(Position, Force, OwnerPlayer, HitPart, D
 			CFrame.new(Position),
 			Enum.PartType.Ball,
 			tier.VoxelSize,
-			-1,
+			20,
 			areaParams,
 			tier.MaxChunks
 		)
@@ -461,6 +461,7 @@ function DestructionService:ApplyRadialImpact(Position, Radius, Force, OwnerPlay
 			tier.MaxChunks
 		)
 	end)
+	print(voxels)
 
 	if ok and voxels then
 		for _, v in voxels do
@@ -529,6 +530,7 @@ function DestructionService:ApplyBoxImpact(CFrameOrPosition, Size, Force, OwnerP
 			tier.MaxChunks
 		)
 	end)
+	print(voxels)
 
 	if ok and voxels then
 		for _, v in voxels do
