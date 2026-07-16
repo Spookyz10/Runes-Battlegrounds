@@ -32,8 +32,8 @@ local IslandsInUse = {}
 
 local GRAVITY_HALF_SIZE = Vector3.new(15, 15, 15)
 local GRAVITY_STUN_TICK = 0.5
-local JUMP_HEIGHT = 100
-local ISLAND_HOVER_HEIGHT = 40
+local JUMP_HEIGHT = 400
+local ISLAND_HOVER_HEIGHT = 200
 local ISLAND_TRAVEL_TIME = 1.6
 local ISLAND_THROW_TIME = 1.1
 local ISLAND_DESTROY_FORCE = 90
@@ -95,6 +95,31 @@ local function getModelSize(model)
 	return Vector3.new(30, 30, 30)
 end
 
+local function lockAirborne(Humanoid, HumRP)
+	Humanoid.AutoRotate = false
+	Humanoid.PlatformStand = true
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp, false)
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+	Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+	HumRP.AssemblyLinearVelocity = Vector3.zero
+	HumRP.Anchored = true
+end
+
+local function restoreGroundControl(Humanoid, HumRP)
+	HumRP.Anchored = false
+	Humanoid.PlatformStand = false
+	Humanoid.AutoRotate = true
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp, true)
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
+	if Humanoid.Health > 0 then
+		Humanoid:ChangeState(Enum.HumanoidStateType.Running)
+	end
+end
+
 function ActiveState.new(Character, Player)
 	local data = {
 		Character = Character,
@@ -108,6 +133,7 @@ function ActiveState.new(Character, Player)
 		OriginalWalkSpeed = nil,
 		PreviousiFrameLevel = 0,
 		GroundReturnPosition = nil,
+		IsAirborne = false,
 	}
 	return data
 end
@@ -165,7 +191,7 @@ local function startGravityField(data, position)
 
 		for _, plr in Players:GetPlayers() do
 			local otherChar = plr.Character
-			if not otherChar then
+			if not otherChar or otherChar == data.Character then
 				continue
 			end
 			local otherHumRP = otherChar:FindFirstChild("HumanoidRootPart")
@@ -364,10 +390,19 @@ local function cleanup(data)
 	end
 	data.Cancelled = true
 
+	local Character = data.Character
+	if data.IsAirborne then
+		local Humanoid = Character and Character.Parent and Character:FindFirstChild("Humanoid")
+		local HumRP = Character and Character.Parent and Character:FindFirstChild("HumanoidRootPart")
+		if Humanoid and HumRP then
+			restoreGroundControl(Humanoid, HumRP)
+		end
+		data.IsAirborne = false
+	end
+
 	stopGravityField(data)
 	destroyIsland(data, true)
 
-	local Character = data.Character
 	if Character and Character.Parent then
 		local Humanoid = Character:FindFirstChild("Humanoid")
 		if Humanoid and data.OriginalWalkSpeed then
@@ -439,6 +474,7 @@ return {
 		table.insert(
 			AnimEvents,
 			AnimTrack:GetMarkerReachedSignal("clap"):Connect(function()
+				print("Clap started")
 				if data.Cancelled or not Character.Parent or Humanoid.Health <= 0 then
 					return
 				end
@@ -450,17 +486,22 @@ return {
 		table.insert(
 			AnimEvents,
 			AnimTrack:GetMarkerReachedSignal("jump"):Connect(function()
+				print("Jump started")
 				if data.Cancelled or not Character.Parent or Humanoid.Health <= 0 then
 					return
 				end
 				ReplicateSet:FireAllClients("LunarImpact", { char = Character })
+				task.wait(0.1)
 				HumRP.CFrame = HumRP.CFrame + Vector3.new(0, JUMP_HEIGHT, 0)
+				lockAirborne(Humanoid, HumRP)
+				data.IsAirborne = true
 			end)
 		)
 
 		table.insert(
 			AnimEvents,
 			AnimTrack:GetMarkerReachedSignal("start"):Connect(function()
+				print("Start started")
 				if data.Cancelled or not Character.Parent or Humanoid.Health <= 0 then
 					return
 				end
@@ -490,6 +531,7 @@ return {
 		table.insert(
 			AnimEvents,
 			AnimTrack:GetMarkerReachedSignal("throw"):Connect(function()
+				print("Throw started")
 				if data.Cancelled or not data.Island then
 					return
 				end
@@ -505,6 +547,13 @@ return {
 			end
 			if diedConn then
 				diedConn:Disconnect()
+			end
+
+			if data.IsAirborne then
+				if Character and Character.Parent then
+					restoreGroundControl(Humanoid, HumRP)
+				end
+				data.IsAirborne = false
 			end
 
 			if not data.Cancelled then
