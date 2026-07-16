@@ -291,6 +291,19 @@ local function CopyProperties(PartOne: Part, PartTwo: Part)
 	end
 end
 
+local function CreateVoxelPart(template)
+	if PartCacheEnabled then
+		local pooled = cache:GetPart()
+		if pooled then
+			CopyProperties(template, pooled)
+			return pooled
+		else
+			warn("[VoxBreaker] PartCache esgotado, usando :Clone() como fallback")
+		end
+	end
+	return template:Clone()
+end
+
 local function partCanSubdivide(part: Part) --Checks if part is rectangular.
 	local Threshold = 1.5 -- How much of a difference there can be between the largest axis and the smallest axis
 
@@ -364,13 +377,7 @@ local function CutPartinHalf(block: Part, TimeToReset: number) --Cuts part into 
 	local halfSize = Vector3.new(X, Y, Z)
 
 	for _, offsetVector in pairs(bipolarVectorSet) do
-		local clone
-		if PartCacheEnabled then
-			clone = cache:GetPart()
-			CopyProperties(block, clone)
-		else
-			clone = block:Clone()
-		end
+		local clone = CreateVoxelPart(block)
 
 		if RandomColors then
 			clone.Color = Color3.fromRGB(math.random(1, 255), math.random(1, 255), math.random(1, 255))
@@ -551,13 +558,7 @@ local function DivideBlock(block, MinimumVoxelSize, Parent, TimeToReset) --Divid
 				local halfSize = Vector3.new(X, Y, Z)
 
 				for _, offsetVector in pairs(bipolarVectorSet) do
-					local clone
-					if PartCacheEnabled then
-						clone = cache:GetPart()
-						CopyProperties(block, clone)
-					else
-						clone = block:Clone()
-					end
+					local clone = CreateVoxelPart(block)
 					clone:SetAttribute("Voxel", true)
 					if RandomColors then
 						clone.Color = Color3.fromRGB(math.random(1, 255), math.random(1, 255), math.random(1, 255))
@@ -587,13 +588,7 @@ local function DivideBlock(block, MinimumVoxelSize, Parent, TimeToReset) --Divid
 				local halfSize = Vector3.new(X, Y, Z)
 
 				for _, offsetVector in pairs(bipolarVectorSet) do
-					local clone
-					if PartCacheEnabled then
-						clone = cache:GetPart()
-						CopyProperties(block, clone)
-					else
-						clone = block:Clone()
-					end
+					local clone = CreateVoxelPart(block)
 					clone:SetAttribute("Voxel", true)
 					if RandomColors then
 						clone.Color = Color3.fromRGB(math.random(1, 255), math.random(1, 255), math.random(1, 255))
@@ -623,13 +618,7 @@ local function DivideBlock(block, MinimumVoxelSize, Parent, TimeToReset) --Divid
 				local halfSize = Vector3.new(X, Y, Z)
 
 				for _, offsetVector in pairs(bipolarVectorSet) do
-					local clone
-					if PartCacheEnabled then
-						clone = cache:GetPart()
-						CopyProperties(block, clone)
-					else
-						clone = block:Clone()
-					end
+					local clone = CreateVoxelPart(block)
 					clone:SetAttribute("Voxel", true)
 					if RandomColors then
 						clone.Color = Color3.fromRGB(math.random(1, 255), math.random(1, 255), math.random(1, 255))
@@ -655,13 +644,7 @@ local function DivideBlock(block, MinimumVoxelSize, Parent, TimeToReset) --Divid
 				local halfSize = block.Size / 2.0
 
 				for _, offsetVector in pairs(bipolarVectorSet) do
-					local clone
-					if PartCacheEnabled then
-						clone = cache:GetPart()
-						CopyProperties(block, clone)
-					else
-						clone = block:Clone()
-					end
+					local clone = CreateVoxelPart(block)
 					if RandomColors then
 						clone.Color = Color3.fromRGB(math.random(1, 255), math.random(1, 255), math.random(1, 255))
 					end
@@ -771,13 +754,7 @@ local function DivideBlock(block, MinimumVoxelSize, Parent, TimeToReset) --Divid
 			block.CanCollide = block:GetAttribute("Collide")
 		end
 
-		local clone
-		if PartCacheEnabled then
-			clone = cache:GetPart()
-			CopyProperties(block, clone)
-		else
-			clone = block:Clone()
-		end
+		local clone = CreateVoxelPart(block)
 		clone.Parent = block.Parent
 		if TimeToReset and TimeToReset >= 0 then
 			Destroy(clone, TimeToReset)

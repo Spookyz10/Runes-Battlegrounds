@@ -12,22 +12,38 @@ local EMERGE_TIME = 0.18
 local KEEP_TIME = 0.6
 local SINK_TIME = 3
 
+local OFFSET_MIN = 1.5
+local OFFSET_MAX = 4
+
 local ACTIVE = {}
 
 local function getKey(char)
 	return tostring(char)
 end
 
+local function getSpawnOrigin(PrimaryPart)
+	local angle = math.rad(math.random(0, 360))
+	local distance = OFFSET_MIN + math.random() * (OFFSET_MAX - OFFSET_MIN)
+
+	local offset = Vector3.new(math.cos(angle) * distance, 0, math.sin(angle) * distance)
+
+	return PrimaryPart.Position
+		+ (PrimaryPart.CFrame.RightVector * offset.X)
+		+ (PrimaryPart.CFrame.LookVector * offset.Z)
+end
+
 local function spawnPiece(PrimaryPart)
+	local origin = getSpawnOrigin(PrimaryPart)
+
 	local hitPart, hitPosition, hitMaterial, hitNormal = Helpers.performRaycast({
-		orig = PrimaryPart.Position,
+		orig = origin,
 		dir = Vector3.new(0, -RAY_DISTANCE, 0),
 		Whitelist = MapRayParams.FilterDescendantsInstances,
 	})
 
 	if not hitPart then
 		hitPart, hitPosition, hitMaterial, hitNormal = Helpers.performRaycast({
-			orig = PrimaryPart.Position,
+			orig = origin,
 			dir = Vector3.new(0, -RAY_DISTANCE, 0),
 			Ignore = { workspace.Live, workspace.Debris },
 		})
@@ -48,6 +64,7 @@ local function spawnPiece(PrimaryPart)
 	Piece.CanCollide = false
 	Piece.CanTouch = false
 	Piece.CanQuery = false
+
 	Piece.Material = hitMaterial
 	Piece.Color = hitPart.Color
 	Piece.Size = Vector3.new(PIECE_SIZE, PIECE_SIZE, PIECE_SIZE)
