@@ -5,7 +5,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VoxBreaker = require(ReplicatedStorage.Shared.Modules.VoxBreaker)
 local DebrisDamage = require(script.DebrisDamage)
 local StructuralSupport = require(script.StructuralSupport)
-local propagateDestroyableAttribute = require(script.PropagateDestroyableAttribute)
 
 local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
@@ -56,12 +55,6 @@ local GROUND_INSTANCES = {
 }
 
 local DESTROYABLES_ROOT = workspace.Map:FindFirstChild("Destroyables")
-
-if DESTROYABLES_ROOT then
-	propagateDestroyableAttribute(DESTROYABLES_ROOT)
-else
-	warn("[DestructionSystem] workspace.Map.Destroyables não encontrado no boot")
-end
 
 local LEVITATION_ACTIVE = {}
 local FAKE_DEBRIS_ACTIVE = {}
@@ -164,9 +157,22 @@ function DestructionService:CollapseCluster(clusterParts, ImpactPosition, Impact
 		return
 	end
 
-	dprint("Cluster desconectado caindo:", #clusterParts, "parts")
+	dprint("Cluster desconectado caindo (rígido):", #clusterParts, "parts")
 
 	ImpactDirection = ImpactDirection or Vector3.new(0, 0, 0)
+
+	-- Escolhe a maior part como root pra weldar o resto nela (vira o "PrimaryPart" do cluster)
+	local root = clusterParts[1]
+	local rootVolume = root.Size.X * root.Size.Y * root.Size.Z
+	for _, part in clusterParts do
+		local vol = part.Size.X * part.Size.Y * part.Size.Z
+		if vol > rootVolume then
+			root = part
+			rootVolume = vol
+		end
+	end
+
+	local welds = {}
 
 	for _, part in clusterParts do
 		if not part.Parent then
@@ -180,29 +186,85 @@ function DestructionService:CollapseCluster(clusterParts, ImpactPosition, Impact
 			and part.Size.Z >= COLLIDE_SIZE_THRESHOLD
 		part.CanCollide = bigEnough
 
-		local away = part.Position - ImpactPosition
-		local awayDir = away.Magnitude > 0.01 and away.Unit or Vector3.new(0, 1, 0)
-
-		local combinedDir = (ImpactDirection * 1.0 + awayDir * 0.25) + Vector3.new(0, 0.35, 0)
-		if combinedDir.Magnitude > 0.01 then
-			combinedDir = combinedDir.Unit
-		else
-			combinedDir = Vector3.new(0, 1, 0)
-		end
-
-		local mass = part:GetMass()
-		local speed = math.clamp(18 / math.sqrt(math.max(mass, 1)) + 6, 4, 30)
-
-		part.AssemblyLinearVelocity = combinedDir * speed
-		part.AssemblyAngularVelocity =
-			Vector3.new(math.random(-150, 150) / 100, math.random(-150, 150) / 100, math.random(-150, 150) / 100)
-
 		pcall(function()
 			part.CollisionGroup = DEBRIS_COLLISION_GROUP
 		end)
 
-		DebrisDamage:Track(part, nil)
+		if part ~= root then
+			local weld = Instance.new("WeldConstraint")
+			weld.Part0 = root
+			weld.Part1 = part
+			weld.Parent = part
+			table.insert(welds, weld)
+		end
 	end
+
+	-- Velocidade/rotação únicas pro corpo inteiro (soma de massa dos welds já conta em :GetMass())
+	local away = root.Position - ImpactPosition
+	local awayDir = away.Magnitude > 0.01 and away.Unit or Vector3.new(0, 1, 0)
+	local combinedDir = (ImpactDirection * 1.0 + awayDir * 0.25) + Vector3.new(0, 0.35, 0)
+	if combinedDir.Magnitude > 0.01 then
+		combinedDir = combinedDir.Unit
+	else
+		combinedDir = Vector3.new(0, 1, 0)
+	end
+
+	local mass = root:GetMass()
+	local speed = math.clamp(18 / math.sqrt(math.max(mass, 1)) + 6, 4, 30)
+
+	root.AssemblyLinearVelocity = combinedDir * speed
+	root.AssemblyAngularVelocity =
+		Vector3.new(math.random(-40, 40) / 100, math.random(-40, 40) / 100, math.random(-40, 40) / 100)
+
+	-- Quando QUALQUER part do cluster tocar algo de fora, desmancha os welds
+	-- e cada peça vira debris individual (com um pequeno impulso de espalhamento)
+	local hasShattered = false
+	local touchConns = {}
+
+	local function shatter(hitPart)
+		if hasShattered then
+			return
+		end
+		hasShattered = true
+
+		for _, c in touchConns do
+			c:Disconnect()
+		end
+
+		for _, w in welds do
+			if w.Parent then
+				w:Destroy()
+			end
+		end
+
+		local impactPos = (hitPart and hitPart.Position) or root.Position
+
+		for _, part in clusterParts do
+			if not part.Parent then
+				continue
+			end
+			local scatterDir = part.Position - impactPos
+			scatterDir = scatterDir.Magnitude > 0.01 and scatterDir.Unit or Vector3.new(0, 1, 0)
+			part.AssemblyLinearVelocity = part.AssemblyLinearVelocity * 0.3 + scatterDir * 6
+			DebrisDamage:Track(part, nil)
+		end
+	end
+
+	for _, part in clusterParts do
+		local conn
+		conn = part.Touched:Connect(function(hit)
+			if hasShattered or table.find(clusterParts, hit) then
+				return -- ignora toques internas do próprio cluster
+			end
+			shatter(hit)
+		end)
+		table.insert(touchConns, conn)
+	end
+
+	-- Fallback: se por algum motivo nunca tocar em nada (ficou preso/flutuando), quebra sozinho
+	task.delay(8, function()
+		shatter(nil)
+	end)
 end
 
 function DestructionService:NotifyPartRemoved(RemovedPartPosition, Direction)
@@ -360,8 +422,12 @@ function DestructionService:ApplyImpact(Position, Force, OwnerPlayer, HitPart, D
 		self:_LaunchChunk(chunk, Position, Force, OwnerPlayer, Direction)
 	end
 
+	-- DestructionSystem.luau, no fim de ApplyBoxImpact/ApplyRadialImpact/ApplyImpact
 	task.defer(function()
 		self:CheckIntegrity(Position, Direction)
+		task.delay(0.5, function()
+			self:CheckIntegrity(Position, Direction)
+		end)
 	end)
 end
 
@@ -424,8 +490,12 @@ function DestructionService:ApplyRadialImpact(Position, Radius, Force, OwnerPlay
 		self:_LaunchChunk(chunk, Position, Force, OwnerPlayer, Direction)
 	end
 
+	-- DestructionSystem.luau, no fim de ApplyBoxImpact/ApplyRadialImpact/ApplyImpact
 	task.defer(function()
 		self:CheckIntegrity(Position, Direction)
+		task.delay(0.5, function()
+			self:CheckIntegrity(Position, Direction)
+		end)
 	end)
 end
 
@@ -480,8 +550,12 @@ function DestructionService:ApplyBoxImpact(CFrameOrPosition, Size, Force, OwnerP
 			self:_ApplyNoVoxelImpact(part, Position, Force, OwnerPlayer, Direction)
 		end
 
+		-- DestructionSystem.luau, no fim de ApplyBoxImpact/ApplyRadialImpact/ApplyImpact
 		task.defer(function()
 			self:CheckIntegrity(Position, Direction)
+			task.delay(0.5, function()
+				self:CheckIntegrity(Position, Direction)
+			end)
 		end)
 		return
 	end
@@ -502,8 +576,12 @@ function DestructionService:ApplyBoxImpact(CFrameOrPosition, Size, Force, OwnerP
 		self:_LaunchChunk(chunk, Position, Force, OwnerPlayer, Direction)
 	end
 
+	-- DestructionSystem.luau, no fim de ApplyBoxImpact/ApplyRadialImpact/ApplyImpact
 	task.defer(function()
 		self:CheckIntegrity(Position, Direction)
+		task.delay(0.5, function()
+			self:CheckIntegrity(Position, Direction)
+		end)
 	end)
 end
 

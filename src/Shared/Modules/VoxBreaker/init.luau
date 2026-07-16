@@ -196,7 +196,7 @@ local TagName = "Destroyable" --Name of Attribute that module will check parts f
 local RandomColors = false -- Will make every part a random color. Set this to true if you want a visual representation of how the parts are being divided.
 local Visualizer = false -- Will make hitboxes visible when set to true
 local miniumCubeSize = 2 --Default Minimum possible size that divided cubes can be.
-local voxelFolder = workspace --Where the voxels are stored. Workspace by default.
+local voxelFolder = workspace.Map.Destroyables --Where the voxels are stored. Workspace by default.
 local AutoStartMoveable = false --Toggle this to true if you want your moveable hitboxes to activate automatically without having to use :Start()
 local PartCacheEnabled = true --Enables PartCache. This significantly improves performance so I reccommend keeping it on.
 local CF_VOX_GHOST_AWAY = CFrame.new(0, 20000, 0)
@@ -858,8 +858,15 @@ local function GetTouchingParts(part: BasePart, Params: OverlapParams?) --Used t
 	end
 
 	print(("[VoxDebug] overlap bruto: %d parts"):format(#touching))
+	-- VoxBreaker.luau, dentro de GetTouchingParts
 	for _, v in pairs(touching) do
-		print(("[VoxDebug]   -> %s | Destroyable=%s"):format(v:GetFullName(), tostring(v:GetAttribute(TagName))))
+		print(
+			("[VoxDebug]   -> %s | Pos=%s | Destroyable=%s"):format(
+				v:GetFullName(),
+				tostring(v.Position),
+				tostring(v:GetAttribute(TagName))
+			)
+		)
 	end
 
 	for i, v in pairs(touching) do

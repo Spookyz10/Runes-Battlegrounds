@@ -39,14 +39,13 @@ ProjectileOverlapParams.FilterDescendantsInstances = { workspace.Live }
 local PROJECTILE_SPEED = 80
 local PROJECTILE_LIFETIME = 10
 local PROJECTILE_SIZE = Vector3.new(20, 20, 20)
-local EXPLOSION_SIZE = Vector3.new(100, 100, 100)
 
 local AIM_CONTROL_MAX_DURATION = 30
 local THROW_DELAY = 1
 local TP_LIFT_HEIGHT = 200
 
 local MOON_IMPACT_FORCE = 400
-local MOON_IMPACT_RADIUS = 50
+local MOON_IMPACT_RADIUS = 100
 local module = {}
 
 local function radialKnockback(Character, EnemyCharacter, EnemyHumanoid, ExplosionPosition, BaseForce, Damage)
@@ -97,8 +96,7 @@ local function explode(Character, Position)
 		ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 10, Last = 1 })
 	end
 
-	DestructionService:ApplyRadialImpact(Position, MOON_IMPACT_RADIUS, MOON_IMPACT_FORCE, Player, Vector3.new(0, -1, 0))
-
+	DestructionService:ApplyRadialImpact(Position, MOON_IMPACT_RADIUS, MOON_IMPACT_FORCE, Player, nil)
 	HitboxHandler:SimpleOnce(Position, MOON_IMPACT_RADIUS, nil, { Character }, "Radius", nil, function(EnemyCharacter)
 		local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
 		if not EnemyHumanoid or EnemyHumanoid.Health <= 0 then

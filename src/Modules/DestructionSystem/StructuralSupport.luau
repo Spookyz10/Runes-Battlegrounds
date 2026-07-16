@@ -1,6 +1,6 @@
 local StructuralSupport = {}
 
-local CHECK_MARGIN = 0.15
+local CHECK_MARGIN = 0.6
 
 local function getNeighbors(part, candidateParts, params)
 	local expandedSize = part.Size + Vector3.one * CHECK_MARGIN

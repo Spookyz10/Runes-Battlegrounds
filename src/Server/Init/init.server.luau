@@ -1282,3 +1282,5 @@ for _, part in workspace.Map.Destroyables:GetDescendants() do
 		part:SetAttribute("Destroyable", true)
 	end
 end
+
+print("Server:all parts got attribute man!.")
