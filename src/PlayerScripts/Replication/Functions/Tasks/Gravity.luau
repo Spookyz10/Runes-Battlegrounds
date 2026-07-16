@@ -1,6 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Assets = ReplicatedStorage.Resources.CharacterAssets.Eclipse.Lunar.Awaken.Gravity
+local Assets = ReplicatedStorage.Resources.CharacterAssets.Eclipse.Lunar.Awaken
 
 local activeGravity = {}
 
