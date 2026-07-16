@@ -37,7 +37,7 @@ VoxBreaker.__index = VoxBreaker
 --				4. Use the module however you want!
 
 --	|FUNCTIONS|
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- The module currently has 4 functions, one of which is OOP based.
 
 --		* VoxelizePart()
@@ -65,12 +65,13 @@ VoxBreaker.__index = VoxBreaker
 --		* CreateHitbox()
 --			Creates one hitbox which divides any applicable parts that are touching it.
 
---      		-Parameters: (Size : Vector3, Cframe : CFrame , Shape : Enum.PartType , MinimumVoxelSize : number , TimeToReset : number,  Params : OverlapParams)
+--      		-Parameters: (Size : Vector3, Cframe : CFrame , Shape : Enum.PartType , MinimumVoxelSize : number , TimeToReset : number,  Params : OverlapParams, MaxVoxels : number)
 --					Size: Size of the hitbox. (1,1,1) By default
 --					Cframe: CFrame of the hitbox. (0,0,0) By default
 --					Shape: Shape of the hitbox. Block by default.
 --					MinimumVoxelSize: Minimum possible size that Voxels can have. Module will try to match that size as accurately as possible. 5 by default.
 --					TimeToReset: Time it takes in seconds to reset voxels back to normal. Will not reset if this is less than zero. 50 by default.
+--					MaxVoxels: Optional hard budget. Once the touching-part count reaches this, subdivision stops early and the remaining parts are left larger instead of recursing further. Prevents runaway subdivision on huge destroyables.
 
 --				-Tip: the larger the hitbox is, the larger I reccommend setting the MinimumVoxelSize. This helps tremendously with performance.
 
@@ -99,7 +100,7 @@ VoxBreaker.__index = VoxBreaker
 --				|	end
 --				|
 
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --		* CreateMoveableHitbox() --OOP BASED
 --			Creates a moveable hitbox that can be controlled manually or welded to a specified part.
 
@@ -172,7 +173,7 @@ VoxBreaker.__index = VoxBreaker
 --				|	Hitbox:Stop()
 --				|
 
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 --		* CutInHalf()
 --			Cuts a specified part into two equal halves.
@@ -857,18 +858,6 @@ local function GetTouchingParts(part: BasePart, Params: OverlapParams?) --Used t
 		touching = workspace:GetPartsInPart(part)
 	end
 
-	print(("[VoxDebug] overlap bruto: %d parts"):format(#touching))
-	-- VoxBreaker.luau, dentro de GetTouchingParts
-	for _, v in pairs(touching) do
-		print(
-			("[VoxDebug]   -> %s | Pos=%s | Destroyable=%s"):format(
-				v:GetFullName(),
-				tostring(v.Position),
-				tostring(v:GetAttribute(TagName))
-			)
-		)
-	end
-
 	for i, v in pairs(touching) do
 		if v:IsA("BasePart") then
 			if v:GetAttribute(TagName) == true then
@@ -907,8 +896,9 @@ function VoxBreaker:VoxelizePart(Part: Part, MinimumVoxelSize: number, TimeToRes
 	return parts
 end
 
-function VoxBreaker:CreateHitbox(Size, Cframe, Shape, MinimumVoxelSize, TimeToReset, Params) --Creates one hitbox which divides any applicable parts that are touching it.
+function VoxBreaker:CreateHitbox(Size, Cframe, Shape, MinimumVoxelSize, TimeToReset, Params, MaxVoxels) --Creates one hitbox which divides any applicable parts that are touching it.
 	--If the TimeToReset parameter is less than 0, then the parts will not reset.
+	--If MaxVoxels is provided, subdivision stops early once the touching-part count reaches it, instead of recursing all the way down to MinimumVoxelSize. This is the safety valve for huge destroyables (mountains, big structures) so the recursive split never runs away.
 
 	local DefaultSize = Vector3.new(1, 1, 1) -- Default Hitbox Size
 	local DefaultShape = Enum.PartType.Block -- Default Shape of hitbox
@@ -972,6 +962,10 @@ function VoxBreaker:CreateHitbox(Size, Cframe, Shape, MinimumVoxelSize, TimeToRe
 			end
 		end
 
+		if MaxVoxels and #partTable >= MaxVoxels then
+			check = true
+		end
+
 		if check == false then
 			for i, v in pairs(partTable) do
 				if v:IsA("BasePart") and v:GetAttribute(TagName) then
@@ -981,8 +975,6 @@ function VoxBreaker:CreateHitbox(Size, Cframe, Shape, MinimumVoxelSize, TimeToRe
 		end
 
 	until check == true
-
-	print(("[VoxDebug] CreateHitbox retornou %d voxels (minimum=%s)"):format(#partTable, tostring(minimum)))
 
 	if PartCacheEnabled then
 		local mode = GetTableMode(partTable)

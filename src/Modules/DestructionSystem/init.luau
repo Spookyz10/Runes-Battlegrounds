@@ -19,7 +19,7 @@ local DEFAULT_TRACK_HITBOX_SIZE = Vector3.new(6, 6, 6)
 
 local DEBRIS_LIFETIME = 10
 local DEBRIS_FADE_TIME = 3
-local MAX_CHUNKS_PER_IMPACT = 150
+local MAX_CHUNKS_PER_IMPACT = 220
 
 local INTEGRITY_SEARCH_RADIUS = 40
 local NO_VOXEL_RESET_TIME = 20
@@ -42,10 +42,13 @@ local FAKE_DEBRIS_SPIN_RANGE = 1
 local FAKE_DEBRIS_FALL_CLEANUP_TIME = 10
 
 local FORCE_TIERS = {
-	{ MinForce = 0, Radius = 5, VoxelSize = 3 },
-	{ MinForce = 30, Radius = 8, VoxelSize = 4 },
-	{ MinForce = 70, Radius = 12, VoxelSize = 6 },
-	{ MinForce = 110, Radius = 18, VoxelSize = 8 },
+	{ MinForce = 0, Radius = 5, VoxelSize = 4, MaxChunks = 6 },
+	{ MinForce = 30, Radius = 8, VoxelSize = 5, MaxChunks = 14 },
+	{ MinForce = 70, Radius = 12, VoxelSize = 7, MaxChunks = 26 },
+	{ MinForce = 110, Radius = 18, VoxelSize = 9, MaxChunks = 45 },
+	{ MinForce = 200, Radius = 35, VoxelSize = 16, MaxChunks = 70 },
+	{ MinForce = 400, Radius = 70, VoxelSize = 26, MaxChunks = 100 },
+	{ MinForce = 800, Radius = 140, VoxelSize = 45, MaxChunks = 150 },
 }
 
 local GROUND_INSTANCES = {
@@ -364,6 +367,7 @@ function DestructionService:ApplyImpact(Position, Force, OwnerPlayer, HitPart, D
 	local localRadius = math.clamp(tier.Radius * 0.4, 2.5, 6)
 	local localSize = Vector3.one * localRadius
 	local localVoxelSize = getBoundedVoxelSize(localSize, tier)
+	local localBudget = math.max(4, math.ceil(tier.MaxChunks * 0.3))
 
 	local allVoxels = {}
 
@@ -378,7 +382,8 @@ function DestructionService:ApplyImpact(Position, Force, OwnerPlayer, HitPart, D
 			Enum.PartType.Ball,
 			localVoxelSize,
 			-1,
-			localParams
+			localParams,
+			localBudget
 		)
 	end)
 
@@ -401,7 +406,8 @@ function DestructionService:ApplyImpact(Position, Force, OwnerPlayer, HitPart, D
 			Enum.PartType.Ball,
 			tier.VoxelSize,
 			-1,
-			areaParams
+			areaParams,
+			tier.MaxChunks
 		)
 	end)
 
@@ -451,7 +457,8 @@ function DestructionService:ApplyRadialImpact(Position, Radius, Force, OwnerPlay
 			Enum.PartType.Ball,
 			radialVoxelSize,
 			-1,
-			areaParams
+			areaParams,
+			tier.MaxChunks
 		)
 	end)
 
@@ -512,7 +519,15 @@ function DestructionService:ApplyBoxImpact(CFrameOrPosition, Size, Force, OwnerP
 	local allVoxels = {}
 
 	local ok, voxels = pcall(function()
-		return VoxBreaker:CreateHitbox(Size, CenterCFrame, Enum.PartType.Block, boxVoxelSize, -1, areaParams)
+		return VoxBreaker:CreateHitbox(
+			Size,
+			CenterCFrame,
+			Enum.PartType.Block,
+			boxVoxelSize,
+			-1,
+			areaParams,
+			tier.MaxChunks
+		)
 	end)
 
 	if ok and voxels then

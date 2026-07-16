@@ -379,154 +379,152 @@ local function cleanup(data)
 	ActiveState[Character] = nil
 end
 
-local module = {}
-
-function module:Activate(Player)
-	print("Starting Lunar Strike for", Player.Name)
-	local Character = Player.Character
-	if not Character or not Character.Parent then
-		return
-	end
-
-	local Humanoid = Character:FindFirstChild("Humanoid")
-	local HumRP = Character:FindFirstChild("HumanoidRootPart")
-	if not Humanoid or not HumRP or Humanoid.Health <= 0 then
-		return
-	end
-
-	if ActiveState[Character] then
-		cleanup(ActiveState[Character])
-	end
-
-	local data = ActiveState.new(Character, Player)
-	ActiveState[Character] = data
-
-	AnimationService:stopAll(Character)
-
-	local AnimTrack, AnimEvents = AnimationService:getAnimationTrack(Character, StrikeAnim)
-	if not AnimTrack then
-		warn("[LunarStrike] AnimTrack is nil for", Character.Name)
-		ActiveState[Character] = nil
-		return
-	end
-
-	data.OriginalWalkSpeed = Humanoid.WalkSpeed
-	data.PreviousiFrameLevel = iFramesService:GetLevel(Character)
-	data.GroundReturnPosition = HumRP.Position
-
-	StunHandler:Stun(Character, 8, true)
-	Humanoid.WalkSpeed = 0
-	iFramesService:RemoveAlliFrames(Character)
-
-	local removingConn
-	local diedConn
-
-	local function onInterrupt()
-		cleanup(data)
-	end
-
-	removingConn = Players.PlayerRemoving:Connect(function(leavingPlayer)
-		if leavingPlayer == Player then
-			onInterrupt()
-		end
-	end)
-	diedConn = Humanoid.Died:Connect(onInterrupt)
-	Character.AncestryChanged:Connect(function(_, parent)
-		if not parent then
-			onInterrupt()
-		end
-	end)
-
-	table.insert(
-		AnimEvents,
-		AnimTrack:GetMarkerReachedSignal("clap"):Connect(function()
-			if data.Cancelled or not Character.Parent or Humanoid.Health <= 0 then
-				return
-			end
-			iFramesService:AddAlliFrames(Character)
-			startGravityField(data, HumRP.Position)
-		end)
-	)
-
-	table.insert(
-		AnimEvents,
-		AnimTrack:GetMarkerReachedSignal("jump"):Connect(function()
-			if data.Cancelled or not Character.Parent or Humanoid.Health <= 0 then
-				return
-			end
-			ReplicateSet:FireAllClients("LunarImpact", { char = Character })
-			HumRP.CFrame = HumRP.CFrame + Vector3.new(0, JUMP_HEIGHT, 0)
-		end)
-	)
-
-	table.insert(
-		AnimEvents,
-		AnimTrack:GetMarkerReachedSignal("start"):Connect(function()
-			if data.Cancelled or not Character.Parent or Humanoid.Health <= 0 then
-				return
-			end
-
-			AnimTrack:AdjustSpeed(0)
-
-			local Island = pickIsland(HumRP.Position)
-			if not Island then
-				warn("[LunarStrike] Nenhuma ilha disponível em workspace.Map.Islands")
-				AnimTrack:AdjustSpeed(1)
-				return
-			end
-
-			IslandsInUse[Island] = true
-			data.Island = Island
-
-			travelIslandToPlayer(data, Character, HumRP)
-
-			if data.Cancelled then
-				return
-			end
-
-			AnimTrack:AdjustSpeed(1)
-		end)
-	)
-
-	table.insert(
-		AnimEvents,
-		AnimTrack:GetMarkerReachedSignal("throw"):Connect(function()
-			if data.Cancelled or not data.Island then
-				return
-			end
-			task.spawn(function()
-				throwIslandToGravity(data)
-			end)
-		end)
-	)
-
-	AnimTrack.Stopped:Once(function()
-		if removingConn then
-			removingConn:Disconnect()
-		end
-		if diedConn then
-			diedConn:Disconnect()
+return {
+	Start = function(Player, Tool)
+		print("Starting Lunar Strike for", Player.Name)
+		local Character = Player.Character
+		if not Character or not Character.Parent then
+			return
 		end
 
-		if not data.Cancelled then
-			if Character and Character.Parent and data.GroundReturnPosition then
-				local groundY = findGroundY(data.GroundReturnPosition)
-				HumRP.CFrame = CFrame.new(Vector3.new(HumRP.Position.X, groundY + 3, HumRP.Position.Z))
-				ReplicateSet:FireAllClients("LunarImpact", { char = Character })
-			end
+		local Humanoid = Character:FindFirstChild("Humanoid")
+		local HumRP = Character:FindFirstChild("HumanoidRootPart")
+		if not Humanoid or not HumRP or Humanoid.Health <= 0 then
+			return
+		end
 
-			if Humanoid then
-				Humanoid.WalkSpeed = data.OriginalWalkSpeed
-			end
-			if Character then
-				Character:SetAttribute("iFrames", data.PreviousiFrameLevel)
-			end
+		if ActiveState[Character] then
+			cleanup(ActiveState[Character])
+		end
+
+		local data = ActiveState.new(Character, Player)
+		ActiveState[Character] = data
+
+		AnimationService:stopAll(Character)
+
+		local AnimTrack, AnimEvents = AnimationService:getAnimationTrack(Character, StrikeAnim)
+		if not AnimTrack then
+			warn("[LunarStrike] AnimTrack is nil for", Character.Name)
 			ActiveState[Character] = nil
+			return
 		end
-	end)
 
-	AnimationService:playAnimation(Character, StrikeAnim)
-	CutscenesSet:FireClient(Player, "LunarAwaken", "Start", { Offset = CFrame.new(0, -3, 0) })
-end
+		data.OriginalWalkSpeed = Humanoid.WalkSpeed
+		data.PreviousiFrameLevel = iFramesService:GetLevel(Character)
+		data.GroundReturnPosition = HumRP.Position
 
-return module
+		StunHandler:Stun(Character, 8, true)
+		Humanoid.WalkSpeed = 0
+		iFramesService:RemoveAlliFrames(Character)
+
+		local removingConn
+		local diedConn
+
+		local function onInterrupt()
+			cleanup(data)
+		end
+
+		removingConn = Players.PlayerRemoving:Connect(function(leavingPlayer)
+			if leavingPlayer == Player then
+				onInterrupt()
+			end
+		end)
+		diedConn = Humanoid.Died:Connect(onInterrupt)
+		Character.AncestryChanged:Connect(function(_, parent)
+			if not parent then
+				onInterrupt()
+			end
+		end)
+
+		table.insert(
+			AnimEvents,
+			AnimTrack:GetMarkerReachedSignal("clap"):Connect(function()
+				if data.Cancelled or not Character.Parent or Humanoid.Health <= 0 then
+					return
+				end
+				iFramesService:AddAlliFrames(Character)
+				startGravityField(data, HumRP.Position)
+			end)
+		)
+
+		table.insert(
+			AnimEvents,
+			AnimTrack:GetMarkerReachedSignal("jump"):Connect(function()
+				if data.Cancelled or not Character.Parent or Humanoid.Health <= 0 then
+					return
+				end
+				ReplicateSet:FireAllClients("LunarImpact", { char = Character })
+				HumRP.CFrame = HumRP.CFrame + Vector3.new(0, JUMP_HEIGHT, 0)
+			end)
+		)
+
+		table.insert(
+			AnimEvents,
+			AnimTrack:GetMarkerReachedSignal("start"):Connect(function()
+				if data.Cancelled or not Character.Parent or Humanoid.Health <= 0 then
+					return
+				end
+
+				AnimTrack:AdjustSpeed(0)
+
+				local Island = pickIsland(HumRP.Position)
+				if not Island then
+					warn("[LunarStrike] Nenhuma ilha disponível em workspace.Map.Islands")
+					AnimTrack:AdjustSpeed(1)
+					return
+				end
+
+				IslandsInUse[Island] = true
+				data.Island = Island
+
+				travelIslandToPlayer(data, Character, HumRP)
+
+				if data.Cancelled then
+					return
+				end
+
+				AnimTrack:AdjustSpeed(1)
+			end)
+		)
+
+		table.insert(
+			AnimEvents,
+			AnimTrack:GetMarkerReachedSignal("throw"):Connect(function()
+				if data.Cancelled or not data.Island then
+					return
+				end
+				task.spawn(function()
+					throwIslandToGravity(data)
+				end)
+			end)
+		)
+
+		AnimTrack.Stopped:Once(function()
+			if removingConn then
+				removingConn:Disconnect()
+			end
+			if diedConn then
+				diedConn:Disconnect()
+			end
+
+			if not data.Cancelled then
+				if Character and Character.Parent and data.GroundReturnPosition then
+					local groundY = findGroundY(data.GroundReturnPosition)
+					HumRP.CFrame = CFrame.new(Vector3.new(HumRP.Position.X, groundY + 3, HumRP.Position.Z))
+					ReplicateSet:FireAllClients("LunarImpact", { char = Character })
+				end
+
+				if Humanoid then
+					Humanoid.WalkSpeed = data.OriginalWalkSpeed
+				end
+				if Character then
+					Character:SetAttribute("iFrames", data.PreviousiFrameLevel)
+				end
+				ActiveState[Character] = nil
+			end
+		end)
+
+		AnimationService:playAnimation(Character, StrikeAnim)
+		CutscenesSet:FireClient(Player, "LunarAwaken", "Start", { Offset = CFrame.new(0, -3, 0) })
+	end,
+}
