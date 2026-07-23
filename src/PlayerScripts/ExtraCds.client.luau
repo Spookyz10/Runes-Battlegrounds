@@ -13,13 +13,16 @@ local SpecialsSet = RS.Remotes.Specials.Set
 
 local activeTweens: { [GuiObject]: Tween } = {}
 
+local COLOR_COOLDOWN = Color3.new(0, 0, 0)
+local COLOR_READY = Color3.new(1, 1, 1)
+
 local function getMain(slot)
 	return slot:FindFirstChild("Main")
 end
 
-local function getCooldownFrame(slot)
+local function getIcon(slot)
 	local main = getMain(slot)
-	return main and main:FindFirstChild("CooldownFrame")
+	return main and main:FindFirstChild("Icon")
 end
 
 local function getSlot(name: string)
@@ -30,15 +33,12 @@ local function getSlot(name: string)
 	return nil
 end
 
-local function cancelTween(cdFrame: GuiObject)
-	if activeTweens[cdFrame] then
-		activeTweens[cdFrame]:Cancel()
-		activeTweens[cdFrame] = nil
+local function cancelTween(icon: GuiObject)
+	if activeTweens[icon] then
+		activeTweens[icon]:Cancel()
+		activeTweens[icon] = nil
 	end
 end
-
-local FULL_SIZE = UDim2.fromScale(1, 0.75)
-local EMPTY_SIZE = UDim2.fromScale(1, 0.25)
 
 local function StartCooldown(name: string, duration: number)
 	local slot = getSlot(name)
@@ -46,27 +46,25 @@ local function StartCooldown(name: string, duration: number)
 		return
 	end
 
-	local cdFrame = getCooldownFrame(slot)
-	if not cdFrame then
+	local icon = getIcon(slot)
+	if not icon then
 		return
 	end
 
 	slot.Visible = true
-	cancelTween(cdFrame)
-	cdFrame.Size = FULL_SIZE
+	cancelTween(icon)
+	icon.ImageColor3 = COLOR_COOLDOWN
 
 	if duration <= 0 then
-		slot.Visible = false
+		icon.ImageColor3 = COLOR_READY
 		return
 	end
 
-	local tween = TS:Create(cdFrame, TweenInfo.new(duration, Enum.EasingStyle.Linear), { Size = EMPTY_SIZE })
-	activeTweens[cdFrame] = tween
+	local tween = TS:Create(icon, TweenInfo.new(duration, Enum.EasingStyle.Linear), { ImageColor3 = COLOR_READY })
+	activeTweens[icon] = tween
 	tween.Completed:Once(function(state)
-		if activeTweens[cdFrame] == tween then
-			activeTweens[cdFrame] = nil
-		end
-		if state == Enum.PlaybackState.Completed then
+		if activeTweens[icon] == tween then
+			activeTweens[icon] = nil
 			slot.Visible = false
 		end
 	end)
@@ -77,9 +75,10 @@ local function resetAllSlots()
 	for _, slot in Main:GetChildren() do
 		if slot:IsA("ImageLabel") then
 			slot.Visible = false
-			local cdFrame = getCooldownFrame(slot)
-			if cdFrame then
-				cancelTween(cdFrame)
+			local icon = getIcon(slot)
+			if icon then
+				cancelTween(icon)
+				icon.ImageColor3 = COLOR_READY
 			end
 		end
 	end

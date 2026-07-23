@@ -1,9 +1,9 @@
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local PhysicsService = game:GetService("PhysicsService")
 
 local VoxBreaker = require(ReplicatedStorage.Shared.Modules.VoxBreaker)
-local DebrisDamage = require(script.DebrisDamage)
 
 local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
@@ -73,6 +73,11 @@ local WATCH_TICK_INTERVAL = 0.5
 local groundRayParams = RaycastParams.new()
 groundRayParams.FilterType = Enum.RaycastFilterType.Include
 groundRayParams.FilterDescendantsInstances = GROUND_INSTANCES
+
+pcall(function()
+	PhysicsService:RegisterCollisionGroup(DEBRIS_COLLISION_GROUP)
+	PhysicsService:CollisionGroupSetCollidable(DEBRIS_COLLISION_GROUP, DEBRIS_COLLISION_GROUP, false)
+end)
 
 local function dprint(...)
 	if DEBUG then
@@ -213,11 +218,7 @@ function DestructionService:_DropUnsupportedPart(part)
 
 	part:SetAttribute("Destroyable", nil)
 	part.Anchored = false
-
-	local bigEnough = part.Size.X >= COLLIDE_SIZE_THRESHOLD
-		and part.Size.Y >= COLLIDE_SIZE_THRESHOLD
-		and part.Size.Z >= COLLIDE_SIZE_THRESHOLD
-	part.CanCollide = bigEnough
+	part.CanCollide = false
 
 	pcall(function()
 		part.CollisionGroup = DEBRIS_COLLISION_GROUP
@@ -226,7 +227,6 @@ function DestructionService:_DropUnsupportedPart(part)
 	part.AssemblyAngularVelocity =
 		Vector3.new(math.random(-40, 40) / 100, math.random(-40, 40) / 100, math.random(-40, 40) / 100)
 
-	DebrisDamage:TrackFall(part, nil)
 	ReplicateSet:FireAllClients("DebrisFallImpact", { Position = part.Position })
 end
 
@@ -307,10 +307,7 @@ function DestructionService:_LaunchChunk(chunk, ImpactPosition, Force, OwnerPlay
 	applySplat(chunk)
 
 	chunk.Anchored = false
-	local bigEnough = chunk.Size.X >= COLLIDE_SIZE_THRESHOLD
-		and chunk.Size.Y >= COLLIDE_SIZE_THRESHOLD
-		and chunk.Size.Z >= COLLIDE_SIZE_THRESHOLD
-	chunk.CanCollide = true
+	chunk.CanCollide = false
 	chunk.CanTouch = true
 	chunk.CanQuery = true
 
@@ -338,8 +335,6 @@ function DestructionService:_LaunchChunk(chunk, ImpactPosition, Force, OwnerPlay
 	if chunk.Size.Magnitude >= INSTAKILL_SIZE then
 		chunk:SetAttribute("InstaKill", true)
 	end
-
-	DebrisDamage:Track(chunk, OwnerPlayer)
 
 	task.delay(DEBRIS_LIFETIME - DEBRIS_FADE_TIME, function()
 		if not chunk or not chunk.Parent then
@@ -461,7 +456,6 @@ function DestructionService:ApplyRadialImpact(Position, Radius, Force, OwnerPlay
 			tier.MaxChunks
 		)
 	end)
-	print(voxels)
 
 	if ok and voxels then
 		for _, v in voxels do
@@ -530,7 +524,6 @@ function DestructionService:ApplyBoxImpact(CFrameOrPosition, Size, Force, OwnerP
 			tier.MaxChunks
 		)
 	end)
-	print(voxels)
 
 	if ok and voxels then
 		for _, v in voxels do
@@ -579,7 +572,7 @@ function DestructionService:_ApplyNoVoxelImpact(part, ImpactPosition, Force, Own
 	local originalCollisionGroup = part.CollisionGroup
 
 	part.Anchored = false
-	part.CanCollide = true
+	part.CanCollide = false
 
 	local away = part.Position - ImpactPosition
 	local awayDir = away.Magnitude > 0.01 and away.Unit or Vector3.new(0, 1, 0)
@@ -602,8 +595,6 @@ function DestructionService:_ApplyNoVoxelImpact(part, ImpactPosition, Force, Own
 	pcall(function()
 		part.CollisionGroup = DEBRIS_COLLISION_GROUP
 	end)
-
-	DebrisDamage:Track(part, OwnerPlayer)
 
 	task.delay(NO_VOXEL_RESET_TIME, function()
 		if not part or not part.Parent then
@@ -785,11 +776,10 @@ function DestructionService:DropArea(id)
 			entry.riseAccelConn:Disconnect()
 		end
 
-		part.CanCollide = entry.originalCollide
+		part.CanCollide = false
 		part.CanTouch = true
 		part.CanQuery = true
 
-		DebrisDamage:TrackFall(part, data.ownerPlayer)
 		ReplicateSet:FireAllClients("DebrisFallImpact", { Position = part.Position })
 	end
 end
@@ -818,7 +808,7 @@ function DestructionService:CancelLevitation(id)
 			entry.riseAccelConn:Disconnect()
 		end
 		part.Anchored = entry.originalAnchored
-		part.CanCollide = entry.originalCollide
+		part.CanCollide = false
 		part.CanTouch = true
 		part.CanQuery = true
 		pcall(function()
@@ -985,11 +975,10 @@ function DestructionService:DropFakeDebris(id)
 			entry.rockAccelConn:Disconnect()
 		end
 
-		part.CanCollide = true
+		part.CanCollide = false
 		part.CanTouch = true
 		part.CanQuery = true
 
-		DebrisDamage:TrackFall(part, data.ownerPlayer)
 		ReplicateSet:FireAllClients("DebrisFallImpact", { Position = part.Position })
 
 		task.delay(FAKE_DEBRIS_FALL_CLEANUP_TIME, function()

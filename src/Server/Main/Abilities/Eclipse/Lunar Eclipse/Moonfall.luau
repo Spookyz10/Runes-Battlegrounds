@@ -329,7 +329,7 @@ local function travelIslandToPlayer(data, Character, HumRP)
 	local startPos = Island:GetPivot().Position
 	local startRot = Island:GetPivot().Rotation
 
-	if Island:FindFirstChild("LunarHightlight") then
+	if Island:FindFirstChild("LunarHighlight") then
 		Island.LunarHighlight.Enabled = true
 	end
 

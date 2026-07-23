@@ -47,6 +47,9 @@ local TWEEN_SLIDE = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirect
 local POS_DOWN = UDim2.new(0.5, 0, 0.5, 125)
 local POS_UP = UDim2.new(0.5, 0, 0.5, 0)
 
+local COLOR_COOLDOWN = Color3.new(0, 0, 0)
+local COLOR_READY = Color3.new(1, 1, 1)
+
 local function getMain(slot)
 	return slot:FindFirstChild("Main")
 end
@@ -54,11 +57,6 @@ end
 local function getBase(slot)
 	local main = getMain(slot)
 	return main and main:FindFirstChild("Base")
-end
-
-local function getCooldownFrame(slot)
-	local main = getMain(slot)
-	return main and main:FindFirstChild("CooldownFrame")
 end
 
 local function getIcon(slot)
@@ -140,10 +138,10 @@ end
 -- ── Cooldown ─────────────────────────────────────────────────────────────────
 local activeCdTweens: { [GuiObject]: Tween } = {}
 
-local function cancelCdTween(cdFrame: GuiObject)
-	if activeCdTweens[cdFrame] then
-		activeCdTweens[cdFrame]:Cancel()
-		activeCdTweens[cdFrame] = nil
+local function cancelCdTween(icon: GuiObject)
+	if activeCdTweens[icon] then
+		activeCdTweens[icon]:Cancel()
+		activeCdTweens[icon] = nil
 	end
 end
 
@@ -194,27 +192,29 @@ local function Equip(Base)
 		local slot = Base.Parent.Parent
 
 		local function addCooldown()
-			local cdFrame = getCooldownFrame(slot)
-			if not cdFrame then
+			local icon = getIcon(slot)
+			if not icon then
 				return
 			end
 
-			cancelCdTween(cdFrame)
-			cdFrame.Size = UDim2.fromScale(1, 0.85)
+			cancelCdTween(icon)
+			icon.ImageColor3 = COLOR_COOLDOWN
 
 			if cds > 0 then
 				local cdTween =
-					TS:Create(cdFrame, TweenInfo.new(cds, Enum.EasingStyle.Linear), { Size = UDim2.fromScale(1, 0.15) })
-				activeCdTweens[cdFrame] = cdTween
+					TS:Create(icon, TweenInfo.new(cds, Enum.EasingStyle.Linear), { ImageColor3 = COLOR_READY })
+				activeCdTweens[icon] = cdTween
 				cdTween.Completed:Once(function(state)
-					if activeCdTweens[cdFrame] == cdTween then
-						activeCdTweens[cdFrame] = nil
+					if activeCdTweens[icon] == cdTween then
+						activeCdTweens[icon] = nil
 					end
 					if state == Enum.PlaybackState.Completed and Tool.Name == Base.SkillName.Text then
 						shineIconEffect(slot)
 					end
 				end)
 				cdTween:Play()
+			else
+				icon.ImageColor3 = COLOR_READY
 			end
 		end
 
@@ -264,25 +264,14 @@ local function AddTool(Tool: Tool)
 	slot:SetAttribute("Active", true)
 
 	tweenMain(main, POS_DOWN, TWEEN_SLIDE, function()
-		local existing = base:FindFirstChild("Cooldown")
-		if existing then
-			existing:Destroy()
-		end
-
 		base.SkillName.Text = Tool.Name
 		base.Number.Text = tostring(Tool:GetAttribute("Index"))
 
 		local icon = getIcon(slot)
 		if icon then
 			icon.Image = Tool:GetAttribute("Icon") or "rbxassetid://0"
-		end
-
-		local cdFrame = getCooldownFrame(slot)
-		if cdFrame then
-			local cdIcon = cdFrame:FindFirstChild("CooldownIcon")
-			if cdIcon then
-				cdIcon.Image = Tool:GetAttribute("Icon") or "rbxassetid://0"
-			end
+			cancelCdTween(icon)
+			icon.ImageColor3 = COLOR_READY
 		end
 
 		slot.Visible = true
@@ -320,9 +309,9 @@ end
 -- ── Init ─────────────────────────────────────────────────────────────────────
 for _, slot in HotbarFrame:GetChildren() do
 	if slot:IsA("ImageLabel") then
-		local cdFrame = getCooldownFrame(slot)
-		if cdFrame then
-			cdFrame.Size = UDim2.fromScale(1, 0)
+		local icon = getIcon(slot)
+		if icon then
+			icon.ImageColor3 = COLOR_READY
 		end
 	end
 end
@@ -392,10 +381,10 @@ MovesetHandler.OnClientEvent:Connect(function(Goal)
 	if Goal == "removeCooldowns" then
 		for _, slot in HotbarFrame:GetChildren() do
 			if slot:IsA("ImageLabel") then
-				local cdFrame = getCooldownFrame(slot)
-				if cdFrame then
-					cancelCdTween(cdFrame)
-					cdFrame.Size = UDim2.fromScale(1, 0)
+				local icon = getIcon(slot)
+				if icon then
+					cancelCdTween(icon)
+					icon.ImageColor3 = COLOR_READY
 				end
 			end
 		end
