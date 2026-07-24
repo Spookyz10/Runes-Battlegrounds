@@ -10,7 +10,8 @@ local iFramesService = require(ModulesFolder.iFramesService)
 local PerfectKnockback = require(ModulesFolder.PerfectKnockback)
 
 local Remotes = ReplicatedStorage.Remotes
-local EvasivaUpdate = Remotes.Evasive.Update
+local EvasiveSet = Remotes.Evasive.Set
+local EvasiveGet = Remotes.Evasive.Get
 
 local THRESHOLD = 20
 local ESCAPE_IFRAME_TIME = 1
@@ -33,7 +34,7 @@ local function sendUpdate(Character)
 	local Progress = Character:GetAttribute("EvasivaProgress") or 0
 	local Charges = Character:GetAttribute("EvasivaCharges") or 0
 
-	EvasivaUpdate:FireClient(Player, Progress, THRESHOLD, Charges)
+	EvasiveSet:FireClient(Player, Progress, THRESHOLD, Charges)
 end
 
 function module:AddProgress(Character, Amount)
@@ -151,6 +152,18 @@ function module:Escape(Character)
 	Remotes.Replicate.Set:FireAllClients("Evasive", { Char = Character })
 
 	return true
+end
+
+EvasiveGet.OnServerInvoke = function(Player)
+	local Character = Player.Character
+	if not Character then
+		return 0, THRESHOLD, 0
+	end
+
+	local Progress = Character:GetAttribute("EvasivaProgress") or 0
+	local Charges = Character:GetAttribute("EvasivaCharges") or 0
+
+	return Progress, THRESHOLD, Charges
 end
 
 Players.PlayerAdded:Connect(function(Player)

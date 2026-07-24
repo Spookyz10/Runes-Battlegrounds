@@ -8,21 +8,34 @@ local PlayerGui = Player:WaitForChild("PlayerGui")
 local GUI = PlayerGui:WaitForChild("ExtraCds")
 local Main = GUI:WaitForChild("Main")
 
-local ExtraCdsSet = RS.Remotes.ExtraCds.Set
-local SpecialsSet = RS.Remotes.Specials.Set
+local Remotes = RS.Remotes
+local ExtraCdsSet = Remotes.ExtraCds.Set
+local SpecialsSet = Remotes.Specials.Set
+local EvasiveSet = Remotes.Evasive.Set
+local EvasiveGet = Remotes.Evasive.Get
 
-local activeTweens: { [GuiObject]: Tween } = {}
+local DARK_OFFSET_START = Vector2.new(0, -0.4)
+local DARK_OFFSET_END = Vector2.new(0, 0.4)
+local DARK_ROTATION = -90
 
-local COLOR_COOLDOWN = Color3.new(0, 0, 0)
-local COLOR_READY = Color3.new(1, 1, 1)
+local DARK_GRADIENT_TRANSPARENCY = NumberSequence.new({
+	NumberSequenceKeypoint.new(0, 0),
+	NumberSequenceKeypoint.new(0.49, 0),
+	NumberSequenceKeypoint.new(0.51, 1),
+	NumberSequenceKeypoint.new(1, 1),
+})
 
 local function getMain(slot)
 	return slot:FindFirstChild("Main")
 end
 
-local function getIcon(slot)
+local function getDarkIcon(slot)
 	local main = getMain(slot)
-	return main and main:FindFirstChild("Icon")
+	return main and main:FindFirstChild("DarkIcon")
+end
+
+local function getDarkGradient(darkIcon)
+	return darkIcon and darkIcon:FindFirstChildOfClass("UIGradient")
 end
 
 local function getSlot(name: string)
@@ -33,11 +46,69 @@ local function getSlot(name: string)
 	return nil
 end
 
-local function cancelTween(icon: GuiObject)
-	if activeTweens[icon] then
-		activeTweens[icon]:Cancel()
-		activeTweens[icon] = nil
+local activeDarkTweens: { [GuiObject]: Tween } = {}
+
+local function cancelDarkTween(darkIcon: GuiObject)
+	if activeDarkTweens[darkIcon] then
+		activeDarkTweens[darkIcon]:Cancel()
+		activeDarkTweens[darkIcon] = nil
 	end
+end
+
+local function resetDarkIcon(slot)
+	local darkIcon = getDarkIcon(slot)
+	if not darkIcon then
+		return
+	end
+	cancelDarkTween(darkIcon)
+	darkIcon.ImageTransparency = 1
+	local grad = getDarkGradient(darkIcon)
+	if grad then
+		grad.Transparency = DARK_GRADIENT_TRANSPARENCY
+		grad.Rotation = DARK_ROTATION
+		grad.Offset = DARK_OFFSET_START
+	end
+end
+
+local function playDarkCooldown(slot, duration, onComplete: (() -> ())?)
+	local darkIcon = getDarkIcon(slot)
+	if not darkIcon then
+		if onComplete then
+			onComplete()
+		end
+		return
+	end
+
+	cancelDarkTween(darkIcon)
+	local grad = getDarkGradient(darkIcon)
+
+	if duration <= 0 or not grad then
+		darkIcon.ImageTransparency = 1
+		if onComplete then
+			onComplete()
+		end
+		return
+	end
+
+	darkIcon.ImageTransparency = 0
+	grad.Transparency = DARK_GRADIENT_TRANSPARENCY
+	grad.Rotation = DARK_ROTATION
+	grad.Offset = DARK_OFFSET_START
+
+	local darkTween = TS:Create(grad, TweenInfo.new(duration, Enum.EasingStyle.Linear), { Offset = DARK_OFFSET_END })
+	activeDarkTweens[darkIcon] = darkTween
+	darkTween.Completed:Once(function(state)
+		if activeDarkTweens[darkIcon] == darkTween then
+			activeDarkTweens[darkIcon] = nil
+		end
+		if state == Enum.PlaybackState.Completed then
+			darkIcon.ImageTransparency = 1
+			if onComplete then
+				onComplete()
+			end
+		end
+	end)
+	darkTween:Play()
 end
 
 local function StartCooldown(name: string, duration: number)
@@ -46,40 +117,60 @@ local function StartCooldown(name: string, duration: number)
 		return
 	end
 
-	local icon = getIcon(slot)
-	if not icon then
+	slot.Visible = true
+
+	if duration <= 0 then
+		resetDarkIcon(slot)
+		slot.Visible = false
+		return
+	end
+
+	playDarkCooldown(slot, duration, function()
+		slot.Visible = false
+	end)
+end
+
+local function setEvasiveMeter(Progress: number, Threshold: number, Charges: number)
+	local slot = getSlot("Evasive")
+	if not slot then
 		return
 	end
 
 	slot.Visible = true
-	cancelTween(icon)
-	icon.ImageColor3 = COLOR_COOLDOWN
 
-	if duration <= 0 then
-		icon.ImageColor3 = COLOR_READY
+	local darkIcon = getDarkIcon(slot)
+	if not darkIcon then
 		return
 	end
 
-	local tween = TS:Create(icon, TweenInfo.new(duration, Enum.EasingStyle.Linear), { ImageColor3 = COLOR_READY })
-	activeTweens[icon] = tween
-	tween.Completed:Once(function(state)
-		if activeTweens[icon] == tween then
-			activeTweens[icon] = nil
-			slot.Visible = false
-		end
-	end)
-	tween:Play()
+	cancelDarkTween(darkIcon)
+
+	if Charges > 0 then
+		darkIcon.ImageTransparency = 1
+		return
+	end
+
+	local grad = getDarkGradient(darkIcon)
+	if not grad then
+		return
+	end
+
+	local percent = 0
+	if Threshold > 0 then
+		percent = math.clamp(Progress / Threshold, 0, 1)
+	end
+
+	darkIcon.ImageTransparency = 0
+	grad.Transparency = DARK_GRADIENT_TRANSPARENCY
+	grad.Rotation = DARK_ROTATION
+	grad.Offset = DARK_OFFSET_START:Lerp(DARK_OFFSET_END, percent)
 end
 
 local function resetAllSlots()
 	for _, slot in Main:GetChildren() do
 		if slot:IsA("ImageLabel") then
 			slot.Visible = false
-			local icon = getIcon(slot)
-			if icon then
-				cancelTween(icon)
-				icon.ImageColor3 = COLOR_READY
-			end
+			resetDarkIcon(slot)
 		end
 	end
 end
@@ -94,4 +185,18 @@ SpecialsSet.OnClientEvent:Connect(function(action, params)
 	end
 end)
 
-Player.CharacterAdded:Connect(resetAllSlots)
+EvasiveSet.OnClientEvent:Connect(function(Progress: number, Threshold: number, Charges: number)
+	setEvasiveMeter(Progress, Threshold, Charges)
+end)
+
+Player.CharacterAdded:Connect(function()
+	resetAllSlots()
+
+	local ok, Progress, Threshold, Charges = pcall(function()
+		return EvasiveGet:InvokeServer()
+	end)
+
+	if ok and Progress and Threshold then
+		setEvasiveMeter(Progress, Threshold, Charges or 0)
+	end
+end)
