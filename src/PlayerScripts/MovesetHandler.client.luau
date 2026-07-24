@@ -50,6 +50,17 @@ local POS_UP = UDim2.new(0.5, 0, 0.5, 0)
 local COLOR_COOLDOWN = Color3.new(0, 0, 0)
 local COLOR_READY = Color3.new(1, 1, 1)
 
+local DARK_OFFSET_START = Vector2.new(0, -0.4)
+local DARK_OFFSET_END = Vector2.new(0, 0.4)
+local DARK_ROTATION = -90
+
+local DARK_GRADIENT_TRANSPARENCY = NumberSequence.new({
+	NumberSequenceKeypoint.new(0, 0),
+	NumberSequenceKeypoint.new(0.49, 0),
+	NumberSequenceKeypoint.new(0.51, 1),
+	NumberSequenceKeypoint.new(1, 1),
+})
+
 local function getMain(slot)
 	return slot:FindFirstChild("Main")
 end
@@ -62,6 +73,15 @@ end
 local function getIcon(slot)
 	local main = getMain(slot)
 	return main and main:FindFirstChild("Icon")
+end
+
+local function getDarkIcon(slot)
+	local main = getMain(slot)
+	return main and main:FindFirstChild("DarkIcon")
+end
+
+local function getDarkGradient(darkIcon)
+	return darkIcon and darkIcon:FindFirstChildOfClass("UIGradient")
 end
 
 local activeMainTweens: { [GuiObject]: Tween } = {}
@@ -89,7 +109,6 @@ local function tweenMain(main: GuiObject, goal: UDim2, tweenInfo: TweenInfo?, on
 	tween:Play()
 end
 
--- ── Helpers gerais ───────────────────────────────────────────────────────────
 local function getCharacter()
 	return Player.Character
 end
@@ -135,7 +154,6 @@ local function tweenAllSlotsDown(onComplete: (() -> ())?)
 	end
 end
 
--- ── Cooldown ─────────────────────────────────────────────────────────────────
 local activeCdTweens: { [GuiObject]: Tween } = {}
 
 local function cancelCdTween(icon: GuiObject)
@@ -143,6 +161,62 @@ local function cancelCdTween(icon: GuiObject)
 		activeCdTweens[icon]:Cancel()
 		activeCdTweens[icon] = nil
 	end
+end
+
+local activeDarkTweens: { [GuiObject]: Tween } = {}
+
+local function cancelDarkTween(darkIcon: GuiObject)
+	if activeDarkTweens[darkIcon] then
+		activeDarkTweens[darkIcon]:Cancel()
+		activeDarkTweens[darkIcon] = nil
+	end
+end
+
+local function resetDarkIcon(slot)
+	local darkIcon = getDarkIcon(slot)
+	if not darkIcon then
+		return
+	end
+	cancelDarkTween(darkIcon)
+	darkIcon.ImageTransparency = 1
+	local grad = getDarkGradient(darkIcon)
+	if grad then
+		grad.Transparency = DARK_GRADIENT_TRANSPARENCY
+		grad.Rotation = DARK_ROTATION
+		grad.Offset = DARK_OFFSET_START
+	end
+end
+
+local function playDarkCooldown(slot, cds)
+	local darkIcon = getDarkIcon(slot)
+	if not darkIcon then
+		return
+	end
+
+	cancelDarkTween(darkIcon)
+	local grad = getDarkGradient(darkIcon)
+
+	if cds <= 0 or not grad then
+		darkIcon.ImageTransparency = 1
+		return
+	end
+
+	darkIcon.ImageTransparency = 0
+	grad.Transparency = DARK_GRADIENT_TRANSPARENCY
+	grad.Rotation = DARK_ROTATION
+	grad.Offset = DARK_OFFSET_START
+
+	local darkTween = TS:Create(grad, TweenInfo.new(cds, Enum.EasingStyle.Linear), { Offset = DARK_OFFSET_END })
+	activeDarkTweens[darkIcon] = darkTween
+	darkTween.Completed:Once(function(state)
+		if activeDarkTweens[darkIcon] == darkTween then
+			activeDarkTweens[darkIcon] = nil
+		end
+		if state == Enum.PlaybackState.Completed then
+			darkIcon.ImageTransparency = 1
+		end
+	end)
+	darkTween:Play()
 end
 
 local function shineIconEffect(slot)
@@ -175,7 +249,6 @@ local function shineIconEffect(slot)
 end
 
 local function Equip(Base)
-	-- Base é o filho do Main; slot é o ImageLabel pai do Main
 	local Tool = AbilitieRemote_Get:InvokeServer(Base.SkillName.Text)
 	if not Tool then
 		return
@@ -188,7 +261,6 @@ local function Equip(Base)
 
 	local cds = Tool:GetAttribute("CDS")
 	if cds ~= 0 then
-		-- slot = Main.Parent
 		local slot = Base.Parent.Parent
 
 		local function addCooldown()
@@ -199,6 +271,8 @@ local function Equip(Base)
 
 			cancelCdTween(icon)
 			icon.ImageColor3 = COLOR_COOLDOWN
+
+			playDarkCooldown(slot, cds)
 
 			if cds > 0 then
 				local cdTween =
@@ -234,7 +308,6 @@ local function Equip(Base)
 	end
 end
 
--- ── Adicionar tool ────────────────────────────────────────────────────────────
 local function getToolKey(tool: Tool): string
 	return tool.Name .. "_" .. tostring(tool:GetAttribute("Index"))
 end
@@ -274,12 +347,13 @@ local function AddTool(Tool: Tool)
 			icon.ImageColor3 = COLOR_READY
 		end
 
+		resetDarkIcon(slot)
+
 		slot.Visible = true
 		tweenMain(main, POS_UP, TWEEN_SLIDE)
 	end)
 end
 
--- ── Gradients ────────────────────────────────────────────────────────────────
 local function updateHotbarGradients()
 	local name = getGradientName()
 	local source = HotbarFrame:FindFirstChild("Gradients")
@@ -306,19 +380,18 @@ local function updateHotbarGradients()
 	end
 end
 
--- ── Init ─────────────────────────────────────────────────────────────────────
 for _, slot in HotbarFrame:GetChildren() do
 	if slot:IsA("ImageLabel") then
 		local icon = getIcon(slot)
 		if icon then
 			icon.ImageColor3 = COLOR_READY
 		end
+		resetDarkIcon(slot)
 	end
 end
 
 updateHotbarGradients()
 
--- ── Input teclado/gamepad ────────────────────────────────────────────────────
 UIS.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then
 		return
@@ -336,7 +409,6 @@ UIS.InputBegan:Connect(function(input, gameProcessed)
 	end
 end)
 
--- ── Click / tap nos slots ────────────────────────────────────────────────────
 for _, slot in HotbarFrame:GetChildren() do
 	if slot:IsA("ImageLabel") then
 		local base = getBase(slot)
@@ -376,7 +448,6 @@ for _, slot in HotbarFrame:GetChildren() do
 	end
 end
 
--- ── Remotes ──────────────────────────────────────────────────────────────────
 MovesetHandler.OnClientEvent:Connect(function(Goal)
 	if Goal == "removeCooldowns" then
 		for _, slot in HotbarFrame:GetChildren() do
@@ -386,6 +457,7 @@ MovesetHandler.OnClientEvent:Connect(function(Goal)
 					cancelCdTween(icon)
 					icon.ImageColor3 = COLOR_READY
 				end
+				resetDarkIcon(slot)
 			end
 		end
 	end
@@ -411,7 +483,6 @@ shared.triggerHotbar = function(State: boolean)
 	end
 end
 
--- ── Backpack ChildAdded / ChildRemoved ───────────────────────────────────────
 Backpack.ChildAdded:Connect(AddTool)
 
 Backpack.ChildRemoved:Connect(function(Tool: Tool)
@@ -450,6 +521,7 @@ Backpack.ChildRemoved:Connect(function(Tool: Tool)
 			if base then
 				base.SkillName.Text = "N/A"
 			end
+			resetDarkIcon(slot)
 		end)
 	end
 end)
@@ -458,7 +530,6 @@ for _, Tool in Backpack:GetChildren() do
 	task.spawn(AddTool, Tool)
 end
 
--- ── Mudança de moveset / modo ────────────────────────────────────────────────
 Player:GetAttributeChangedSignal("Moveset"):Connect(function()
 	tweenAllSlotsDown()
 	task.delay(TWEEN_SLIDE.Time, updateHotbarGradients)

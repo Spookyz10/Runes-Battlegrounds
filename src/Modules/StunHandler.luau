@@ -49,7 +49,16 @@ local function Unstun(Character)
 	module.Cache[Character] = nil
 end
 
-function module:Stun(Character, Duration, IgnoreImmunity, WalkSpeed, JumpPower, DestroyImmunity, IgnoreThrowable)
+function module:Stun(
+	Character,
+	Duration,
+	IgnoreImmunity,
+	WalkSpeed,
+	JumpPower,
+	DestroyImmunity,
+	IgnoreThrowable,
+	Escapable
+)
 	Duration = Duration or -1
 	WalkSpeed = WalkSpeed or 0
 	JumpPower = JumpPower or 0
@@ -81,6 +90,7 @@ function module:Stun(Character, Duration, IgnoreImmunity, WalkSpeed, JumpPower, 
 	Stunned.Parent = Character
 	Stunned:SetAttribute("WalkSpeed", WalkSpeed)
 	Stunned:SetAttribute("JumpPower", JumpPower)
+	Stunned:SetAttribute("Escapable", Escapable ~= false)
 
 	Stunned.Destroying:Once(function()
 		Character:SetAttribute("Stunned", false)
@@ -138,6 +148,24 @@ end
 
 function module:IsStunned(Character)
 	return Character:FindFirstChild("Stunned") or Character:HasTag("Stunned") or Character:GetAttribute("Stunned")
+end
+
+function module:CanEscape(Character)
+	local Stunned = Character:FindFirstChild("Stunned")
+	if not Stunned then
+		return false
+	end
+
+	return Stunned:GetAttribute("Escapable") ~= false
+end
+
+function module:EscapeStun(Character)
+	if not module:CanEscape(Character) then
+		return false
+	end
+
+	Unstun(Character)
+	return true
 end
 
 return module

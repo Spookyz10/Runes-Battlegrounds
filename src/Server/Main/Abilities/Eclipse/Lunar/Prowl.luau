@@ -183,6 +183,7 @@ return {
 							FallingDetectDelay = 0.3,
 							Dot = 1,
 							DontFreeze = false,
+							Escapable = true,
 						}, Character)
 
 						local stopTracking = DestructionService:TrackCharacterImpacts(

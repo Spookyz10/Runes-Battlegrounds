@@ -128,6 +128,24 @@ function Perfect:Cancel(EnemyCharacter)
 	resetHumanoidState(EnemyCharacter)
 end
 
+function Perfect:CanEscape(EnemyCharacter)
+	local Data = Perfect.Active[EnemyCharacter]
+	if not Data then
+		return false
+	end
+
+	return Data.Escapable ~= false
+end
+
+function Perfect:Escape(EnemyCharacter)
+	if not Perfect:CanEscape(EnemyCharacter) then
+		return false
+	end
+
+	Perfect:Cancel(EnemyCharacter)
+	return true
+end
+
 RagdollHandler.RegisterActiveKnockbackCanceller(function(Character)
 	if Perfect.Active[Character] then
 		Perfect:Cancel(Character)
@@ -196,6 +214,7 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 	Params.UpVelocityTime = Params.UpVelocityTime or 0.2
 	Params.EscapableCooldown = math.clamp(Params.EscapableCooldown, 1, 9999999) or 1
 	Params.FallingDetectDelay = Params.FallingDetectDelay or 0.715
+	Params.Escapable = Params.Escapable ~= false
 
 	dprint(
 		"Params resolved -> Dot:",
@@ -207,7 +226,9 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 		"GroundStunTime:",
 		Params.GroundStunTime,
 		"FallingDetectDelay:",
-		Params.FallingDetectDelay
+		Params.FallingDetectDelay,
+		"Escapable:",
+		Params.Escapable
 	)
 
 	if EnemyHumanoid.Health <= 0 then
@@ -298,6 +319,7 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 		BodyVelocity = BodyVelocity,
 		BodyGyro = BodyGyro,
 		EnemyStun = EnemyStun,
+		Escapable = Params.Escapable,
 		Collision = nil,
 		StoppedConnection = nil,
 		DamageConn = nil,

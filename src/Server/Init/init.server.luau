@@ -25,6 +25,7 @@ local AnimationService = require(SvModules.AnimationService)
 local Knockback = require(SvModules.BodymoverService)
 local iFramesService = require(SvModules.iFramesService)
 local CombatUtils = require(SvModules.CombatUtils)
+local EvasiveService = require(SvModules.EvasiveService)
 
 local ReplicatedHitboxes = require(SvModules.ReplicatedHitboxes)
 local CheckBehind = require(Shared.Utility.CheckBehind)
@@ -359,33 +360,31 @@ local ComunicatorFunctions = {
 		if Keypressed == Enum.KeyCode.Q then
 			local Direction = Parameters.Direction
 
+			local Trapped = EvasiveService:IsTrapped(Character)
+
+			if Trapped then
+				if not EvasiveService:CanEscape(Character) then
+					return
+				end
+
+				if Direction == "Front" then
+					local Side = HumRP.CFrame.RightVector:Dot(Humanoid.MoveDirection)
+					Direction = Side < 0 and "Left" or "Right"
+				end
+
+				if not EvasiveService:Escape(Character) then
+					return
+				end
+			end
+
 			if Direction == "Front" or Direction == "Back" then
 				if Direction == "Back" then
-					if not Character:HasTag("Ragdolled") and not Character:HasTag("Knockbacked") then
+					if not Trapped then
 						if
 							Character:HasTag("DashCD")
 							or Character:HasTag("CantDash")
 							or Character:HasTag("Stunned")
 						then
-							return
-						end
-					else
-						if
-							not Character:HasTag("CantRagdollCancel")
-							and Character:GetAttribute("RagdollCancel") ~= false
-						then
-							task.spawn(function()
-								RagdollHandler.cancelRagdoll(Humanoid, nil, false, nil, true, true)
-
-								ReplicateSet:FireAllClients("Evasive", { Char = Character })
-								ExtraCdsSet:FireClient(Player, "Evasive", 30)
-
-								Character:SetAttribute("RagdollCancel", false)
-								task.delay(30, function()
-									Character:SetAttribute("RagdollCancel", true)
-								end)
-							end)
-						else
 							return
 						end
 					end
@@ -447,11 +446,7 @@ local ComunicatorFunctions = {
 						end
 					end
 				else
-					if Character:HasTag("Stunned") then
-						return
-					end
-
-					if not Character:HasTag("Ragdolled") and not Character:HasTag("Knockbacked") then
+					if not Trapped then
 						if
 							Character:HasTag("DashCD")
 							or Character:HasTag("CantDash")
@@ -815,30 +810,12 @@ local ComunicatorFunctions = {
 					end
 				end
 			elseif Direction == "Right" or Direction == "Left" then
-				if not Character:HasTag("Ragdolled") and not Character:HasTag("Knockbacked") then
+				if not Trapped then
 					if
 						Character:HasTag("SideDashCD")
 						or Character:HasTag("CantSideDash")
 						or Character:HasTag("Stunned")
 					then
-						return
-					end
-				else
-					if
-						not Character:HasTag("CantRagdollCancel")
-						and Character:GetAttribute("RagdollCancel") ~= false
-					then
-						task.spawn(function()
-							RagdollHandler.cancelRagdoll(Humanoid, nil, false, nil, true, true)
-
-							ReplicateSet:FireAllClients("Evasive", { Char = Character })
-
-							Character:SetAttribute("RagdollCancel", false)
-							task.delay(30, function()
-								Character:SetAttribute("RagdollCancel", true)
-							end)
-						end)
-					else
 						return
 					end
 				end
