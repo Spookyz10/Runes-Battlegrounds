@@ -13,7 +13,6 @@ local DamageHandler = require(ServerModules.DamageHandler)
 local AnimationService = require(ServerModules.AnimationService)
 local iFramesService = require(ServerModules.iFramesService)
 local RagdollHandler = require(ServerModules.RagdollHandler)
-local BodymoverService = require(ServerModules.BodymoverService)
 local PerfectKnockback = require(ServerModules.PerfectKnockback)
 local WeldSystem = require(ReplicatedModules.WeldSystem)
 
@@ -34,33 +33,35 @@ local CLOSE_DISTANCE = 5
 local HITBOX_SIZE = Vector3.new(10, 10, 10)
 local HITBOX_OFFSET = CFrame.new(0, 0, -5)
 
--- Tempo que a corrente "viaja" até o inimigo antes de travar ele (efeito visual de lançamento)
 local CHAIN_TRAVEL_TIME = 0.35
--- Slow-fall: multiplica a velocidade Y do inimigo quando preso no ar
 local AIR_SLOW_FACTOR = 0.12
 
+local MIN_AIR_HEIGHT = 6
+
+local GroundRayParams = RaycastParams.new()
+GroundRayParams.FilterType = Enum.RaycastFilterType.Include
+GroundRayParams.FilterDescendantsInstances = { workspace.Map }
+GroundRayParams.IgnoreWater = true
+
 local function isInAir(EnemyCharacter)
-	if EnemyCharacter:FindFirstChild("inAir") then
+	local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
+	if not EnemyHumRP then
+		return false
+	end
+
+	local RayResult = workspace:Raycast(EnemyHumRP.Position, Vector3.new(0, -500, 0), GroundRayParams)
+	if not RayResult then
 		return true
 	end
-	local touched = EnemyCharacter:GetAttribute("TouchedGround")
-	if touched and (tick() - touched) <= 0.25 then
-		return true
-	end
-	return false
+
+	local heightAboveGround = EnemyHumRP.Position.Y - RayResult.Position.Y
+	return heightAboveGround >= MIN_AIR_HEIGHT
 end
 
---[[
-	Cancela o PerfectKnockback e limpa todos os estados de knockback do personagem.
-	Chamado quando o inimigo recebe dano ou é pego numa hitbox, para evitar a
-	animação ficar congelada no estado "freeze" do PerfectKnockback.
-]]
 local function cancelAllKnockbackStates(EnemyCharacter)
 	local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
 	local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
 
-	-- Cancela o PerfectKnockback — isso para a animação, destrói os body movers
-	-- e chama Unstun internamente, evitando o freeze da animação de knockback
 	PerfectKnockback:Cancel(EnemyCharacter)
 
 	if EnemyHumRP then
@@ -95,8 +96,6 @@ local function cancelAllKnockbackStates(EnemyCharacter)
 
 	EnemyCharacter:RemoveTag("Knockbacked")
 
-	-- Para garantir que a animação de knockback não fique congelada,
-	-- paramos todas as animações se o PerfectKnockback estava ativo
 	AnimationService:stopAll(EnemyCharacter)
 end
 
@@ -152,6 +151,10 @@ local function doHitEffects(
 	closestEnemy:RemoveTag("CantRotate")
 	closestEnemy:RemoveTag("Knockbacked")
 
+	if closestEnemy:HasTag("Ragdolled") then
+		RagdollHandler.cancelRagdoll(EnemyHumanoid, nil, false, nil, false, true, true)
+	end
+
 	DamageHandler:TakeDamage(Character, EnemyHumanoid, DAMAGE, nil, nil, true, true, true, true, true, nil, nil)
 
 	EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
@@ -165,18 +168,20 @@ local function doHitEffects(
 		kickFlat = kickFlat.Unit
 	end
 
-	RagdollHandler.ragdoll(EnemyHumanoid, 2, nil, nil, nil, nil, true)
+	local lookCF = CFrame.lookAt(EnemyHumRP.Position, EnemyHumRP.Position + kickFlat)
 
-	task.defer(function()
-		if not closestEnemy or not closestEnemy.Parent then
-			return
-		end
-		BodymoverService:Knockback(closestEnemy, {
-			KnockbackType = "Velocity",
-			MaxForce = Vector3.new(1, 1, 1) * 100000,
-			Velocity = kickFlat * KICK_HORIZONTAL_FORCE + KICK_VELOCITY,
-		})
-	end)
+	PerfectKnockback:KnockBack(nil, closestEnemy, {
+		LookVector = kickFlat,
+		LookForce = KICK_HORIZONTAL_FORCE,
+		LookFinalForce = KICK_HORIZONTAL_FORCE,
+		LookAt = lookCF,
+		UpVelocity = KICK_VELOCITY,
+		UpVelocityTime = 0.15,
+		GroundStunTime = 1.0,
+		FallingDetectDelay = 0.4,
+		Dot = 1,
+		DontFreeze = false,
+	}, Character)
 
 	applyInferno(closestEnemy)
 
@@ -310,17 +315,11 @@ return {
 					return
 				end
 
-				-- ── SLOW-FALL: reduz a velocidade vertical do inimigo no ar ─────────────
-				-- Isso dá a sensação de que as correntes "travaram" ele no ar antes de puxar
 				do
 					local currentVel = EnemyHumRP.AssemblyLinearVelocity
-					EnemyHumRP.AssemblyLinearVelocity = Vector3.new(
-						currentVel.X * 0.3,
-						math.min(currentVel.Y, 0) * AIR_SLOW_FACTOR, -- só freia queda, não sobe
-						currentVel.Z * 0.3
-					)
+					EnemyHumRP.AssemblyLinearVelocity =
+						Vector3.new(currentVel.X * 0.3, math.min(currentVel.Y, 0) * AIR_SLOW_FACTOR, currentVel.Z * 0.3)
 
-					-- BodyVelocity temporário para segurar o inimigo no ar enquanto a corrente viaja
 					local holdBV = Instance.new("BodyVelocity")
 					holdBV.Name = "TetherHold"
 					holdBV.MaxForce = Vector3.new(100000, 100000, 100000)
@@ -330,7 +329,6 @@ return {
 					game:GetService("Debris"):AddItem(holdBV, CHAIN_TRAVEL_TIME + 0.05)
 				end
 
-				-- ── CANCELAR KNOCKBACK ANTES (inclui PerfectKnockback com animação freezada) ──
 				cancelAllKnockbackStates(closestEnemy)
 
 				VictimStun = StunHandler:Stun(closestEnemy, nil, true, 0, 0, true)
@@ -343,16 +341,12 @@ return {
 
 				startRotation()
 
-				-- ── VFX DAS CORRENTES: notifica o client para animar as correntes "viajando" ──
-				-- O client receberá travelTime para interpolar a corrente do braço do caster até o victim.
-				-- Após travelTime o client "trava" a corrente na posição final.
 				ReplicateSet:FireAllClients("TethersVFX_Start", {
 					casterChar = Character,
 					victimChar = closestEnemy,
-					travelTime = CHAIN_TRAVEL_TIME, -- novo campo: cliente usa para fazer tween
+					travelTime = CHAIN_TRAVEL_TIME,
 				})
 
-				-- Espera a corrente "viajar" visualmente antes de iniciar o pull físico
 				task.wait(CHAIN_TRAVEL_TIME)
 
 				if pullDone then
@@ -549,7 +543,7 @@ return {
 						if not Hum or not Hrp then
 							return
 						end
-						if Hum.Health <= 0 or EnemyCharacter:HasTag("Ragdolled") then
+						if Hum.Health <= 0 then
 							return
 						end
 						if iFramesService:HasiFrame(EnemyCharacter, Tool.Name) then
@@ -558,7 +552,6 @@ return {
 
 						HitList[EnemyCharacter] = true
 
-						-- Cancela PerfectKnockback de qualquer inimigo atingido pela hitbox AoE
 						cancelAllKnockbackStates(EnemyCharacter)
 
 						local HitInfo = DamageHandler:TakeDamage(
@@ -586,18 +579,20 @@ return {
 						pushDir = Vector3.new(pushDir.X, 0, pushDir.Z)
 						pushDir = pushDir.Magnitude > 0 and pushDir.Unit or HumRP.CFrame.LookVector
 
-						RagdollHandler.ragdoll(Hum, 2, nil, nil, nil, nil, true)
+						local lookCF = CFrame.lookAt(Hrp.Position, Hrp.Position + pushDir)
 
-						task.defer(function()
-							if not EnemyCharacter or not EnemyCharacter.Parent then
-								return
-							end
-							BodymoverService:Knockback(EnemyCharacter, {
-								KnockbackType = "Velocity",
-								MaxForce = Vector3.new(1, 1, 1) * 100000,
-								Velocity = pushDir * KICK_HORIZONTAL_FORCE + KICK_VELOCITY,
-							})
-						end)
+						PerfectKnockback:KnockBack(nil, EnemyCharacter, {
+							LookVector = pushDir,
+							LookForce = KICK_HORIZONTAL_FORCE,
+							LookFinalForce = KICK_HORIZONTAL_FORCE,
+							LookAt = lookCF,
+							UpVelocity = KICK_VELOCITY,
+							UpVelocityTime = 0.15,
+							GroundStunTime = 1.0,
+							FallingDetectDelay = 0.4,
+							Dot = 1,
+							DontFreeze = false,
+						}, Character)
 
 						applyInferno(EnemyCharacter)
 					end

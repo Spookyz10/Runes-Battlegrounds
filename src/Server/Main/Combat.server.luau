@@ -17,6 +17,7 @@ local AnimationService = require(SvModules.AnimationService)
 local NewKnockback = require(SvModules.BodymoverService)
 local iFramesService = require(SvModules.iFramesService)
 local SoundsModule = require(SvModules.SoundsModule)
+local PerfectKnockback = require(SvModules.PerfectKnockback)
 
 local Assets = SvSt.Assets
 local Animations = Assets.Animations
@@ -211,10 +212,14 @@ local function M1(Player)
 					end
 
 					if CurrentCombo >= MaxCombo then
-						RagdollHandler.ragdoll(EnemyHumanoid, 2, nil, nil, nil, nil, true)
 						if CurrentType == "Downslam" then
+							RagdollHandler.ragdoll(EnemyHumanoid, 2, nil, nil, nil, nil, true)
 							EnemyHumRP.CFrame *= CFrame.Angles(math.pi / 2, 0, 0)
 						elseif CurrentType == "Uppercut" then
+							if EnemyCharacter:HasTag("Ragdolled") then
+								RagdollHandler.cancelRagdoll(EnemyHumanoid, nil, false, nil, false, true, true)
+							end
+
 							local BodyAngularVelocity = Instance.new("BodyAngularVelocity")
 							BodyAngularVelocity.MaxTorque = Vector3.new(50000, 50000, 50000)
 							BodyAngularVelocity.AngularVelocity =
@@ -222,19 +227,47 @@ local function M1(Player)
 							BodyAngularVelocity.Parent = EnemyHumRP
 							Debris:AddItem(BodyAngularVelocity, 0.1)
 
-							NewKnockback:Knockback(EnemyCharacter, {
-								KnockbackType = "Velocity",
-								MaxForce = Vector3.new(0, 1, 0) * 10000,
-								Velocity = Vector3.new(0, 1, 0) * 70,
-							})
+							local lookCF =
+								CFrame.lookAt(EnemyHumRP.Position, EnemyHumRP.Position + HumRP.CFrame.LookVector)
+
+							PerfectKnockback:KnockBack(nil, EnemyCharacter, {
+								LookVector = Vector3.zero,
+								LookForce = 0,
+								LookFinalForce = 0,
+								LookAt = lookCF,
+								UpVelocity = Vector3.new(0, 70, 0),
+								UpVelocityTime = 0,
+								GroundStunTime = 1.0,
+								FallingDetectDelay = 0.5,
+								Dot = 1,
+								DontFreeze = false,
+							}, Character)
+
 							SvSt.Bindables.AirDetector:Fire(EnemyCharacter, nil, true, nil, 6.2)
 						else
-							local FinalKnockback = Vector3.new(30, 0, 30)
-							NewKnockback:Knockback(EnemyCharacter, {
-								KnockbackType = "Velocity",
-								MaxForce = Vector3.new(10000, 10000, 10000),
-								Velocity = HumRP.CFrame.LookVector * FinalKnockback + Vector3.new(0, 20, 0),
-							})
+							if EnemyCharacter:HasTag("Ragdolled") then
+								RagdollHandler.cancelRagdoll(EnemyHumanoid, nil, false, nil, false, true, true)
+							end
+
+							local pushDir = HumRP.CFrame.LookVector
+							local pushFlat = Vector3.new(pushDir.X, 0, pushDir.Z)
+							pushFlat = pushFlat.Magnitude > 0 and pushFlat.Unit or Vector3.new(0, 0, -1)
+
+							local lookCF = CFrame.lookAt(EnemyHumRP.Position, EnemyHumRP.Position + pushFlat)
+
+							PerfectKnockback:KnockBack(nil, EnemyCharacter, {
+								LookVector = pushFlat,
+								LookForce = 30,
+								LookFinalForce = 28,
+								LookAt = lookCF,
+								UpVelocity = Vector3.new(0, 20, 0),
+								UpVelocityTime = 0.15,
+								GroundStunTime = 1.0,
+								FallingDetectDelay = 0.5,
+								Dot = 1,
+								DontFreeze = false,
+							}, Character)
+
 							SvSt.Bindables.AirDetector:Fire(EnemyCharacter, nil, true, nil, 6.2)
 						end
 					else
