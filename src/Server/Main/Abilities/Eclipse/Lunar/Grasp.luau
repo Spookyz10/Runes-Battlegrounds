@@ -1,24 +1,26 @@
+local ServerStorage = game:GetService("ServerStorage")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ServerStorage = game:GetService("ServerStorage")
 
 local ServerModules = ServerStorage.Modules
-local ReplicatedModules = ReplicatedStorage.Shared.Modules
 
 local StunHandler = require(ServerModules.StunHandler)
-local DamageHandler = require(ServerModules.DamageHandler)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local HitboxHandler = require(ServerModules.HitboxHandler)
-local WeldSystem = require(ReplicatedModules.WeldSystem)
+local AnimationService = require(ServerModules.AnimationService)
 
-local GROW_DISTANCE = 30
-local GROW_TIME = 0.55
+local MoveAnims = ServerStorage.Assets.Animations.Moves
+local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
+
+local HAND_TRAVEL_TIME = 1
+local HAND_START_DIST = 3
+local HAND_END_DIST = 20
+local HITBOX_SIZE = Vector3.new(10, 10, 20)
+local PULL_DISTANCE = 3
 local PULL_TIME = 0.35
-local HOLD_TIME = 2.0
-local HITBOX_WIDTH = 8
-local PULL_DAMAGE = 25
+local POST_PULL_STUN_EXTRA = 2
 
 return {
 	Start = function(Player, Tool)
@@ -33,86 +35,16 @@ return {
 			return
 		end
 
-		local lv = HumRP.CFrame.LookVector
-		local lookFlat = Vector3.new(lv.X, 0, lv.Z).Unit
-		local originPos = HumRP.Position
-
 		local casterStun = StunHandler:Stun(Character, nil, true, 0, 0, true)
-		task.wait(0.5)
-
-		local HitboxPart = Instance.new("Part")
-		HitboxPart.Name = "GraspHitbox"
-		HitboxPart.Anchored = true
-		HitboxPart.CanCollide = false
-		HitboxPart.CanTouch = false
-		HitboxPart.Transparency = 1
-		HitboxPart.Size = Vector3.new(HITBOX_WIDTH, HITBOX_WIDTH, 0.05)
-		HitboxPart.CFrame = CFrame.new(originPos, originPos + lookFlat)
-		HitboxPart.Parent = workspace
+		iFramesService:AddAlliFrames(Character)
 
 		local grabbed = {}
-		local hitSet = {}
-
-		local function releaseAll()
-			for _, data in grabbed do
-				local EnemyHumRP = data.character:FindFirstChild("HumanoidRootPart")
-				local hum = data.humanoid
-
-				data.wsys:Stop()
-
-				if EnemyHumRP and hum then
-					EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
-					EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
-
-					hum.PlatformStand = false
-
-					hum:ChangeState(Enum.HumanoidStateType.GettingUp)
-				end
-
-				if data.freezeToken then
-					StunHandler:Unstun(data.character, data.freezeToken)
-				end
-
-				if hum and hum.Health > 0 then
-					DamageHandler:TakeDamage(
-						Character,
-						hum,
-						PULL_DAMAGE,
-						0,
-						nil,
-						false,
-						false,
-						true,
-						true,
-						false,
-						nil,
-						nil
-					)
-				end
-			end
-
-			HitboxPart:Destroy()
-		end
-
-		local function beginHold()
-			StunHandler:Unstun(Character, casterStun)
-
-			task.delay(HOLD_TIME, releaseAll)
-		end
-
-		local function pullBack()
-			local pullTarget = CFrame.new(HumRP.Position, HumRP.Position + lookFlat)
-			local tween = TweenService:Create(
-				HitboxPart,
-				TweenInfo.new(PULL_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-				{ CFrame = pullTarget }
-			)
-			tween.Completed:Once(beginHold)
-			tween:Play()
-		end
+		local hitbox = nil
+		local HitboxPart = nil
+		local travelConn = nil
 
 		local function tryCapture(enemyChar)
-			if hitSet[enemyChar] then
+			if grabbed[enemyChar] then
 				return
 			end
 
@@ -129,8 +61,6 @@ return {
 				return
 			end
 
-			hitSet[enemyChar] = true
-
 			if enemyChar:HasTag("Ragdolled") then
 				RagdollHandler.cancelRagdoll(EnemyHum, nil, false, nil, true, true, false)
 			end
@@ -143,49 +73,175 @@ return {
 			end)
 
 			EnemyHum:ChangeState(Enum.HumanoidStateType.PlatformStanding)
+
 			local freezeToken = StunHandler:Stun(enemyChar, nil, true, 0, 0, true)
 
-			local captureOffset = HitboxPart.CFrame:ToObjectSpace(EnemyHumRP.CFrame)
-			local wsys = WeldSystem.new(HitboxPart, EnemyHumRP, captureOffset, -1)
-			wsys:Start(0.1, nil)
-
-			table.insert(grabbed, {
-				character = enemyChar,
-				wsys = wsys,
+			grabbed[enemyChar] = {
 				humanoid = EnemyHum,
 				freezeToken = freezeToken,
-			})
+			}
 		end
 
-		local hitbox = HitboxHandler.new()
-		hitbox.Instance = HitboxPart
-		hitbox.Size = Vector3.new(HITBOX_WIDTH, HITBOX_WIDTH, 0.05)
-		hitbox.Ignore = { Character }
-		hitbox.ResetCharactersList = true
-		hitbox.onTouch = tryCapture
-
-		local elapsed = 0
-		local growConn
-
-		growConn = RunService.Heartbeat:Connect(function(dt)
-			elapsed += dt
-			local alpha = math.clamp(elapsed / GROW_TIME, 0, 1)
-			local currentLen = GROW_DISTANCE * alpha
-
-			local centerPos = originPos + lookFlat * (currentLen / 2)
-			local newSize = Vector3.new(HITBOX_WIDTH, HITBOX_WIDTH, math.max(currentLen, 0.05))
-
-			HitboxPart.Size = newSize
-			HitboxPart.CFrame = CFrame.new(centerPos, centerPos + lookFlat)
-			hitbox.Size = newSize
-
-			if alpha >= 1 then
-				growConn:Disconnect()
-				hitbox:Stop()
-				pullBack()
+		local function stopHand()
+			if travelConn then
+				travelConn:Disconnect()
+				travelConn = nil
 			end
+			if hitbox then
+				hitbox:Stop()
+				hitbox = nil
+			end
+			if HitboxPart and HitboxPart.Parent then
+				HitboxPart:Destroy()
+			end
+			HitboxPart = nil
+		end
+
+		local function releaseGrabbed(extraStunTime)
+			for enemyChar, data in grabbed do
+				local EnemyHumRP = enemyChar:FindFirstChild("HumanoidRootPart")
+				local Hum = data.humanoid
+
+				local function finalize()
+					if EnemyHumRP and EnemyHumRP.Parent and Hum then
+						EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
+						EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
+						Hum.PlatformStand = false
+						Hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+					end
+					if data.freezeToken then
+						StunHandler:Unstun(enemyChar, data.freezeToken)
+					end
+				end
+
+				if extraStunTime and extraStunTime > 0 then
+					task.delay(extraStunTime, finalize)
+				else
+					finalize()
+				end
+			end
+
+			grabbed = {}
+		end
+
+		local function doFullCleanup()
+			StunHandler:Unstun(Character, casterStun)
+			iFramesService:RemoveAlliFrames(Character)
+		end
+
+		local UserAnimation = MoveAnims.Eclipse.Lunar.Grasp
+		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
+
+		table.insert(
+			UserEvents,
+			UserTrack:GetMarkerReachedSignal("summon"):Once(function()
+				UserTrack:AdjustSpeed(0)
+
+				local lv = HumRP.CFrame.LookVector
+				local lookFlat = Vector3.new(lv.X, 0, lv.Z).Unit
+				local originPos = HumRP.Position
+
+				ReplicateSet:FireAllClients("hand", {
+					char = Character,
+					position = originPos + Vector3.new(0, -2, 0),
+					direction = lookFlat,
+					duration = HAND_TRAVEL_TIME,
+					startDist = HAND_START_DIST,
+					endDist = HAND_END_DIST,
+				})
+
+				HitboxPart = Instance.new("Part")
+				HitboxPart.Name = "GraspHandHitbox"
+				HitboxPart.Anchored = true
+				HitboxPart.CanCollide = false
+				HitboxPart.CanTouch = false
+				HitboxPart.Transparency = 1
+				HitboxPart.Size = HITBOX_SIZE
+				HitboxPart.CFrame = CFrame.new(
+					originPos + lookFlat * HAND_START_DIST,
+					originPos + lookFlat * HAND_START_DIST + lookFlat
+				)
+				HitboxPart.Parent = workspace
+
+				hitbox = HitboxHandler.new()
+				hitbox.Instance = HitboxPart
+				hitbox.Size = HITBOX_SIZE
+				hitbox.Ignore = { Character }
+				hitbox.ResetCharactersList = true
+				hitbox.onTouch = tryCapture
+
+				local startTime = os.clock()
+				travelConn = RunService.Heartbeat:Connect(function()
+					local t = math.clamp((os.clock() - startTime) / HAND_TRAVEL_TIME, 0, 1)
+					local dist = HAND_START_DIST + (HAND_END_DIST - HAND_START_DIST) * t
+					local center = originPos + lookFlat * dist
+
+					if HitboxPart and HitboxPart.Parent then
+						HitboxPart.CFrame = CFrame.new(center, center + lookFlat)
+					end
+
+					if t >= 1 then
+						stopHand()
+
+						if UserTrack.IsPlaying then
+							UserTrack:AdjustSpeed(1)
+						end
+					end
+				end)
+
+				hitbox:Start()
+			end)
+		)
+
+		table.insert(
+			UserEvents,
+			UserTrack:GetMarkerReachedSignal("pull"):Once(function()
+				stopHand()
+
+				local lv = HumRP.CFrame.LookVector
+				local lookFlat = Vector3.new(lv.X, 0, lv.Z).Unit
+				local targetPos = HumRP.Position + lookFlat * PULL_DISTANCE
+				local targetCFrame = CFrame.new(targetPos, HumRP.Position)
+
+				local pullList = {}
+				for enemyChar in grabbed do
+					table.insert(pullList, enemyChar)
+				end
+
+				for _, enemyChar in pullList do
+					local EnemyHumRP = enemyChar:FindFirstChild("HumanoidRootPart")
+					if EnemyHumRP and EnemyHumRP.Parent then
+						TweenService:Create(
+							EnemyHumRP,
+							TweenInfo.new(PULL_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+							{ CFrame = targetCFrame }
+						):Play()
+					end
+				end
+
+				task.wait(PULL_TIME)
+
+				for _, enemyChar in pullList do
+					local EnemyHumRP = enemyChar:FindFirstChild("HumanoidRootPart")
+					if EnemyHumRP and EnemyHumRP.Parent then
+						EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
+						EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
+					end
+				end
+			end)
+		)
+
+		UserTrack.Stopped:Once(function()
+			for _, v in UserEvents do
+				v:Disconnect()
+			end
+
+			stopHand()
+			releaseGrabbed(POST_PULL_STUN_EXTRA)
+			doFullCleanup()
 		end)
 
-		hitbox:Start()
+		AnimationService:stopAll(Character)
+		AnimationService:playAnimation(Character, UserAnimation)
 	end,
 }
