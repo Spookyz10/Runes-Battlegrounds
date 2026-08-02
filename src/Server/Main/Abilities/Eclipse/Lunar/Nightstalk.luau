@@ -23,6 +23,8 @@ local CIRCLE_OFFSET_FORWARD = 3
 local CIRCLE_OFFSET_DOWN = 3
 local CIRCLE_VFX_DURATION = 3.95
 
+local FREEZE_STARTUP_TIME = 0.3
+
 local SPIKE_STAGES = {
 	{ Distance = 4, HitboxSize = Vector3.new(6, 8, 6), Scale = 1 },
 	{ Distance = 8, HitboxSize = Vector3.new(9, 8, 9), Scale = 1.5 },
@@ -34,7 +36,18 @@ return {
 		local Character = Player.Character
 		local HumRP = Character.HumanoidRootPart
 
+		ReplicateSet:FireClient(Player, "FreezeCharacter", { func = "Start", char = Character })
+		task.wait(FREEZE_STARTUP_TIME)
+
+		if not Character.Parent then
+			ReplicateSet:FireClient(Player, "FreezeCharacter", { func = "End", char = Character })
+			return
+		end
+
 		local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true)
+		pcall(function()
+			HumRP:SetNetworkOwner(Player)
+		end)
 		iFramesService:AddAlliFrames(Character)
 		SkillCollisionLock:Lock(Character)
 
@@ -160,6 +173,8 @@ return {
 			SkillCollisionLock:Unlock(Character)
 			iFramesService:RemoveAlliFrames(Character)
 			StunHandler:Unstun(Character, Stun)
+			print("Nightstalk cleanup")
+			ReplicateSet:FireClient(Player, "FreezeCharacter", { func = "End", char = Character })
 		end
 
 		local UserAnimation = MoveAnims.Eclipse.Lunar:FindFirstChild("Nightstalk")

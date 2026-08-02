@@ -13,7 +13,6 @@ local HitboxHandler = require(SvModules.HitboxHandler)
 local RagdollHandler = require(SvModules.RagdollHandler)
 local AnimationService = require(SvModules.AnimationService)
 local IndicatorService = require(SvModules.IndicatorService)
-local CutsceneManager = require(SvModules.CutsceneManager)
 local DestructionService = require(SvModules.DestructionSystem)
 
 local Remotes = ReplicatedStorage.Remotes
@@ -267,25 +266,15 @@ function module:Activate(Player)
 	ReplicateSet:FireAllClients("HideHotbar")
 	ReplicateSet:FireAllClients("HideAwkbar")
 
-	local CutsceneSession =
-		CutsceneManager:PlayCutscene(Player, "LunarAwaken", { Offset = CFrame.new(0, -3, 0), weld = true })
-	local cutsceneEnded = false
 	local isAirborne = false
 
-	task.spawn(function()
-		CutsceneSession:WaitTilEnd()
-		cutsceneEnded = true
-
-		if Character and Character.Parent and Humanoid.Health > 0 then
-			ReplicateSet:FireClient(Player, "StartLunarAimControl", { Duration = AIM_CONTROL_MAX_DURATION })
-			IndicatorService:Create({
-				id = indicatorId,
-				character = Character,
-				ownerId = Player.UserId,
-				asset = LunarIndicatorAsset,
-			})
-		end
-	end)
+	ReplicateSet:FireClient(Player, "StartLunarAimControl", { Duration = AIM_CONTROL_MAX_DURATION })
+	IndicatorService:Create({
+		id = indicatorId,
+		character = Character,
+		ownerId = Player.UserId,
+		asset = LunarIndicatorAsset,
+	})
 
 	table.insert(
 		AnimEvents,
@@ -331,27 +320,18 @@ function module:Activate(Player)
 			end
 
 			local LaunchOrigin = Torso.Position + Vector3.new(0, 70, 0)
-			local LaunchDirection
 
-			if cutsceneEnded then
-				ReplicateSet:FireClient(Player, "StopLunarAimControl", { RestoreCamera = false })
+			ReplicateSet:FireClient(Player, "StopLunarAimControl", { RestoreCamera = false })
 
-				local launchPosition = IndicatorService:GetPosition(Player, indicatorId)
-				IndicatorService:Destroy(indicatorId)
+			local launchPosition = IndicatorService:GetPosition(Player, indicatorId)
+			IndicatorService:Destroy(indicatorId)
 
-				LaunchDirection = HumRP.CFrame.LookVector
-				if launchPosition then
-					local toTarget = launchPosition - LaunchOrigin
-					if toTarget.Magnitude > 0.01 then
-						LaunchDirection = toTarget.Unit
-					end
+			local LaunchDirection = HumRP.CFrame.LookVector
+			if launchPosition then
+				local toTarget = launchPosition - LaunchOrigin
+				if toTarget.Magnitude > 0.01 then
+					LaunchDirection = toTarget.Unit
 				end
-			else
-				warn("[LunarEclipse] throw antes do fim da cutscene, usando fallback para", Character.Name)
-				CutsceneSession:ForceEnd()
-				cutsceneEnded = true
-				IndicatorService:Destroy(indicatorId)
-				LaunchDirection = Vector3.new(0, -1, 0)
 			end
 
 			task.delay(THROW_DELAY, function()
@@ -406,10 +386,7 @@ function module:Activate(Player)
 			isAirborne = false
 		end
 
-		CutsceneSession:ForceEnd()
-		if not cutsceneEnded then
-			ReplicateSet:FireClient(Player, "StopLunarAimControl", { RestoreCamera = false })
-		end
+		ReplicateSet:FireClient(Player, "StopLunarAimControl", { RestoreCamera = false })
 		IndicatorService:Destroy(indicatorId)
 		ReplicateSet:FireClient(Player, "LunarAimRestoreCamera", {})
 		ReplicateSet:FireAllClients("LunarAwakenEnd", { char = Character })
