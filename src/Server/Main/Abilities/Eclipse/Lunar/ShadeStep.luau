@@ -3,15 +3,12 @@ local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ServerModules = ServerStorage.Modules
-local ReplicatedModules = ReplicatedStorage.Shared.Modules
 
 local StunHandler = require(ServerModules.StunHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local AnimationService = require(ServerModules.AnimationService)
-
-local Freeze = require(ReplicatedModules.Utility.Freeze)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
@@ -83,7 +80,7 @@ return {
 			end
 
 			if lockAnchor then
-				Freeze.Release(Character, lockAnchor, false)
+				--Freeze.Release(Character, lockAnchor, false)
 				lockAnchor = nil
 			end
 
@@ -94,7 +91,6 @@ return {
 		iFramesService:AddAlliFrames(Character)
 
 		activeStun = StunHandler:Stun(Character, nil, true, 0, 0, true)
-		lockAnchor = Freeze.Lock(Character)
 
 		ReplicateSet:FireAllClients("ShadestepBegin", { func = "ShadestepBeginStart", char = Character })
 		ReplicateSet:FireAllClients("ShadestepBeam", { func = "Startup", char = Character })
@@ -135,8 +131,6 @@ return {
 					end
 					table.insert(dashHitList, enemyChar)
 				end)
-
-				Freeze.Release(Character, lockAnchor, true)
 
 				local dashTween = TweenService:Create(
 					HumRP,
@@ -200,7 +194,6 @@ return {
 							end
 
 							Humanoid.WalkSpeed = 0
-							lockAnchor = Freeze.Lock(Character)
 
 							ReplicateSet:FireAllClients("ShadestepBeam", { func = "ChargeEffect", char = Character })
 

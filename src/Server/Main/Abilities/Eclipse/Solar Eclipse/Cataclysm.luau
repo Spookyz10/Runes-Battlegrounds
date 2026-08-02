@@ -4,7 +4,6 @@ local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 
 local ServerModules = ServerStorage.Modules
-local ReplicatedModules = ReplicatedStorage.Shared.Modules
 
 local StunHandler = require(ServerModules.StunHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
@@ -13,8 +12,6 @@ local HitboxHandler = require(ServerModules.HitboxHandler)
 local AnimationService = require(ServerModules.AnimationService)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local BodymoverService = require(ServerModules.BodymoverService)
-
-local Freeze = require(ReplicatedModules.Utility.Freeze)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
@@ -61,14 +58,16 @@ return {
 
 		Humanoid.WalkSpeed = 0
 
-		local CasterLock = nil
+		local CasterLocked = false
 		local FreezeDelayThread = task.delay(WALKSPEED_FREEZE_DELAY, function()
-			CasterLock = Freeze.Lock(Character)
+			CasterLocked = true
+			Character:AddTag("CantRotate")
+			HumRP.Anchored = true
 		end)
 
 		local HitCharacter = nil
 		local VictimStun = nil
-		local VictimLock = nil
+		local VictimLocked = false
 		local Cleaned = false
 
 		local function cleanupCaster()
@@ -82,9 +81,10 @@ return {
 				FreezeDelayThread = nil
 			end
 
-			if CasterLock then
-				Freeze.Release(Character, CasterLock, true)
-				CasterLock = nil
+			if CasterLocked then
+				Character:RemoveTag("CantRotate")
+				HumRP.Anchored = false
+				CasterLocked = false
 			end
 
 			iFramesService:RemoveAlliFrames(Character)
@@ -101,9 +101,13 @@ return {
 				return
 			end
 
-			if VictimLock then
-				Freeze.Release(HitCharacter, VictimLock, true)
-				VictimLock = nil
+			if VictimLocked then
+				HitCharacter:RemoveTag("CantRotate")
+				local VictimHumRP = HitCharacter:FindFirstChild("HumanoidRootPart")
+				if VictimHumRP then
+					VictimHumRP.Anchored = false
+				end
+				VictimLocked = false
 			end
 
 			if VictimStun then
@@ -339,7 +343,9 @@ return {
 			end
 
 			VictimStun = StunHandler:Stun(HitCharacter, nil, true, 0, 0, true)
-			VictimLock = Freeze.Lock(HitCharacter)
+			HitCharacter:AddTag("CantRotate")
+			EnemyHumRP.Anchored = true
+			VictimLocked = true
 
 			EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
 			EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
@@ -358,8 +364,7 @@ return {
 			local targetPosition = HumRP.Position + lookFlat * VICTIM_TWEEN_DISTANCE
 			local targetCFrame = CFrame.new(targetPosition, targetPosition + lookFlat)
 
-			Freeze.Release(HitCharacter, VictimLock, true)
-			VictimLock = nil
+			EnemyHumRP.Anchored = false
 
 			local VictimTween = TweenService:Create(
 				EnemyHumRP,
@@ -374,8 +379,9 @@ return {
 				if state ~= Enum.PlaybackState.Completed then
 					return
 				end
-
-				VictimLock = Freeze.Lock(HitCharacter)
+				if VictimLocked then
+					EnemyHumRP.Anchored = true
+				end
 			end)
 
 			VictimTween:Play()
