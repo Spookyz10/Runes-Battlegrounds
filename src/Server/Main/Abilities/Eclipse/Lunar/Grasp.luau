@@ -14,7 +14,7 @@ local AnimationService = require(ServerModules.AnimationService)
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
-local HAND_TRAVEL_TIME = 1
+local HAND_TRAVEL_TIME = 0.5
 local HAND_START_DIST = 3
 local HAND_END_DIST = 20
 local HITBOX_SIZE = Vector3.new(10, 10, 20)
