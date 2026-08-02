@@ -189,7 +189,9 @@ return {
 						warn("[Nightstalk] erro ao disparar spikes: " .. tostring(err))
 					end
 
-					UserTrack:AdjustSpeed(1)
+					if UserTrack then
+						UserTrack:AdjustSpeed(1)
+					end
 				end)
 			end)
 		)
