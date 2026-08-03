@@ -46,6 +46,8 @@ return {
 		iFramesService:AddAlliFrames(Character)
 		SkillCollisionLock:Lock(Character)
 
+		task.wait(0.2)
+
 		local HitList = {}
 
 		local circleCounter = 0

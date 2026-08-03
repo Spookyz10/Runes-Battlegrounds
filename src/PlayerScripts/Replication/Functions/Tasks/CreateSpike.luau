@@ -5,7 +5,7 @@ local Resources = Constants.Resources
 local ParticlesModule = Constants.ParticlesModule
 
 local EMERGE_TIME = 0.25
-local KEEP_TIME = 3
+local KEEP_TIME = 0.5
 local SINK_TIME = 0.5
 
 local function easeOutBack(t)
