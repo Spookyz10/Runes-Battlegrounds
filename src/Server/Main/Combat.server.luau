@@ -350,7 +350,7 @@ local function Block(Player)
 		return
 	end
 
-	local Actions = { "CantPunch", "CantDash", "CantSideDash", "CantBlock", "Blocking", "CantRun" }
+	local Actions = { "CantPunch", "CantDash", "CantBlock", "Blocking", "CantRun" }
 	local Connections = {}
 	local Stopped
 

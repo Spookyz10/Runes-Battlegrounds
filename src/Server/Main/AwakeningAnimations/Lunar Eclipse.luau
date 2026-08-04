@@ -255,6 +255,8 @@ function module:Activate(Player)
 	local indicatorId = "LunarAwaken_" .. Player.UserId
 	local OriginPosition = HumRP.Position
 
+	Humanoid.WalkSpeed = 0
+
 	AnimationService:stopAll(Character)
 
 	local AnimTrack, AnimEvents = AnimationService:getAnimationTrack(Character, LunarEclipseAnim)
@@ -394,6 +396,8 @@ function module:Activate(Player)
 
 	AnimationService:playAnimation(Character, LunarEclipseAnim)
 	AnimTrack.Stopped:Wait()
+	Humanoid.WalkSpeed = 16
+
 	ReplicateSet:FireAllClients("ShowHotbar")
 	ReplicateSet:FireAllClients("ShowAwkbar")
 end

@@ -1056,7 +1056,12 @@ local function AddStarterPlayer(Player)
 	end
 
 	local leaderstats = Player:FindFirstChild("leaderstats")
-	if leaderstats then
+
+	if not leaderstats then
+		local Folder = Instance.new("Folder")
+		Folder.Parent = Player
+		Folder.Name = "leaderstats"
+	else
 		local Kills = leaderstats:FindFirstChild("Kills") or Instance.new("NumberValue", leaderstats)
 		Kills.Name = "Kills"
 		Kills.Value = Data[Player].Kills()

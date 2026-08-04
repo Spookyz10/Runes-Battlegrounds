@@ -93,6 +93,8 @@ shared.moveget.OnServerInvoke = function(Player, ToolName)
 
 	addToolCDS(Player, Tool)
 
+	shared.repfire:FireAllClients("ActionHightlight", { char = Character, func = "Hit" })
+
 	if shared.Abilities[ToolName] and shared.Abilities[ToolName]["Start"] then
 		coroutine.wrap(function()
 			shared.Abilities[ToolName].Start(Player, Tool)
