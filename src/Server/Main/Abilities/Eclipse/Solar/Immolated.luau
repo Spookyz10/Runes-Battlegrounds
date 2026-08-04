@@ -11,13 +11,14 @@ local AnimationService = require(ServerModules.AnimationService)
 
 local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
-local DURATION = 8
-local DAMAGE_TAKEN_MULT = 0.5
+local DURATION = 10
+local DAMAGE_TAKEN_MULT = 0.8
+local IMMOLATED_WALKSPEED = 10
 local SLOW_RADIUS = 12
 local ENEMY_SLOW_MULT = 0.55
 local SLOW_UPDATE_INTERVAL = 0.3
 
-local function cleanUp(Character, diedConnection, immolateStun, slowLoopConn, slowedEnemies)
+local function cleanUp(Character, diedConnection, immolateStun, slowLoopConn, slowedEnemies, originalWalkSpeed)
 	if diedConnection then
 		diedConnection:Disconnect()
 	end
@@ -41,6 +42,11 @@ local function cleanUp(Character, diedConnection, immolateStun, slowLoopConn, sl
 	Character:SetAttribute("DamageTakenMult", nil)
 	iFramesService:RemoveiFrames(Character, "Strong")
 	ReplicateSet:FireAllClients("Immolate", { Char = Character, Enabled = false })
+
+	local Humanoid = Character:FindFirstChild("Humanoid")
+	if Humanoid and originalWalkSpeed then
+		Humanoid.WalkSpeed = originalWalkSpeed
+	end
 end
 
 return {
@@ -88,9 +94,12 @@ return {
 
 				local immolateStun = StunHandler:Stun(Character, 0.35, true, 0, 0, true)
 
+				local originalWalkSpeed = Humanoid.WalkSpeed
+
 				Character:SetAttribute("Immolated", true)
 				Character:SetAttribute("DamageTakenMult", DAMAGE_TAKEN_MULT)
 				iFramesService:AddStrongiFrames(Character)
+				Humanoid.WalkSpeed = IMMOLATED_WALKSPEED
 				ReplicateSet:FireAllClients("Immolate", { Char = Character, Enabled = true, Duration = DURATION })
 
 				local diedConnection
@@ -147,7 +156,7 @@ return {
 				end)
 
 				diedConnection = Humanoid.Died:Once(function()
-					cleanUp(Character, diedConnection, immolateStun, slowLoopConn, slowedEnemies)
+					cleanUp(Character, diedConnection, immolateStun, slowLoopConn, slowedEnemies, originalWalkSpeed)
 				end)
 
 				task.delay(DURATION, function()
@@ -157,7 +166,7 @@ return {
 					if not Character:GetAttribute("Immolated") then
 						return
 					end
-					cleanUp(Character, diedConnection, immolateStun, slowLoopConn, slowedEnemies)
+					cleanUp(Character, diedConnection, immolateStun, slowLoopConn, slowedEnemies, originalWalkSpeed)
 				end)
 			end)
 		)

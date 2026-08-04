@@ -7,6 +7,7 @@ local ServerModules = ServerStorage.Modules
 
 local StunHandler = require(ServerModules.StunHandler)
 local RagdollHandler = require(ServerModules.RagdollHandler)
+local DamageHandler = require(ServerModules.DamageHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local AnimationService = require(ServerModules.AnimationService)
@@ -21,6 +22,9 @@ local HITBOX_SIZE = Vector3.new(10, 10, 20)
 local PULL_DISTANCE = 3
 local PULL_TIME = 0.35
 local POST_PULL_STUN_EXTRA = 2
+
+local HAND_DAMAGE = 5
+local PULL_DAMAGE = 5
 
 return {
 	Start = function(Player, Tool)
@@ -58,6 +62,25 @@ return {
 				return
 			end
 			if iFramesService:HasiFrame(enemyChar, Tool.Name) then
+				return
+			end
+
+			local HitInfo = DamageHandler:TakeDamage(
+				Character,
+				EnemyHum,
+				HAND_DAMAGE,
+				nil,
+				nil,
+				true,
+				true,
+				true,
+				true,
+				false,
+				nil,
+				nil
+			)
+
+			if HitInfo.Countered or HitInfo.Blocked then
 				return
 			end
 
@@ -226,6 +249,24 @@ return {
 					if EnemyHumRP and EnemyHumRP.Parent then
 						EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
 						EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
+
+						local EnemyHum = enemyChar:FindFirstChild("Humanoid")
+						if EnemyHum and EnemyHum.Health > 0 then
+							DamageHandler:TakeDamage(
+								Character,
+								EnemyHum,
+								PULL_DAMAGE,
+								nil,
+								nil,
+								false,
+								false,
+								true,
+								true,
+								false,
+								nil,
+								nil
+							)
+						end
 					end
 				end
 			end)

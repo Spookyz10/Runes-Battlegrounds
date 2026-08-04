@@ -10,16 +10,23 @@ local DamageHandler = require(ServerModules.DamageHandler)
 local AnimationService = require(ServerModules.AnimationService)
 local iFramesService = require(ServerModules.iFramesService)
 local PerfectKnockback = require(ServerModules.PerfectKnockback)
+local RagdollHandler = require(ServerModules.RagdollHandler)
+local BodymoverService = require(ServerModules.BodymoverService)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
 local HITBOX_SIZE = Vector3.new(30, 30, 30)
 local HITBOX_OFFSET = CFrame.new(0, 0, 0)
-local DAMAGE = 1
+local DAMAGE = 15
 local STUN_TIME = 0.4
 local INFERNO_DURATION = 10
 
+local BLOCKED_KNOCK_FORCE = 35
+local BLOCKED_UP_FORCE = 25
+local BLOCKED_RAGDOLL_TIME = 2.5
+
+-- Inferno agora é só uma marca (usada pelo Undawn), não causa mais dano por segundo.
 local function applyInferno(EnemyCharacter)
 	local existing = EnemyCharacter:GetAttribute("Inferno")
 	EnemyCharacter:SetAttribute("Inferno", true)
@@ -27,29 +34,7 @@ local function applyInferno(EnemyCharacter)
 		return
 	end
 
-	local tickStart = tick()
-	local duration = INFERNO_DURATION
-	local dotInterval = 3
-	local dotDamage = 1
-
-	task.spawn(function()
-		while EnemyCharacter and EnemyCharacter.Parent and EnemyCharacter:GetAttribute("Inferno") do
-			if tick() - tickStart >= duration then
-				break
-			end
-			local Hum = EnemyCharacter:FindFirstChild("Humanoid")
-			if not Hum or Hum.Health <= 0 then
-				break
-			end
-			Hum:TakeDamage(dotDamage)
-			task.wait(dotInterval)
-		end
-		if EnemyCharacter and EnemyCharacter.Parent then
-			EnemyCharacter:SetAttribute("Inferno", nil)
-		end
-	end)
-
-	task.delay(duration, function()
+	task.delay(INFERNO_DURATION, function()
 		if EnemyCharacter and EnemyCharacter.Parent then
 			EnemyCharacter:SetAttribute("Inferno", nil)
 		end
@@ -132,7 +117,7 @@ return {
 								nil
 							)
 
-							if HitInfo.Countered or HitInfo.Blocked then
+							if HitInfo.Countered then
 								return
 							end
 
@@ -146,20 +131,35 @@ return {
 								pushDir = HumRP.CFrame.LookVector
 							end
 
-							local lookCF = CFrame.lookAt(EnemyHumRP.Position, EnemyHumRP.Position + pushDir)
+							if EnemyCharacter:HasTag("Blocking") then
+								RagdollHandler.ragdoll(EnemyHumanoid, BLOCKED_RAGDOLL_TIME)
 
-							PerfectKnockback:KnockBack(nil, EnemyCharacter, {
-								LookVector = pushDir,
-								LookForce = 20,
-								LookFinalForce = 50,
-								LookAt = lookCF,
-								UpVelocity = Vector3.new(0, 45, 0),
-								UpVelocityTime = 0.4,
-								GroundStunTime = 1.0,
-								FallingDetectDelay = 0.5,
-								Dot = 1,
-								DontFreeze = false,
-							}, Character)
+								task.defer(function()
+									if not EnemyCharacter or not EnemyCharacter.Parent then
+										return
+									end
+									BodymoverService:Knockback(EnemyCharacter, {
+										KnockbackType = "Velocity",
+										MaxForce = Vector3.new(100000, 100000, 100000),
+										Velocity = pushDir * BLOCKED_KNOCK_FORCE + Vector3.new(0, BLOCKED_UP_FORCE, 0),
+									})
+								end)
+							else
+								local lookCF = CFrame.lookAt(EnemyHumRP.Position, EnemyHumRP.Position + pushDir)
+
+								PerfectKnockback:KnockBack(nil, EnemyCharacter, {
+									LookVector = pushDir,
+									LookForce = 20,
+									LookFinalForce = 50,
+									LookAt = lookCF,
+									UpVelocity = Vector3.new(0, 45, 0),
+									UpVelocityTime = 0.4,
+									GroundStunTime = 1.0,
+									FallingDetectDelay = 0.5,
+									Dot = 1,
+									DontFreeze = false,
+								}, Character)
+							end
 
 							SvSt.Bindables.AirDetector:Fire(EnemyCharacter, nil, true)
 							applyInferno(EnemyCharacter)

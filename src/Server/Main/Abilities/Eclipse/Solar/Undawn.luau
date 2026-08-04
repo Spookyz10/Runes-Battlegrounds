@@ -15,7 +15,7 @@ local RagdollHandler = require(ServerModules.RagdollHandler)
 local KnockbackService = require(ServerModules.KnockbackModule)
 
 local PILLAR_SEARCH_RADIUS = 60
-local PILLAR_DAMAGE = 1
+local PILLAR_DAMAGE = 10
 local PILLAR_STUN = 1.5
 
 local EMPOWERED_DAMAGE = 22
@@ -217,6 +217,12 @@ return {
 						if not EnemyCharacter:GetAttribute("Inferno") then
 							return
 						end
+
+						if EnemyCharacter:HasTag("Blocking") then
+							EnemyCharacter:SetAttribute("Inferno", nil)
+							return
+						end
+
 						if iFramesService:HasiFrame(EnemyCharacter, Tool.Name) then
 							return
 						end

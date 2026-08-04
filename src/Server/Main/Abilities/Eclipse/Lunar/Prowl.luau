@@ -17,8 +17,8 @@ local DestructionService = require(ServerModules.DestructionSystem)
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 local ReplicateSet = RemotesContainer.Replicate.Set
 
-local HIT_DAMAGE = { 8, 10 }
-local PUNCH_DAMAGE = 1
+local HIT_DAMAGE = { 3, 3 }
+local PUNCH_DAMAGE = 5
 local PUNCH_DESTRUCTION_FORCE = 35
 local PUNCH_DESTRUCTION_MAX_TRACK_TIME = 4
 
@@ -27,6 +27,9 @@ local HIT_OFFSET = CFrame.new(0, 0, -4.5)
 
 local PUNCH_SIZE = Vector3.new(9, 9, 9)
 local PUNCH_OFFSET = CFrame.new(0, 0, -4)
+
+local BLOCK_SLOW_SPEED = 0.5
+local BLOCK_SLOW_TIME = 1
 
 return {
 	Start = function(Player, Tool)
@@ -78,7 +81,7 @@ return {
 							local HitInfo = DamageHandler:TakeDamage(
 								Character,
 								EnemyHumanoid,
-								HIT_DAMAGE[i] or 8,
+								HIT_DAMAGE[i] or 3,
 								nil,
 								nil,
 								true,
@@ -90,7 +93,19 @@ return {
 								nil
 							)
 
-							if HitInfo.Countered or HitInfo.Blocked then
+							if HitInfo.Countered then
+								return
+							end
+
+							if HitInfo.Blocked then
+								if UserTrack then
+									UserTrack:AdjustSpeed(BLOCK_SLOW_SPEED)
+									task.delay(BLOCK_SLOW_TIME, function()
+										if UserTrack and UserTrack.IsPlaying then
+											UserTrack:AdjustSpeed(1)
+										end
+									end)
+								end
 								return
 							end
 

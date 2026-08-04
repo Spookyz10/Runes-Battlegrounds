@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
 
 local RPModules = RS.Shared.Modules
 local SvModules = script.Parent
@@ -13,6 +14,8 @@ local AnimationService = require(SvModules.AnimationService)
 local AntiTeamingHandler = require(SvModules.AntiTeamingHandler)
 
 local CheckBehind = Utility("CheckBehind")
+
+local BlockAnims = ServerStorage.Assets.Animations.BlockAnims
 
 local module = {}
 
@@ -43,6 +46,18 @@ local function AddDealtDamage(Damaged, Damager, Damage)
 			end
 		end
 	end)
+end
+
+local function playRandomBlockAnim(Damaged)
+	local anims = BlockAnims:GetChildren()
+	if #anims == 0 then
+		return
+	end
+
+	local randomAnim = anims[math.random(1, #anims)]
+	if randomAnim:IsA("Animation") then
+		AnimationService:playAnimation(Damaged, randomAnim)
+	end
 end
 
 local Remotes = RS.Remotes
@@ -91,12 +106,17 @@ function module:TakeDamage(
 
 	local WasDead = Hum.Health <= 0 or Hum:GetState() == Enum.HumanoidStateType.Dead
 
+	if Blockable ~= true and Damaged:HasTag("Blocking") then
+		Damaged:SetAttribute("doBlock", false)
+	end
+
 	if
 		Blockable == true
 		and Damaged:HasTag("Blocking")
 		and CheckBehind(Damager.HumanoidRootPart, Damaged.HumanoidRootPart) == false
 	then
 		returnValue.Blocked = true
+		playRandomBlockAnim(Damaged)
 	else
 		if Damaged:HasTag("Countering") and Counterable == true then
 			returnValue.Countered = true

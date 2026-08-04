@@ -13,23 +13,22 @@ local AnimationService = require(ServerModules.AnimationService)
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
+-- NOTA: essa skill agora usa UMA animação só, com os markers "start", "dash" e "fire".
+-- Ajustei o path pra MoveAnims.Eclipse.Lunar.Shadestep — troca o nome/caminho aqui se
+-- a animação nova ficar em outro lugar quando você remontar as animações.
+local UserAnimation = MoveAnims.Eclipse.Lunar.Shadestep
+
 local DASH_RANGE = 45
 local DASH_HIT_SIZE = Vector3.new(10, 10, DASH_RANGE)
-local DASH_DAMAGE = 18
+local DASH_DAMAGE = 5
 local DASH_STUN = 1.8
 local DASH_TWEEN_TIME = 0.12
 local DASH_WALL_OFFSET = 3
-
-local PRE_DASH_CHARGE_DELAY = 0.2
-local PRE_DASH_CHARGE_LOCK_TIME = 0.3
-
-local POST_CHARGE_FREE_TIME = 0.5
-
-local POST_BEAM_LOCK_TIME = 1
+local DASH_BLOCK_STUN_TIME = 2
 
 local BEAM_RANGE = 70
 local BEAM_HIT_SIZE = Vector3.new(10, 10, BEAM_RANGE)
-local BEAM_DAMAGE = 30
+local BEAM_DAMAGE = 5
 local BEAM_STUN = 1.5
 
 local WallRayParams = RaycastParams.new()
@@ -65,7 +64,6 @@ return {
 
 		local cleanupDone = false
 		local activeStun = nil
-		local lockAnchor = nil
 
 		local function doFullCleanup()
 			if cleanupDone then
@@ -79,32 +77,29 @@ return {
 				activeStun = nil
 			end
 
-			if lockAnchor then
-				--Freeze.Release(Character, lockAnchor, false)
-				lockAnchor = nil
-			end
-
 			Character:RemoveTag("CantRotate")
 			iFramesService:RemoveAlliFrames(Character)
 		end
 
 		iFramesService:AddAlliFrames(Character)
-
 		activeStun = StunHandler:Stun(Character, nil, true, 0, 0, true)
+		Character:AddTag("CantRotate")
 
-		ReplicateSet:FireAllClients("ShadestepBegin", { func = "ShadestepBeginStart", char = Character })
-		ReplicateSet:FireAllClients("ShadestepBeam", { func = "Startup", char = Character })
-
-		local UserAnimation = MoveAnims.Eclipse.Lunar.ShadestepBegin
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
 
-		local hitReached = false
+		local dashBlocked = false
 
 		table.insert(
 			UserEvents,
-			UserTrack:GetMarkerReachedSignal("hit"):Once(function()
-				hitReached = true
+			UserTrack:GetMarkerReachedSignal("start"):Once(function()
+				ReplicateSet:FireAllClients("ShadestepBegin", { func = "ShadestepBeginStart", char = Character })
+				ReplicateSet:FireAllClients("ShadestepBeam", { func = "Startup", char = Character })
+			end)
+		)
 
+		table.insert(
+			UserEvents,
+			UserTrack:GetMarkerReachedSignal("dash"):Once(function()
 				local lv = HumRP.CFrame.LookVector
 				local lookFlat = Vector3.new(lv.X, 0, lv.Z).Unit
 				local originPos = HumRP.Position
@@ -117,6 +112,7 @@ return {
 				local dashHitSize = Vector3.new(DASH_HIT_SIZE.X, DASH_HIT_SIZE.Y, math.max(safeRange, 1))
 				local dashCF = CFrame.new(dashCenter, dashCenter + lookFlat)
 				local dashHitList = {}
+				local blockedByAny = false
 
 				HitboxHandler:SimpleOnce(dashCF, dashHitSize, CFrame.new(), { Character }, nil, nil, function(enemyChar)
 					if table.find(dashHitList, enemyChar) then
@@ -130,7 +126,27 @@ return {
 						return
 					end
 					table.insert(dashHitList, enemyChar)
+
+					if enemyChar:HasTag("Blocking") then
+						blockedByAny = true
+					end
 				end)
+
+				if blockedByAny then
+					dashBlocked = true
+
+					ReplicateSet:FireAllClients("ShadestepBegin", { func = "ShadestepBeginEnd", char = Character })
+					ReplicateSet:FireAllClients("ShadestepBeam", { func = "DestroyStartup", char = Character })
+
+					if UserTrack then
+						UserTrack:Stop()
+					end
+
+					doFullCleanup()
+					activeStun = StunHandler:Stun(Character, DASH_BLOCK_STUN_TIME, true)
+
+					return
+				end
 
 				local dashTween = TweenService:Create(
 					HumRP,
@@ -139,9 +155,6 @@ return {
 				)
 				dashTween:Play()
 				dashTween.Completed:Wait()
-
-				lockAnchor = nil
-				Character:RemoveTag("CantRotate")
 
 				ReplicateSet:FireAllClients("ShadestepBegin", { func = "ShadestepBeginEnd", char = Character })
 
@@ -154,7 +167,7 @@ return {
 							DASH_DAMAGE,
 							DASH_STUN,
 							nil,
-							false,
+							true,
 							false,
 							true,
 							true,
@@ -165,118 +178,77 @@ return {
 					end
 				end
 
-				ReplicateSet:FireAllClients("ShadestepBeam", { func = "DestroyStartup", char = Character })
-
 				Humanoid.WalkSpeed = 16
+			end)
+		)
 
-				task.spawn(function()
-					if not Character.Parent then
-						doFullCleanup()
-						return
+		table.insert(
+			UserEvents,
+			UserTrack:GetMarkerReachedSignal("fire"):Once(function()
+				if dashBlocked then
+					return
+				end
+
+				-- personagem gira 180 na animação mas a HumanoidRootPart não muda de
+				-- direção, então o beam sai pro lado contrário do LookVector (pras costas
+				-- de onde o personagem tava olhando antes do giro)
+				local lv = HumRP.CFrame.LookVector
+				local lookFlat = Vector3.new(-lv.X, 0, -lv.Z).Unit
+				local originPos = HumRP.Position
+
+				local beamCenter = originPos + lookFlat * (BEAM_RANGE / 2)
+				local beamCF = CFrame.new(beamCenter, beamCenter + lookFlat)
+
+				local beamHitList = {}
+				HitboxHandler:SimpleOnce(
+					beamCF,
+					BEAM_HIT_SIZE,
+					CFrame.new(),
+					{ Character },
+					nil,
+					nil,
+					function(enemyChar)
+						if table.find(beamHitList, enemyChar) then
+							return
+						end
+						local EnemyHum = enemyChar:FindFirstChild("Humanoid")
+						if not EnemyHum or EnemyHum.Health <= 0 then
+							return
+						end
+						if iFramesService:HasiFrame(enemyChar, Tool.Name) then
+							return
+						end
+						table.insert(beamHitList, enemyChar)
 					end
+				)
 
-					local BeamAnimation = MoveAnims.Eclipse.Lunar.ShadestepBeam
-					local BeamTrack, BeamEvents = AnimationService:getAnimationTrack(Character, BeamAnimation)
+				ReplicateSet:FireAllClients("ShadestepBeam", {
+					func = "FireBeam",
+					char = Character,
+					direction = lookFlat,
+				})
 
-					local chargeReached = false
+				for _, enemyChar in beamHitList do
+					local EnemyHum = enemyChar:FindFirstChild("Humanoid")
+					if EnemyHum and EnemyHum.Health > 0 then
+						DamageHandler:TakeDamage(
+							Character,
+							EnemyHum,
+							BEAM_DAMAGE,
+							BEAM_STUN,
+							nil,
+							true,
+							false,
+							true,
+							true,
+							false,
+							nil,
+							nil
+						)
+					end
+				end
 
-					table.insert(
-						BeamEvents,
-						BeamTrack:GetMarkerReachedSignal("charge"):Once(function()
-							chargeReached = true
-							BeamTrack:AdjustSpeed(0)
-
-							task.wait(POST_CHARGE_FREE_TIME)
-
-							if not Character.Parent then
-								doFullCleanup()
-								return
-							end
-
-							Humanoid.WalkSpeed = 0
-
-							ReplicateSet:FireAllClients("ShadestepBeam", { func = "ChargeEffect", char = Character })
-
-							if not Character.Parent then
-								doFullCleanup()
-								return
-							end
-
-							task.wait(0.4)
-
-							BeamTrack:AdjustSpeed(1)
-
-							local lv2 = HumRP.CFrame.LookVector
-							local lookFlat2 = Vector3.new(lv2.X, 0, lv2.Z).Unit
-							local originPos2 = HumRP.Position
-
-							local beamCenter = originPos2 + lookFlat2 * (BEAM_RANGE / 2)
-							local beamCF = CFrame.new(beamCenter, beamCenter + lookFlat2)
-
-							local beamHitList = {}
-							HitboxHandler:SimpleOnce(
-								beamCF,
-								BEAM_HIT_SIZE,
-								CFrame.new(),
-								{ Character },
-								nil,
-								nil,
-								function(enemyChar)
-									if table.find(beamHitList, enemyChar) then
-										return
-									end
-									local EnemyHum = enemyChar:FindFirstChild("Humanoid")
-									if not EnemyHum or EnemyHum.Health <= 0 then
-										return
-									end
-									if iFramesService:HasiFrame(enemyChar, Tool.Name) then
-										return
-									end
-									table.insert(beamHitList, enemyChar)
-								end
-							)
-
-							ReplicateSet:FireAllClients("ShadestepBeam", { func = "FireBeam", char = Character })
-
-							for _, enemyChar in beamHitList do
-								local EnemyHum = enemyChar:FindFirstChild("Humanoid")
-								if EnemyHum and EnemyHum.Health > 0 then
-									DamageHandler:TakeDamage(
-										Character,
-										EnemyHum,
-										BEAM_DAMAGE,
-										BEAM_STUN,
-										nil,
-										false,
-										false,
-										true,
-										true,
-										false,
-										nil,
-										nil
-									)
-								end
-							end
-
-							task.wait(POST_BEAM_LOCK_TIME)
-
-							doFullCleanup()
-						end)
-					)
-
-					BeamTrack.Stopped:Once(function()
-						for _, v in BeamEvents do
-							v:Disconnect()
-						end
-						if not chargeReached then
-							doFullCleanup()
-						end
-					end)
-
-					AnimationService:stopAll(Character)
-					AnimationService:playAnimation(Character, BeamAnimation)
-					Humanoid.WalkSpeed = 0
-				end)
+				doFullCleanup()
 			end)
 		)
 
@@ -284,30 +256,10 @@ return {
 			for _, v in UserEvents do
 				v:Disconnect()
 			end
-			if not hitReached then
-				doFullCleanup()
-			end
+			doFullCleanup()
 		end)
 
 		AnimationService:stopAll(Character)
 		AnimationService:playAnimation(Character, UserAnimation)
-
-		task.spawn(function()
-			task.wait(PRE_DASH_CHARGE_DELAY)
-
-			if hitReached or not Character.Parent or not UserTrack.IsPlaying then
-				return
-			end
-
-			UserTrack:AdjustSpeed(0)
-
-			task.wait(PRE_DASH_CHARGE_LOCK_TIME)
-
-			if hitReached or not Character.Parent or not UserTrack.IsPlaying then
-				return
-			end
-
-			UserTrack:AdjustSpeed(1)
-		end)
 	end,
 }

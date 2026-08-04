@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local ServerModules = ServerStorage.Modules
 
 local StunHandler = require(ServerModules.StunHandler)
+local DamageHandler = require(ServerModules.DamageHandler)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local AnimationService = require(ServerModules.AnimationService)
 local iFramesService = require(ServerModules.iFramesService)
@@ -18,6 +19,7 @@ local STAGE_DELAY = 0.2
 local RAGDOLL_TIME = 4
 local UP_FORCE = 90
 local UP_VELOCITY_TIME = 0.15
+local DAMAGE = 10
 
 local CIRCLE_OFFSET_FORWARD = 3
 local CIRCLE_OFFSET_DOWN = 3
@@ -94,7 +96,31 @@ return {
 		end
 
 		local function applyHit(EnemyCharacter)
+			local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
+			if not EnemyHumanoid or EnemyHumanoid.Health <= 0 then
+				return
+			end
+
 			table.insert(HitList, EnemyCharacter)
+
+			local HitInfo = DamageHandler:TakeDamage(
+				Character,
+				EnemyHumanoid,
+				DAMAGE,
+				nil,
+				nil,
+				false,
+				false,
+				true,
+				true,
+				false,
+				nil,
+				nil
+			)
+
+			if HitInfo.Countered then
+				return
+			end
 
 			local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
 			local KnockLookVector = EnemyHumRP and (EnemyHumRP.Position - HumRP.Position) or getLookFlat()
