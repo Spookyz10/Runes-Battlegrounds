@@ -321,6 +321,8 @@ local function M1(Player)
 	AnimationService:stopAnimation(Character, PreviousAnimation)
 	AnimationService:playAnimation(Character, PunchAnim)
 	AnimationService:adjustSpeed(Character, PunchAnim, 1.5)
+
+	ReplicateSet:FireAllClients("ActionHightlight", { char = Character, func = "M1" })
 end
 
 local function Block(Player)
@@ -376,6 +378,8 @@ local function Block(Player)
 		end
 
 		SoundsModule:PlaySound(CombatSounds.Blocking.Stop, HumRP)
+
+		ReplicateSet:FireAllClients("ActionHightlight", { char = Character, func = "BlockEnd" })
 	end
 
 	local BlockAnimTrack = AnimationService:getAnimationTrack(Character, Anim)
@@ -399,6 +403,8 @@ local function Block(Player)
 	for _, Action in ipairs(Actions) do
 		Character:AddTag(Action)
 	end
+
+	ReplicateSet:FireAllClients("ActionHightlight", { char = Character, func = "BlockStart" })
 
 	local Perfect = true
 	local PC

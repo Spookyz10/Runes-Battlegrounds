@@ -95,7 +95,7 @@ local function hold(Character)
 	local tween = TweenService:Create(
 		Highlight,
 		TweenInfo.new(HOLD_IN_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-		{ FillTransparency = 0, OutlineTransparency = 0 }
+		{ FillTransparency = 0.5, OutlineTransparency = 0.5 }
 	)
 
 	data.Tween = tween

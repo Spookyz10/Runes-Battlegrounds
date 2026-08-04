@@ -148,12 +148,16 @@ function module:TakeDamage(
 					AddDealtDamage(Damaged, Damager, Damage)
 
 					AntiTeamingHandler:OnDamageReceived(Damaged, Damager, FinisherRequirement or Damage)
+
+					ReplicateSet:FireAllClients("ActionHightlight", { char = Damaged, func = "Hit" })
 				end
 			else
 				Hum:TakeDamage(Damage)
 				AddDealtDamage(Damaged, Damager, Damage)
 
 				AntiTeamingHandler:OnDamageReceived(Damaged, Damager, Damage)
+
+				ReplicateSet:FireAllClients("ActionHightlight", { char = Damaged, func = "Hit" })
 
 				if Type == "M1" then
 					ReplicateSet:FireAllClients("RemoveAllBodyMovers", Damaged)

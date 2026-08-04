@@ -414,35 +414,7 @@ for _, slot in HotbarFrame:GetChildren() do
 		local base = getBase(slot)
 		if base then
 			base.Activated:Connect(function()
-				local char = getCharacter()
-
-				if Player.Configuration["Auto Use"].Value == true then
-					Equip(base)
-				else
-					if base.SelectionObjectClipper.Visible == true then
-						base.SelectionObjectClipper.Visible = false
-						if char then
-							char:RemoveTag("Move Selected")
-						end
-					else
-						for _, otherSlot in HotbarFrame:GetChildren() do
-							if otherSlot:IsA("ImageLabel") then
-								local otherBase = getBase(otherSlot)
-								if otherBase and otherBase ~= base and otherBase.SelectionObjectClipper.Visible then
-									otherBase.SelectionObjectClipper.Visible = false
-									if char then
-										char:RemoveTag("Move Selected")
-									end
-								end
-							end
-						end
-
-						base.SelectionObjectClipper.Visible = true
-						if char then
-							char:AddTag("Move Selected")
-						end
-					end
-				end
+				Equip(base)
 			end)
 		end
 	end

@@ -405,6 +405,7 @@ local ComunicatorFunctions = {
 					StunHandler:Stun(Character, 1.017, true, 0, 0, true)
 
 					ReplicateSet:FireAllClients("DashDebris", { func = "Start", char = Character })
+					ReplicateSet:FireAllClients("ActionHightlight", { char = Character, func = "Dash" })
 					task.delay(1.017, function()
 						ReplicateSet:FireAllClients("DashDebris", { func = "Stop", char = Character })
 					end)
@@ -773,6 +774,7 @@ local ComunicatorFunctions = {
 
 					Character:SetAttribute("Dashing", true)
 					ReplicateSet:FireAllClients("DashDebris", { func = "Start", char = Character })
+					ReplicateSet:FireAllClients("ActionHightlight", { char = Character, func = "Dash" })
 
 					ReplicateSet:FireAllClients("DashMiss", { PrimaryPart = HumRP })
 
@@ -854,6 +856,8 @@ local ComunicatorFunctions = {
 				task.delay(0.6, function()
 					Character:RemoveTag("CantDash")
 				end)
+
+				ReplicateSet:FireAllClients("ActionHightlight", { char = Character, func = "Dash" })
 			end
 		end
 	end,
