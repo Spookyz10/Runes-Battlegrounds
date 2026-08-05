@@ -14,6 +14,7 @@ local AnimationService = require(SvModules.AnimationService)
 local StunHandler = require(SvModules.StunHandler)
 local DestructionSystem = require(SvModules.DestructionSystem)
 local SceneObjectReservation = require(SvModules.SceneObjectReservation)
+local SFX = require(SvModules.SFXModule)
 
 local Remotes = ReplicatedStorage.Remotes
 local ReplicateSet = Remotes.Replicate.Set
@@ -222,6 +223,8 @@ local function applyGravityFieldCompensationDamage(data)
 	end
 
 	ReplicateSet:FireAllClients("LunarImpact", { position = position })
+	SFX:Play("EclipseImpact", position)
+	SFX:Play("Moonfall3", position)
 
 	if Player then
 		ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 10, Last = 0.8 })
@@ -271,6 +274,9 @@ end
 local function impactIsland(data, impactPosition)
 	local Character = data.Character
 	local Player = data.Player
+
+	SFX:Play("Moonfall3", impactPosition)
+	SFX:Play("EclipseImpact", impactPosition)
 
 	ReplicateSet:FireAllClients("Ground Crater", {
 		Seed = math.random(1, 2147483647),
@@ -543,6 +549,8 @@ return {
 		Humanoid.WalkSpeed = 0
 		iFramesService:RemoveAlliFrames(Character)
 
+		SFX:Play("Moonfall1", HumRP)
+
 		local removingConn
 		local diedConn
 
@@ -579,7 +587,15 @@ return {
 				if data.Cancelled or not Character.Parent or Humanoid.Health <= 0 then
 					return
 				end
-				ReplicateSet:FireAllClients("LunarImpact", { position = ActiveState[Character].GravityPos })
+
+				local gravPos = ActiveState[Character] and ActiveState[Character].GravityPos
+				if gravPos then
+					ReplicateSet:FireAllClients("LunarImpact", { position = gravPos })
+					SFX:Play("EclipseImpact", gravPos)
+				end
+
+				SFX:Play("Moonfall2", HumRP)
+
 				task.wait(0.1)
 				HumRP.CFrame = HumRP.CFrame + Vector3.new(JUMP_X_OFFSET, JUMP_HEIGHT, 0)
 				lockAirborne(Humanoid, HumRP)
@@ -675,7 +691,12 @@ return {
 
 					HumRP.CFrame =
 						CFrame.new(Vector3.new(data.GroundReturnPosition.X, groundY + 3, data.GroundReturnPosition.Z))
-					ReplicateSet:FireAllClients("LunarImpact", { position = ActiveState[Character].GravityPos })
+
+					local gravPos = ActiveState[Character] and ActiveState[Character].GravityPos
+					if gravPos then
+						ReplicateSet:FireAllClients("LunarImpact", { position = gravPos })
+						SFX:Play("EclipseImpact", gravPos)
+					end
 				end
 
 				if Humanoid then

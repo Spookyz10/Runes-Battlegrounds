@@ -1,6 +1,5 @@
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 
 local ServerModules = ServerStorage.Modules
 local MoveAnims = ServerStorage.Assets.Animations.Moves
@@ -8,6 +7,7 @@ local MoveAnims = ServerStorage.Assets.Animations.Moves
 local StunHandler = require(ServerModules.StunHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local AnimationService = require(ServerModules.AnimationService)
+local SFX = require(ServerModules.SFXModule)
 
 local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
@@ -16,17 +16,30 @@ local DAMAGE_TAKEN_MULT = 0.8
 local IMMOLATED_WALKSPEED = 10
 local SLOW_RADIUS = 12
 local ENEMY_SLOW_MULT = 0.55
-local SLOW_UPDATE_INTERVAL = 0.3
+local PULSE_INTERVAL = 3
+local PULSE_SLOW_DURATION = 2
 
-local function cleanUp(Character, diedConnection, immolateStun, slowLoopConn, slowedEnemies, originalWalkSpeed)
+local function cleanUp(
+	Character,
+	diedConnection,
+	immolateStun,
+	pulseThread,
+	loopSound,
+	slowedEnemies,
+	originalWalkSpeed
+)
 	if diedConnection then
 		diedConnection:Disconnect()
 	end
 	if immolateStun then
 		StunHandler:Unstun(Character, immolateStun)
 	end
-	if slowLoopConn then
-		slowLoopConn:Disconnect()
+	if pulseThread then
+		task.cancel(pulseThread)
+	end
+	if loopSound and loopSound.Parent then
+		loopSound:Stop()
+		loopSound:Destroy()
 	end
 
 	for EnemyCharacter, baseSpeed in slowedEnemies do
@@ -93,7 +106,6 @@ return {
 				StunHandler:Unstun(Character, CasterStun)
 
 				local immolateStun = StunHandler:Stun(Character, 0.35, true, 0, 0, true)
-
 				local originalWalkSpeed = Humanoid.WalkSpeed
 
 				Character:SetAttribute("Immolated", true)
@@ -102,61 +114,77 @@ return {
 				Humanoid.WalkSpeed = IMMOLATED_WALKSPEED
 				ReplicateSet:FireAllClients("Immolate", { Char = Character, Enabled = true, Duration = DURATION })
 
+				SFX:Play("ImmolatedStart", HumRP)
+				local loopSound = SFX:Play("immolatedLoop", HumRP)
+
 				local diedConnection
 				local slowedEnemies = {}
-				local lastUpdate = 0
 
 				local overlapParams = OverlapParams.new()
 				overlapParams.FilterType = Enum.RaycastFilterType.Include
 				overlapParams.FilterDescendantsInstances = { workspace.Live }
 
-				local slowLoopConn = RunService.Heartbeat:Connect(function()
-					if not Character or not Character.Parent or not HumRP.Parent then
-						return
-					end
-
-					if os.clock() - lastUpdate < SLOW_UPDATE_INTERVAL then
-						return
-					end
-					lastUpdate = os.clock()
-
-					local parts = workspace:GetPartBoundsInRadius(HumRP.Position, SLOW_RADIUS, overlapParams)
-					local currentlyNear = {}
-
-					for _, part in parts do
-						local EnemyCharacter = part.Parent
-						if not EnemyCharacter or EnemyCharacter == Character then
-							continue
+				local pulseThread = task.spawn(function()
+					while Character:GetAttribute("Immolated") do
+						task.wait(PULSE_INTERVAL)
+						if not Character:GetAttribute("Immolated") then
+							break
+						end
+						if not HumRP.Parent then
+							break
 						end
 
-						local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
-						if not EnemyHumanoid or EnemyHumanoid.Health <= 0 then
-							continue
-						end
+						SFX:Play("immolatedPulse", HumRP)
 
-						currentlyNear[EnemyCharacter] = true
+						local parts = workspace:GetPartBoundsInRadius(HumRP.Position, SLOW_RADIUS, overlapParams)
+						local pulsedThisTick = {}
 
-						if not slowedEnemies[EnemyCharacter] then
-							slowedEnemies[EnemyCharacter] = EnemyHumanoid.WalkSpeed
-							EnemyHumanoid.WalkSpeed = slowedEnemies[EnemyCharacter] * ENEMY_SLOW_MULT
-						end
-					end
-
-					for EnemyCharacter, baseSpeed in slowedEnemies do
-						if not currentlyNear[EnemyCharacter] then
-							if EnemyCharacter and EnemyCharacter.Parent then
-								local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
-								if EnemyHumanoid then
-									EnemyHumanoid.WalkSpeed = baseSpeed
-								end
+						for _, part in parts do
+							local EnemyCharacter = part.Parent
+							if not EnemyCharacter or EnemyCharacter == Character then
+								continue
 							end
-							slowedEnemies[EnemyCharacter] = nil
+							if pulsedThisTick[EnemyCharacter] then
+								continue
+							end
+							local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
+							if not EnemyHumanoid or EnemyHumanoid.Health <= 0 then
+								continue
+							end
+
+							pulsedThisTick[EnemyCharacter] = true
+
+							local baseSpeed = EnemyHumanoid.WalkSpeed
+							if not slowedEnemies[EnemyCharacter] then
+								slowedEnemies[EnemyCharacter] = baseSpeed
+								EnemyHumanoid.WalkSpeed = math.max(baseSpeed * ENEMY_SLOW_MULT, 1)
+							end
+
+							task.delay(PULSE_SLOW_DURATION, function()
+								if slowedEnemies[EnemyCharacter] then
+									slowedEnemies[EnemyCharacter] = nil
+									if EnemyCharacter and EnemyCharacter.Parent then
+										local hum = EnemyCharacter:FindFirstChild("Humanoid")
+										if hum then
+											hum.WalkSpeed = baseSpeed
+										end
+									end
+								end
+							end)
 						end
 					end
 				end)
 
 				diedConnection = Humanoid.Died:Once(function()
-					cleanUp(Character, diedConnection, immolateStun, slowLoopConn, slowedEnemies, originalWalkSpeed)
+					cleanUp(
+						Character,
+						diedConnection,
+						immolateStun,
+						pulseThread,
+						loopSound,
+						slowedEnemies,
+						originalWalkSpeed
+					)
 				end)
 
 				task.delay(DURATION, function()
@@ -166,7 +194,15 @@ return {
 					if not Character:GetAttribute("Immolated") then
 						return
 					end
-					cleanUp(Character, diedConnection, immolateStun, slowLoopConn, slowedEnemies, originalWalkSpeed)
+					cleanUp(
+						Character,
+						diedConnection,
+						immolateStun,
+						pulseThread,
+						loopSound,
+						slowedEnemies,
+						originalWalkSpeed
+					)
 				end)
 			end)
 		)
