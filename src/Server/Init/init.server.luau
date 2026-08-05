@@ -1061,21 +1061,21 @@ local function AddStarterPlayer(Player)
 		local Folder = Instance.new("Folder")
 		Folder.Parent = Player
 		Folder.Name = "leaderstats"
-	else
-		local Kills = leaderstats:FindFirstChild("Kills") or Instance.new("NumberValue", leaderstats)
-		Kills.Name = "Kills"
-		Kills.Value = Data[Player].Kills()
-		Data[Player].Kills.Changed(function(kills, oldKills)
-			Kills.Value = kills
-		end)
-
-		local TotalKills = leaderstats:FindFirstChild("Total Kills") or Instance.new("NumberValue", leaderstats)
-		TotalKills.Name = "Total Kills"
-		TotalKills.Value = Data[Player].TotalKills()
-		Data[Player].TotalKills.Changed(function(kills, oldKills)
-			Kills.Value = kills
-		end)
 	end
+
+	local Kills = leaderstats:FindFirstChild("Kills") or Instance.new("NumberValue", leaderstats)
+	Kills.Name = "Kills"
+	Kills.Value = Data[Player].Kills()
+	Data[Player].Kills.Changed(function(kills, oldKills)
+		Kills.Value = kills
+	end)
+
+	local TotalKills = leaderstats:FindFirstChild("Total Kills") or Instance.new("NumberValue", leaderstats)
+	TotalKills.Name = "Total Kills"
+	TotalKills.Value = Data[Player].TotalKills()
+	Data[Player].TotalKills.Changed(function(kills, oldKills)
+		Kills.Value = kills
+	end)
 
 	local Moveset_attr = Player:GetAttribute("Moveset")
 	if not Moveset_attr then

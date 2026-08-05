@@ -1,37 +1,36 @@
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local module = {}
 
-local ALLTIME_STORE_NAME = "Leaderboard_Kills_AllTime_v1"
-local MONTHLY_STORE_PREFIX = "Leaderboard_Kills_v1_"
+local STORE_NAMES = {
+	Kills = "Leaderboard_Kills_AllTime_v1",
+	Donated = "Leaderboard_Donated_AllTime_v1",
+}
+
 local FLUSH_DEBOUNCE = 8
 local CACHE_LIFETIME = 60
 local TOP_COUNT = 10
 
-local function GetMonthKey()
-	return os.date("!%Y_%m")
+local Stores = {}
+for board, name in STORE_NAMES do
+	Stores[board] = DataStoreService:GetOrderedDataStore(name)
 end
 
-local function GetMonthlyStore()
-	return DataStoreService:GetOrderedDataStore(MONTHLY_STORE_PREFIX .. GetMonthKey())
-end
-
-local AllTimeStore = DataStoreService:GetOrderedDataStore(ALLTIME_STORE_NAME)
-
-local PendingKills = {}
-local FlushScheduled = {}
+local Pending = { Kills = {}, Donated = {} }
+local FlushScheduled = { Kills = {}, Donated = {} }
 
 local Cache = {
-	AllTime = { Data = nil, UpdatedAt = 0 },
-	Monthly = { Data = nil, UpdatedAt = 0, MonthKey = GetMonthKey() },
+	Kills = { Data = nil, UpdatedAt = 0 },
+	Donated = { Data = nil, UpdatedAt = 0 },
 }
 
 local function SafeUpdateAsync(store, key, delta)
 	local attempts = 0
 	while attempts < 5 do
 		attempts += 1
-		local ok, err = pcall(function()
+		local ok = pcall(function()
 			store:UpdateAsync(key, function(old)
 				return (old or 0) + delta
 			end)
@@ -44,45 +43,50 @@ local function SafeUpdateAsync(store, key, delta)
 	return false
 end
 
-local function FlushPlayerKey(userId)
-	local delta = PendingKills[userId]
+local function FlushPlayerKey(board, userId)
+	local delta = Pending[board][userId]
 	if not delta or delta <= 0 then
-		FlushScheduled[userId] = nil
+		FlushScheduled[board][userId] = nil
 		return
 	end
-	PendingKills[userId] = 0
-	FlushScheduled[userId] = nil
+	Pending[board][userId] = 0
+	FlushScheduled[board][userId] = nil
 
 	local key = tostring(userId)
 
 	task.spawn(function()
-		SafeUpdateAsync(AllTimeStore, key, delta)
-	end)
-	task.spawn(function()
-		SafeUpdateAsync(GetMonthlyStore(), key, delta)
+		SafeUpdateAsync(Stores[board], key, delta)
 	end)
 end
 
-local function ScheduleFlush(userId)
-	if FlushScheduled[userId] then
+local function ScheduleFlush(board, userId)
+	if FlushScheduled[board][userId] then
 		return
 	end
-	FlushScheduled[userId] = true
+	FlushScheduled[board][userId] = true
 	task.delay(FLUSH_DEBOUNCE, function()
-		FlushPlayerKey(userId)
+		FlushPlayerKey(board, userId)
 	end)
 end
 
-function module:AddKill(player, amount)
+local function AddValue(board, player, amount)
 	if not player or not player:IsA("Player") then
 		return
 	end
 	amount = amount or 1
 
 	local userId = player.UserId
-	PendingKills[userId] = (PendingKills[userId] or 0) + amount
+	Pending[board][userId] = (Pending[board][userId] or 0) + amount
 
-	ScheduleFlush(userId)
+	ScheduleFlush(board, userId)
+end
+
+function module:AddKill(player, amount)
+	AddValue("Kills", player, amount)
+end
+
+function module:AddDonation(player, amount)
+	AddValue("Donated", player, amount)
 end
 
 local function ResolveNames(entries)
@@ -101,7 +105,7 @@ local function ResolveNames(entries)
 		table.insert(result, {
 			UserId = userId,
 			Name = name,
-			Kills = entry.value,
+			Value = entry.value,
 		})
 	end
 	return result
@@ -125,56 +129,59 @@ local function FetchTop(store)
 	return ResolveNames(page)
 end
 
-function module:GetTopAllTime()
+local function GetTop(board)
 	local now = os.clock()
-	if Cache.AllTime.Data and (now - Cache.AllTime.UpdatedAt) < CACHE_LIFETIME then
-		return Cache.AllTime.Data
+	if Cache[board].Data and (now - Cache[board].UpdatedAt) < CACHE_LIFETIME then
+		return Cache[board].Data
 	end
 
-	local top = FetchTop(AllTimeStore)
+	local top = FetchTop(Stores[board])
 	if top then
-		Cache.AllTime.Data = top
-		Cache.AllTime.UpdatedAt = now
+		Cache[board].Data = top
+		Cache[board].UpdatedAt = now
 	end
 
-	return Cache.AllTime.Data or {}
+	return Cache[board].Data or {}
 end
 
-function module:GetTopMonthly()
-	local now = os.clock()
-	local currentMonthKey = GetMonthKey()
-
-	if Cache.Monthly.MonthKey ~= currentMonthKey then
-		Cache.Monthly.Data = nil
-		Cache.Monthly.MonthKey = currentMonthKey
-	end
-
-	if Cache.Monthly.Data and (now - Cache.Monthly.UpdatedAt) < CACHE_LIFETIME then
-		return Cache.Monthly.Data
-	end
-
-	local top = FetchTop(GetMonthlyStore())
-	if top then
-		Cache.Monthly.Data = top
-		Cache.Monthly.UpdatedAt = now
-	end
-
-	return Cache.Monthly.Data or {}
+function module:GetTopKills()
+	return GetTop("Kills")
 end
 
-local function FlushAllPending()
-	for userId in PendingKills do
-		FlushPlayerKey(userId)
+function module:GetTopDonated()
+	return GetTop("Donated")
+end
+
+local function FlushAllPending(board)
+	for userId in Pending[board] do
+		FlushPlayerKey(board, userId)
 	end
 end
 
 Players.PlayerRemoving:Connect(function(player)
-	FlushPlayerKey(player.UserId)
+	FlushPlayerKey("Kills", player.UserId)
+	FlushPlayerKey("Donated", player.UserId)
 end)
 
 game:BindToClose(function()
-	FlushAllPending()
+	FlushAllPending("Kills")
+	FlushAllPending("Donated")
 	task.wait(2)
 end)
+
+local Remotes = ReplicatedStorage:FindFirstChild("Remotes")
+local LeaderboardsRemote = Remotes and Remotes:FindFirstChild("Leaderboards")
+local LeaderboardsGet = LeaderboardsRemote and LeaderboardsRemote:FindFirstChild("Get")
+
+if LeaderboardsGet then
+	LeaderboardsGet.OnServerInvoke = function(Player, Board)
+		if Board == "Kills" then
+			return module:GetTopKills()
+		elseif Board == "Donated" then
+			return module:GetTopDonated()
+		end
+		return {}
+	end
+end
 
 return module
