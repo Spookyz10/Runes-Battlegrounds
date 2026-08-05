@@ -245,6 +245,13 @@ return {
 					end
 				end
 
+				UserTrack:AdjustSpeed(0)
+				task.delay(0.5, function()
+					if UserTrack and UserTrack.IsPlaying then
+						UserTrack:AdjustSpeed(1)
+					end
+				end)
+
 				doFullCleanup()
 			end)
 		)

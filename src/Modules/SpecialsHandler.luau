@@ -2,6 +2,7 @@ local SpecialsHandler = {}
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local InfoModule = require(ReplicatedStorage.Shared.Info)
+local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
 local Cooldowns = {}
 
@@ -44,6 +45,11 @@ SpecialActions["SwapMode"] = function(Player, MovesetHandler, isUlt)
 
 	if isUlt then
 		MovesetHandler:AddAwakeningMoveset(Player, moveset)
+
+		local Character = Player.Character
+		if Character and Character:HasTag("Awakened") then
+			ReplicateSet:FireAllClients("GivePlayerAura", { Char = Character, AuraName = nextMode .. " " .. moveset })
+		end
 	else
 		MovesetHandler:AddBaseMoveset(Player, moveset)
 	end

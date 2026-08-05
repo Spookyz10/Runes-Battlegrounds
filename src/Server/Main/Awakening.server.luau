@@ -60,6 +60,8 @@ local function EndAwakening(Player, Awk0C, AwkTween, DeathConn)
 	Character:SetAttribute("Awakened", nil)
 	Character:SetAttribute("AwakeningAura", false)
 
+	ReplicateSet:FireAllClients("GivePlayerAura", { Char = Character })
+
 	local moveset = Player:GetAttribute("Moveset")
 	if moveset == "Eclipse" then
 		local playerClass = Data[Player]

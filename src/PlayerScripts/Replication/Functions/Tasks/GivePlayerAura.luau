@@ -14,7 +14,15 @@ return function(Params)
 		end
 	end
 
+	if not Params.AuraName then
+		return
+	end
+
 	local Aura = Resources.Auras:FindFirstChild(Params.AuraName)
+	if not Aura then
+		return
+	end
+
 	for _, Effect in Aura:GetChildren() do
 		if R6Parts[Effect.Name] then
 			local Part = Character:FindFirstChild(Effect.Name)
