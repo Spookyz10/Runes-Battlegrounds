@@ -9,6 +9,7 @@ local DamageHandler = require(ServerModules.DamageHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local AnimationService = require(ServerModules.AnimationService)
+local SFX = require(ServerModules.SFXModule)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
@@ -89,6 +90,7 @@ return {
 		table.insert(
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("start"):Once(function()
+				SFX:Play("shadestepCharge", HumRP)
 				ReplicateSet:FireAllClients("ShadestepBegin", { func = "ShadestepBeginStart", char = Character })
 			end)
 		)
@@ -143,6 +145,8 @@ return {
 					return
 				end
 
+				SFX:Play("shadestepTeleport", HumRP)
+
 				local dashTween = TweenService:Create(
 					HumRP,
 					TweenInfo.new(DASH_TWEEN_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
@@ -186,9 +190,6 @@ return {
 					return
 				end
 
-				-- personagem gira 180 na animação mas a HumanoidRootPart não muda de
-				-- direção, então o beam sai pro lado contrário do LookVector (pras costas
-				-- de onde o personagem tava olhando antes do giro)
 				local lv = HumRP.CFrame.LookVector
 				local lookFlat = Vector3.new(-lv.X, 0, -lv.Z).Unit
 				local originPos = HumRP.Position
@@ -218,6 +219,8 @@ return {
 						table.insert(fireballHitList, enemyChar)
 					end
 				)
+
+				SFX:Play("shadestepBeam", HumRP)
 
 				ReplicateSet:FireAllClients("ShadestepFireball", {
 					func = "Launch",

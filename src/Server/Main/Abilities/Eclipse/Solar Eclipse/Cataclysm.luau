@@ -12,6 +12,7 @@ local HitboxHandler = require(ServerModules.HitboxHandler)
 local AnimationService = require(ServerModules.AnimationService)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local BodymoverService = require(ServerModules.BodymoverService)
+local SFX = require(ServerModules.SFXModule)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
@@ -149,6 +150,7 @@ return {
 				UserEvents,
 				UserTrack:GetMarkerReachedSignal("jump"):Connect(function()
 					ReplicateSet:FireAllClients("SolarImpact", { char = Character })
+					SFX:Play("EclipseImpact", HumRP.Position)
 				end)
 			)
 
@@ -166,6 +168,7 @@ return {
 
 					ReplicateSet:FireAllClients("SolarHit", { char = Character })
 					ReplicateSet:FireAllClients("Cataclysm", { char = Character })
+					SFX:Play("EclipseImpact", HumRP.Position)
 
 					DamageHandler:TakeDamage(
 						Character,
@@ -283,6 +286,7 @@ return {
 				UserEvents,
 				UserTrack:GetMarkerReachedSignal("landed"):Once(function()
 					ReplicateSet:FireAllClients("SolarImpact", { char = Character })
+					SFX:Play("EclipseImpact", HumRP.Position)
 				end)
 			)
 
@@ -394,6 +398,13 @@ return {
 			cleanupCaster()
 			return
 		end
+
+		table.insert(
+			WindupEvents,
+			WindupTrack:GetMarkerReachedSignal("startup"):Once(function()
+				SFX:Play("CataclysmStartup", HumRP)
+			end)
+		)
 
 		table.insert(
 			WindupEvents,

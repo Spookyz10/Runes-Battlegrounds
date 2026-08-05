@@ -15,6 +15,7 @@ local iFramesService = require(ServerModules.iFramesService)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local PerfectKnockback = require(ServerModules.PerfectKnockback)
 local WeldSystem = require(ReplicatedModules.WeldSystem)
+local SFX = require(ServerModules.SFXModule)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
@@ -120,6 +121,8 @@ local function doHitEffects(
 
 	DamageHandler:TakeDamage(Character, EnemyHumanoid, DAMAGE, nil, nil, true, true, true, true, true, nil, nil)
 
+	SFX:Play("tethersKick", HumRP)
+
 	EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
 	EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
 
@@ -221,6 +224,8 @@ return {
 			UserTrack:GetMarkerReachedSignal("pull"):Once(function()
 				UserTrack:AdjustSpeed(0)
 
+				SFX:Play("tethersStart", HumRP)
+
 				task.wait(0.2)
 
 				local overlapParams = OverlapParams.new()
@@ -308,6 +313,8 @@ return {
 					travelTime = CHAIN_TRAVEL_TIME,
 				})
 
+				SFX:Play("tethersChains", EnemyHumRP)
+
 				task.wait(CHAIN_TRAVEL_TIME)
 
 				if pullDone then
@@ -378,6 +385,8 @@ return {
 						HumRP.Position,
 						Vector3.new(EnemyHumRP.Position.X, HumRP.Position.Y, EnemyHumRP.Position.Z)
 					)
+
+					SFX:Play("tethersBind", EnemyHumRP)
 
 					Weld = WeldSystem.new(HumRP, EnemyHumRP, WELD_OFFSET, -1)
 					Weld:Start(WELD_TIME, EnemyPlayer, Player)

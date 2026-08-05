@@ -11,6 +11,7 @@ local iFramesService = require(SvModules.iFramesService)
 local RagdollHandler = require(SvModules.RagdollHandler)
 local AnimationService = require(SvModules.AnimationService)
 local DestructionService = require(SvModules.DestructionSystem)
+local SFX = require(SvModules.SFXModule)
 
 local Remotes = ReplicatedStorage.Remotes
 local ReplicateSet = Remotes.Replicate.Set
@@ -141,6 +142,7 @@ local function triggerLandingImpact(Character, Position)
 	local ImpactStun = StunHandler:Stun(Character, 0.4, true, 0, 0, true)
 
 	ReplicateSet:FireAllClients("SolarImpact", { char = Character })
+	SFX:Play("EclipseImpact", Position)
 	triggerJumpCrater(Character, Position)
 
 	task.delay(0.4, function()
@@ -181,6 +183,7 @@ function module:Activate(Player)
 		AnimTrack:GetMarkerReachedSignal("jump"):Connect(function()
 			ReplicateSet:FireAllClients("SolarAwakenStart", { char = Character })
 			ReplicateSet:FireAllClients("SolarImpact", { char = Character })
+			SFX:Play("EclipseImpact", HumRP.Position)
 			triggerJumpCrater(Character, HumRP.Position)
 			levitationId = DestructionService:LevitateArea(HumRP.Position, LEVITATE_RADIUS, Player)
 			fakeDebrisId = DestructionService:SpawnFakeDebris(Character, {
@@ -201,6 +204,7 @@ function module:Activate(Player)
 			if not Character or not Character.Parent or Humanoid.Health <= 0 then
 				return
 			end
+			SFX:Play("Solar Awkening", HumRP)
 			ReplicateSet:FireAllClients("GivePlayerAura", { Char = Character, AuraName = "Solar Eclipse" })
 			triggerExplosion(Character, Character.Torso.Position + Vector3.new(0, 200, 0))
 		end)

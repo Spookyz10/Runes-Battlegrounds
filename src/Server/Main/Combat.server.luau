@@ -17,6 +17,7 @@ local AnimationService = require(SvModules.AnimationService)
 local NewKnockback = require(SvModules.BodymoverService)
 local iFramesService = require(SvModules.iFramesService)
 local SoundsModule = require(SvModules.SoundsModule)
+local SFX = require(SvModules.SFXModule)
 
 local Assets = SvSt.Assets
 local Animations = Assets.Animations
@@ -200,6 +201,8 @@ local function M1(Player)
 					)
 				else
 					Hit = true
+
+					SFX:Play("Hit", EnemyHumRP)
 
 					Character:SetAttribute("LastM1Hit", EnemyCharacter.Name)
 

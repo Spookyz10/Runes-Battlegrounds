@@ -12,6 +12,7 @@ local iFramesService = require(ServerModules.iFramesService)
 local PerfectKnockback = require(ServerModules.PerfectKnockback)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local BodymoverService = require(ServerModules.BodymoverService)
+local SFX = require(ServerModules.SFXModule)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
@@ -26,7 +27,6 @@ local BLOCKED_KNOCK_FORCE = 35
 local BLOCKED_UP_FORCE = 25
 local BLOCKED_RAGDOLL_TIME = 2.5
 
--- Inferno agora é só uma marca (usada pelo Undawn), não causa mais dano por segundo.
 local function applyInferno(EnemyCharacter)
 	local existing = EnemyCharacter:GetAttribute("Inferno")
 	EnemyCharacter:SetAttribute("Inferno", true)
@@ -65,6 +65,7 @@ return {
 			UserTrack:GetMarkerReachedSignal("freeze"):Once(function()
 				UserTrack:AdjustSpeed(0)
 
+				SFX:Play("sunquakeWindup", HumRP)
 				ReplicateSet:FireAllClients("SunquakeVFX", { char = Character })
 
 				task.delay(1, function()
@@ -120,6 +121,8 @@ return {
 							if HitInfo.Countered then
 								return
 							end
+
+							SFX:Play("sunquakeExplosion", EnemyHumRP)
 
 							EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
 

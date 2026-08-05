@@ -26,6 +26,7 @@ local Knockback = require(SvModules.BodymoverService)
 local iFramesService = require(SvModules.iFramesService)
 local CombatUtils = require(SvModules.CombatUtils)
 local EvasiveService = require(SvModules.EvasiveService)
+local SFX = require(SvModules.SFXModule)
 
 local ReplicatedHitboxes = require(SvModules.ReplicatedHitboxes)
 local CheckBehind = require(Shared.Utility.CheckBehind)
@@ -392,6 +393,7 @@ local ComunicatorFunctions = {
 					local Jantior = Trove.new()
 
 					Character:AddTag("DashCD")
+					SFX:Play("Dash", HumRP)
 					task.delay(5, function()
 						Character:RemoveTag("DashCD")
 					end)
@@ -465,6 +467,7 @@ local ComunicatorFunctions = {
 					end)
 
 					ExtraCdsSet:FireClient(Player, "FrontDash", 5)
+					SFX:Play("Dash", HumRP)
 
 					for _, v in HumRP:GetChildren() do
 						if v:IsA("LinearVelocity") or v:IsA("BodyVelocity") then
@@ -846,6 +849,7 @@ local ComunicatorFunctions = {
 				end
 
 				Character:AddTag("SideDashCD")
+				SFX:Play("Dash", HumRP)
 				task.delay(2, function()
 					Character:RemoveTag("SideDashCD")
 				end)
@@ -1058,9 +1062,9 @@ local function AddStarterPlayer(Player)
 	local leaderstats = Player:FindFirstChild("leaderstats")
 
 	if not leaderstats then
-		local Folder = Instance.new("Folder")
-		Folder.Parent = Player
-		Folder.Name = "leaderstats"
+		leaderstats = Instance.new("Folder")
+		leaderstats.Parent = Player
+		leaderstats.Name = "leaderstats"
 	end
 
 	local Kills = leaderstats:FindFirstChild("Kills") or Instance.new("NumberValue", leaderstats)

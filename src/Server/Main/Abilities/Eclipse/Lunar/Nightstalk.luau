@@ -11,6 +11,7 @@ local AnimationService = require(ServerModules.AnimationService)
 local iFramesService = require(ServerModules.iFramesService)
 local PerfectKnockback = require(ServerModules.PerfectKnockback)
 local SkillCollisionLock = require(ServerModules.SkillCollisionLock)
+local SFX = require(ServerModules.SFXModule)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
@@ -47,6 +48,8 @@ return {
 
 		iFramesService:AddAlliFrames(Character)
 		SkillCollisionLock:Lock(Character)
+
+		SFX:Play("nightstalkInit", HumRP)
 
 		task.wait(0.2)
 
@@ -157,6 +160,8 @@ return {
 				Scale = stage.Scale,
 				Position = spikePosition,
 			})
+
+			SFX:Play("spike", spikePosition)
 
 			ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 1.5, Last = 0.2 })
 

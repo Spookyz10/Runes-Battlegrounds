@@ -13,6 +13,7 @@ local AnimationService = require(ServerModules.AnimationService)
 local iFramesService = require(ServerModules.iFramesService)
 local PerfectKnockback = require(ServerModules.PerfectKnockback)
 local DestructionService = require(ServerModules.DestructionSystem)
+local SFX = require(ServerModules.SFXModule)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 local ReplicateSet = RemotesContainer.Replicate.Set
@@ -31,6 +32,8 @@ local PUNCH_OFFSET = CFrame.new(0, 0, -4)
 local BLOCK_SLOW_SPEED = 0.5
 local BLOCK_SLOW_TIME = 1
 
+local HIT_SOUNDS = { "prowlHit1", "prowlHit2", "prowlHit3" }
+
 return {
 	Start = function(Player, Tool)
 		local Character = Player.Character
@@ -41,6 +44,8 @@ return {
 
 		local UserAnimation = MoveAnims.Eclipse.Lunar["Prowl"]
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
+
+		local hitSoundIndex = 1
 
 		for i = 1, 2 do
 			local markerName = "hit" .. i
@@ -78,6 +83,8 @@ return {
 
 							table.insert(localHitList, EnemyCharacter)
 
+							local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
+
 							local HitInfo = DamageHandler:TakeDamage(
 								Character,
 								EnemyHumanoid,
@@ -107,6 +114,15 @@ return {
 									end)
 								end
 								return
+							end
+
+							local soundName = HIT_SOUNDS[hitSoundIndex]
+							if soundName and EnemyHumRP then
+								SFX:Play(soundName, EnemyHumRP)
+							end
+							hitSoundIndex = hitSoundIndex + 1
+							if hitSoundIndex > #HIT_SOUNDS then
+								hitSoundIndex = 1
 							end
 
 							StunHandler:Stun(EnemyCharacter, 1, true, 0, 0, true)
@@ -181,6 +197,8 @@ return {
 						if HitInfo.Countered or HitInfo.Blocked then
 							return
 						end
+
+						SFX:Play("prowlHit3", EnemyHumRP)
 
 						EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
 
