@@ -51,6 +51,7 @@ local template = {
 
 	Kills = 0,
 	TotalKills = 0,
+	Donated = 0,
 
 	OwnedPasses = {} :: { number },
 	OwnedEmotes = {
