@@ -13,9 +13,6 @@ local AnimationService = require(ServerModules.AnimationService)
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
--- NOTA: essa skill agora usa UMA animação só, com os markers "start", "dash" e "fire".
--- Ajustei o path pra MoveAnims.Eclipse.Lunar.Shadestep — troca o nome/caminho aqui se
--- a animação nova ficar em outro lugar quando você remontar as animações.
 local UserAnimation = MoveAnims.Eclipse.Lunar.Shadestep
 
 local DASH_RANGE = 45
