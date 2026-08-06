@@ -6,6 +6,7 @@ local Players = game:GetService("Players")
 
 local SvModules = ServerStorage.Modules
 
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local SFXModule = require(ServerStorage.Modules.SFXModule)
 local DamageHandler = require(SvModules.DamageHandler)
 local KnockbackService = require(SvModules.KnockbackModule)
@@ -70,9 +71,9 @@ local function explode(Character, Position)
 		end
 	end)
 
-	ReplicateSet:FireAllClients("LunarAwakenMoonImpact", { char = Character, position = Position })
+	RemoteManager.FireAllClients("ReplicateTask", "LunarAwakenMoonImpact", { char = Character, position = Position })
 
-	ReplicateSet:FireAllClients("Ground Crater", {
+	RemoteManager.FireAllClients("ReplicateTask", "Ground Crater", {
 		nosmoke = true,
 		nosound = true,
 		nodebris = true,
@@ -213,7 +214,7 @@ local function spawnCrater(Position, opts)
 		params[k] = v
 	end
 
-	ReplicateSet:FireAllClients("Ground Crater", params)
+	RemoteManager.FireAllClients("ReplicateTask", "Ground Crater", params)
 end
 
 local function lockAirborne(Humanoid, HumRP)
@@ -267,8 +268,8 @@ function module:Activate(Player)
 		return
 	end
 
-	ReplicateSet:FireAllClients("HideHotbar")
-	ReplicateSet:FireAllClients("HideAwkbar")
+	RemoteManager.FireAllClients("ReplicateTask", "HideHotbar")
+	RemoteManager.FireAllClients("ReplicateTask", "HideAwkbar")
 
 	local isAirborne = false
 
@@ -289,9 +290,9 @@ function module:Activate(Player)
 
 			SFXModule:Play("Lunar Awakening", HumRP)
 
-			ReplicateSet:FireAllClients("LunarAwakenStart", { char = Character })
+			RemoteManager.FireAllClients("ReplicateTask", "LunarAwakenStart", { char = Character })
 			spawnCrater(OriginPosition, { amount = 70, tiltMin = 30, tiltMax = 50 })
-			ReplicateSet:FireAllClients("LunarImpact", { position = OriginPosition })
+			RemoteManager.FireAllClients("ReplicateTask", "LunarImpact", { position = OriginPosition })
 
 			if not Character or not Character.Parent then
 				return
@@ -312,9 +313,13 @@ function module:Activate(Player)
 				return
 			end
 
-			ReplicateSet:FireAllClients("LunarAwakenMoonSpawn", { char = Character })
-			ReplicateSet:FireAllClients("LunarAwakenFogEnd", { char = Character })
-			ReplicateSet:FireAllClients("GivePlayerAura", { Char = Character, AuraName = "Lunar Eclipse" })
+			RemoteManager.FireAllClients("ReplicateTask", "LunarAwakenMoonSpawn", { char = Character })
+			RemoteManager.FireAllClients("ReplicateTask", "LunarAwakenFogEnd", { char = Character })
+			RemoteManager.FireAllClients(
+				"ReplicateTask",
+				"GivePlayerAura",
+				{ Char = Character, AuraName = "Lunar Eclipse" }
+			)
 		end)
 	)
 
@@ -343,7 +348,7 @@ function module:Activate(Player)
 			task.delay(THROW_DELAY, function()
 				if Character and Character.Parent then
 					fireProjectile(Character, LaunchOrigin, LaunchDirection)
-					ReplicateSet:FireAllClients("LunarAwakenMoonLaunch", {
+					RemoteManager.FireAllClients("ReplicateTask", "LunarAwakenMoonLaunch", {
 						char = Character,
 						direction = LaunchDirection,
 						ownerId = Player.UserId,
@@ -380,7 +385,7 @@ function module:Activate(Player)
 				return
 			end
 
-			ReplicateSet:FireAllClients("LunarImpact", { position = OriginPosition })
+			RemoteManager.FireAllClients("ReplicateTask", "LunarImpact", { position = OriginPosition })
 			SFXModule:Play("EclipseImpact", OriginPosition)
 			spawnCrater(HumRP.Position, { amount = 60, debrisSizeMin = 5, debrisSizeMax = 14, sizemult = 1.4 })
 		end)
@@ -396,15 +401,15 @@ function module:Activate(Player)
 		ReplicateSet:FireClient(Player, "StopLunarAimControl", { RestoreCamera = false })
 		IndicatorService:Destroy(indicatorId)
 		ReplicateSet:FireClient(Player, "LunarAimRestoreCamera", {})
-		ReplicateSet:FireAllClients("LunarAwakenEnd", { char = Character })
+		RemoteManager.FireAllClients("ReplicateTask", "LunarAwakenEnd", { char = Character })
 	end)
 
 	AnimationService:playAnimation(Character, LunarEclipseAnim)
 	AnimTrack.Stopped:Wait()
 	Humanoid.WalkSpeed = 16
 
-	ReplicateSet:FireAllClients("ShowHotbar")
-	ReplicateSet:FireAllClients("ShowAwkbar")
+	RemoteManager.FireAllClients("ReplicateTask", "ShowHotbar")
+	RemoteManager.FireAllClients("ReplicateTask", "ShowAwkbar")
 end
 
 return module

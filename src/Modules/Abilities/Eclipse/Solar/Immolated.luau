@@ -4,13 +4,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerModules = ServerStorage.Modules
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local StunHandler = require(ServerModules.StunHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local AnimationService = require(ServerModules.AnimationService)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local SFX = require(ServerModules.SFXModule)
-
-local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
 local DURATION = 10
 local DAMAGE_TAKEN_MULT = 0.8
@@ -55,7 +54,7 @@ local function cleanUp(
 	Character:SetAttribute("Immolated", nil)
 	Character:SetAttribute("DamageTakenMult", nil)
 	iFramesService:RemoveiFrames(Character, "Strong")
-	ReplicateSet:FireAllClients("Immolate", { Char = Character, Enabled = false })
+	RemoteManager.FireAllClients("ReplicateTask", "Immolate", { Char = Character, Enabled = false })
 
 	local Humanoid = Character:FindFirstChild("Humanoid")
 	if Humanoid and originalWalkSpeed then
@@ -113,7 +112,11 @@ return {
 				Character:SetAttribute("DamageTakenMult", DAMAGE_TAKEN_MULT)
 				iFramesService:AddStrongiFrames(Character)
 				Humanoid.WalkSpeed = IMMOLATED_WALKSPEED
-				ReplicateSet:FireAllClients("Immolate", { Char = Character, Enabled = true, Duration = DURATION })
+				RemoteManager.FireAllClients(
+					"ReplicateTask",
+					"Immolate",
+					{ Char = Character, Enabled = true, Duration = DURATION }
+				)
 
 				SFX:Play("ImmolatedStart", HumRP)
 				local loopSound = SFX:Play("immolatedLoop", HumRP)
@@ -132,7 +135,7 @@ return {
 
 						SFX:Play("immolatedPulse", HumRP)
 
-						ReplicateSet:FireAllClients("ImmolatedPulse", { position = HumRP.Position })
+						RemoteManager.FireAllClients("ReplicateTask", "ImmolatedPulse", { position = HumRP.Position })
 
 						local pulsedThisTick = {}
 

@@ -5,6 +5,7 @@ local TweenService = game:GetService("TweenService")
 
 local ServerModules = ServerStorage.Modules
 
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local StunHandler = require(ServerModules.StunHandler)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
@@ -14,7 +15,6 @@ local AnimationService = require(ServerModules.AnimationService)
 local SFX = require(ServerModules.SFXModule)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
-local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
 local HAND_TRAVEL_TIME = 0.5
 local HAND_START_DIST = 3
@@ -105,7 +105,11 @@ return {
 			local freezeToken = StunHandler:Stun(enemyChar, nil, true, 0, 0, true)
 
 			enemyChar:SetAttribute("LunarMark", true)
-			ReplicateSet:FireAllClients("AuraFX", { func = "Start", char = enemyChar, aura = "LunarMark" })
+			RemoteManager.FireAllClients(
+				"ReplicateTask",
+				"AuraFX",
+				{ func = "Start", char = enemyChar, aura = "LunarMark" }
+			)
 
 			grabbed[enemyChar] = {
 				humanoid = EnemyHum,
@@ -145,7 +149,11 @@ return {
 					end
 					if enemyChar:GetAttribute("LunarMark") then
 						enemyChar:SetAttribute("LunarMark", nil)
-						ReplicateSet:FireAllClients("AuraFX", { func = "End", char = enemyChar, aura = "LunarMark" })
+						RemoteManager.FireAllClients(
+							"ReplicateTask",
+							"AuraFX",
+							{ func = "End", char = enemyChar, aura = "LunarMark" }
+						)
 					end
 				end
 
@@ -179,7 +187,7 @@ return {
 				local lookFlat = Vector3.new(lv.X, 0, lv.Z).Unit
 				local originPos = HumRP.Position
 
-				ReplicateSet:FireAllClients("hand", {
+				RemoteManager.FireAllClients("ReplicateTask", "hand", {
 					char = Character,
 					position = originPos + Vector3.new(0, -2, 0),
 					direction = lookFlat,
@@ -287,7 +295,11 @@ return {
 
 					if enemyChar:GetAttribute("LunarMark") then
 						enemyChar:SetAttribute("LunarMark", nil)
-						ReplicateSet:FireAllClients("AuraFX", { func = "End", char = enemyChar, aura = "LunarMark" })
+						RemoteManager.FireAllClients(
+							"ReplicateTask",
+							"AuraFX",
+							{ func = "End", char = enemyChar, aura = "LunarMark" }
+						)
 					end
 				end
 			end)

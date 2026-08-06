@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SvSt = ServerStorage
 local ServerModules = ServerStorage.Modules
 
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local StunHandler = require(ServerModules.StunHandler)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
@@ -16,7 +17,6 @@ local StatusEffectHandler = require(ServerModules.StatusEffectHandler)
 local SFX = require(ServerModules.SFXModule)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
-local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
 local HITBOX_SIZE = Vector3.new(30, 30, 30)
 local HITBOX_OFFSET = CFrame.new(0, 0, 0)
@@ -53,7 +53,7 @@ return {
 				UserTrack:AdjustSpeed(0)
 
 				SFX:Play("sunquakeWindup", HumRP)
-				ReplicateSet:FireAllClients("SunquakeVFX", { char = Character })
+				RemoteManager.FireAllClients("ReplicateTask", "SunquakeVFX", { char = Character })
 
 				task.delay(1, function()
 					if not UserTrack.IsPlaying then

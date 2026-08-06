@@ -15,10 +15,10 @@ local iFramesService = require(ServerModules.iFramesService)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local PerfectKnockback = require(ServerModules.PerfectKnockback)
 local WeldSystem = require(ReplicatedModules.WeldSystem)
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local SFX = require(ServerModules.SFXModule)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
-local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
 local SEARCH_RADIUS = 300
 local DAMAGE = 15
@@ -148,7 +148,7 @@ local function doHitEffects(
 	}, Character)
 
 	if EnemyPlayer then
-		ReplicateSet:FireClient(EnemyPlayer, "ShakeCamera", { Intensity = 4, Last = 0.4 })
+		RemoteManager.FireClient(EnemyPlayer, "ReplicateTask", "ShakeCamera", { Intensity = 4, Last = 0.4 })
 	end
 
 	iFramesService:RemoveAlliFrames(Character)
@@ -305,7 +305,7 @@ return {
 
 				startRotation()
 
-				ReplicateSet:FireAllClients("TethersVFX_Start", {
+				RemoteManager.FireAllClients("ReplicateTask", "TethersVFX_Start", {
 					casterChar = Character,
 					victimChar = closestEnemy,
 					travelTime = CHAIN_TRAVEL_TIME,
@@ -355,7 +355,7 @@ return {
 					end
 					pullDone = true
 
-					ReplicateSet:FireAllClients("TethersVFX_Stop", {
+					RemoteManager.FireAllClients("ReplicateTask", "TethersVFX_Stop", {
 						casterChar = Character,
 						victimChar = closestEnemy,
 					})
@@ -409,7 +409,7 @@ return {
 						PullAnchor:Destroy()
 					end
 
-					ReplicateSet:FireAllClients("TethersVFX_Stop", {
+					RemoteManager.FireAllClients("ReplicateTask", "TethersVFX_Stop", {
 						casterChar = Character,
 						victimChar = closestEnemy,
 					})

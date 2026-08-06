@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 
 local SvModules = ServerStorage.Modules
 
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local StunHandler = require(SvModules.StunHandler)
 local DamageHandler = require(SvModules.DamageHandler)
 local KnockbackService = require(SvModules.KnockbackModule)
@@ -30,7 +31,7 @@ local LEVITATE_RADIUS = CYLINDER_SIZE.X
 local module = {}
 
 local function triggerJumpCrater(Character, Position)
-	ReplicateSet:FireAllClients("Ground Crater", {
+	RemoteManager.FireAllClients("ReplicateTask", "Ground Crater", {
 		Seed = math.random(1, 2147483647),
 		amount = 70,
 		start = Position + Vector3.new(0, 4, 0),
@@ -68,7 +69,7 @@ local function triggerExplosion(Character, Position)
 		end
 	end)
 
-	ReplicateSet:FireAllClients("SolarAwakenExplosion", {
+	RemoteManager.FireAllClients("ReplicateTask", "SolarAwakenExplosion", {
 		func = "Start",
 		id = Player.UserId,
 		position = Position,
@@ -141,7 +142,7 @@ end
 local function triggerLandingImpact(Character, Position)
 	local ImpactStun = StunHandler:Stun(Character, 0.4, true, 0, 0, true)
 
-	ReplicateSet:FireAllClients("SolarImpact", { char = Character })
+	RemoteManager.FireAllClients("ReplicateTask", "SolarImpact", { char = Character })
 	SFX:Play("EclipseImpact", Position)
 	triggerJumpCrater(Character, Position)
 
@@ -175,14 +176,14 @@ function module:Activate(Player)
 	local levitationId = nil
 	local fakeDebrisId = nil
 
-	ReplicateSet:FireAllClients("HideHotbar")
-	ReplicateSet:FireAllClients("HideAwkbar")
+	RemoteManager.FireAllClients("ReplicateTask", "HideHotbar")
+	RemoteManager.FireAllClients("ReplicateTask", "HideAwkbar")
 
 	table.insert(
 		AnimEvents,
 		AnimTrack:GetMarkerReachedSignal("jump"):Connect(function()
-			ReplicateSet:FireAllClients("SolarAwakenStart", { char = Character })
-			ReplicateSet:FireAllClients("SolarImpact", { char = Character })
+			RemoteManager.FireAllClients("ReplicateTask", "SolarAwakenStart", { char = Character })
+			RemoteManager.FireAllClients("ReplicateTask", "SolarImpact", { char = Character })
 			SFX:Play("EclipseImpact", HumRP.Position)
 			triggerJumpCrater(Character, HumRP.Position)
 			levitationId = DestructionService:LevitateArea(HumRP.Position, LEVITATE_RADIUS, Player)
@@ -205,7 +206,11 @@ function module:Activate(Player)
 				return
 			end
 			SFX:Play("Solar Awakening", HumRP)
-			ReplicateSet:FireAllClients("GivePlayerAura", { Char = Character, AuraName = "Solar Eclipse" })
+			RemoteManager.FireAllClients(
+				"ReplicateTask",
+				"GivePlayerAura",
+				{ Char = Character, AuraName = "Solar Eclipse" }
+			)
 			triggerExplosion(Character, Character.Torso.Position + Vector3.new(0, 200, 0))
 		end)
 	)
@@ -213,7 +218,7 @@ function module:Activate(Player)
 	table.insert(
 		AnimEvents,
 		AnimTrack:GetMarkerReachedSignal("clear"):Connect(function()
-			ReplicateSet:FireAllClients("SolarAwakenExplosion", { func = "Stop", id = Player.UserId })
+			RemoteManager.FireAllClients("ReplicateTask", "SolarAwakenExplosion", { func = "Stop", id = Player.UserId })
 			if levitationId then
 				DestructionService:DropArea(levitationId)
 				levitationId = nil
@@ -245,7 +250,7 @@ function module:Activate(Player)
 			fakeDebrisId = nil
 		end
 		CutscenesSet:FireClient(Player, "SolarAwaken", "End", {})
-		ReplicateSet:FireAllClients("SolarAwakenEnd", { char = Character })
+		RemoteManager.FireAllClients("ReplicateTask", "SolarAwakenEnd", { char = Character })
 	end)
 
 	Character:AddTag("CantRotate")
@@ -253,8 +258,8 @@ function module:Activate(Player)
 	CutscenesSet:FireClient(Player, "SolarAwaken", "Start", { Offset = CFrame.new(0, -3, 0) })
 	AnimTrack.Stopped:Wait()
 	Character:RemoveTag("CantRotate")
-	ReplicateSet:FireAllClients("ShowHotbar")
-	ReplicateSet:FireAllClients("ShowAwkbar")
+	RemoteManager.FireAllClients("ReplicateTask", "ShowHotbar")
+	RemoteManager.FireAllClients("ReplicateTask", "ShowAwkbar")
 end
 
 return module

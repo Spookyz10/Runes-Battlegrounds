@@ -1,8 +1,10 @@
 local RS = game:GetService("ReplicatedStorage")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SvSt = game:GetService("ServerStorage")
 
 local SvModules = SvSt.Modules
 
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local DamageHandler = require(SvModules.DamageHandler)
 local HitboxHandler = require(SvModules.HitboxHandler)
 local AnimationService = require(SvModules.AnimationService)
@@ -187,7 +189,11 @@ function M1Handler:Punch(Player)
 					Character:SetAttribute("LastM1Hit", EnemyCharacter.Name)
 
 					if Step.PlayHitEffect ~= false then
-						ReplicateSet:FireAllClients("HitEffect", { EChar = EnemyCharacter, HitChar = Character })
+						RemoteManager.FireAllClients(
+							"ReplicateTask",
+							"HitEffect",
+							{ EChar = EnemyCharacter, HitChar = Character }
+						)
 					end
 
 					if Step.Knockback then
@@ -275,7 +281,7 @@ function M1Handler:Punch(Player)
 	AnimationService:playAnimation(Character, Animation)
 	AnimationService:adjustSpeed(Character, Animation, Step.Speed or 1.5)
 
-	ReplicateSet:FireAllClients("ActionHightlight", { char = Character, func = "M1" })
+	RemoteManager.FireAllClients("ReplicateTask", "ActionHightlight", { char = Character, func = "M1" })
 end
 
 return M1Handler

@@ -1,15 +1,15 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
 return {
 	Id = "FireArms",
 	Definition = {
 		MaxStacks = math.huge,
 		OnApply = function(Character, Data, Stacks, Params)
-			ReplicateSet:FireAllClients("UndawnVFX", { func = "Arms", char = Character })
+			RemoteManager.FireAllClients("ReplicateTask", "UndawnVFX", { func = "Arms", char = Character })
 		end,
 		OnExpire = function(Character, Data, Stacks)
-			ReplicateSet:FireAllClients("UndawnVFX", { func = "ArmsRemove", char = Character })
+			RemoteManager.FireAllClients("ReplicateTask", "UndawnVFX", { func = "ArmsRemove", char = Character })
 		end,
 	},
 }

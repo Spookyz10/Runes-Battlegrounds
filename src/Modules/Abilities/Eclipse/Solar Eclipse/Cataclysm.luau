@@ -5,6 +5,7 @@ local TweenService = game:GetService("TweenService")
 
 local ServerModules = ServerStorage.Modules
 
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local StunHandler = require(ServerModules.StunHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
 local iFramesService = require(ServerModules.iFramesService)
@@ -15,7 +16,7 @@ local BodymoverService = require(ServerModules.BodymoverService)
 local SFX = require(ServerModules.SFXModule)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
-local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
+
 local CutscenesSet = ReplicatedStorage.Remotes.Cutscenes.Set
 
 local WindupAnimation = MoveAnims.Eclipse.Solar.Awakening["Cataclysm Windup"]
@@ -149,7 +150,7 @@ return {
 			table.insert(
 				UserEvents,
 				UserTrack:GetMarkerReachedSignal("jump"):Connect(function()
-					ReplicateSet:FireAllClients("SolarImpact", { char = Character })
+					RemoteManager.FireAllClients("ReplicateTask", "SolarImpact", { char = Character })
 					SFX:Play("EclipseImpact", HumRP.Position)
 				end)
 			)
@@ -166,8 +167,8 @@ return {
 						return
 					end
 
-					ReplicateSet:FireAllClients("SolarHit", { char = Character })
-					ReplicateSet:FireAllClients("Cataclysm", { char = Character })
+					RemoteManager.FireAllClients("ReplicateTask", "SolarHit", { char = Character })
+					RemoteManager.FireAllClients("ReplicateTask", "Cataclysm", { char = Character })
 					SFX:Play("Cataclysm", HumRP.Position)
 
 					DamageHandler:TakeDamage(
@@ -187,7 +188,12 @@ return {
 
 					local EnemyPlayer = Players:GetPlayerFromCharacter(HitCharacter)
 					if EnemyPlayer then
-						ReplicateSet:FireClient(EnemyPlayer, "ShakeCamera", { Intensity = 6, Last = 0.5 })
+						RemoteManager.FireClient(
+							EnemyPlayer,
+							"ReplicateTask",
+							"ShakeCamera",
+							{ Intensity = 6, Last = 0.5 }
+						)
 					end
 
 					local SplashCFrame = HumRP.CFrame * CFrame.new(0, 0, -SPLASH_FORWARD_DISTANCE)
@@ -256,7 +262,12 @@ return {
 
 							local SplashPlayer = Players:GetPlayerFromCharacter(SplashCharacter)
 							if SplashPlayer then
-								ReplicateSet:FireClient(SplashPlayer, "ShakeCamera", { Intensity = 8, Last = 0.6 })
+								RemoteManager.FireClient(
+									SplashPlayer,
+									"ReplicateTask",
+									"ShakeCamera",
+									{ Intensity = 8, Last = 0.6 }
+								)
 							end
 						end
 					)
@@ -285,7 +296,7 @@ return {
 			table.insert(
 				UserEvents,
 				UserTrack:GetMarkerReachedSignal("landed"):Once(function()
-					ReplicateSet:FireAllClients("SolarImpact", { char = Character })
+					RemoteManager.FireAllClients("ReplicateTask", "SolarImpact", { char = Character })
 					SFX:Play("EclipseImpact", HumRP.Position)
 				end)
 			)
@@ -307,7 +318,11 @@ return {
 			local FoundVictim = nil
 
 			SFX:Play("CataclysmStartup", HumRP)
-			ReplicateSet:FireAllClients("CataclysmWindup", { CFrame = HumRP.CFrame + Vector3.new(0, -3, -3) })
+			RemoteManager.FireAllClients(
+				"ReplicateTask",
+				"CataclysmWindup",
+				{ CFrame = HumRP.CFrame + Vector3.new(0, -3, -3) }
+			)
 
 			HitboxHandler:SimpleOnce(
 				HumRP,

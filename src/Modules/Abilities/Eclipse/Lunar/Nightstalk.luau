@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 
 local ServerModules = ServerStorage.Modules
 
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local StunHandler = require(ServerModules.StunHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
 local HitboxHandler = require(ServerModules.HitboxHandler)
@@ -14,7 +15,6 @@ local SkillCollisionLock = require(ServerModules.SkillCollisionLock)
 local SFX = require(ServerModules.SFXModule)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
-local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
 local STAGE_DELAY = 0.2
 local RAGDOLL_TIME = 4
@@ -72,11 +72,11 @@ return {
 		end
 
 		local function spawnCircle(id, position)
-			ReplicateSet:FireAllClients("CircleVFX", { func = "Start", id = id, position = position })
+			RemoteManager.FireAllClients("ReplicateTask", "CircleVFX", { func = "Start", id = id, position = position })
 		end
 
 		local function despawnCircle(id)
-			ReplicateSet:FireAllClients("CircleVFX", { func = "Stop", id = id })
+			RemoteManager.FireAllClients("ReplicateTask", "CircleVFX", { func = "Stop", id = id })
 		end
 
 		local lookFlat = getLookFlat()
@@ -152,7 +152,7 @@ return {
 
 			local EnemyPlayer = Players:GetPlayerFromCharacter(EnemyCharacter)
 			if EnemyPlayer then
-				ReplicateSet:FireClient(EnemyPlayer, "ShakeCamera", { Intensity = 2, Last = 0.3 })
+				RemoteManager.FireClient(EnemyPlayer, "ReplicateTask", "ShakeCamera", { Intensity = 2, Last = 0.3 })
 			end
 		end
 
@@ -160,14 +160,14 @@ return {
 			local stageLookFlat = getLookFlat()
 			local spikePosition = HumRP.Position + Vector3.new(0, -3, 0) + stageLookFlat * stage.Distance
 
-			ReplicateSet:FireAllClients("createSpike", {
+			RemoteManager.FireAllClients("ReplicateTask", "createSpike", {
 				Scale = stage.Scale,
 				Position = spikePosition,
 			})
 
 			SFX:Play("spike", spikePosition)
 
-			ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 1.5, Last = 0.2 })
+			RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", { Intensity = 1.5, Last = 0.2 })
 
 			circleCounter += 1
 			local circleId = tostring(Character) .. "_Nightstalk_Spike_" .. circleCounter

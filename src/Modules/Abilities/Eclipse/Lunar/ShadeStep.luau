@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ServerModules = ServerStorage.Modules
 
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local StunHandler = require(ServerModules.StunHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
 local iFramesService = require(ServerModules.iFramesService)
@@ -12,7 +13,6 @@ local AnimationService = require(ServerModules.AnimationService)
 local SFX = require(ServerModules.SFXModule)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
-local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
 local UserAnimation = MoveAnims.Eclipse.Lunar.Shadestep
 
@@ -91,7 +91,11 @@ return {
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("start"):Once(function()
 				SFX:Play("shadestepCharge", HumRP)
-				ReplicateSet:FireAllClients("ShadestepBegin", { func = "ShadestepBeginStart", char = Character })
+				RemoteManager.FireAllClients(
+					"ReplicateTask",
+					"ShadestepBegin",
+					{ func = "ShadestepBeginStart", char = Character }
+				)
 			end)
 		)
 
@@ -133,7 +137,11 @@ return {
 				if blockedByAny then
 					dashBlocked = true
 
-					ReplicateSet:FireAllClients("ShadestepBegin", { func = "ShadestepBeginEnd", char = Character })
+					RemoteManager.FireAllClients(
+						"ReplicateTask",
+						"ShadestepBegin",
+						{ func = "ShadestepBeginEnd", char = Character }
+					)
 
 					if UserTrack then
 						UserTrack:Stop()
@@ -155,7 +163,11 @@ return {
 				dashTween:Play()
 				dashTween.Completed:Wait()
 
-				ReplicateSet:FireAllClients("ShadestepBegin", { func = "ShadestepBeginEnd", char = Character })
+				RemoteManager.FireAllClients(
+					"ReplicateTask",
+					"ShadestepBegin",
+					{ func = "ShadestepBeginEnd", char = Character }
+				)
 
 				for _, enemyChar in dashHitList do
 					local EnemyHum = enemyChar:FindFirstChild("Humanoid")
@@ -179,7 +191,11 @@ return {
 
 				Humanoid.WalkSpeed = 16
 
-				ReplicateSet:FireAllClients("ShadestepFireball", { func = "Attach", char = Character })
+				RemoteManager.FireAllClients(
+					"ReplicateTask",
+					"ShadestepFireball",
+					{ func = "Attach", char = Character }
+				)
 			end)
 		)
 
@@ -222,7 +238,7 @@ return {
 
 				SFX:Play("shadestepBeam", HumRP)
 
-				ReplicateSet:FireAllClients("ShadestepFireball", {
+				RemoteManager.FireAllClients("ReplicateTask", "ShadestepFireball", {
 					func = "Launch",
 					char = Character,
 					direction = lookFlat,

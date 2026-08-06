@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 
 local SvModules = ServerStorage.Modules
 
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local StunHandler = require(SvModules.StunHandler)
 local AnimationService = require(SvModules.AnimationService)
 local KnockbackService = require(SvModules.BodymoverService)
@@ -396,7 +397,7 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 
 			StunHandler:Stun(EnemyCharacter, Params.GroundStunTime, true, 0, 0, true)
 
-			ReplicateSet:FireAllClients("smokeEffect", { time = 0.75, char = EnemyCharacter })
+			RemoteManager.FireAllClients("ReplicateTask", "smokeEffect", { time = 0.75, char = EnemyCharacter })
 		end)
 	)
 

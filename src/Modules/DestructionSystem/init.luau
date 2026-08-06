@@ -3,15 +3,13 @@ local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PhysicsService = game:GetService("PhysicsService")
 
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local VoxBreaker = require(ReplicatedStorage.Shared.Modules.VoxBreaker)
-
-local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
 local DestructionService = {}
 
 local DEBUG = false
 
-local COLLIDE_SIZE_THRESHOLD = 3
 local INSTAKILL_SIZE = 100
 local DEBRIS_COLLISION_GROUP = "NonPColDebri"
 local DEFAULT_TRACK_DURATION = 5
@@ -227,7 +225,7 @@ function DestructionService:_DropUnsupportedPart(part)
 	part.AssemblyAngularVelocity =
 		Vector3.new(math.random(-40, 40) / 100, math.random(-40, 40) / 100, math.random(-40, 40) / 100)
 
-	ReplicateSet:FireAllClients("DebrisFallImpact", { Position = part.Position })
+	RemoteManager.FireAllClients("ReplicateTask", "DebrisFallImpact", { Position = part.Position })
 end
 
 function DestructionService:_ProcessWatchBatch()
@@ -780,7 +778,7 @@ function DestructionService:DropArea(id)
 		part.CanTouch = true
 		part.CanQuery = true
 
-		ReplicateSet:FireAllClients("DebrisFallImpact", { Position = part.Position })
+		RemoteManager.FireAllClients("ReplicateTask", "DebrisFallImpact", { Position = part.Position })
 	end
 end
 
@@ -979,7 +977,7 @@ function DestructionService:DropFakeDebris(id)
 		part.CanTouch = true
 		part.CanQuery = true
 
-		ReplicateSet:FireAllClients("DebrisFallImpact", { Position = part.Position })
+		RemoteManager.FireAllClients("ReplicateTask", "DebrisFallImpact", { Position = part.Position })
 
 		task.delay(FAKE_DEBRIS_FALL_CLEANUP_TIME, function()
 			if part and part.Parent then

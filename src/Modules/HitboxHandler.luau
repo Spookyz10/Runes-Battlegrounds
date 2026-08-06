@@ -1,7 +1,9 @@
 local RNS = game:GetService("RunService")
 local RS = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
 local HitboxBool = ServerScriptService.Hitboxes
 local DebugHitboxes = HitboxBool.Value
@@ -81,7 +83,11 @@ function HB:_Cast(dt)
 
 	if RNS:IsStudio() and DebugHitboxes then
 		task.spawn(function()
-			ReplicateSet:FireAllClients("Hitbox", { Method = self.Method, Size = self.Size, CFrame = HitboxCFrame })
+			RemoteManager.FireAllClients(
+				"ReplicateTask",
+				"Hitbox",
+				{ Method = self.Method, Size = self.Size, CFrame = HitboxCFrame }
+			)
 		end)
 	end
 
@@ -229,7 +235,11 @@ function HB:SimpleOnce(Object, Size, Offset, Ignore, Method, HitType, onTouch, D
 
 	if RNS:IsStudio() and DebugHitboxes then
 		task.spawn(function()
-			ReplicateSet:FireAllClients("Hitbox", { Method = Method, Size = Size, CFrame = HitboxCFrame })
+			RemoteManager.FireAllClients(
+				"ReplicateTask",
+				"Hitbox",
+				{ Method = Method, Size = Size, CFrame = HitboxCFrame }
+			)
 		end)
 	end
 

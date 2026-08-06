@@ -3,8 +3,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ServerModules = ServerStorage.Modules
 local MoveAnims = ServerStorage.Assets.Animations.Moves
-local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local StunHandler = require(ServerModules.StunHandler)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
@@ -23,7 +23,7 @@ local FIRE_ARMS_STACKS = 2
 
 local function fireVFX(func, params)
 	params.func = func
-	ReplicateSet:FireAllClients("UndawnVFX", params)
+	RemoteManager.FireAllClients("ReplicateTask", "UndawnVFX", params)
 end
 
 local function clearInferno(EnemyCharacter)

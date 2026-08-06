@@ -6,6 +6,7 @@ local Players = game:GetService("Players")
 
 local SvModules = ServerStorage.Modules
 
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local DamageHandler = require(SvModules.DamageHandler)
 local iFramesService = require(SvModules.iFramesService)
 local HitboxHandler = require(SvModules.HitboxHandler)
@@ -149,7 +150,7 @@ local function stopGravityField(data)
 		data.GravityConn = nil
 	end
 	if data.GravityPos then
-		ReplicateSet:FireAllClients("Gravity", { func = "End", char = data.Character })
+		RemoteManager.FireAllClients("ReplicateTask", "Gravity", { func = "End", char = data.Character })
 	end
 end
 
@@ -157,7 +158,7 @@ local function startGravityField(data, position)
 	data.GravityPos = position
 	data.GravityActive = true
 
-	ReplicateSet:FireAllClients("Gravity", { func = "start", char = data.Character, pos = position })
+	RemoteManager.FireAllClients("ReplicateTask", "Gravity", { func = "start", char = data.Character, pos = position })
 
 	for _, plr in Players:GetPlayers() do
 		local otherChar = plr.Character
@@ -222,7 +223,7 @@ local function applyGravityFieldCompensationDamage(data)
 		return
 	end
 
-	ReplicateSet:FireAllClients("LunarImpact", { position = position })
+	RemoteManager.FireAllClients("ReplicateTask", "LunarImpact", { position = position })
 	SFX:Play("EclipseImpact", position)
 	SFX:Play("Moonfall3", position)
 
@@ -277,7 +278,7 @@ local function impactIsland(data, impactPosition)
 	SFX:Play("Moonfall3", impactPosition)
 	SFX:Play("EclipseImpact", impactPosition)
 
-	ReplicateSet:FireAllClients("Ground Crater", {
+	RemoteManager.FireAllClients("ReplicateTask", "Ground Crater", {
 		Seed = math.random(1, 2147483647),
 		amount = 80,
 		start = impactPosition + Vector3.new(0, 6, 0),
@@ -337,7 +338,7 @@ local function travelIslandToPlayer(data, Character, HumRP)
 		Island.LunarHighlight.Enabled = true
 	end
 
-	ReplicateSet:FireAllClients("EnableVFX", { container = Island })
+	RemoteManager.FireAllClients("ReplicateTask", "EnableVFX", { container = Island })
 
 	local basePos = data.GroundReturnPosition or HumRP.Position
 	local targetPos = Vector3.new(basePos.X, HumRP.Position.Y + ISLAND_HOVER_HEIGHT, basePos.Z)
@@ -460,7 +461,7 @@ local function throwIslandToGravity(data)
 		Island:PivotTo(CFrame.new(pos) * startRot)
 
 		if t >= 1 then
-			ReplicateSet:FireAllClients("IslandExplosion", { position = targetPos })
+			RemoteManager.FireAllClients("ReplicateTask", "IslandExplosion", { position = targetPos })
 			completed = true
 		end
 	end)
@@ -587,7 +588,7 @@ return {
 
 				local gravPos = ActiveState[Character] and ActiveState[Character].GravityPos
 				if gravPos then
-					ReplicateSet:FireAllClients("LunarImpact", { position = gravPos })
+					RemoteManager.FireAllClients("ReplicateTask", "LunarImpact", { position = gravPos })
 					SFX:Play("EclipseImpact", gravPos)
 				end
 
@@ -691,7 +692,7 @@ return {
 
 					local gravPos = ActiveState[Character] and ActiveState[Character].GravityPos
 					if gravPos then
-						ReplicateSet:FireAllClients("LunarImpact", { position = gravPos })
+						RemoteManager.FireAllClients("ReplicateTask", "LunarImpact", { position = gravPos })
 						SFX:Play("EclipseImpact", gravPos)
 					end
 				end

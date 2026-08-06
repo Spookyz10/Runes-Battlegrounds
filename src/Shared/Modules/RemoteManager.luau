@@ -162,14 +162,17 @@ function RemoteManager.ListenToAllClient(Listener: { [string]: any })
 		end)
 	end
 end
+
 function RemoteManager.InvokeClient(Player: Player, remoteName: string, ...: any)
 	local remote = getRemote(remoteName, "ClientFunction")
 	if not remote then
 		return nil
 	end
 
+	local Args = { ... }
+
 	local ok, result = pcall(function()
-		return remote:InvokeClient(Player, ...)
+		return remote:InvokeClient(Player, table.unpack(Args))
 	end)
 
 	if not ok then
@@ -177,7 +180,6 @@ function RemoteManager.InvokeClient(Player: Player, remoteName: string, ...: any
 	end
 	return result
 end
-
 function RemoteManager.ListenToAllClientFunctions(Listener: { [string]: any })
 	for remoteName in ClientInvokeFunctions do
 		local remote = getRemote(remoteName, "ClientFunction")

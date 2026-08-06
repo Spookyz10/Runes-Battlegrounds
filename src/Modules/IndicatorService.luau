@@ -1,4 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
 local Remotes = ReplicatedStorage.Remotes
 local ReplicateSet = Remotes.Replicate.Set
@@ -11,7 +12,7 @@ function IndicatorService:Create(params)
 	assert(params.character, "[IndicatorService] params.character é obrigatório")
 	assert(params.asset, "[IndicatorService] params.asset é obrigatório")
 
-	ReplicateSet:FireAllClients("Indicator", {
+	RemoteManager.FireAllClients("ReplicateTask", "Indicator", {
 		id = params.id,
 		char = params.character,
 		ownerId = params.ownerId,
@@ -21,7 +22,7 @@ function IndicatorService:Create(params)
 end
 
 function IndicatorService:Destroy(id)
-	ReplicateSet:FireAllClients("IndicatorEnd", { id = id })
+	RemoteManager.FireAllClients("ReplicateTask", "IndicatorEnd", { id = id })
 end
 
 function IndicatorService:GetPosition(Player, id)

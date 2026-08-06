@@ -1,5 +1,4 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
 return {
 	Id = "Inferno",
@@ -9,8 +8,16 @@ return {
 		OnApply = function(Character, Data, Stacks, Params)
 			Character:SetAttribute("InfernoMarked", true)
 			Character:SetAttribute("Inferno", true)
-			ReplicateSet:FireAllClients("StatusEffect", { Char = Character, Effect = "Inferno", State = true })
-			ReplicateSet:FireAllClients("AuraFX", { func = "Start", char = Character, aura = "Inferno" })
+			RemoteManager.FireAllClients(
+				"ReplicateTask",
+				"StatusEffect",
+				{ Char = Character, Effect = "Inferno", State = true }
+			)
+			RemoteManager.FireAllClients(
+				"ReplicateTask",
+				"AuraFX",
+				{ func = "Start", char = Character, aura = "Inferno" }
+			)
 		end,
 		OnExpire = function(Character, Data, Stacks)
 			local StatusEffectHandler = require(script.Parent.Parent)
@@ -20,8 +27,16 @@ return {
 
 			Character:SetAttribute("InfernoMarked", nil)
 			Character:SetAttribute("Inferno", nil)
-			ReplicateSet:FireAllClients("StatusEffect", { Char = Character, Effect = "Inferno", State = false })
-			ReplicateSet:FireAllClients("AuraFX", { func = "End", char = Character, aura = "Inferno" })
+			RemoteManager.FireAllClients(
+				"ReplicateTask",
+				"StatusEffect",
+				{ Char = Character, Effect = "Inferno", State = false }
+			)
+			RemoteManager.FireAllClients(
+				"ReplicateTask",
+				"AuraFX",
+				{ func = "End", char = Character, aura = "Inferno" }
+			)
 		end,
 	},
 }

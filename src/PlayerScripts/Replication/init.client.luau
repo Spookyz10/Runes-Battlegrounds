@@ -31,7 +31,7 @@ local ClientRemoteListener = require(ReplicatedStorage.Shared.Modules.ClientRemo
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local IndicatorService = require(script.Functions.Tasks.Shared.IndicatorService)
 local RotationController = require(script.Functions.Tasks.Shared.RotationController)
-local CutsceneController = require(script.Functions.CutsceneController)
+local CutsceneController = require(RS.Shared.Modules.CutsceneController)
 
 local Animations = RS.Resources.Animations
 

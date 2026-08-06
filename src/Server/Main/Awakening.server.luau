@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local InfoModule = require(RS.Shared.Info)
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local Data = require(ReplicatedStorage.Shared.Data).server
 
 local SvModules = SvSt.Modules
@@ -41,7 +42,11 @@ local function EndAwakening(Player, Awk0C, AwkTween, DeathConn)
 			if Character then
 				local HumRP = Character:FindFirstChild("HumanoidRootPart")
 				if HumRP then
-					ReplicateSet:FireAllClients("StopAwakeningMusics", { MusAtt = HumRP.AwakeningMusic })
+					RemoteManager.FireAllClients(
+						"ReplicateTask",
+						"StopAwakeningMusics",
+						{ MusAtt = HumRP.AwakeningMusic }
+					)
 				end
 			end
 		end
@@ -60,16 +65,16 @@ local function EndAwakening(Player, Awk0C, AwkTween, DeathConn)
 	Character:SetAttribute("Awakened", nil)
 	Character:SetAttribute("AwakeningAura", false)
 
-	ReplicateSet:FireAllClients("GivePlayerAura", { Char = Character })
+	RemoteManager.FireAllClients("ReplicateTask", "GivePlayerAura", { Char = Character })
 
 	local moveset = Player:GetAttribute("Moveset")
 	if moveset == "Eclipse" then
 		local playerClass = Data[Player]
 		local mode = playerClass and playerClass.MovesetModes("Eclipse")
 		if mode == "Lunar" then
-			ReplicateSet:FireAllClients("LunarAwakenEnd", { char = Character })
+			RemoteManager.FireAllClients("ReplicateTask", "LunarAwakenEnd", { char = Character })
 		elseif mode == "Solar" then
-			ReplicateSet:FireAllClients("SolarAwakenEnd", { char = Character })
+			RemoteManager.FireAllClients("ReplicateTask", "SolarAwakenEnd", { char = Character })
 		end
 	end
 

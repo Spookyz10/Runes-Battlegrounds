@@ -6,6 +6,7 @@ local ServerModules = ServerStorage.Modules
 
 local RemotesContainer = ReplicatedStorage.Remotes
 
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local StunHandler = require(ServerModules.StunHandler)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
@@ -53,7 +54,7 @@ return {
 				UserEvents,
 				UserTrack:GetMarkerReachedSignal(markerName):Once(function()
 					local localHitList = {}
-					ReplicateSet:FireAllClients("ProwlHit", {
+					RemoteManager.FireAllClients("ReplicateTask", "ProwlHit", {
 						Index = i,
 						Char = Character,
 					})
@@ -87,8 +88,6 @@ return {
 							end
 
 							table.insert(localHitList, EnemyCharacter)
-
-							local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
 
 							local HitInfo = DamageHandler:TakeDamage(
 								Character,
@@ -130,14 +129,19 @@ return {
 
 							local EnemyPlayer = Players:GetPlayerFromCharacter(EnemyCharacter)
 							if EnemyPlayer then
-								ReplicateSet:FireClient(EnemyPlayer, "ShakeCamera", { Intensity = 1.5 })
+								RemoteManager.FireClient(
+									EnemyPlayer,
+									"ReplicateTask",
+									"ShakeCamera",
+									{ Intensity = 1.5 }
+								)
 							end
 						end
 					)
 
 					if i == 2 then
 						task.delay(0.2, function()
-							ReplicateSet:FireAllClients("ProwlPunch", {
+							RemoteManager.FireAllClients("ReplicateTask", "ProwlPunch", {
 								func = "Start",
 								Char = Character,
 							})
@@ -235,12 +239,17 @@ return {
 						end
 
 						if EnemyPlayer then
-							ReplicateSet:FireClient(EnemyPlayer, "ShakeCamera", { Intensity = 10, Last = 0.6 })
+							RemoteManager.FireClient(
+								EnemyPlayer,
+								"ReplicateTask",
+								"ShakeCamera",
+								{ Intensity = 10, Last = 0.6 }
+							)
 						end
 					end
 				)
 
-				ReplicateSet:FireAllClients("ProwlPunch", {
+				RemoteManager.FireAllClients("ReplicateTask", "ProwlPunch", {
 					func = "End",
 					Char = Character,
 				})

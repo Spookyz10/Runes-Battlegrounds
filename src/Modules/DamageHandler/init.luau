@@ -9,6 +9,7 @@ local SvModules = script.Parent
 local StunHandler = require(SvModules.StunHandler)
 local CombatLogger = require(script.CombatLogger)
 local Utility = require(RPModules.Utility)
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local Data = require(ReplicatedStorage.Shared.Data).server
 local AnimationService = require(SvModules.AnimationService)
 local AntiTeamingHandler = require(SvModules.AntiTeamingHandler)
@@ -59,9 +60,6 @@ local function playRandomBlockAnim(Damaged)
 		AnimationService:playAnimation(Damaged, randomAnim)
 	end
 end
-
-local Remotes = RS.Remotes
-local ReplicateSet = Remotes.Replicate.Set
 
 function module:TakeDamage(
 	Damager,
@@ -149,7 +147,7 @@ function module:TakeDamage(
 
 					AntiTeamingHandler:OnDamageReceived(Damaged, Damager, FinisherRequirement or Damage)
 
-					ReplicateSet:FireAllClients("ActionHightlight", { char = Damaged, func = "Hit" })
+					RemoteManager.FireAllClients("ReplicateTask", "ActionHightlight", { char = Damaged, func = "Hit" })
 				end
 			else
 				Hum:TakeDamage(Damage)
@@ -157,10 +155,10 @@ function module:TakeDamage(
 
 				AntiTeamingHandler:OnDamageReceived(Damaged, Damager, Damage)
 
-				ReplicateSet:FireAllClients("ActionHightlight", { char = Damaged, func = "Hit" })
+				RemoteManager.FireAllClients("ReplicateTask", "ActionHightlight", { char = Damaged, func = "Hit" })
 
 				if Type == "M1" then
-					ReplicateSet:FireAllClients("RemoveAllBodyMovers", Damaged)
+					RemoteManager.FireAllClients("ReplicateTask", "RemoveAllBodyMovers", Damaged)
 					for _, BodyMover in Damaged:GetDescendants() do
 						if
 							BodyMover:IsA("BodyVelocity")

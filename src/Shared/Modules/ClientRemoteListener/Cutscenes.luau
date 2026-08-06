@@ -1,4 +1,6 @@
-local CutsceneController = require(script.Parent.Parent.Parent.PlayerScripts.Replication.Functions.CutsceneController)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local CutsceneController = require(ReplicatedStorage.Shared.Modules.CutsceneController)
 
 local Remote = {}
 

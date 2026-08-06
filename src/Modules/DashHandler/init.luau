@@ -18,8 +18,6 @@ local SFX = require(SvModules.SFXModule)
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local CheckBehind = require(ReplicatedStorage.Shared.Utility.CheckBehind)
 
-local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
-
 local Configs = require(script.Configs)
 
 local DashHandler = {}
@@ -212,7 +210,7 @@ local function runAttackDash(Player, Character, HumRP, Humanoid, Config)
 	AnimationService:playAnimation(Character, Animation)
 
 	Character:SetAttribute("Dashing", true)
-	ReplicateSet:FireAllClients("ActionHightlight", { char = Character, func = "Dash" })
+	RemoteManager.FireAllClients("ReplicateTask", "ActionHightlight", { char = Character, func = "Dash" })
 	RemoteManager.FireAllClients("DashMiss", { PrimaryPart = HumRP })
 
 	task.delay(0.7, function()
@@ -253,7 +251,7 @@ local function runDisplacementDash(Player, Character, HumRP, Humanoid, Config)
 		end)
 	end
 
-	ReplicateSet:FireAllClients("ActionHightlight", { char = Character, func = "Dash" })
+	RemoteManager.FireAllClients("ReplicateTask", "ActionHightlight", { char = Character, func = "Dash" })
 
 	local Animation = Config.Animation and Config.Animation()
 	if Animation then

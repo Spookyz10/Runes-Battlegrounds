@@ -48,7 +48,11 @@ SpecialActions["SwapMode"] = function(Player, MovesetHandler, isUlt)
 
 		local Character = Player.Character
 		if Character and Character:HasTag("Awakened") then
-			ReplicateSet:FireAllClients("GivePlayerAura", { Char = Character, AuraName = nextMode .. " " .. moveset })
+			RemoteManager.FireAllClients(
+				"ReplicateTask",
+				"GivePlayerAura",
+				{ Char = Character, AuraName = nextMode .. " " .. moveset }
+			)
 		end
 	else
 		MovesetHandler:AddBaseMoveset(Player, moveset)
