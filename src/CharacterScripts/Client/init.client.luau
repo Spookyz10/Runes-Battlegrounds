@@ -5,6 +5,8 @@ local RNS = game:GetService("RunService")
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 
+local ClientContext = require(RS.Shared.Modules.ClientContext)
+
 --Player
 if script.Parent.Parent:GetAttribute("ClonedChar2") then
 	return script:Destroy()
@@ -93,48 +95,6 @@ local CameraShaker = require(RS.Shared.Modules.CameraShaker).new(Enum.RenderPrio
 	Camera.CFrame = Camera.CFrame * Offset
 end)
 CameraShaker:Start()
-
---Functions
-shared.shake = function(Magnitude, Roughness, FadeInTime, FadeOutTime, PositionInfluence)
-	shared.addshake(Magnitude / 2)
-end
-
-shared.sustainshake = function(_Instance, shakeTime, fadeOutTime)
-	CameraShaker:ShakeSustain(CameraShaker.Presets[_Instance])
-
-	task.delay(shakeTime, function()
-		CameraShaker:StopSustained(fadeOutTime)
-	end)
-end
-
-shared.addshake = function(Shake, fadeOutTime)
-	if ConfigFolder:FindFirstChild("Camera Shake") and ConfigFolder["Camera Shake"].Value == false then
-		return
-	end
-
-	fadeOutTime = fadeOutTime or 0.5
-
-	if not stopCameraShakeLoop then
-		stopCameraShakeLoop = shared.loop(function()
-			xShake = xShake * (math.random(1, 2) == 1 and -1 or 1)
-			yShake = yShake * (math.random(1, 2) == 1 and -1 or 1)
-			zShake = zShake * (math.random(1, 2) == 1 and -1 or 1)
-
-			xShake = xShake * 0.85
-			yShake = yShake * 0.85
-			zShake = zShake * 0.85
-
-			if math.abs(xShake) <= 0.05 and math.abs(yShake) <= 0.05 and math.abs(zShake) <= 0.05 then
-				stopCameraShakeLoop()
-				stopCameraShakeLoop = nil
-			end
-		end)
-	end
-
-	xShake = xShake + Shake * (math.random(1, 2) == 1 and -1 or 1)
-	yShake = yShake + Shake * (math.random(1, 2) == 1 and -1 or 1)
-	zShake = zShake + Shake * (math.random(1, 2) == 1 and -1 or 1)
-end
 
 local function isRunning()
 	local goalWalkSpeed
@@ -460,8 +420,8 @@ Heartbeat = RNS.RenderStepped:Connect(function(deltaTime)
 	if Head and HumRP and Torso then
 		if
 			Camera.CameraType ~= Enum.CameraType.Scriptable
-			and not shared._lunarAimActive
-			and not shared._solarAimActive
+			and not ClientContext.LunarAimActive
+			and not ClientContext.SolarAimActive
 		then
 			local defaultOffset = Vector3.new(0 + xShake, -1.25 + yShake, 0 + zShake)
 			local camOffset = defaultOffset

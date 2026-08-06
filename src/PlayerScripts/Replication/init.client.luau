@@ -19,6 +19,7 @@ local UIS = game:GetService("UserInputService")
 local RS = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
 
+local ClientContext = require(RS.Shared.Modules.ClientContext)
 local TextChatService = game:GetService("TextChatService")
 
 local Remotes = RS.Remotes
@@ -103,8 +104,8 @@ RNS.RenderStepped:Connect(function()
 	if
 		shiftlockActive
 		and not Character:HasTag("CantRotate")
-		and not shared._lunarAimActive
-		and not shared._solarAimActive
+		and not ClientContext.LunarAimActive
+		and not ClientContext.SolarAimActive
 	then
 		Camera.CFrame = Camera.CFrame * CFrame.new(1.75, 0, 0)
 	end

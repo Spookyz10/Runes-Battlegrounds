@@ -152,10 +152,10 @@ return {
 							end
 
 							SvSt.Bindables.AirDetector:Fire(EnemyCharacter, nil, true)
-							StatusEffectHandler:Apply(EnemyCharacter, "Inferno", {
-								Duration = INFERNO_DURATION,
-								Source = Character,
-							})
+							-- StatusEffectHandler:Apply(EnemyCharacter, "Inferno", {
+							-- 	Duration = INFERNO_DURATION,
+							-- 	Source = Character,
+							-- })
 						end
 					)
 				end)
