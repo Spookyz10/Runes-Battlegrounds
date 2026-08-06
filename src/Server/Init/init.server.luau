@@ -75,91 +75,36 @@ shared.cfolder = function(instanceData, lifeTime)
 	return newInstance
 end
 
-shared.fireAllExcept = function(RemoteEvent, Blacklist, Parameters)
-	for _, Player in Players:GetPlayers() do
-		if not table.find(Blacklist, Player) then
-			RemoteEvent:FireClient(Player, table.unpack(Parameters))
-		end
-	end
-end
-
-shared.fireTo = function(RemoteEvent, Whitelist, Parameters)
-	for _, Player in Whitelist do
-		RemoteEvent:FireClient(Player, table.unpack(Parameters))
-	end
-end
-
-local function HumanoidDied(Player)
+local function HumanoidDied(Player: Player)
 	if not Player.Character then
 		return
 	end
 
 	local Character = Player.Character
-	local HumRP = Character:FindFirstChild("HumanoidRootPart")
+
 	local Humanoid = Character.Humanoid
 
-	if not Character:HasTag("DontDoDieFunction") then
-		if Humanoid.BreakJointsOnDeath then
-			for _, v in Character:GetDescendants() do
-				if v:IsA("Motor6D") or v:IsA("BallSocketConstraint") then
-					v:Destroy()
-				elseif v:IsA("Part") or v:IsA("BasePart") or v:IsA("MeshPart") then
-					v.AssemblyLinearVelocity =
-						Vector3.new(math.random(-50, 50), math.random(-50, 50), math.random(-50, 50))
-					v.AssemblyAngularVelocity =
-						Vector3.new(math.random(-15, 15), math.random(-15, 15), math.random(-15, 15))
-				end
+	if Humanoid.BreakJointsOnDeath then
+		for _, v in Character:GetDescendants() do
+			if v:IsA("Motor6D") or v:IsA("BallSocketConstraint") then
+				v:Destroy()
+			elseif v:IsA("Part") or v:IsA("BasePart") or v:IsA("MeshPart") then
+				v.AssemblyLinearVelocity = Vector3.new(math.random(-50, 50), math.random(-50, 50), math.random(-50, 50))
+				v.AssemblyAngularVelocity =
+					Vector3.new(math.random(-15, 15), math.random(-15, 15), math.random(-15, 15))
 			end
-
-			StunHandler:Stun(Character, 6)
-		else
-			Character:AddTag("CantRagdollCancel")
-			RagdollHandler.ragdoll(Humanoid)
 		end
-	end
 
-	local deathSoundId = Player:GetAttribute("deathSound")
-	if deathSoundId ~= nil and HumRP then
-		local deathSound = Instance.new("Sound")
-		deathSound.RollOffMaxDistance = 250
-		deathSound.RollOffMinDistance = 10
-		deathSound.Volume = 1
-		deathSound.SoundId = "rbxassetid://" .. tostring(deathSoundId)
-		deathSound.SoundGroup = game.SoundService.Sounds
-		deathSound.Parent = HumRP
-		deathSound:Play()
-		task.spawn(function()
-			deathSound.Stopped:Wait()
-			deathSound:Destroy()
-		end)
+		StunHandler:Stun(Character, 6)
+	else
+		Character:AddTag("CantRagdollCancel")
+		RagdollHandler.ragdoll(Humanoid)
 	end
 
 	iFramesService:RemoveAlliFrames(Character)
 
-	local respawnConnection
-	local respawnStartTime = os.clock()
-	local respawnDelay = Player:WaitForChild("RespawnTime").Value
-
-	respawnConnection = RNS.Heartbeat:Connect(function()
-		if Player:WaitForChild("CanRespawn").Value == true then
-			if (os.clock() - respawnStartTime) >= respawnDelay then
-				Character:Destroy()
-
-				if Player:IsDescendantOf(game) then
-					Player:LoadCharacter()
-				end
-
-				respawnConnection:Disconnect()
-				return
-			end
-		else
-			respawnStartTime = os.clock()
-
-			if respawnDelay ~= 2.5 then
-				respawnDelay = 2.5
-				return
-			end
-		end
+	task.delay(5, function()
+		Player:LoadCharacterAsync()
 	end)
 end
 

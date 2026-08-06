@@ -5,6 +5,7 @@ local SvSt = game:GetService("ServerStorage")
 local TS = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local StartAirDetection = SvSt.Bindables.AirDetector
 
@@ -15,6 +16,7 @@ local Replicate = Remotes.Replicate.Set
 local Comunicator = Remotes.Comunicator.Set
 
 local SvModules = SvSt.Modules
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local StunHandler = require(SvModules.StunHandler)
 local AnimationService = require(SvModules.AnimationService)
 local NewKnockback = require(SvModules.BodymoverService)
@@ -402,11 +404,6 @@ function Ragdoll.ragdoll(Humanoid, Duration, HardRagdoll, Ragdoller, _, _, check
 							sizemult = 1.75,
 							size = 3,
 						})
-						shared.fireTo(
-							Replicate,
-							{ Player, RagdollerPlayer },
-							{ "Camshake", { Intensity = 8, Last = 0.75 } }
-						)
 
 						local Size = Vector3.new(20, 20, 20)
 						local Offset = CFrame.new(0, 0, 0)

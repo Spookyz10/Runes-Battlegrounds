@@ -1,5 +1,6 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Awkbar = require(ReplicatedStorage.Shared.UI.Logic.Awkbar)
+
 return function(_Params)
-	if shared.triggerAwkbar then
-		shared.triggerAwkbar(false)
-	end
+	Awkbar.Hide()
 end

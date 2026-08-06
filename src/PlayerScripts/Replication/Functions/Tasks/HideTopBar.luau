@@ -1,6 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Hotbar = require(ReplicatedStorage.Shared.UI.Logic.Hotbar)
+local Topbar = require(ReplicatedStorage.Shared.UI.Logic.Topbar)
 
 return function(_Params)
-	Hotbar.Hide()
+	Topbar.Hide()
 end

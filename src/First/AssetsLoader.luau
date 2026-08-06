@@ -1,5 +1,5 @@
 --Services
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local ContentProvider = game:GetService("ContentProvider")
 local RunService = game:GetService("RunService")
 
