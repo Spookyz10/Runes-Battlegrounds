@@ -48,6 +48,10 @@ local function addTools(Player, folder, attributeName)
 	end
 end
 
+function module:IsValidMoveset(Moveset)
+	return InfoModule.Movesets[Moveset] ~= nil
+end
+
 function module:AddBaseMoveset(Player, Moveset)
 	Moveset = Moveset or Player:GetAttribute("Moveset")
 
@@ -82,6 +86,22 @@ function module:AddAwakeningMoveset(Player, Moveset)
 	end
 
 	addTools(Player, folder, "Awakening")
+end
+
+function module:SetMoveset(Player, MovesetName)
+	if not module:IsValidMoveset(MovesetName) then
+		return false, "InvalidMoveset"
+	end
+
+	if MovesetName == Player:GetAttribute("Moveset") then
+		return false, "AlreadyEquipped"
+	end
+
+	Player.Configuration.Moveset.Value = MovesetName
+	Player:SetAttribute("Moveset", MovesetName)
+	Player:LoadCharacter()
+
+	return true
 end
 
 return module

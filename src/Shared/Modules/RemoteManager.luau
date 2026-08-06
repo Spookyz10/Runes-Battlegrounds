@@ -5,11 +5,16 @@ local RemoteManager = {}
 
 local RemoteEvents = {
 	ReplicateTask = "Client",
+	ExtraCds = "Client",
+	Keypress = "Server",
+	ResetCharacter = "Server",
+	SetMoveset = "Server",
+	InputDetected = "Server",
+	ReplicationLoaded = "Server",
+	UseAbillity = "Server",
 }
 
-local RemoteFunctions = {
-	Replicate = "Server",
-}
+local RemoteFunctions = {}
 
 local RemoteCache: { [string]: Instance } = {}
 
@@ -142,15 +147,21 @@ end
 
 if RunService:IsServer() then
 	for remoteName: string, folder: string in RemoteEvents do
-		local NewRemote = Instance.new("RemoteEvent")
-		NewRemote.Name = remoteName
-		NewRemote.Parent = ReplicatedStorage:FindFirstChild("Remotes"):FindFirstChild(folder)
+		local ExistingFolder = ReplicatedStorage:FindFirstChild("Remotes"):FindFirstChild(folder)
+		if ExistingFolder and not ExistingFolder:FindFirstChild(remoteName) then
+			local NewRemote = Instance.new("RemoteEvent")
+			NewRemote.Name = remoteName
+			NewRemote.Parent = ExistingFolder
+		end
 	end
 
 	for remoteName: string, folder: string in RemoteFunctions do
-		local NewRemoteFunction = Instance.new("RemoteFunction")
-		NewRemoteFunction.Name = remoteName
-		NewRemoteFunction.Parent = ReplicatedStorage:FindFirstChild("Remotes"):FindFirstChild(folder)
+		local ExistingFolder = ReplicatedStorage:FindFirstChild("Remotes"):FindFirstChild(folder)
+		if ExistingFolder and not ExistingFolder:FindFirstChild(remoteName) then
+			local NewRemoteFunction = Instance.new("RemoteFunction")
+			NewRemoteFunction.Name = remoteName
+			NewRemoteFunction.Parent = ExistingFolder
+		end
 	end
 end
 
