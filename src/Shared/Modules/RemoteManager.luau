@@ -4,7 +4,7 @@ local RunService = game:GetService("RunService")
 local RemoteManager = {}
 
 local RemoteEvents = {
-	Replicate = "Client",
+	ReplicateTask = "Client",
 }
 
 local RemoteFunctions = {
@@ -74,36 +74,70 @@ function RemoteManager.GetRemote(remoteName: string, folder: string): Instance?
 	return getRemote(remoteName, folder)
 end
 
-function RemoteManager.ListenClient(remoteName: string, Listener: { [string]: any })
-	local remote = getRemote(remoteName, "Client")
-	if not remote then
-		return
-	end
-
-	remote.OnClientEvent:Connect(function(Task, ...)
-		local ListenerModule = Listener[Task]
-		if not ListenerModule then
-			return
+function RemoteManager.ListenToAll(Listener: { [string]: any })
+	for remoteName, folder in RemoteEvents do
+		if folder ~= "Server" then
+			continue
 		end
 
-		ListenerModule:Activate(...)
-	end)
+		local remote = getRemote(remoteName, folder)
+		if not remote then
+			continue
+		end
+
+		remote.OnServerEvent:Connect(function(Player: Player, ...)
+			local ListenerModule = Listener[remoteName]
+			if not ListenerModule then
+				return
+			end
+
+			ListenerModule:Activate(Player, ...)
+		end)
+	end
 end
 
-function RemoteManager.ListenServer(remoteName: string, Listener: { [string]: any })
-	local remote = getRemote(remoteName, "Server")
-	if not remote then
-		return
-	end
-
-	remote.OnServerEvent:Connect(function(Player, Task, ...)
-		local ListenerModule = Listener[Task]
-		if not ListenerModule then
-			return
+function RemoteManager.ListenToAllFunctions(Listener: { [string]: any })
+	for remoteName, folder in RemoteFunctions do
+		if folder ~= "Server" then
+			continue
 		end
 
-		ListenerModule:Activate(Player, ...)
-	end)
+		local remote = getRemote(remoteName, folder)
+		if not remote then
+			continue
+		end
+
+		remote.OnServerInvoke = function(Player: Player, ...)
+			local ListenerModule = Listener[remoteName]
+			if not ListenerModule then
+				return nil
+			end
+
+			return ListenerModule:Invoke(Player, ...)
+		end
+	end
+end
+
+function RemoteManager.ListenToAllClient(Listener: { [string]: any })
+	for remoteName, folder in RemoteEvents do
+		if folder ~= "Client" then
+			continue
+		end
+
+		local remote = getRemote(remoteName, folder)
+		if not remote then
+			continue
+		end
+
+		remote.OnClientEvent:Connect(function(...)
+			local ListenerModule = Listener[remoteName]
+			if not ListenerModule then
+				return
+			end
+
+			ListenerModule:Activate(...)
+		end)
+	end
 end
 
 if RunService:IsServer() then

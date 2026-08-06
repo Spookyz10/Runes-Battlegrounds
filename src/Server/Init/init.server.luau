@@ -1,18 +1,19 @@
 local Players = game:GetService("Players")
 
-local RS = game:GetService("ReplicatedStorage")
-local SvSt = game:GetService("ServerStorage")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
 
 local RNS = game:GetService("RunService")
 local Debris = game:GetService("Debris")
 local CollectionService = game:GetService("CollectionService")
 local PhysicsService = game:GetService("PhysicsService")
-local ServerStorage = game:GetService("ServerStorage")
 
-local Shared = RS.Shared.Modules
-local SvModules = SvSt.Modules
+local Shared = ReplicatedStorage.Shared.Modules
+local SvModules = ServerStorage.Modules
 
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local PerfectKnockback = require(ServerStorage.Modules.PerfectKnockback)
+local ServerRemoteListener = require(ServerStorage.Modules.ServerRemoteListener)
 
 local Trove = require(Shared.Trove)
 
@@ -30,11 +31,11 @@ local SFX = require(SvModules.SFXModule)
 
 local ReplicatedHitboxes = require(SvModules.ReplicatedHitboxes)
 local CheckBehind = require(Shared.Utility.CheckBehind)
-local Data = require(RS.Shared.Data).server
-local Assets = SvSt.Assets
+local Data = require(ReplicatedStorage.Shared.Data).server
+local Assets = ServerStorage.Assets
 local Animations = Assets.Animations
 
-local Remotes = RS.Remotes
+local Remotes = ReplicatedStorage.Remotes
 local ComunicatorComms = Remotes.Comunicator
 local ComSet = ComunicatorComms.Set
 local ComGet = ComunicatorComms.Get
@@ -58,58 +59,6 @@ for _, Animation in Assets.Animations:GetDescendants() do
 	end
 end
 
-shared.sfx = function(Parameters)
-	local Sound = Instance.new("Sound")
-	Sound.SoundGroup = game.SoundService.Sounds
-
-	if Parameters.AddTo then
-		table.insert(Parameters.AddTo, Sound)
-		Parameters.AddTo = nil
-	end
-
-	local Attachment = nil
-	local EndConnection = nil
-	EndConnection = Sound.Ended:connect(function()
-		if Sound then
-			Sound:Destroy()
-		end
-
-		if Attachment then
-			Attachment:Destroy()
-		end
-
-		return EndConnection:Disconnect()
-	end)
-
-	if not Parameters.RollOffMaxDistance then
-		Parameters.RollOffMaxDistance = 300
-	end
-
-	if Parameters.CFrame then
-		Attachment = Instance.new("Attachment")
-		Attachment.Parent = workspace.Terrain
-		Attachment.WorldCFrame = Parameters.CFrame
-		Parameters.Parent = Attachment
-	end
-
-	Parameters.CFrame = nil
-
-	for Index, Value in Parameters do
-		Sound[Index] = Value
-	end
-
-	return Sound, Attachment
-end
-
-shared.safeDestroy = function(instance)
-	if not instance or typeof(instance) ~= "Instance" then
-		return
-	end
-
-	instance:Destroy()
-	instance = nil
-end
-
 shared.cfolder = function(instanceData, lifeTime)
 	local newInstance = Instance.new("Accessory")
 
@@ -119,86 +68,11 @@ shared.cfolder = function(instanceData, lifeTime)
 
 	if lifeTime and typeof(lifeTime) == "number" then
 		task.delay(lifeTime, function()
-			shared.safeDestroy(newInstance)
+			Debris:AddItem(newInstance)
 		end)
 	end
 
 	return newInstance
-end
-
-shared.AddAppareance = function(Player, Character, HumanoidDescription)
-	if not Player or not Character or not Character.Parent then
-		return
-	end
-
-	local userId = Player.UserId
-	local Humanoid = Character:FindFirstChild("Humanoid") or Character:WaitForChild("Humanoid", 5)
-	if not Humanoid then
-		return
-	end
-
-	local PlayersModel = Players:GetCharacterAppearanceAsync(userId)
-	HumanoidDescription = HumanoidDescription or Players:GetHumanoidDescriptionFromUserId(userId)
-
-	if HumanoidDescription then
-		Humanoid:ApplyDescription(HumanoidDescription)
-	end
-
-	if PlayersModel then
-		local Face = PlayersModel:FindFirstChild("face")
-		if Face then
-			Character.Head.face.Texture = Face.Texture
-		end
-
-		PlayersModel:Destroy()
-	end
-
-	for _, Accessory in Character:GetChildren() do
-		if Accessory:IsA("Accessory") then
-			local Handle = Accessory:FindFirstChild("Handle")
-			if Handle and Handle:FindFirstChildOfClass("Weld") then
-				local AccessoryWeld = Handle:FindFirstChildOfClass("Weld")
-
-				local Weld = Instance.new("Weld")
-				Weld.Name = "WeldConstraint"
-				Weld.Part1 = AccessoryWeld.Part1
-				Weld.Part0 = Handle
-				Weld.C0 = Handle.CFrame:ToObjectSpace(AccessoryWeld.Part1.CFrame)
-				Weld.Parent = Accessory
-
-				AccessoryWeld:Destroy()
-
-				Handle.CanCollide = false
-				Handle.CanQuery = false
-				Handle.CanTouch = false
-				Handle.Massless = true
-				Handle.CollisionGroup = "Players"
-
-				Accessory.Name = "#ACCESSORY_" .. Accessory.Name
-				Accessory.Parent = Character.FakeHead
-			end
-		end
-	end
-
-	local NewOutfitApplied = Instance.new("Configuration")
-	NewOutfitApplied.Name = "NewHumanoidDescriptionApplied"
-	NewOutfitApplied.Parent = Character
-	Debris:AddItem(NewOutfitApplied, 5)
-
-	if RS.Clones:FindFirstChild(Character.Name) then
-		RS.Clones[Character.Name]:Destroy()
-	end
-
-	Character.Archivable = true
-	local CharacterClone = Character:Clone()
-	Character.Archivable = false
-
-	CharacterClone.Parent = RS.Clones
-	for _, scriptInChar in CharacterClone:GetDescendants() do
-		if scriptInChar:IsA("LocalScript") or scriptInChar:IsA("Script") then
-			scriptInChar:Destroy()
-		end
-	end
 end
 
 shared.fireAllExcept = function(RemoteEvent, Blacklist, Parameters)
@@ -505,7 +379,7 @@ local ComunicatorFunctions = {
 					CollectionService:AddTag(SmallDebris, "SmallDebris")
 					SmallDebris.Parent = Character
 
-					local DashStart = RS.Resources.Animations.Dashes.DashFront
+					local DashStart = ReplicatedStorage.Resources.Animations.Dashes.DashFront
 					local AnimTrack = AnimationService:getAnimationTrack(Character, DashStart)
 					local HitEvents = {}
 
@@ -534,7 +408,7 @@ local ComunicatorFunctions = {
 
 						AnimTrack:AdjustSpeed(1)
 
-						shared.safeDestroy(SmallDebris)
+						Debris:AddItem(SmallDebris)
 
 						if Jantior then
 							Jantior:Destroy()
@@ -736,7 +610,7 @@ local ComunicatorFunctions = {
 
 							if not Ended then
 								if Character:GetAttribute("Combo") == 3 then
-									shared.safeDestroy(dashVelocity)
+									Debris:AddItem(dashVelocity)
 									Character:SetAttribute("Combo", 0)
 								end
 
@@ -1029,7 +903,7 @@ local function AddStarterPlayer(Player)
 	end
 
 	local PlayerData = Data.Service:waitForData(Player)
-	local template = SvSt.StarterPlayer
+	local template = ServerStorage.StarterPlayer
 
 	for _, obj in template:GetChildren() do
 		local clone = obj:Clone()
@@ -1272,3 +1146,5 @@ for _, part in workspace.Map.Destroyables:GetDescendants() do
 		part:SetAttribute("Destroyable", true)
 	end
 end
+
+RemoteManager.ListenToAll(ServerRemoteListener)

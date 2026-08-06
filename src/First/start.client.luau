@@ -279,54 +279,6 @@ shared.resizemodel = function(model, scale)
 	resize(parts, joints, meshes, Vector3.new(1, 1, 1) * scale)
 end
 
-shared.OnScreen = function(Position)
-	local _, IsOnScreen = workspace.CurrentCamera:WorldToScreenPoint(Position)
-	return IsOnScreen
-end
-
-shared.sfx = function(Parameters)
-	local Sound = Instance.new("Sound")
-	Sound.SoundGroup = SoundService.Sounds
-
-	if Parameters.AddTo then
-		table.insert(Parameters.AddTo, Sound)
-		Parameters.AddTo = nil
-	end
-
-	local Attachment = nil
-	local EndConnection = nil
-	EndConnection = Sound.Ended:connect(function()
-		if Sound then
-			Sound:Destroy()
-		end
-
-		if Attachment then
-			Attachment:Destroy()
-		end
-
-		return EndConnection:Disconnect()
-	end)
-
-	if not Parameters.RollOffMaxDistance then
-		Parameters.RollOffMaxDistance = 300
-	end
-
-	if Parameters.CFrame then
-		Attachment = Instance.new("Attachment")
-		Attachment.Parent = workspace.Terrain
-		Attachment.WorldCFrame = Parameters.CFrame
-		Parameters.Parent = Attachment
-	end
-
-	Parameters.CFrame = nil
-
-	for Index, Value in Parameters do
-		Sound[Index] = Value
-	end
-
-	return Sound, Attachment
-end
-
 shared.NerfVfx = function(Params)
 	local Character = Params.Char == game.Players.LocalPlayer.Character
 	local Rate = Params.RateNerf or 1.5

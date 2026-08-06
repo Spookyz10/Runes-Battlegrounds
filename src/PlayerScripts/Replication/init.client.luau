@@ -18,6 +18,7 @@ local StarterGui = game:GetService("StarterGui")
 local UIS = game:GetService("UserInputService")
 local RS = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ClientContext = require(RS.Shared.Modules.ClientContext)
 local TextChatService = game:GetService("TextChatService")
@@ -33,6 +34,8 @@ local SpecialsSet = Remotes.Specials.Set
 local RPModules = RS.Shared.Modules
 
 local InfoModule = require(RS.Shared.Info)
+local ClientRemoteListener = require(ReplicatedStorage.Shared.Modules.ClientRemoteListener)
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local IndicatorService = require(script.Functions.Tasks.Shared.IndicatorService)
 local RotationController = require(script.Functions.Tasks.Shared.RotationController)
 local CutsceneController = require(script.Functions.CutsceneController)
@@ -1639,3 +1642,5 @@ TextChatService.OnIncomingMessage = function(message)
 		.. message.PrefixText
 	return overrideProperties
 end
+
+RemoteManager.ListenToAllClient(ClientRemoteListener)
