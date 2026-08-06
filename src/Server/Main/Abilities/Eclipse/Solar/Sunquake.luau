@@ -34,9 +34,12 @@ local function applyInferno(EnemyCharacter)
 		return
 	end
 
+	ReplicateSet:FireAllClients("AuraFX", { func = "Start", char = EnemyCharacter, aura = "Inferno" })
+
 	task.delay(INFERNO_DURATION, function()
 		if EnemyCharacter and EnemyCharacter.Parent then
 			EnemyCharacter:SetAttribute("Inferno", nil)
+			ReplicateSet:FireAllClients("AuraFX", { func = "End", char = EnemyCharacter, aura = "Inferno" })
 		end
 	end)
 end

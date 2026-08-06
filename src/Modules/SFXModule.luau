@@ -24,6 +24,13 @@ function module:Play(name, location, playbackSpeed, fadeOutParams, timePosition)
 	return SoundsModule:PlaySound(sound, location, playbackSpeed, nil, fadeOutParams, timePosition)
 end
 
+function module:Stop(soundInstance)
+	if not soundInstance then
+		return
+	end
+	SoundsModule:StopSound(soundInstance)
+end
+
 function module:Get(name)
 	return sounds[name]
 end

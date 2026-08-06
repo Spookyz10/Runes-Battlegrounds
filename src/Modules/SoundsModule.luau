@@ -10,10 +10,11 @@ local getCF = {
 	end,
 }
 
+local soundAttachments = setmetatable({}, { __mode = "k" })
+
 function module:PlaySound(OriginalSound, Part, PlaybackSpeed, _, FadeOutParams, TimePosition)
 	local partType = typeof(Part)
 	local ParentPart = nil
-	local destroyParentPart = false
 
 	local Sound = OriginalSound:Clone()
 	task.spawn(function()
@@ -25,7 +26,7 @@ function module:PlaySound(OriginalSound, Part, PlaybackSpeed, _, FadeOutParams, 
 			soundAttachment.WorldPosition = getCF[partType](Part)
 
 			ParentPart = soundAttachment
-			destroyParentPart = true
+			soundAttachments[Sound] = soundAttachment
 		else
 			ParentPart = Part
 		end
@@ -37,10 +38,7 @@ function module:PlaySound(OriginalSound, Part, PlaybackSpeed, _, FadeOutParams, 
 
 		if Sound.Looped == false then
 			task.delay(Sound.TimeLength + 5, function()
-				Sound:Destroy()
-				if destroyParentPart == true then
-					ParentPart:Destroy()
-				end
+				module:StopSound(Sound)
 			end)
 
 			if FadeOutParams then
@@ -52,6 +50,24 @@ function module:PlaySound(OriginalSound, Part, PlaybackSpeed, _, FadeOutParams, 
 	end)
 
 	return Sound
+end
+
+function module:StopSound(Sound)
+	if not Sound then
+		return
+	end
+
+	local attachment = soundAttachments[Sound]
+	soundAttachments[Sound] = nil
+
+	if Sound.Parent then
+		Sound:Stop()
+		Sound:Destroy()
+	end
+
+	if attachment and attachment.Parent then
+		attachment:Destroy()
+	end
 end
 
 return module

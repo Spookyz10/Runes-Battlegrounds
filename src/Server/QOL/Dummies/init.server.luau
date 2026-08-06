@@ -112,6 +112,8 @@ function spawnDummy(CF, InitialHp, ScriptName)
 	Dummy.Parent = LiveFolder
 	CollectionService:AddTag(Dummy, "Character")
 
+	Dummy.PrimaryPart:SetNetworkOwner(nil)
+
 	if ScriptName and script.Scripts:FindFirstChild(ScriptName) then
 		local Script: Script = script.Scripts[ScriptName]:Clone()
 		Script.Parent = Dummy

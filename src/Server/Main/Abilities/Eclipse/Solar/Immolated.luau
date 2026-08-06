@@ -7,6 +7,7 @@ local MoveAnims = ServerStorage.Assets.Animations.Moves
 local StunHandler = require(ServerModules.StunHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local AnimationService = require(ServerModules.AnimationService)
+local HitboxHandler = require(ServerModules.HitboxHandler)
 local SFX = require(ServerModules.SFXModule)
 
 local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
@@ -14,7 +15,7 @@ local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 local DURATION = 10
 local DAMAGE_TAKEN_MULT = 0.8
 local IMMOLATED_WALKSPEED = 10
-local SLOW_RADIUS = 12
+local PULSE_HITBOX_SIZE = Vector3.new(34, 34, 34)
 local ENEMY_SLOW_MULT = 0.55
 local PULSE_INTERVAL = 3
 local PULSE_SLOW_DURATION = 2
@@ -37,9 +38,9 @@ local function cleanUp(
 	if pulseThread then
 		task.cancel(pulseThread)
 	end
-	if loopSound and loopSound.Parent then
-		loopSound:Stop()
-		loopSound:Destroy()
+
+	if loopSound then
+		SFX:Stop(loopSound)
 	end
 
 	for EnemyCharacter, baseSpeed in slowedEnemies do
@@ -120,13 +121,8 @@ return {
 				local diedConnection
 				local slowedEnemies = {}
 
-				local overlapParams = OverlapParams.new()
-				overlapParams.FilterType = Enum.RaycastFilterType.Include
-				overlapParams.FilterDescendantsInstances = { workspace.Live }
-
 				local pulseThread = task.spawn(function()
 					while Character:GetAttribute("Immolated") do
-						task.wait(PULSE_INTERVAL)
 						if not Character:GetAttribute("Immolated") then
 							break
 						end
@@ -136,42 +132,49 @@ return {
 
 						SFX:Play("immolatedPulse", HumRP)
 
-						local parts = workspace:GetPartBoundsInRadius(HumRP.Position, SLOW_RADIUS, overlapParams)
+						ReplicateSet:FireAllClients("ImmolatedPulse", { position = HumRP.Position })
+
 						local pulsedThisTick = {}
 
-						for _, part in parts do
-							local EnemyCharacter = part.Parent
-							if not EnemyCharacter or EnemyCharacter == Character then
-								continue
-							end
-							if pulsedThisTick[EnemyCharacter] then
-								continue
-							end
-							local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
-							if not EnemyHumanoid or EnemyHumanoid.Health <= 0 then
-								continue
-							end
+						HitboxHandler:SimpleOnce(
+							HumRP.Position,
+							PULSE_HITBOX_SIZE,
+							nil,
+							{ Character },
+							"Box",
+							nil,
+							function(EnemyCharacter)
+								if pulsedThisTick[EnemyCharacter] then
+									return
+								end
+								local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
+								if not EnemyHumanoid or EnemyHumanoid.Health <= 0 then
+									return
+								end
 
-							pulsedThisTick[EnemyCharacter] = true
+								pulsedThisTick[EnemyCharacter] = true
 
-							local baseSpeed = EnemyHumanoid.WalkSpeed
-							if not slowedEnemies[EnemyCharacter] then
-								slowedEnemies[EnemyCharacter] = baseSpeed
-								EnemyHumanoid.WalkSpeed = math.max(baseSpeed * ENEMY_SLOW_MULT, 1)
-							end
+								local baseSpeed = EnemyHumanoid.WalkSpeed
+								if not slowedEnemies[EnemyCharacter] then
+									slowedEnemies[EnemyCharacter] = baseSpeed
+									EnemyHumanoid.WalkSpeed = math.max(baseSpeed * ENEMY_SLOW_MULT, 1)
+								end
 
-							task.delay(PULSE_SLOW_DURATION, function()
-								if slowedEnemies[EnemyCharacter] then
-									slowedEnemies[EnemyCharacter] = nil
-									if EnemyCharacter and EnemyCharacter.Parent then
-										local hum = EnemyCharacter:FindFirstChild("Humanoid")
-										if hum then
-											hum.WalkSpeed = baseSpeed
+								task.delay(PULSE_SLOW_DURATION, function()
+									if slowedEnemies[EnemyCharacter] then
+										slowedEnemies[EnemyCharacter] = nil
+										if EnemyCharacter and EnemyCharacter.Parent then
+											local hum = EnemyCharacter:FindFirstChild("Humanoid")
+											if hum then
+												hum.WalkSpeed = baseSpeed
+											end
 										end
 									end
-								end
-							end)
-						end
+								end)
+							end
+						)
+
+						task.wait(PULSE_INTERVAL)
 					end
 				end)
 

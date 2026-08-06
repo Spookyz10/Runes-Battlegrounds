@@ -104,6 +104,9 @@ return {
 
 			local freezeToken = StunHandler:Stun(enemyChar, nil, true, 0, 0, true)
 
+			enemyChar:SetAttribute("LunarMark", true)
+			ReplicateSet:FireAllClients("AuraFX", { func = "Start", char = enemyChar, aura = "LunarMark" })
+
 			grabbed[enemyChar] = {
 				humanoid = EnemyHum,
 				freezeToken = freezeToken,
@@ -139,6 +142,10 @@ return {
 					end
 					if data.freezeToken then
 						StunHandler:Unstun(enemyChar, data.freezeToken)
+					end
+					if enemyChar:GetAttribute("LunarMark") then
+						enemyChar:SetAttribute("LunarMark", nil)
+						ReplicateSet:FireAllClients("AuraFX", { func = "End", char = enemyChar, aura = "LunarMark" })
 					end
 				end
 
@@ -276,6 +283,11 @@ return {
 								nil
 							)
 						end
+					end
+
+					if enemyChar:GetAttribute("LunarMark") then
+						enemyChar:SetAttribute("LunarMark", nil)
+						ReplicateSet:FireAllClients("AuraFX", { func = "End", char = enemyChar, aura = "LunarMark" })
 					end
 				end
 			end)

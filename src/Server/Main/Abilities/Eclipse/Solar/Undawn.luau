@@ -220,6 +220,10 @@ return {
 
 						if EnemyCharacter:HasTag("Blocking") then
 							EnemyCharacter:SetAttribute("Inferno", nil)
+							ReplicateSet:FireAllClients(
+								"AuraFX",
+								{ func = "End", char = EnemyCharacter, aura = "Inferno" }
+							)
 							return
 						end
 
@@ -234,6 +238,7 @@ return {
 						end
 
 						EnemyCharacter:SetAttribute("Inferno", nil)
+						ReplicateSet:FireAllClients("AuraFX", { func = "End", char = EnemyCharacter, aura = "Inferno" })
 
 						local HitInfo = DamageHandler:TakeDamage(
 							Character,

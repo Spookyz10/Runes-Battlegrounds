@@ -37,10 +37,6 @@ function module:Knockback(
 			AnimTrack = AnimationService:getAnimationTrack(Character, CustomAnimation)
 			tweenTime = AnimTrack.Length
 			StunHandler:Stun(Character, tweenTime, true, 0, 0, true)
-			ReplicateSet:FireAllClients(
-				"RockTrail",
-				{ parent = HumRP, size = 0.5, side = 2.5, t = 5, height = 5, spawnrate = 0.15, duration = tweenTime }
-			)
 		else
 			local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true)
 			AnimTrack = AnimationService:getAnimationTrack(Character, knockAnim)
@@ -58,16 +54,6 @@ function module:Knockback(
 
 						AnimTrack:AdjustSpeed(1)
 
-						ReplicateSet:FireAllClients("RockTrail", {
-							parent = HumRP,
-							size = 0.5,
-							side = 2.5,
-							t = 5,
-							height = 5,
-							spawnrate = 0.15,
-							duration = 0.533,
-						})
-
 						if waitForFloor ~= false and typeof(Velocity) == "Vector3" then
 							Bodymover:Knockback(Character, {
 								KnockbackType = "VelocityTweenDown",
@@ -78,16 +64,6 @@ function module:Knockback(
 						end
 					end)
 				else
-					ReplicateSet:FireAllClients("RockTrail", {
-						parent = HumRP,
-						size = 0.5,
-						side = 2.5,
-						t = 5,
-						height = 5,
-						spawnrate = 0.15,
-						duration = 0.533,
-					})
-
 					if waitForFloor ~= false then
 						Bodymover:Knockback(Character, {
 							KnockbackType = "VelocityTweenDown",
