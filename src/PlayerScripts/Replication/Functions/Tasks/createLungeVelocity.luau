@@ -2,6 +2,8 @@ local Constants = require(script.Parent.Shared.Constants)
 local LocalPlayer = Constants.LocalPlayer
 local RunService = Constants.RunService
 
+local ClientState = require(script.Parent.Shared.ClientState)
+
 return function(Params)
 	local Character = LocalPlayer.Character
 	if not Character then
@@ -52,7 +54,7 @@ return function(Params)
 			if speed <= 0.5 then
 				bv:Destroy()
 				conn:Disconnect()
-				shared._lungeConn = nil
+				ClientState.LungeConnection = nil
 				return
 			end
 		end
@@ -60,5 +62,5 @@ return function(Params)
 		bv.Velocity = HumRP.CFrame.LookVector * speed
 	end)
 
-	shared._lungeConn = conn
+	ClientState.LungeConnection = conn
 end

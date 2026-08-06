@@ -272,20 +272,20 @@ function module:Activate(Player)
 
 	local isAirborne = false
 
-	ReplicateSet:FireClient(Player, "StartLunarAimControl", { Duration = AIM_CONTROL_MAX_DURATION })
-	IndicatorService:Create({
-		id = indicatorId,
-		character = Character,
-		ownerId = Player.UserId,
-		asset = LunarIndicatorAsset,
-	})
-
 	table.insert(
 		AnimEvents,
 		AnimTrack:GetMarkerReachedSignal("tpup"):Connect(function()
 			if not Character or not Character.Parent or Humanoid.Health <= 0 then
 				return
 			end
+
+			ReplicateSet:FireClient(Player, "StartLunarAimControl", { Duration = AIM_CONTROL_MAX_DURATION })
+			IndicatorService:Create({
+				id = indicatorId,
+				character = Character,
+				ownerId = Player.UserId,
+				asset = LunarIndicatorAsset,
+			})
 
 			SFXModule:Play("Lunar Awakening", HumRP)
 

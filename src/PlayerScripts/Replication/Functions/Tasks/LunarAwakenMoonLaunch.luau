@@ -1,5 +1,6 @@
 local Constants = require(script.Parent.Shared.Constants)
 local State = require(script.Parent.Shared.State)
+local ClientState = require(script.Parent.Shared.ClientState)
 local RunService = Constants.RunService
 
 return function(Params)
@@ -16,7 +17,7 @@ return function(Params)
 		data.moonConn = nil
 	end
 
-	if shared._indicators and ownerId and shared._indicators[ownerId] then
+	if ownerId and ClientState.Indicators[ownerId] then
 		local IndicatorEnd = require(script.Parent.IndicatorEnd)
 		IndicatorEnd({ ownerId = ownerId })
 	end

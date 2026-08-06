@@ -1,10 +1,12 @@
 local Constants = require(script.Parent.Shared.Constants)
 local LocalPlayer = Constants.LocalPlayer
 
+local ClientState = require(script.Parent.Shared.ClientState)
+
 return function(_Params)
-	if shared._lungeConn then
-		shared._lungeConn:Disconnect()
-		shared._lungeConn = nil
+	if ClientState.LungeConnection then
+		ClientState.LungeConnection:Disconnect()
+		ClientState.LungeConnection = nil
 	end
 
 	local Character = LocalPlayer.Character

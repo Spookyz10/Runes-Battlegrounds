@@ -6,8 +6,8 @@ local VoxBreaker = Constants.VoxBreaker
 local LocalPlayer = Constants.LocalPlayer
 local MapOverlapParams = Constants.MapOverlapParams
 
-local DestroyedParts = {}
-shared.DestroyedParts = DestroyedParts
+local ClientState = require(script.Parent.Shared.ClientState)
+local DestroyedParts = ClientState.DestroyedParts
 
 return function(Params)
 	local CF: CFrame = Params.CFrame

@@ -1,13 +1,14 @@
 local RotationController = require(script.Parent.Shared.RotationController)
+local ClientState = require(script.Parent.Shared.ClientState)
 
 return function(Params)
-	shared._lunarAimActive = false
+	ClientState.LunarAimActive = false
 	RotationController:Release("lunarAim")
 
 	if Params.RestoreCamera ~= false then
-		if shared._lunarAimRestoreCamera then
-			shared._lunarAimRestoreCamera()
-			shared._lunarAimRestoreCamera = nil
+		if ClientState.LunarAimRestoreCamera then
+			ClientState.LunarAimRestoreCamera()
+			ClientState.LunarAimRestoreCamera = nil
 		end
 	end
 end

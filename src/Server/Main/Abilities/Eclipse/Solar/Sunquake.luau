@@ -12,6 +12,7 @@ local iFramesService = require(ServerModules.iFramesService)
 local PerfectKnockback = require(ServerModules.PerfectKnockback)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local BodymoverService = require(ServerModules.BodymoverService)
+local StatusEffectHandler = require(ServerModules.StatusEffectHandler)
 local SFX = require(ServerModules.SFXModule)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
@@ -26,23 +27,6 @@ local INFERNO_DURATION = 10
 local BLOCKED_KNOCK_FORCE = 35
 local BLOCKED_UP_FORCE = 25
 local BLOCKED_RAGDOLL_TIME = 2.5
-
-local function applyInferno(EnemyCharacter)
-	local existing = EnemyCharacter:GetAttribute("Inferno")
-	EnemyCharacter:SetAttribute("Inferno", true)
-	if existing then
-		return
-	end
-
-	ReplicateSet:FireAllClients("AuraFX", { func = "Start", char = EnemyCharacter, aura = "Inferno" })
-
-	task.delay(INFERNO_DURATION, function()
-		if EnemyCharacter and EnemyCharacter.Parent then
-			EnemyCharacter:SetAttribute("Inferno", nil)
-			ReplicateSet:FireAllClients("AuraFX", { func = "End", char = EnemyCharacter, aura = "Inferno" })
-		end
-	end)
-end
 
 return {
 	Start = function(Player, Tool)
@@ -168,7 +152,10 @@ return {
 							end
 
 							SvSt.Bindables.AirDetector:Fire(EnemyCharacter, nil, true)
-							applyInferno(EnemyCharacter)
+							StatusEffectHandler:Apply(EnemyCharacter, "Inferno", {
+								Duration = INFERNO_DURATION,
+								Source = Character,
+							})
 						end
 					)
 				end)

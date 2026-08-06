@@ -1,8 +1,9 @@
 local RotationController = require(script.Parent.Shared.RotationController)
+local ClientState = require(script.Parent.Shared.ClientState)
 
 return function(Params)
-	shared._solarAimActive = true
-	shared._solarAimDirection = workspace.CurrentCamera.CFrame.LookVector
+	ClientState.SolarAimActive = true
+	ClientState.SolarAimDirection = workspace.CurrentCamera.CFrame.LookVector
 
 	local duration = Params.Duration or 5
 	local startTime = tick()
@@ -10,12 +11,12 @@ return function(Params)
 	RotationController:Request("solarAim", 10, function()
 		if tick() - startTime >= duration then
 			RotationController:Release("solarAim")
-			shared._solarAimActive = false
+			ClientState.SolarAimActive = false
 			return nil
 		end
 
 		local lookDir = workspace.CurrentCamera.CFrame.LookVector
-		shared._solarAimDirection = lookDir
+		ClientState.SolarAimDirection = lookDir
 		return lookDir
 	end)
 end

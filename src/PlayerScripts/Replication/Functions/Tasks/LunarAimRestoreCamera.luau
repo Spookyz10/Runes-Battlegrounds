@@ -1,6 +1,8 @@
+local ClientState = require(script.Parent.Shared.ClientState)
+
 return function(_Params)
-	if shared._lunarAimRestoreCamera then
-		shared._lunarAimRestoreCamera()
-		shared._lunarAimRestoreCamera = nil
+	if ClientState.LunarAimRestoreCamera then
+		ClientState.LunarAimRestoreCamera()
+		ClientState.LunarAimRestoreCamera = nil
 	end
 end

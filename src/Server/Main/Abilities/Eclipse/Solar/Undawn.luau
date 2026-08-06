@@ -17,12 +17,19 @@ local StatusEffectHandler = require(ServerModules.StatusEffectHandler)
 local PILLAR_SEARCH_RADIUS = 60
 local PILLAR_DAMAGE = 10
 local PILLAR_STUN = 1.5
+local PILLAR_DELAY = 0.7
 
 local FIRE_ARMS_STACKS = 2
 
 local function fireVFX(func, params)
 	params.func = func
 	ReplicateSet:FireAllClients("UndawnVFX", params)
+end
+
+local function clearInferno(EnemyCharacter)
+	for _, source in StatusEffectHandler:GetSources(EnemyCharacter, "Inferno") do
+		StatusEffectHandler:Remove(EnemyCharacter, "Inferno", source)
+	end
 end
 
 return {
@@ -58,7 +65,7 @@ return {
 				"Sphere",
 				nil,
 				function(EnemyCharacter)
-					if not EnemyCharacter:GetAttribute("Inferno") then
+					if not StatusEffectHandler:Has(EnemyCharacter, "Inferno") then
 						return
 					end
 					local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
@@ -80,7 +87,7 @@ return {
 				return
 			end
 
-			task.delay(1, function()
+			task.delay(PILLAR_DELAY, function()
 				fireVFX("Beam", {
 					char = Character,
 					beamPositions = beamPositions,
@@ -94,16 +101,12 @@ return {
 					"Sphere",
 					nil,
 					function(EnemyCharacter)
-						if not EnemyCharacter:GetAttribute("Inferno") then
+						if not StatusEffectHandler:Has(EnemyCharacter, "Inferno") then
 							return
 						end
 
 						if EnemyCharacter:HasTag("Blocking") then
-							EnemyCharacter:SetAttribute("Inferno", nil)
-							ReplicateSet:FireAllClients(
-								"AuraFX",
-								{ func = "End", char = EnemyCharacter, aura = "Inferno" }
-							)
+							clearInferno(EnemyCharacter)
 							return
 						end
 
@@ -117,8 +120,7 @@ return {
 							return
 						end
 
-						EnemyCharacter:SetAttribute("Inferno", nil)
-						ReplicateSet:FireAllClients("AuraFX", { func = "End", char = EnemyCharacter, aura = "Inferno" })
+						clearInferno(EnemyCharacter)
 
 						local HitInfo = DamageHandler:TakeDamage(
 							Character,

@@ -248,9 +248,11 @@ function module:Activate(Player)
 		ReplicateSet:FireAllClients("SolarAwakenEnd", { char = Character })
 	end)
 
+	Character:AddTag("CantRotate")
 	AnimationService:playAnimation(Character, SolarEclipseAnim)
 	CutscenesSet:FireClient(Player, "SolarAwaken", "Start", { Offset = CFrame.new(0, -3, 0) })
 	AnimTrack.Stopped:Wait()
+	Character:RemoveTag("CantRotate")
 	ReplicateSet:FireAllClients("ShowHotbar")
 	ReplicateSet:FireAllClients("ShowAwkbar")
 end
