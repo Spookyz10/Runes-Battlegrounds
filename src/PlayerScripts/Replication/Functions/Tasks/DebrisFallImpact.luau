@@ -4,6 +4,9 @@ local Resources = Constants.Resources
 local Debris = Constants.Debris
 local ParticlesModule = Constants.ParticlesModule
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CameraShakeController = require(ReplicatedStorage.Shared.Modules.Functions.CameraShakerController)
+
 local SHAKE_RADIUS = 40
 
 return function(Params)
@@ -28,6 +31,6 @@ return function(Params)
 	local Character = LocalPlayer.Character
 	local HumRP = Character and Character:FindFirstChild("HumanoidRootPart")
 	if HumRP and (HumRP.Position - Position).Magnitude <= SHAKE_RADIUS then
-		shared.repfire("ShakeCamera", { Magnitude = 3, Roughness = 6, FadeInTime = 0.05, FadeOutTime = 0.4 })
+		CameraShakeController.AddShake(3, 0.4)
 	end
 end

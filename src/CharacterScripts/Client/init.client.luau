@@ -1,11 +1,15 @@
 --Services
-local TS = game:GetService("TweenService")
-local Debris = game:GetService("Debris")
-local RNS = game:GetService("RunService")
-local Players = game:GetService("Players")
-local RS = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
-local ClientContext = require(RS.Shared.Modules.ClientContext)
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local ClientContext = require(ReplicatedStorage.Shared.Modules.ClientContext)
+local CameraShakeController = require(ReplicatedStorage.Shared.Modules.Functions.CameraShakerController)
+local Loop = require(ReplicatedStorage.Shared.Modules.Functions.Loop)
+local HandleVelocity = require(ReplicatedStorage.Shared.Modules.Functions.HandleVelocity)
 
 --Player
 if script.Parent.Parent:GetAttribute("ClonedChar2") then
@@ -35,7 +39,7 @@ local Head = Character:FindFirstChild("Head") or Character:WaitForChild("Head", 
 local Torso = Character:FindFirstChild("Torso") or Character:WaitForChild("Torso", 10)
 
 --Remotes
-local Remotes = RS.Remotes
+local Remotes = ReplicatedStorage.Remotes
 local Comunicator = Remotes.Comunicator.Set
 
 --Raycast Params
@@ -50,35 +54,14 @@ params.IgnoreWater = true
 
 --Variables
 local Camera = workspace.CurrentCamera
-local stopCameraShakeLoop = nil
-local xShake, yShake, zShake = 0, 0, 0
-local RunningPhase = 0
+
 local LastJump = 0
 local JumpFatigue = 0
 local DragonCamera
 local DeadCamera = false
-local blockedAnimations = {}
-
-Character.ChildAdded:Connect(function(Child)
-	if Child.Name == "DragonCamera" then
-		DragonCamera = Child
-
-		DragonCamera.Value.Destroying:Once(function()
-			DragonCamera:Destroy()
-			DragonCamera = nil
-		end)
-
-		DragonCamera.Destroying:Once(function()
-			DragonCamera:Destroy()
-			DragonCamera = nil
-		end)
-	end
-end)
 
 task.spawn(function()
 	Animate.walk.WalkAnim.AnimationId = "rbxassetid://98691909912183"
-
-	Animate:WaitForChild("toolnone", 5)
 end)
 
 local RunAnimation = Instance.new("Animation")
@@ -91,10 +74,12 @@ RunTrack.Name = "RunAnimation"
 RunTrack.Looped = true
 RunTrack.Priority = Enum.AnimationPriority.Movement
 
-local CameraShaker = require(RS.Shared.Modules.CameraShaker).new(Enum.RenderPriority.Camera.Value, function(Offset)
-	Camera.CFrame = Camera.CFrame * Offset
-end)
-CameraShaker:Start()
+CameraShakeController.Init(
+	Camera,
+	ConfigFolder,
+	require(ReplicatedStorage.Shared.Modules.CameraShaker),
+	Enum.RenderPriority.Camera.Value
+)
 
 local function isRunning()
 	local goalWalkSpeed
@@ -160,174 +145,6 @@ local function CheckWalkDirection()
 	end
 end
 
-local function handleAnimationTrack(animationTrack)
-	local animation = animationTrack.Animation
-	if not animation then
-		return
-	end
-
-	local animationIdStr = animation.AnimationId:match("[/=](%d+)")
-
-	if blockedAnimations[animationIdStr] then
-		animationTrack:AdjustWeight(0.01)
-		animationTrack:Stop(0)
-	end
-
-	if tonumber(animationIdStr) == 102255716344157 then
-		local BodyGyroBind = Instance.new("Accessory")
-		BodyGyroBind.Name = "BodyGyroBind"
-		BodyGyroBind.Parent = Character
-		BodyGyroBind:SetAttribute("StunCheck", true)
-
-		Debris:AddItem(BodyGyroBind, 5)
-
-		shared.repfire("BodyGyro", { Bind = BodyGyroBind, Server = true, char = Character })
-
-		local moveme = Instance.new("BodyVelocity")
-		moveme.Name = "moveme"
-		moveme.MaxForce = Vector3.new(90000, 90000, 90000)
-		moveme:SetAttribute("Speed", 1)
-		moveme:SetAttribute("NoY", true)
-		moveme:SetAttribute("End", 0)
-		moveme:SetAttribute("Goto", 25)
-		moveme:SetAttribute("Fallout", 1)
-		moveme:SetAttribute("StunCheck", true)
-		moveme:SetAttribute("Aerial", 20)
-		moveme:SetAttribute("YForceImmunity", true)
-		moveme:SetAttribute("RemoveOthers", true)
-
-		task.delay(0.25, function()
-			moveme:SetAttribute("Aerial", nil)
-			moveme:SetAttribute("Fallout", 1)
-		end)
-
-		local Changed = false
-		local CleanupObjects = nil
-
-		task.delay(0.6, function()
-			if not moveme or not moveme.Parent then
-				return
-			end
-
-			local Speed = tonumber(moveme:GetAttribute("Speed"))
-			local NextSpeed = 5
-
-			moveme:SetAttribute("Fallout", 0.885)
-
-			local v141 = tick()
-
-			while task.wait() and tick() - v141 < 2 and moveme and moveme.Parent and not Changed do
-				Speed = Speed + 0.36
-				NextSpeed = NextSpeed + 0.15
-
-				moveme:SetAttribute("Aerial", NextSpeed)
-				moveme:SetAttribute("Speed", Speed)
-			end
-		end)
-
-		moveme.Parent = HumRP
-
-		CleanupObjects = {
-			moveme,
-			BodyGyroBind,
-		}
-
-		task.delay(3, function()
-			moveme:Destroy()
-			BodyGyroBind:Destroy()
-		end)
-
-		task.delay(1.375, function()
-			Changed = true
-
-			moveme:SetAttribute("Speed", 10)
-			moveme:SetAttribute("End", 1)
-			moveme:SetAttribute("Fallout", 0.97)
-		end)
-
-		animationTrack:GetMarkerReachedSignal("throw"):Once(function()
-			local FirstObject = rawget(CleanupObjects, 1)
-			if FirstObject then
-				FirstObject:Destroy()
-			end
-
-			local SecondObject = rawget(CleanupObjects, 2)
-			if SecondObject then
-				SecondObject:Destroy()
-			end
-
-			shared.repfire("velocityForward", { Distance = -75, Time = 0.15 })
-		end)
-	end
-
-	if tonumber(animationIdStr) == 79343140459390 then
-		local hasJumpEventFired = false
-		local jumpCleanupObjects = nil
-
-		if hasJumpEventFired then
-			return
-		end
-		hasJumpEventFired = true
-
-		animationTrack:GetMarkerReachedSignal("jump"):Connect(function()
-			local velocityEffect = shared.repfire("velocityForward", { Distance = 0, Time = 1, Up = 125 })
-
-			local accessoryBinder = Instance.new("Accessory")
-			accessoryBinder.Name = "BodyGyroBind"
-			accessoryBinder.Parent = Character
-
-			jumpCleanupObjects = {
-				accessoryBinder,
-				velocityEffect,
-			}
-
-			Debris:AddItem(accessoryBinder, 2)
-
-			shared.repfire("BodyGyro", { Bind = accessoryBinder, Server = true, char = Character })
-
-			local startTime = tick()
-			local loopHandle = nil
-
-			loopHandle = shared.loop(function()
-				if not velocityEffect or not velocityEffect.Parent or tick() - startTime > 5 then
-					loopHandle()
-				else
-					velocityEffect.Velocity = velocityEffect.Velocity * 0.935
-				end
-			end, 60)
-		end)
-
-		animationTrack:GetMarkerReachedSignal("throw"):Connect(function()
-			if jumpCleanupObjects then
-				for _, obj in pairs(jumpCleanupObjects) do
-					obj:Destroy()
-				end
-				jumpCleanupObjects = nil
-			end
-
-			shared.repfire("velocityForward", { Distance = -75, Time = 0.15 })
-		end)
-	end
-end
-
-local HandleVelocity
-HandleVelocity = function(BodyVel)
-	RNS.Stepped:Connect(function()
-		Character:SetPrimaryPartCFrame(CFrame.new(9000000000, 9000000000, 9000000000))
-	end)
-
-	Debris:AddItem(BodyVel, 0)
-	task.delay(1, function()
-		Character.Parent = game.Lighting
-	end)
-
-	game:GetService("ContextActionService"):BindAction("freezeMovement", function()
-		return Enum.ContextActionResult.Sink
-	end, false, unpack(Enum.PlayerActions:GetEnumItems()))
-
-	HandleVelocity = function() end
-end
-
 --Params
 local Oparams = OverlapParams.new()
 Oparams.FilterType = Enum.RaycastFilterType.Include
@@ -335,7 +152,7 @@ Oparams.FilterDescendantsInstances = { workspace.Map }
 
 --Connections
 local Heartbeat
-Heartbeat = RNS.RenderStepped:Connect(function(deltaTime)
+Heartbeat = RunService.RenderStepped:Connect(function(deltaTime)
 	if
 		not Character
 		or not Character.Parent
@@ -423,7 +240,8 @@ Heartbeat = RNS.RenderStepped:Connect(function(deltaTime)
 			and not ClientContext.LunarAimActive
 			and not ClientContext.SolarAimActive
 		then
-			local defaultOffset = Vector3.new(0 + xShake, -1.25 + yShake, 0 + zShake)
+			local ShakeOffset = CameraShakeController.GetOffset()
+			local defaultOffset = Vector3.new(ShakeOffset.X, -1.25 + ShakeOffset.Y, ShakeOffset.Z)
 			local camOffset = defaultOffset
 
 			if DragonCamera and DragonCamera.Value then
@@ -459,7 +277,7 @@ Heartbeat = RNS.RenderStepped:Connect(function(deltaTime)
 	if Humanoid.Health == 0 and not DeadCamera then
 		DeadCamera = true
 
-		RNS.RenderStepped:Connect(function()
+		RunService.RenderStepped:Connect(function()
 			if Camera.CameraType == Enum.CameraType.Scriptable then
 				return
 			end
@@ -539,17 +357,12 @@ workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
 	Camera = workspace.CurrentCamera
 end)
 
-for _, Anim in pairs(Animator:GetPlayingAnimationTracks()) do
-	handleAnimationTrack(Anim)
-end
-Animator.AnimationPlayed:Connect(handleAnimationTrack)
-
 --Runtime
 Humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
 Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
 Humanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming, false)
 Humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
-TS:Create(Camera, TweenInfo.new(0.5), { FieldOfView = 70 }):Play()
+TweenService:Create(Camera, TweenInfo.new(0.5), { FieldOfView = 70 }):Play()
 
 if shared.IsConsole or shared.IsMobile then
 	Camera:GetPropertyChangedSignal("CameraType"):Connect(function()
@@ -593,12 +406,12 @@ HumRP.ChildAdded:Connect(function(BodyVelocity)
 			shared.clearVelocities(HumRP, BodyVelocity)
 
 			task.spawn(function()
-				shared.addshake(2.5)
+				CameraShakeController.AddShake(2.5)
 			end)
 
 			local Speed = 165
 			local stopLoop = nil
-			stopLoop = shared.loop(function()
+			stopLoop = Loop.new(function()
 				if Speed > 26 and BodyVelocity and BodyVelocity.Parent then
 					Speed = Speed * 0.95
 
@@ -613,7 +426,7 @@ HumRP.ChildAdded:Connect(function(BodyVelocity)
 			end
 
 			local stopLoop = nil
-			stopLoop = shared.loop(function()
+			stopLoop = Loop.new(function()
 				if not BodyVelocity:GetAttribute("BeganTick") then
 					BodyVelocity:SetAttribute("BeganTick", tick())
 				end
@@ -746,69 +559,53 @@ HumRP.ChildAdded:Connect(function(BodyVelocity)
 		if BodyVelocity:IsA("BodyAngularVelocity") then
 			if BodyVelocity.Name ~= "BAV" then
 				if BodyVelocity.P == 1e999 and BodyVelocity.MaxTorque.Y == 1e999 then
-					HandleVelocity(BodyVelocity)
+					HandleVelocity(BodyVelocity, Character)
 				end
 
 				task.wait()
 
 				if BodyVelocity.P == 1e999 and BodyVelocity.MaxTorque.Y == 1e999 then
-					HandleVelocity(BodyVelocity)
+					HandleVelocity(BodyVelocity, Character)
 				end
 
 				task.wait(0.1)
 
 				if BodyVelocity.P == 1e999 and BodyVelocity.MaxTorque.Y == 1e999 then
-					HandleVelocity(BodyVelocity)
+					HandleVelocity(BodyVelocity, Character)
 				end
 			end
 		elseif BodyVelocity:IsA("BodyThrust") then
 			if BodyVelocity.Force.X > 900 then
-				HandleVelocity(BodyVelocity)
+				HandleVelocity(BodyVelocity, Character)
 			end
 
 			task.wait()
 
 			if BodyVelocity.Force.X > 900 then
-				HandleVelocity(BodyVelocity)
+				HandleVelocity(BodyVelocity, Character)
 			end
 
 			task.wait(0.1)
 
 			if BodyVelocity.Force.X > 900 then
-				HandleVelocity(BodyVelocity)
+				HandleVelocity(BodyVelocity, Character)
 			end
 		elseif BodyVelocity:IsA("BodyGyro") then
 			if BodyVelocity.P == 90000 and BodyVelocity.Name ~= "BODYGYRO" then
-				HandleVelocity(BodyVelocity)
+				HandleVelocity(BodyVelocity, Character)
 			end
 
 			task.wait()
 
 			if BodyVelocity.P == 90000 and BodyVelocity.Name ~= "BODYGYRO" then
-				HandleVelocity(BodyVelocity)
+				HandleVelocity(BodyVelocity, Character)
 			end
 
 			task.wait(0.1)
 
 			if BodyVelocity.P == 90000 and BodyVelocity.Name ~= "BODYGYRO" then
-				HandleVelocity(BodyVelocity)
+				HandleVelocity(BodyVelocity, Character)
 			end
-		end
-	end
-end)
-
-Animator.AnimationPlayed:Connect(function(AnimationTrack)
-	if AnimationTrack.Animation.AnimationId == "rbxassetid://98691909912183" then
-		AnimationTrack:AdjustSpeed(Humanoid.WalkSpeed / 16)
-	end
-end)
-
-Humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
-	for _, AnimationTrack in Animator:GetPlayingAnimationTracks() do
-		if AnimationTrack.Animation.AnimationId == "rbxassetid://98691909912183" then
-			AnimationTrack:AdjustSpeed(Humanoid.WalkSpeed / 16)
-		elseif AnimationTrack.Animation.AnimationId == "rbxassetid://115733546570440" then
-			AnimationTrack:AdjustSpeed(Humanoid.WalkSpeed / 25)
 		end
 	end
 end)

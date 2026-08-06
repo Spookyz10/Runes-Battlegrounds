@@ -5,7 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
 
-local DAMAGE_THRESHOLD = 10
+local DAMAGE_THRESHOLD = 15
 local IFRAME_DURATION = 2
 local BUFF_DURATION = 10
 local DAMAGE_MULT = 1.2

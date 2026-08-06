@@ -1,39 +1,14 @@
-local SvSt = game:GetService("ServerStorage")
 local RS = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
 
-shared.AirDetect = SvSt.Bindables.AirDetector
-
-local Assets = SvSt.Assets
-
-shared.Assets = Assets
+local Abilities = require(ServerStorage.Modules.Abilities)
+local RemoteManager = require(RS.Shared.Modules.RemoteManager)
 
 local Remotes = RS.Remotes
-
-local ComunicatorFolder = Remotes.Comunicator
-
-shared.PlrSet = ComunicatorFolder.Set
-shared.PlrGet = ComunicatorFolder.Get
 
 local ReplicateAbilities = Remotes.AbilitiesHandler
 
 shared.moveget = ReplicateAbilities.Get
-shared.movefire = ReplicateAbilities.Set
-
-local ReplicateEffects = Remotes.Replicate
-
-shared.repget = ReplicateEffects.Get
-shared.repfire = ReplicateEffects.Set
-
-local ReplicatedModules = RS.Shared.Modules
-
-shared.AnimationEvents = require(ReplicatedModules.AnimationEvents)
-shared.Utility = require(ReplicatedModules.Utility)
-shared.WeldSystem = require(ReplicatedModules.WeldSystem)
-
-shared.rad = math.rad
-shared.DefaultJoint = game.StarterPlayer.StarterCharacter.HumanoidRootPart.RootJoint
-
-shared.Abilities = {}
 
 local function addToolCDS(Player, Tool)
 	local toolCooldowns = Tool:GetAttribute("Cooldowns")
@@ -58,12 +33,6 @@ local function addToolCDS(Player, Tool)
 	end
 end
 
-for _, v in script:GetDescendants() do
-	if v:IsA("ModuleScript") then
-		shared.Abilities[v.Name] = require(v)
-	end
-end
-
 shared.moveget.OnServerInvoke = function(Player, ToolName)
 	local Character = Player.Character
 	if not Character then
@@ -84,11 +53,11 @@ shared.moveget.OnServerInvoke = function(Player, ToolName)
 
 	addToolCDS(Player, Tool)
 
-	shared.repfire:FireAllClients("ActionHightlight", { char = Character, func = "Hit" })
+	RemoteManager.FireAllClients("Replicate", "ActionHightlight", { char = Character, func = "Hit" })
 
-	if shared.Abilities[ToolName] and shared.Abilities[ToolName]["Start"] then
+	if Abilities[ToolName] and Abilities[ToolName]["Start"] then
 		coroutine.wrap(function()
-			shared.Abilities[ToolName].Start(Player, Tool)
+			Abilities[ToolName].Start(Player, Tool)
 		end)()
 	end
 
