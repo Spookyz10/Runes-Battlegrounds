@@ -30,6 +30,8 @@ local ActiveEntries = {
 	Donated = {},
 }
 
+local Leaderboard = {}
+
 local function FormatValue(value)
 	if value >= 1000000 then
 		return string.format("%.1fM", value / 1000000)
@@ -115,14 +117,20 @@ local function LoadBoard(board)
 	end
 end
 
-local function LoadAllBoards()
+function Leaderboard.Refresh()
 	for board in BoardFolders do
 		LoadBoard(board)
 	end
 end
 
-LoadAllBoards()
+function Leaderboard.Init()
+	Leaderboard.Refresh()
 
-while task.wait(REFRESH_INTERVAL) do
-	LoadAllBoards()
+	task.spawn(function()
+		while task.wait(REFRESH_INTERVAL) do
+			Leaderboard.Refresh()
+		end
+	end)
 end
+
+return Leaderboard

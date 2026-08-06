@@ -1,15 +1,10 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
+
 local module = {}
-
-local ComSet = game.ReplicatedStorage.Remotes.Comunicator.Set
-local ComGet = game.ReplicatedStorage.Remotes.Comunicator.Get
-
 module.__index = module
 
 function module.new(Player: Player)
-	if game.PlaceId == workspace:GetAttribute("DuelsHubPlaceId") then
-		return
-	end
-
 	local ExistingBridges = 0
 	for _, v in Player:GetChildren() do
 		if v.Name:find("HitboxBridge") then
@@ -35,7 +30,7 @@ function module.new(Player: Player)
 		destroyAfterOnce = false,
 	}, module)
 
-	ComSet:FireClient(Player, "SetupHitboxBridge", { BridgeId = Bridge.Name })
+	RemoteManager.FireClient(Player, "ReplicateTask", "SetupHitboxBridge", { BridgeId = Bridge.Name })
 
 	Bridge.OnServerEvent:Connect(function(ReceivedPlayer, TouchedEnemies)
 		if ReceivedPlayer ~= Player then
