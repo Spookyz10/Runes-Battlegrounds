@@ -997,259 +997,259 @@ task.spawn(function()
 	local Icon = require(IconModule)
 	task.wait()
 
-	local CharactersIcon = Icon.new(true)
-	CharactersIcon:set("dropdownSquareCorners", true)
-	CharactersIcon:setName("Characters")
-	CharactersIcon:setLabel("Characters")
-	CharactersIcon:set("dropdownMaxIconsBeforeScroll", UIS.TouchEnabled and 6 or 10)
-	CharactersIcon:autoDeselect(true)
-	CharactersIcon:bindEvent("selected", function()
-		if shared.SettingsIcon then
-			shared.SettingsIcon:deselect()
-		end
-		StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false)
-		CharactersIcon:setLabel("")
-	end)
-	CharactersIcon:bindEvent("deselected", function()
-		StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, true)
-	end)
+	-- local CharactersIcon = Icon.new(true)
+	-- CharactersIcon:set("dropdownSquareCorners", true)
+	-- CharactersIcon:setName("Characters")
+	-- CharactersIcon:setLabel("Characters")
+	-- CharactersIcon:set("dropdownMaxIconsBeforeScroll", UIS.TouchEnabled and 6 or 10)
+	-- CharactersIcon:autoDeselect(true)
+	-- CharactersIcon:bindEvent("selected", function()
+	-- 	if shared.SettingsIcon then
+	-- 		shared.SettingsIcon:deselect()
+	-- 	end
+	-- 	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false)
+	-- 	CharactersIcon:setLabel("")
+	-- end)
+	-- CharactersIcon:bindEvent("deselected", function()
+	-- 	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, true)
+	-- end)
 
-	local MovesetIcons = {}
-	sortedMovesetIcons = { Public = {}, Quest = {}, EarlyAccess = {}, AdminOnly = {} }
+	-- local MovesetIcons = {}
+	-- sortedMovesetIcons = { Public = {}, Quest = {}, EarlyAccess = {}, AdminOnly = {} }
 
-	for Name, Info in InfoModule.Movesets do
-		local Order = Info.Order
-		local imageId = Info.Icon
+	-- for Name, Info in InfoModule.Movesets do
+	-- 	local Order = Info.Order
+	-- 	local imageId = Info.Icon
 
-		local isQuest = Info.isQuest
-		local isEA = Info.EarlyAccess
+	-- 	local isQuest = Info.isQuest
+	-- 	local isEA = Info.EarlyAccess
 
-		local MovesetIcon = Icon.new()
-		task.spawn(function()
-			MovesetIcon:set("forcedIconSizeX", 32)
-			MovesetIcon:set("forcedIconSizeY", 32)
-			MovesetIcon:set("iconSize", UDim2.new(0, 32, 0, 32))
-			MovesetIcon:set("iconImageYScale", 0.75)
-			MovesetIcon:setLabel(Name)
-			MovesetIcon:setName(Name)
-			MovesetIcon:setImage(imageId)
-			MovesetIcon:setOrder(Order)
-			MovesetIcon:autoDeselect(true)
-			MovesetIcon:bindEvent("selected", function(icon)
-				MovesetIcon:deselect()
-				Comunicator:FireServer("SetMoveset", Name)
-			end)
+	-- 	local MovesetIcon = Icon.new()
+	-- 	task.spawn(function()
+	-- 		MovesetIcon:set("forcedIconSizeX", 32)
+	-- 		MovesetIcon:set("forcedIconSizeY", 32)
+	-- 		MovesetIcon:set("iconSize", UDim2.new(0, 32, 0, 32))
+	-- 		MovesetIcon:set("iconImageYScale", 0.75)
+	-- 		MovesetIcon:setLabel(Name)
+	-- 		MovesetIcon:setName(Name)
+	-- 		MovesetIcon:setImage(imageId)
+	-- 		MovesetIcon:setOrder(Order)
+	-- 		MovesetIcon:autoDeselect(true)
+	-- 		MovesetIcon:bindEvent("selected", function(icon)
+	-- 			MovesetIcon:deselect()
+	-- 			Comunicator:FireServer("SetMoveset", Name)
+	-- 		end)
 
-			if isQuest == true then
-				sortedMovesetIcons.Quest[Name] = MovesetIcon
-				MovesetIcon:set("iconTextColor", Color3.fromRGB(255, 216, 19))
-			elseif isEA == true then
-				sortedMovesetIcons.EarlyAccess[Name] = MovesetIcon
-				MovesetIcon:set("iconTextColor", Color3.fromRGB(255, 255, 0))
-			else
-				sortedMovesetIcons.Public[Name] = MovesetIcon
-			end
-		end)
-		MovesetIcons[Name] = MovesetIcon
-	end
+	-- 		if isQuest == true then
+	-- 			sortedMovesetIcons.Quest[Name] = MovesetIcon
+	-- 			MovesetIcon:set("iconTextColor", Color3.fromRGB(255, 216, 19))
+	-- 		elseif isEA == true then
+	-- 			sortedMovesetIcons.EarlyAccess[Name] = MovesetIcon
+	-- 			MovesetIcon:set("iconTextColor", Color3.fromRGB(255, 255, 0))
+	-- 		else
+	-- 			sortedMovesetIcons.Public[Name] = MovesetIcon
+	-- 		end
+	-- 	end)
+	-- 	MovesetIcons[Name] = MovesetIcon
+	-- end
 
-	CharactersIcon:setDropdown(MovesetIcons)
-	shared.CharactersIcon = CharactersIcon
+	-- CharactersIcon:setDropdown(MovesetIcons)
+	-- shared.CharactersIcon = CharactersIcon
 
-	task.wait(0.15)
+	-- task.wait(0.15)
 
-	local ConfigIcon = Icon.new(true)
-	ConfigIcon:setName("Config")
-	ConfigIcon:setImage(3687980595)
-	ConfigIcon:set("dropdownSquareCorners", true)
-	ConfigIcon:set("dropdownMaxIconsBeforeScroll", 8)
-	ConfigIcon:bindEvent("selected", function()
-		if shared.CharactersIcon then
-			shared.CharactersIcon:deselect()
-		end
-		StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false)
-	end)
-	ConfigIcon:bindEvent("deselected", function()
-		StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, true)
-	end)
+	-- local ConfigIcon = Icon.new(true)
+	-- ConfigIcon:setName("Config")
+	-- ConfigIcon:setImage(3687980595)
+	-- ConfigIcon:set("dropdownSquareCorners", true)
+	-- ConfigIcon:set("dropdownMaxIconsBeforeScroll", 8)
+	-- ConfigIcon:bindEvent("selected", function()
+	-- 	if shared.CharactersIcon then
+	-- 		shared.CharactersIcon:deselect()
+	-- 	end
+	-- 	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false)
+	-- end)
+	-- ConfigIcon:bindEvent("deselected", function()
+	-- 	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, true)
+	-- end)
 
-	local configDropdown = {
-		Icon.new()
-			:setName("Move_Buttons")
-			:setLabel("Edit Button Positions")
-			:setImage(notBoolId)
-			:autoDeselect(true)
-			:setEnabled(shared.IsMobile)
-			:bindEvent("selected", function(icon)
-				icon:deselect()
+	-- local configDropdown = {
+	-- 	Icon.new()
+	-- 		:setName("Move_Buttons")
+	-- 		:setLabel("Edit Button Positions")
+	-- 		:setImage(notBoolId)
+	-- 		:autoDeselect(true)
+	-- 		:setEnabled(shared.IsMobile)
+	-- 		:bindEvent("selected", function(icon)
+	-- 			icon:deselect()
 
-				local ChangingButtons = Character:FindFirstChild("ChangingButtons")
-				if ChangingButtons then
-					icon:setLabel("Edit Button Positions")
-					ChangingButtons:Destroy()
-					Comunicator:FireServer("SaveButtonsPos", {
-						Dash = {
-							ScaleX = JumpButton.Position.X.Scale - DashButton.Position.X.Scale,
-							OffsetX = DashButton.Position.X.Offset
-								- (JumpButton.Position.X.Offset + JumpButton.Size.X.Offset / 2),
-							ScaleY = JumpButton.Position.Y.Scale - DashButton.Position.Y.Scale,
-							OffsetY = DashButton.Position.Y.Offset
-								- (JumpButton.Position.Y.Offset - (JumpButton.Size.Y.Offset / 2 + 7)),
-						},
-						M1 = {
-							ScaleX = JumpButton.Position.X.Scale - PunchButton.Position.X.Scale,
-							OffsetX = PunchButton.Position.X.Offset
-								- (JumpButton.Position.X.Offset + JumpButton.Size.X.Offset / 2),
-							ScaleY = JumpButton.Position.Y.Scale - PunchButton.Position.Y.Scale,
-							OffsetY = PunchButton.Position.Y.Offset
-								- (JumpButton.Position.Y.Offset - 2.5 * (JumpButton.Size.Y.Offset / 2 + 7)),
-						},
-						Block = {
-							ScaleX = JumpButton.Position.X.Scale - BlockButton.Position.X.Scale,
-							OffsetX = BlockButton.Position.X.Offset
-								- (JumpButton.Position.X.Offset + JumpButton.Size.X.Offset / 2),
-							ScaleY = JumpButton.Position.Y.Scale - BlockButton.Position.Y.Scale,
-							OffsetY = BlockButton.Position.Y.Offset
-								- (JumpButton.Position.Y.Offset - 4 * (JumpButton.Size.Y.Offset / 2 + 7)),
-						},
-						Shiftlock = {
-							ScaleX = JumpButton.Position.X.Scale - ShiftlockButton.Position.X.Scale,
-							OffsetX = ShiftlockButton.Position.X.Offset
-								- (JumpButton.Position.X.Offset - JumpButton.Size.X.Offset / 2),
-							ScaleY = JumpButton.Position.Y.Scale - ShiftlockButton.Position.Y.Scale,
-							OffsetY = ShiftlockButton.Position.Y.Offset
-								- (JumpButton.Position.Y.Offset - 3.25 * (JumpButton.Size.Y.Offset / 2 + 7)),
-						},
-					})
-					return
-				end
-				icon:setLabel("Save Edits?")
-				local CB = Instance.new("BoolValue")
-				CB.Name = "ChangingButtons"
-				CB.Value = true
-				CB.Parent = Character
-			end),
+	-- 			local ChangingButtons = Character:FindFirstChild("ChangingButtons")
+	-- 			if ChangingButtons then
+	-- 				icon:setLabel("Edit Button Positions")
+	-- 				ChangingButtons:Destroy()
+	-- 				Comunicator:FireServer("SaveButtonsPos", {
+	-- 					Dash = {
+	-- 						ScaleX = JumpButton.Position.X.Scale - DashButton.Position.X.Scale,
+	-- 						OffsetX = DashButton.Position.X.Offset
+	-- 							- (JumpButton.Position.X.Offset + JumpButton.Size.X.Offset / 2),
+	-- 						ScaleY = JumpButton.Position.Y.Scale - DashButton.Position.Y.Scale,
+	-- 						OffsetY = DashButton.Position.Y.Offset
+	-- 							- (JumpButton.Position.Y.Offset - (JumpButton.Size.Y.Offset / 2 + 7)),
+	-- 					},
+	-- 					M1 = {
+	-- 						ScaleX = JumpButton.Position.X.Scale - PunchButton.Position.X.Scale,
+	-- 						OffsetX = PunchButton.Position.X.Offset
+	-- 							- (JumpButton.Position.X.Offset + JumpButton.Size.X.Offset / 2),
+	-- 						ScaleY = JumpButton.Position.Y.Scale - PunchButton.Position.Y.Scale,
+	-- 						OffsetY = PunchButton.Position.Y.Offset
+	-- 							- (JumpButton.Position.Y.Offset - 2.5 * (JumpButton.Size.Y.Offset / 2 + 7)),
+	-- 					},
+	-- 					Block = {
+	-- 						ScaleX = JumpButton.Position.X.Scale - BlockButton.Position.X.Scale,
+	-- 						OffsetX = BlockButton.Position.X.Offset
+	-- 							- (JumpButton.Position.X.Offset + JumpButton.Size.X.Offset / 2),
+	-- 						ScaleY = JumpButton.Position.Y.Scale - BlockButton.Position.Y.Scale,
+	-- 						OffsetY = BlockButton.Position.Y.Offset
+	-- 							- (JumpButton.Position.Y.Offset - 4 * (JumpButton.Size.Y.Offset / 2 + 7)),
+	-- 					},
+	-- 					Shiftlock = {
+	-- 						ScaleX = JumpButton.Position.X.Scale - ShiftlockButton.Position.X.Scale,
+	-- 						OffsetX = ShiftlockButton.Position.X.Offset
+	-- 							- (JumpButton.Position.X.Offset - JumpButton.Size.X.Offset / 2),
+	-- 						ScaleY = JumpButton.Position.Y.Scale - ShiftlockButton.Position.Y.Scale,
+	-- 						OffsetY = ShiftlockButton.Position.Y.Offset
+	-- 							- (JumpButton.Position.Y.Offset - 3.25 * (JumpButton.Size.Y.Offset / 2 + 7)),
+	-- 					},
+	-- 				})
+	-- 				return
+	-- 			end
+	-- 			icon:setLabel("Save Edits?")
+	-- 			local CB = Instance.new("BoolValue")
+	-- 			CB.Name = "ChangingButtons"
+	-- 			CB.Value = true
+	-- 			CB.Parent = Character
+	-- 		end),
 
-		Icon.new()
-			:setName("Reset_Buttons")
-			:setLabel("Reset Button Positions")
-			:setImage(notBoolId)
-			:autoDeselect(true)
-			:setEnabled(shared.IsMobile)
-			:bindEvent("selected", function(icon)
-				icon:deselect()
+	-- 	Icon.new()
+	-- 		:setName("Reset_Buttons")
+	-- 		:setLabel("Reset Button Positions")
+	-- 		:setImage(notBoolId)
+	-- 		:autoDeselect(true)
+	-- 		:setEnabled(shared.IsMobile)
+	-- 		:bindEvent("selected", function(icon)
+	-- 			icon:deselect()
 
-				DashButton.Position = UDim2.new(
-					JumpButton.Position.X.Scale,
-					JumpButton.Position.X.Offset + JumpButton.Size.X.Offset / 2,
-					JumpButton.Position.Y.Scale,
-					JumpButton.Position.Y.Offset - (JumpButton.Size.Y.Offset / 2 + 7)
-				)
-				PunchButton.Position = UDim2.new(
-					JumpButton.Position.X.Scale,
-					JumpButton.Position.X.Offset + JumpButton.Size.X.Offset / 2,
-					JumpButton.Position.Y.Scale,
-					JumpButton.Position.Y.Offset - 2.5 * (JumpButton.Size.Y.Offset / 2 + 7)
-				)
-				BlockButton.Position = UDim2.new(
-					JumpButton.Position.X.Scale,
-					JumpButton.Position.X.Offset + JumpButton.Size.X.Offset / 2,
-					JumpButton.Position.Y.Scale,
-					JumpButton.Position.Y.Offset - 4 * (JumpButton.Size.Y.Offset / 2 + 7)
-				)
-				ShiftlockButton.Position = UDim2.new(
-					JumpButton.Position.X.Scale,
-					JumpButton.Position.X.Offset - JumpButton.Size.X.Offset / 2,
-					JumpButton.Position.Y.Scale,
-					JumpButton.Position.Y.Offset - 3.25 * (JumpButton.Size.Y.Offset / 2 + 7)
-				)
-				Comunicator:FireServer("SaveButtonsPos", {
-					Dash = {
-						ScaleX = 0,
-						OffsetX = 0,
-						ScaleY = 0,
-						OffsetY = 0,
-						SizeMultiplier = DashButton:GetAttribute("SizeMultiplier"),
-					},
-					M1 = {
-						ScaleX = 0,
-						OffsetX = 0,
-						ScaleY = 0,
-						OffsetY = 0,
-						SizeMultiplier = PunchButton:GetAttribute("SizeMultiplier"),
-					},
-					Block = {
-						ScaleX = 0,
-						OffsetX = 0,
-						ScaleY = 0,
-						OffsetY = 0,
-						SizeMultiplier = BlockButton:GetAttribute("SizeMultiplier"),
-					},
-					Shiftlock = {
-						ScaleX = 0,
-						OffsetX = 0,
-						ScaleY = 0,
-						OffsetY = 0,
-						SizeMultiplier = ShiftlockButton:GetAttribute("SizeMultiplier"),
-					},
-				})
-			end),
+	-- 			DashButton.Position = UDim2.new(
+	-- 				JumpButton.Position.X.Scale,
+	-- 				JumpButton.Position.X.Offset + JumpButton.Size.X.Offset / 2,
+	-- 				JumpButton.Position.Y.Scale,
+	-- 				JumpButton.Position.Y.Offset - (JumpButton.Size.Y.Offset / 2 + 7)
+	-- 			)
+	-- 			PunchButton.Position = UDim2.new(
+	-- 				JumpButton.Position.X.Scale,
+	-- 				JumpButton.Position.X.Offset + JumpButton.Size.X.Offset / 2,
+	-- 				JumpButton.Position.Y.Scale,
+	-- 				JumpButton.Position.Y.Offset - 2.5 * (JumpButton.Size.Y.Offset / 2 + 7)
+	-- 			)
+	-- 			BlockButton.Position = UDim2.new(
+	-- 				JumpButton.Position.X.Scale,
+	-- 				JumpButton.Position.X.Offset + JumpButton.Size.X.Offset / 2,
+	-- 				JumpButton.Position.Y.Scale,
+	-- 				JumpButton.Position.Y.Offset - 4 * (JumpButton.Size.Y.Offset / 2 + 7)
+	-- 			)
+	-- 			ShiftlockButton.Position = UDim2.new(
+	-- 				JumpButton.Position.X.Scale,
+	-- 				JumpButton.Position.X.Offset - JumpButton.Size.X.Offset / 2,
+	-- 				JumpButton.Position.Y.Scale,
+	-- 				JumpButton.Position.Y.Offset - 3.25 * (JumpButton.Size.Y.Offset / 2 + 7)
+	-- 			)
+	-- 			Comunicator:FireServer("SaveButtonsPos", {
+	-- 				Dash = {
+	-- 					ScaleX = 0,
+	-- 					OffsetX = 0,
+	-- 					ScaleY = 0,
+	-- 					OffsetY = 0,
+	-- 					SizeMultiplier = DashButton:GetAttribute("SizeMultiplier"),
+	-- 				},
+	-- 				M1 = {
+	-- 					ScaleX = 0,
+	-- 					OffsetX = 0,
+	-- 					ScaleY = 0,
+	-- 					OffsetY = 0,
+	-- 					SizeMultiplier = PunchButton:GetAttribute("SizeMultiplier"),
+	-- 				},
+	-- 				Block = {
+	-- 					ScaleX = 0,
+	-- 					OffsetX = 0,
+	-- 					ScaleY = 0,
+	-- 					OffsetY = 0,
+	-- 					SizeMultiplier = BlockButton:GetAttribute("SizeMultiplier"),
+	-- 				},
+	-- 				Shiftlock = {
+	-- 					ScaleX = 0,
+	-- 					OffsetX = 0,
+	-- 					ScaleY = 0,
+	-- 					OffsetY = 0,
+	-- 					SizeMultiplier = ShiftlockButton:GetAttribute("SizeMultiplier"),
+	-- 				},
+	-- 			})
+	-- 		end),
 
-		Icon.new()
-			:setLabel("Awakening Music")
-			:setImage(getBoolConfigLabel("Awakening Music"))
-			:autoDeselect(true)
-			:bindEvent("selected", function(icon)
-				icon:deselect()
-				if ConfigFolder["Awakening Music"].Value == true then
-					icon:setImage(RedSquareId)
-					Comunicator:FireServer("SetConfig", { CN = "Awakening Music", V = false })
-				else
-					icon:setImage(GreenSquareId)
-					Comunicator:FireServer("SetConfig", { CN = "Awakening Music", V = true })
-				end
-			end),
+	-- 	Icon.new()
+	-- 		:setLabel("Awakening Music")
+	-- 		:setImage(getBoolConfigLabel("Awakening Music"))
+	-- 		:autoDeselect(true)
+	-- 		:bindEvent("selected", function(icon)
+	-- 			icon:deselect()
+	-- 			if ConfigFolder["Awakening Music"].Value == true then
+	-- 				icon:setImage(RedSquareId)
+	-- 				Comunicator:FireServer("SetConfig", { CN = "Awakening Music", V = false })
+	-- 			else
+	-- 				icon:setImage(GreenSquareId)
+	-- 				Comunicator:FireServer("SetConfig", { CN = "Awakening Music", V = true })
+	-- 			end
+	-- 		end),
 
-		Icon.new()
-			:setLabel("Camera Shake")
-			:setName("CameraShake")
-			:setImage(getBoolConfigLabel("Camera Shake"))
-			:autoDeselect(true)
-			:bindEvent("selected", function(icon)
-				icon:deselect()
-				if ConfigFolder["Camera Shake"].Value == true then
-					icon:setImage(RedSquareId)
-					Comunicator:FireServer("SetConfig", { CN = "Camera Shake", V = false })
-				else
-					icon:setImage(GreenSquareId)
-					Comunicator:FireServer("SetConfig", { CN = "Camera Shake", V = true })
-				end
-			end),
-	}
+	-- 	Icon.new()
+	-- 		:setLabel("Camera Shake")
+	-- 		:setName("CameraShake")
+	-- 		:setImage(getBoolConfigLabel("Camera Shake"))
+	-- 		:autoDeselect(true)
+	-- 		:bindEvent("selected", function(icon)
+	-- 			icon:deselect()
+	-- 			if ConfigFolder["Camera Shake"].Value == true then
+	-- 				icon:setImage(RedSquareId)
+	-- 				Comunicator:FireServer("SetConfig", { CN = "Camera Shake", V = false })
+	-- 			else
+	-- 				icon:setImage(GreenSquareId)
+	-- 				Comunicator:FireServer("SetConfig", { CN = "Camera Shake", V = true })
+	-- 			end
+	-- 		end),
+	-- }
 
-	task.spawn(function()
-		ConfigIcon:set("dropdownMaxIconsBeforeScroll", 8)
-		for Index, Ico in configDropdown do
-			Ico:setOrder(Index - #configDropdown)
-			Ico:set("forcedIconSizeX", 32)
-			Ico:set("forcedIconSizeY", 32)
-			Ico:set("iconSize", UDim2.new(0, 32, 0, 32))
-			Ico:set("iconImageRatio", 0.6)
-		end
-	end)
+	-- task.spawn(function()
+	-- 	ConfigIcon:set("dropdownMaxIconsBeforeScroll", 8)
+	-- 	for Index, Ico in configDropdown do
+	-- 		Ico:setOrder(Index - #configDropdown)
+	-- 		Ico:set("forcedIconSizeX", 32)
+	-- 		Ico:set("forcedIconSizeY", 32)
+	-- 		Ico:set("iconSize", UDim2.new(0, 32, 0, 32))
+	-- 		Ico:set("iconImageRatio", 0.6)
+	-- 	end
+	-- end)
 
-	ConfigIcon:setDropdown(configDropdown)
-	shared.SettingsIcon = ConfigIcon
+	-- ConfigIcon:setDropdown(configDropdown)
+	-- shared.SettingsIcon = ConfigIcon
 
-	local shiftlockIcon = configDropdown[1]
-	local moveBtnsIcon = configDropdown[2]
-	local resetBtnsIcon = configDropdown[3]
+	-- local shiftlockIcon = configDropdown[1]
+	-- local moveBtnsIcon = configDropdown[2]
+	-- local resetBtnsIcon = configDropdown[3]
 
 	local function toggleNonKeyboardIcons()
 		local currentValue = UIS.TouchEnabled == true
-		shiftlockIcon:setEnabled(currentValue)
-		moveBtnsIcon:setEnabled(currentValue)
-		resetBtnsIcon:setEnabled(currentValue)
+		-- shiftlockIcon:setEnabled(currentValue)
+		-- moveBtnsIcon:setEnabled(currentValue)
+		-- resetBtnsIcon:setEnabled(currentValue)
 	end
 
 	toggleNonKeyboardIcons()
