@@ -1,24 +1,18 @@
 local RS = game:GetService("ReplicatedStorage")
 local SvSt = game:GetService("ServerStorage")
-local Players = game:GetService("Players")
-local Debris = game:GetService("Debris")
 
-local Remotes = RS.Remotes
-
-local CombatSet = Remotes.Combat.Set
-local CombatSetEvent = CombatSet.OnServerEvent
+local RemoteManager = require(RS.Shared.Modules.RemoteManager)
 
 local SvModules = SvSt.Modules
-
 local AnimationService = require(SvModules.AnimationService)
 local SoundsModule = require(SvModules.SoundsModule)
 local M1Handler = require(SvModules.M1Handler)
 
 local Assets = SvSt.Assets
 local Animations = Assets.Animations
-local Sounds = Assets.Sounds
-local CombatSounds = Sounds.Combat
-local ReplicateSet = Remotes.Replicate.Set
+local CombatSounds = Assets.Sounds.Combat
+
+local Remote = {}
 
 local function Block(Player)
 	local Character = Player.Character
@@ -74,7 +68,7 @@ local function Block(Player)
 
 		SoundsModule:PlaySound(CombatSounds.Blocking.Stop, HumRP)
 
-		ReplicateSet:FireAllClients("ActionHightlight", { char = Character, func = "BlockEnd" })
+		RemoteManager.FireAllClients("ReplicateTask", "ActionHightlight", { char = Character, func = "BlockEnd" })
 	end
 
 	local BlockAnimTrack = AnimationService:getAnimationTrack(Character, Anim)
@@ -99,7 +93,7 @@ local function Block(Player)
 		Character:AddTag(Action)
 	end
 
-	ReplicateSet:FireAllClients("ActionHightlight", { char = Character, func = "BlockStart" })
+	RemoteManager.FireAllClients("ReplicateTask", "ActionHightlight", { char = Character, func = "BlockStart" })
 
 	local Perfect = true
 	local PC
@@ -125,7 +119,7 @@ local function Block(Player)
 	end)
 end
 
-CombatSetEvent:Connect(function(Player, Action, Params)
+function Remote:Activate(Player: Player, Action: string, Params)
 	if not Player:FindFirstChild("LoadedData") then
 		return
 	end
@@ -154,4 +148,6 @@ CombatSetEvent:Connect(function(Player, Action, Params)
 			Character:SetAttribute("doBlock", false)
 		end
 	end
-end)
+end
+
+return Remote

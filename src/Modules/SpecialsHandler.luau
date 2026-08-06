@@ -2,7 +2,7 @@ local SpecialsHandler = {}
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local InfoModule = require(ReplicatedStorage.Shared.Info)
-local ReplicateSet = ReplicatedStorage.Remotes.Replicate.Set
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
 local Cooldowns = {}
 
@@ -75,16 +75,12 @@ function SpecialsHandler:Activate(Player, isUlt, MovesetHandler)
 
 	if now - cd[cdKey] < config.Cooldown then
 		local remaining = config.Cooldown - (now - cd[cdKey])
-		ReplicatedStorage.Remotes.Specials.Set:FireClient(
-			Player,
-			"OnCooldown",
-			{ Remaining = remaining, IsUlt = isUlt }
-		)
+		RemoteManager.FireClient(Player, "SpecialsResult", "OnCooldown", { Remaining = remaining, IsUlt = isUlt })
 		return
 	end
 
 	if getAwkProgress(Player) < config.Cost then
-		ReplicatedStorage.Remotes.Specials.Set:FireClient(Player, "NotEnoughAwk", {})
+		RemoteManager.FireClient(Player, "SpecialsResult", "NotEnoughAwk", {})
 		return
 	end
 
@@ -112,11 +108,7 @@ function SpecialsHandler:Activate(Player, isUlt, MovesetHandler)
 	consumeAwk(Player, config.Cost)
 	cd[cdKey] = now
 
-	ReplicatedStorage.Remotes.Specials.Set:FireClient(
-		Player,
-		"Activated",
-		{ Cooldown = config.Cooldown, IsUlt = isUlt }
-	)
+	RemoteManager.FireClient(Player, "SpecialsResult", "Activated", { Cooldown = config.Cooldown, IsUlt = isUlt })
 end
 
 function SpecialsHandler:ClearPlayer(userId)

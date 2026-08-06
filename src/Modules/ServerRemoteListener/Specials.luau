@@ -1,13 +1,11 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
-local Players = game:GetService("Players")
 
 local SpecialsHandler = require(ServerStorage.Modules.SpecialsHandler)
 local MovesetHandler = require(ServerStorage.Modules.MovesetHandler)
 
-local SpecialsSet = ReplicatedStorage.Remotes.Specials.Set
+local Remote = {}
 
-SpecialsSet.OnServerEvent:Connect(function(Player, action, params)
+function Remote:Activate(Player: Player, action: string, params)
 	if not Player:FindFirstChild("LoadedData") then
 		return
 	end
@@ -22,8 +20,6 @@ SpecialsSet.OnServerEvent:Connect(function(Player, action, params)
 	elseif action == "ActivateUlt" then
 		SpecialsHandler:Activate(Player, true, MovesetHandler)
 	end
-end)
+end
 
-Players.PlayerRemoving:Connect(function(player)
-	SpecialsHandler:ClearPlayer(player.UserId)
-end)
+return Remote

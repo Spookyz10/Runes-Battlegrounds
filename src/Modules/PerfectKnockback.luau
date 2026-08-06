@@ -396,10 +396,6 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 
 			StunHandler:Stun(EnemyCharacter, Params.GroundStunTime, true, 0, 0, true)
 
-			local smallDebris = shared.cfolder({ Name = "SmallDebris" }, 0.75)
-			CollectionService:AddTag(smallDebris, "SmallDebris")
-			smallDebris.Parent = EnemyCharacter
-
 			ReplicateSet:FireAllClients("smokeEffect", { time = 0.75, char = EnemyCharacter })
 		end)
 	)

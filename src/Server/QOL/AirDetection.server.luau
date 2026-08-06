@@ -3,6 +3,8 @@ local SvSt = game:GetService("ServerStorage")
 local RS = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local Debris = game:GetService("Debris")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
 --Comunication
 local Remotes = RS.Remotes
@@ -103,7 +105,7 @@ local function StartAirDetection(Character, _, isRagdoll, justDown, customClampD
 				end)
 			end)
 
-			Comunicator:FireClient(Player, "DetectAir", {
+			RemoteManager.FireClient(Player, "DetectAir", {
 				Bridge = Bridge.Name,
 				Char = Character,
 				ragdoll = isRagdoll,

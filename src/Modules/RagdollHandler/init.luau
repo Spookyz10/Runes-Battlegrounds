@@ -199,7 +199,7 @@ function Ragdoll.cancelRagdoll(Humanoid, _, DoKnockback, MainPart, isCancel, ful
 
 		if Player then
 			if not ignoreComunication then
-				Comunicator:FireClient(Player, "Ragdoll", { State = false })
+				RemoteManager.FireClient(Player, "Ragdoll", { State = false })
 			end
 		end
 	end
@@ -324,7 +324,7 @@ function Ragdoll.ragdoll(Humanoid, Duration, HardRagdoll, Ragdoller, _, _, check
 		Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
 		Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
 	else
-		Comunicator:FireClient(Player, "Ragdoll", { State = true })
+		RemoteManager.FireClient(Player, "Ragdoll", { State = true })
 	end
 
 	for _, v in ipairs(Character.Torso:GetChildren()) do

@@ -1,13 +1,13 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
 local LocalPlayer = Players.LocalPlayer
 
 local CameraRigs = ReplicatedStorage.Resources.CameraRigs
 local CutsceneAnimations = ReplicatedStorage.Resources.Animations.Cutscenes
 local CutscenesSet = ReplicatedStorage.Remotes.Cutscenes.Set
-local CutscenesEnded = ReplicatedStorage.Remotes.Cutscenes.Ended
 
 local Controller = {}
 
@@ -37,7 +37,7 @@ end
 
 function Controller:ReportEnded()
 	if activeCutsceneId then
-		CutscenesEnded:FireServer(activeCutsceneId)
+		RemoteManager.FireServer("CutsceneEnded", activeCutsceneId)
 		activeCutsceneId = nil
 	end
 end
@@ -218,12 +218,6 @@ function Controller:Dispatch(name, action, Params)
 	if handler then
 		handler(Params or {}, Controller)
 	end
-end
-
-function Controller:Listen()
-	CutscenesSet.OnClientEvent:Connect(function(name, action, Params)
-		Controller:Dispatch(name, action, Params)
-	end)
 end
 
 return Controller

@@ -6,15 +6,33 @@ local RemoteManager = {}
 local RemoteEvents = {
 	ReplicateTask = "Client",
 	ExtraCds = "Client",
+	Evasive = "Client",
+	Combat = "Server",
 	Keypress = "Server",
 	ResetCharacter = "Server",
 	SetMoveset = "Server",
 	InputDetected = "Server",
 	ReplicationLoaded = "Server",
 	UseAbillity = "Server",
+
+	Specials = "Server",
+	SpecialsResult = "Client",
+
+	Cutscenes = "Client",
+	CutsceneEnded = "Server",
+
+	Ragdoll = "Client",
+	DetectAir = "Client",
+	StopEmote = "Server",
 }
 
-local RemoteFunctions = {}
+local RemoteFunctions = {
+	Evasive = "Server",
+}
+
+local ClientInvokeFunctions = {
+	ClientQuery = true,
+}
 
 local RemoteCache: { [string]: Instance } = {}
 
@@ -144,6 +162,38 @@ function RemoteManager.ListenToAllClient(Listener: { [string]: any })
 		end)
 	end
 end
+function RemoteManager.InvokeClient(Player: Player, remoteName: string, ...: any)
+	local remote = getRemote(remoteName, "ClientFunction")
+	if not remote then
+		return nil
+	end
+
+	local ok, result = pcall(function()
+		return remote:InvokeClient(Player, ...)
+	end)
+
+	if not ok then
+		return nil
+	end
+	return result
+end
+
+function RemoteManager.ListenToAllClientFunctions(Listener: { [string]: any })
+	for remoteName in ClientInvokeFunctions do
+		local remote = getRemote(remoteName, "ClientFunction")
+		if not remote then
+			continue
+		end
+
+		remote.OnClientInvoke = function(...)
+			local ListenerModule = Listener[remoteName]
+			if not ListenerModule then
+				return nil
+			end
+			return ListenerModule:Invoke(...)
+		end
+	end
+end
 
 if RunService:IsServer() then
 	for remoteName: string, folder: string in RemoteEvents do
@@ -155,12 +205,14 @@ if RunService:IsServer() then
 		end
 	end
 
-	for remoteName: string, folder: string in RemoteFunctions do
-		local ExistingFolder = ReplicatedStorage:FindFirstChild("Remotes"):FindFirstChild(folder)
-		if ExistingFolder and not ExistingFolder:FindFirstChild(remoteName) then
-			local NewRemoteFunction = Instance.new("RemoteFunction")
-			NewRemoteFunction.Name = remoteName
-			NewRemoteFunction.Parent = ExistingFolder
+	for remoteName in ClientInvokeFunctions do
+		local ExistingFolder = ReplicatedStorage:FindFirstChild("Remotes"):FindFirstChild("ClientFunction")
+			or Instance.new("Folder", ReplicatedStorage.Remotes)
+		ExistingFolder.Name = "ClientFunction"
+		if not ExistingFolder:FindFirstChild(remoteName) then
+			local NewRF = Instance.new("RemoteFunction")
+			NewRF.Name = remoteName
+			NewRF.Parent = ExistingFolder
 		end
 	end
 end

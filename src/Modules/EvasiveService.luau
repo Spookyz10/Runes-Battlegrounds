@@ -9,10 +9,7 @@ local StunHandler = require(ModulesFolder.StunHandler)
 local iFramesService = require(ModulesFolder.iFramesService)
 local PerfectKnockback = require(ModulesFolder.PerfectKnockback)
 
-local Remotes = ReplicatedStorage.Remotes
-local EvasiveSet = Remotes.Evasive.Set
-local EvasiveGet = Remotes.Evasive.Get
-
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local THRESHOLD = 20
 local ESCAPE_IFRAME_TIME = 1
 
@@ -34,7 +31,7 @@ local function sendUpdate(Character)
 	local Progress = Character:GetAttribute("EvasivaProgress") or 0
 	local Charges = Character:GetAttribute("EvasivaCharges") or 0
 
-	EvasiveSet:FireClient(Player, Progress, THRESHOLD, Charges)
+	RemoteManager.FireClient(Player, "Evasive", Progress, THRESHOLD, Charges)
 end
 
 function module:AddProgress(Character, Amount)
@@ -149,12 +146,12 @@ function module:Escape(Character)
 
 	sendUpdate(Character)
 
-	Remotes.Replicate.Set:FireAllClients("Evasive", { Char = Character })
+	RemoteManager.FireAllClients("ReplicateTask", "Evasive", { Char = Character })
 
 	return true
 end
 
-EvasiveGet.OnServerInvoke = function(Player)
+function module:HandleGetRequest(Player)
 	local Character = Player.Character
 	if not Character then
 		return 0, THRESHOLD, 0

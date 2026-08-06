@@ -22,22 +22,6 @@ local CombatUtils = require(SvModules.CombatUtils)
 
 local Data = require(ReplicatedStorage.Shared.Data).server
 
-shared.cfolder = function(instanceData, lifeTime)
-	local newInstance = Instance.new("Accessory")
-
-	for i, v in instanceData do
-		newInstance[i] = v
-	end
-
-	if lifeTime and typeof(lifeTime) == "number" then
-		task.delay(lifeTime, function()
-			game:GetService("Debris"):AddItem(newInstance)
-		end)
-	end
-
-	return newInstance
-end
-
 local function HumanoidDied(Player: Player)
 	if not Player.Character then
 		return
@@ -304,3 +288,4 @@ for _, part in workspace.Map.Destroyables:GetDescendants() do
 end
 
 RemoteManager.ListenToAll(ServerRemoteListener)
+RemoteManager.ListenToAllFunctions(ServerRemoteListener)

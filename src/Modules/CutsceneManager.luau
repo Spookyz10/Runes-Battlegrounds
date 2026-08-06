@@ -1,9 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Remotes = ReplicatedStorage.Remotes
-local CutscenesSet = Remotes.Cutscenes.Set
-local CutscenesEnded = Remotes.Cutscenes.Ended
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
 local CutsceneManager = {}
 local sessions = {} -- [Player] = { [id] = boolean (ended?) }
@@ -20,7 +18,7 @@ function CutsceneManager:PlayCutscene(Player, name, Params)
 	local mergedParams = Params or {}
 	mergedParams.CutsceneId = id
 
-	CutscenesSet:FireClient(Player, name, "Start", mergedParams)
+	RemoteManager.FireClient(Player, "Cutscenes", name, "Start", mergedParams)
 
 	local Session = {}
 
@@ -44,18 +42,18 @@ function CutsceneManager:PlayCutscene(Player, name, Params)
 			sessions[Player][id] = true
 		end
 		if Player and Player.Parent then
-			CutscenesSet:FireClient(Player, name, action or "End", params or {})
+			RemoteManager.FireClient(Player, "Cutscenes", name, action or "End", params or {})
 		end
 	end
 
 	return Session
 end
 
-CutscenesEnded.OnServerEvent:Connect(function(Player, id)
+function CutsceneManager:MarkEnded(Player, id)
 	if sessions[Player] then
 		sessions[Player][id] = true
 	end
-end)
+end
 
 Players.PlayerRemoving:Connect(function(Player)
 	sessions[Player] = nil

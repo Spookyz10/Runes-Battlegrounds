@@ -123,7 +123,7 @@ end
 
 local function Punch()
 	if checkCharacterAvailability() == true and not shared.buildenabled then
-		CombatSet:FireServer("PunchStart")
+		RemoteManager.FireServer("Combat", "PunchStart")
 	end
 end
 
@@ -369,7 +369,7 @@ UIS.InputBegan:Connect(function(input, gameProccessedEvent)
 		local DoBlock = coroutine.wrap(function()
 			RunService.Heartbeat:Wait()
 			if not Character:FindFirstChild("Stunned") then
-				CombatSet:FireServer("Block", { Stage = true })
+				RemoteManager.FireServer("Combat", "Block", { Stage = true })
 				if Character:FindFirstChild("Emoting") then
 					Comunicator:FireServer("StopEmote")
 				end
@@ -407,7 +407,7 @@ UIS.InputBegan:Connect(function(input, gameProccessedEvent)
 	elseif input.KeyCode == Enum.KeyCode.R then
 		if not gameProccessedEvent then
 			local isAwakened = Character:GetAttribute("Awakened") == true
-			SpecialsSet:FireServer(isAwakened and "ActivateUlt" or "ActivateBase", {})
+			RemoteManager.FireServer("Specials", isAwakened and "ActivateUlt" or "ActivateBase", {})
 		end
 	end
 end)
@@ -420,9 +420,9 @@ UIS.InputEnded:Connect(function(input, gameProccessedEvent)
 	if
 		combatKeybinds.Punch and (input.UserInputType == combatKeybinds.Punch or input.KeyCode == combatKeybinds.Punch)
 	then
-		CombatSet:FireServer("PunchEnd")
+		RemoteManager.FireServer("Combat", "PunchEnd")
 	elseif combatKeybinds.Block and input.KeyCode == combatKeybinds.Block then
-		CombatSet:FireServer("Block", { Stage = false })
+		RemoteManager.FireServer("Combat", "Block", { Stage = false })
 	elseif input.UserInputType == Enum.UserInputType.Touch and inputChanged ~= nil then
 		inputChanged:Disconnect()
 		inputChanged = nil

@@ -1,4 +1,3 @@
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local UIConstants = require(ReplicatedStorage.Shared.UI.UIConstants)
@@ -11,10 +10,8 @@ local GUI = PlayerGui:WaitForChild("ExtraCds")
 local Main = GUI:WaitForChild("Main")
 
 local Remotes = ReplicatedStorage.Remotes
-local ExtraCdsSet = Remotes.ExtraCds.Set
 local SpecialsSet = Remotes.Specials.Set
-local EvasiveSet = Remotes.Evasive.Set
-local EvasiveGet = Remotes.Evasive.Get
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
 local ExtraCds = {}
 
@@ -35,7 +32,7 @@ local function getSlot(name: string)
 	return nil
 end
 
-local function StartCooldown(name: string, duration: number)
+function ExtraCds.StartCooldown(name: string, duration: number)
 	local slot = getSlot(name)
 	if not slot then
 		return
@@ -54,40 +51,6 @@ local function StartCooldown(name: string, duration: number)
 	end)
 end
 
-local function setEvasiveMeter(Progress: number, Threshold: number, Charges: number)
-	local slot = getSlot("Evasive")
-	if not slot then
-		return
-	end
-
-	slot.Visible = true
-
-	local darkIcon = getDarkIcon(slot)
-	if not darkIcon then
-		return
-	end
-
-	UIFunctions.ResetCooldownIcon(darkIcon)
-
-	if Charges > 0 then
-		darkIcon.ImageTransparency = 1
-		return
-	end
-
-	local percent = 0
-	if Threshold > 0 then
-		percent = math.clamp(Progress / Threshold, 0, 1)
-	end
-
-	UIFunctions.PlayCooldownFill(darkIcon, 0)
-	darkIcon.ImageTransparency = 0
-
-	local grad = darkIcon:FindFirstChildOfClass("UIGradient")
-	if grad then
-		grad.Offset = Vector2.new(0, -0.4):Lerp(Vector2.new(0, 0.4), percent)
-	end
-end
-
 local function resetAllSlots()
 	for _, slot in Main:GetChildren() do
 		if slot:IsA("ImageLabel") then
@@ -98,29 +61,21 @@ local function resetAllSlots()
 end
 
 function ExtraCds.Init()
-	ExtraCdsSet.OnClientEvent:Connect(function(name: string, duration: number)
-		StartCooldown(name, duration)
-	end)
-
 	SpecialsSet.OnClientEvent:Connect(function(action, params)
 		if action == "Activated" and not params.IsUlt then
-			StartCooldown("Special", params.Cooldown)
+			ExtraCds.StartCooldown("Special", params.Cooldown)
 		end
-	end)
-
-	EvasiveSet.OnClientEvent:Connect(function(Progress: number, Threshold: number, Charges: number)
-		setEvasiveMeter(Progress, Threshold, Charges)
 	end)
 
 	Player.CharacterAdded:Connect(function()
 		resetAllSlots()
 
 		local ok, Progress, Threshold, Charges = pcall(function()
-			return EvasiveGet:InvokeServer()
+			return RemoteManager.InvokeServer("Evasive")
 		end)
 
 		if ok and Progress and Threshold then
-			setEvasiveMeter(Progress, Threshold, Charges or 0)
+			ExtraCds.SetEvasiveMeter(Progress, Threshold, Charges or 0)
 		end
 	end)
 end
