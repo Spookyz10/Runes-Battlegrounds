@@ -2,7 +2,7 @@ local Constants = require(script.Parent.Shared.Constants)
 local LocalPlayer = Constants.LocalPlayer
 local RunService = Constants.RunService
 
-local ClientState = require(script.Parent.Shared.ClientState)
+local ClientState = require(game:GetService("ReplicatedStorage").Shared.Modules.ClientContext)
 
 return function(Params)
 	local Character = LocalPlayer.Character

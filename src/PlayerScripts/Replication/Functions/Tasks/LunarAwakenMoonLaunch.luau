@@ -1,6 +1,6 @@
 local Constants = require(script.Parent.Shared.Constants)
 local State = require(script.Parent.Shared.State)
-local ClientState = require(script.Parent.Shared.ClientState)
+local ClientState = require(game:GetService("ReplicatedStorage").Shared.Modules.ClientContext)
 local RunService = Constants.RunService
 
 return function(Params)

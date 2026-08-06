@@ -1,5 +1,5 @@
 local RotationController = require(script.Parent.Shared.RotationController)
-local ClientState = require(script.Parent.Shared.ClientState)
+local ClientState = require(game:GetService("ReplicatedStorage").Shared.Modules.ClientContext)
 
 return function(Params)
 	ClientState.SolarAimActive = true

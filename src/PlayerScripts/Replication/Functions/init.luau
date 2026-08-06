@@ -1,6 +1,8 @@
 local RS = game:GetService("ReplicatedStorage")
 local TS = game:GetService("TweenService")
 
+local ClientContext = require(RS.Shared.Modules.ClientContext)
+
 local Remotes = RS.Remotes
 local Comunicator = Remotes.Comunicator
 local ComSet = Comunicator.Set
@@ -43,13 +45,13 @@ function Interface:Start()
 
 	Replicate_Get.OnClientInvoke = function(GoalName, Parameters)
 		if GoalName == "IsPartDestroyed" then
-			return table.find(shared.DestroyedParts, Parameters.Part) ~= nil
+			return table.find(ClientContext.DestroyedParts, Parameters.Part) ~= nil
 		end
 
 		return nil
 	end
 
-	shared.repfire = repfire
+	ClientContext.repfire = repfire
 
 	local ResetBindable = Instance.new("BindableEvent")
 	ResetBindable.Event:Connect(function()
@@ -102,7 +104,7 @@ function Interface:Start()
 
 	ComSet:FireServer("replicationLoaded")
 
-	shared.clearVelocities = function(Part: Part, Ignore: BodyVelocity?)
+	ClientContext.clearVelocities = function(Part: Part, Ignore: BodyVelocity?)
 		for _, Velocity in Part:GetDescendants() do
 			if
 				Velocity ~= Ignore

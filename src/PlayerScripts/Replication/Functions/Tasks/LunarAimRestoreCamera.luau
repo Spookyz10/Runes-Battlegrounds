@@ -1,4 +1,4 @@
-local ClientState = require(script.Parent.Shared.ClientState)
+local ClientState = require(game:GetService("ReplicatedStorage").Shared.Modules.ClientContext)
 
 return function(_Params)
 	if ClientState.LunarAimRestoreCamera then

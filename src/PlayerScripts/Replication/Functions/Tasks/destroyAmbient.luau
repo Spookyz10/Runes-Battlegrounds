@@ -6,7 +6,7 @@ local VoxBreaker = Constants.VoxBreaker
 local LocalPlayer = Constants.LocalPlayer
 local MapOverlapParams = Constants.MapOverlapParams
 
-local ClientState = require(script.Parent.Shared.ClientState)
+local ClientState = require(game:GetService("ReplicatedStorage").Shared.Modules.ClientContext)
 local DestroyedParts = ClientState.DestroyedParts
 
 return function(Params)
