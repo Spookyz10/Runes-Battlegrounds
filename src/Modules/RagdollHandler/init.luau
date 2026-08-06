@@ -11,10 +11,6 @@ local StartAirDetection = SvSt.Bindables.AirDetector
 
 local Assets = SvSt.Assets
 
-local Remotes = RS.Remotes
-local Replicate = Remotes.Replicate.Set
-local Comunicator = Remotes.Comunicator.Set
-
 local SvModules = SvSt.Modules
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local StunHandler = require(SvModules.StunHandler)
@@ -381,14 +377,14 @@ function Ragdoll.ragdoll(Humanoid, Duration, HardRagdoll, Ragdoller, _, _, check
 						MapRayParams
 					)
 					if HitRay then
-						Replicate:FireAllClients("Ground Crater", {
+						RemoteManager.FireAllClients("ReplicateTask", "Ground Crater", {
 							Seed = math.random(1, 2000000000),
 							start = HumRP.Position + Vector3.new(0, 0.10000000149011612, 0),
 							["end"] = Vector3.new(0, -24, 0),
 							amount = 6,
 							size = 0.3,
 						})
-						Replicate:FireAllClients("Ground Crater", {
+						RemoteManager.FireAllClients("ReplicateTask", "Ground Crater", {
 							Seed = math.random(1, 2000000000),
 							start = HumRP.Position + Vector3.new(0, 0.10000000149011612, 0),
 							["end"] = Vector3.new(0, -14, 0),
@@ -396,7 +392,7 @@ function Ragdoll.ragdoll(Humanoid, Duration, HardRagdoll, Ragdoller, _, _, check
 							sizemult = 1.35,
 							size = 2,
 						})
-						Replicate:FireAllClients("Ground Crater", {
+						RemoteManager.FireAllClients("ReplicateTask", "Ground Crater", {
 							Seed = math.random(1, 2000000000),
 							start = HumRP.Position + Vector3.new(0, 0.10000000149011612, 0),
 							["end"] = Vector3.new(0, -14, 0),
