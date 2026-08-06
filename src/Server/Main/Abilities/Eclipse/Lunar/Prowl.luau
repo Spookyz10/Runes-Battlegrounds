@@ -58,6 +58,11 @@ return {
 						Char = Character,
 					})
 
+					local soundName = HIT_SOUNDS[hitSoundIndex]
+					if soundName and HumRP then
+						SFX:Play(soundName, HumRP)
+					end
+
 					HitboxHandler:SimpleOnce(
 						HumRP,
 						HIT_SIZE,
@@ -116,10 +121,6 @@ return {
 								return
 							end
 
-							local soundName = HIT_SOUNDS[hitSoundIndex]
-							if soundName and EnemyHumRP then
-								SFX:Play(soundName, EnemyHumRP)
-							end
 							hitSoundIndex = hitSoundIndex + 1
 							if hitSoundIndex > #HIT_SOUNDS then
 								hitSoundIndex = 1
@@ -150,6 +151,8 @@ return {
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("punch"):Once(function()
 				local HitList = {}
+
+				SFX:Play("prowlHit3", HumRP)
 
 				HitboxHandler:SimpleOnce(
 					HumRP,
@@ -197,8 +200,6 @@ return {
 						if HitInfo.Countered or HitInfo.Blocked then
 							return
 						end
-
-						SFX:Play("prowlHit3", EnemyHumRP)
 
 						EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
 

@@ -8,8 +8,9 @@ local CharacterAssets = Constants.CharacterAssets
 local FadeOut = require(ReplicatedStorage.Shared.Modules.Utility.FadeOut)
 local Particles = require(ReplicatedStorage.Shared.Modules.Utility.Particles)
 
-local DEFAULT_START_DIST = 3
+local DEFAULT_START_DIST = 12
 local DEFAULT_END_DIST = 30
+local CIRCLE_FORWARD_OFFSET = 3
 local FADE_DURATION = 0.35
 
 local function animateToCFrame(instance, startCFrame, endCFrame, tweenInfo)
@@ -52,26 +53,35 @@ return function(Params)
 		return
 	end
 
+	local StartDist = Params.startDist or DEFAULT_START_DIST
 	local EndDist = Params.endDist or DEFAULT_END_DIST
 
 	local Assets = CharacterAssets.Eclipse.Lunar
 	local HandAsset = Assets:FindFirstChild("Hand")
 	local VFXAsset = Assets:FindFirstChild("HandVFX")
 
-	local StartCFrame = (Params.char.HumanoidRootPart.CFrame + Vector3.new(0, -2, -12))
-		* CFrame.Angles(0, math.rad(180), 0)
+	local FlatDirection = Vector3.new(Direction.X, 0, Direction.Z)
+	if FlatDirection.Magnitude < 0.001 then
+		FlatDirection = Vector3.new(0, 0, -1)
+	else
+		FlatDirection = FlatDirection.Unit
+	end
+
+	local ModelStartDist = StartDist * 2
 	local ModelEndDist = EndDist * 2
-	local ModelEndCFrame = CFrame.new(
-		Position + Direction * ModelEndDist,
-		Position + Direction * ModelEndDist + Direction
-	) * CFrame.Angles(0, math.rad(180), 0)
+
+	local StartPos = Position - FlatDirection * ModelStartDist
+	local EndPos = Position + FlatDirection * ModelEndDist
+
+	local StartCFrame = CFrame.lookAt(StartPos, StartPos + FlatDirection) * CFrame.Angles(0, math.rad(180), 0)
+	local ModelEndCFrame = CFrame.lookAt(EndPos, EndPos + FlatDirection) * CFrame.Angles(0, math.rad(180), 0)
 
 	local Clone = HandAsset:Clone()
 	Clone.Parent = workspace
 
 	local VFXClone = VFXAsset:Clone()
 	VFXClone.Parent = workspace
-	VFXClone.CFrame = Params.char.HumanoidRootPart.CFrame + Vector3.new(0, 0, -3)
+	VFXClone.CFrame = CFrame.lookAt(Position, Position + FlatDirection) * CFrame.new(0, 0, -CIRCLE_FORWARD_OFFSET)
 
 	Particles.Emit(VFXClone)
 

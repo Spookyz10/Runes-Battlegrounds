@@ -6,19 +6,8 @@ local SFXFolder = ReplicatedStorage.Resources.SFX
 
 local sounds = {}
 
-local function isUnused(instance)
-	local p = instance.Parent
-	while p and p ~= SFXFolder do
-		if p.Name == "Unused" then
-			return true
-		end
-		p = p.Parent
-	end
-	return false
-end
-
-for _, v in SFXFolder:GetDescendants() do
-	if v:IsA("Sound") and not isUnused(v) then
+for _, v in SFXFolder.Main:GetDescendants() do
+	if v:IsA("Sound") then
 		sounds[v.Name] = v
 	end
 end
@@ -27,6 +16,7 @@ local module = {}
 
 function module:Play(name, location, playbackSpeed, fadeOutParams, timePosition)
 	local sound = sounds[name]
+
 	if not sound then
 		warn("[SFX] Sound not found: " .. tostring(name))
 		return

@@ -157,6 +157,7 @@ local function M1(Player)
 	table.insert(
 		PunchEvents,
 		PunchAnimTrack:GetMarkerReachedSignal("hit"):Connect(function()
+			SFX:Play("Hit", HumRP)
 			HitboxHandler:SimpleOnce(HumRP, Size, Offset, { Character }, nil, nil, function(EnemyCharacter)
 				local EnemyPlayer = Players:GetPlayerFromCharacter(EnemyCharacter)
 				local EnemyHumanoid = EnemyCharacter.Humanoid
@@ -201,8 +202,6 @@ local function M1(Player)
 					)
 				else
 					Hit = true
-
-					SFX:Play("Hit", EnemyHumRP)
 
 					Character:SetAttribute("LastM1Hit", EnemyCharacter.Name)
 

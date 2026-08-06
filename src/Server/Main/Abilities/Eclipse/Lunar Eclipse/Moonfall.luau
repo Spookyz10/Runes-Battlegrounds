@@ -231,7 +231,6 @@ local function applyGravityFieldCompensationDamage(data)
 	end
 
 	HitboxHandler:SimpleOnce(position, IMPACT_SIZE, nil, { Character }, "Box", nil, function(EnemyCharacter)
-		print("Applying compensation damage to", EnemyCharacter.Name)
 		local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
 		if not EnemyHumanoid or EnemyHumanoid.Health <= 0 then
 			return
@@ -302,7 +301,6 @@ local function impactIsland(data, impactPosition)
 	end
 
 	HitboxHandler:SimpleOnce(impactPosition, IMPACT_SIZE, nil, { Character }, "Box", nil, function(EnemyCharacter)
-		print("damage")
 		local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
 		if not EnemyHumanoid or EnemyHumanoid.Health <= 0 then
 			return
@@ -513,7 +511,6 @@ end
 
 return {
 	Start = function(Player, Tool)
-		print("Starting Lunar Strike for", Player.Name)
 		local Character = Player.Character
 		if not Character or not Character.Parent then
 			return

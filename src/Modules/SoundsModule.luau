@@ -21,7 +21,7 @@ function module:PlaySound(OriginalSound, Part, PlaybackSpeed, _, FadeOutParams, 
 
 		if partType == "CFrame" or partType == "Vector3" then
 			local soundAttachment = Instance.new("Attachment")
-			soundAttachment.Parent = workspace.Terrain
+			soundAttachment.Parent = workspace
 			soundAttachment.WorldPosition = getCF[partType](Part)
 
 			ParentPart = soundAttachment

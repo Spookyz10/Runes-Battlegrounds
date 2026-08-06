@@ -22,8 +22,8 @@ local WindupAnimation = MoveAnims.Eclipse.Solar.Awakening["Cataclysm Windup"]
 local UserAnimation = MoveAnims.Eclipse.Solar.Awakening.Cataclysm
 local VictimAnimation = MoveAnims.Eclipse.Solar.Awakening["Cataclysm Victim"]
 
-local GRAB_HITBOX_SIZE = Vector3.new(7, 10, 8)
-local GRAB_HITBOX_OFFSET = CFrame.new(0, 0, -6)
+local GRAB_HITBOX_SIZE = Vector3.new(15, 30, 40)
+local GRAB_HITBOX_OFFSET = CFrame.new(0, 0, -15)
 
 local MISS_WAIT_TIME = 3
 
@@ -168,7 +168,7 @@ return {
 
 					ReplicateSet:FireAllClients("SolarHit", { char = Character })
 					ReplicateSet:FireAllClients("Cataclysm", { char = Character })
-					SFX:Play("EclipseImpact", HumRP.Position)
+					SFX:Play("Cataclysm", HumRP.Position)
 
 					DamageHandler:TakeDamage(
 						Character,
@@ -306,6 +306,9 @@ return {
 		local function grabVictim(Tool)
 			local FoundVictim = nil
 
+			SFX:Play("CataclysmStartup", HumRP)
+			ReplicateSet:FireAllClients("CataclysmWindup", { CFrame = HumRP.CFrame + Vector3.new(0, -3, -3) })
+
 			HitboxHandler:SimpleOnce(
 				HumRP,
 				GRAB_HITBOX_SIZE,
@@ -398,13 +401,6 @@ return {
 			cleanupCaster()
 			return
 		end
-
-		table.insert(
-			WindupEvents,
-			WindupTrack:GetMarkerReachedSignal("startup"):Once(function()
-				SFX:Play("CataclysmStartup", HumRP)
-			end)
-		)
 
 		table.insert(
 			WindupEvents,

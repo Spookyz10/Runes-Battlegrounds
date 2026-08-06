@@ -121,8 +121,6 @@ local function doHitEffects(
 
 	DamageHandler:TakeDamage(Character, EnemyHumanoid, DAMAGE, nil, nil, true, true, true, true, true, nil, nil)
 
-	SFX:Play("tethersKick", HumRP)
-
 	EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
 	EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
 
@@ -481,6 +479,7 @@ return {
 			UserTrack:GetMarkerReachedSignal("hit"):Once(function()
 				stopRotation()
 				cleanupWeld()
+				SFX:Play("tethersKick", HumRP)
 
 				if hitDone then
 					return

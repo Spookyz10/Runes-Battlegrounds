@@ -7,15 +7,6 @@ local Assets = SvSt.Assets
 
 shared.Assets = Assets
 
-local SoundsFolder = Assets.Sounds
-local AnimsFolder = Assets.Animations
-
-shared.SoundsFolder = SoundsFolder
-shared.AnimsFolder = AnimsFolder
-
-shared.MoveSounds = SoundsFolder.Moves
-shared.MoveAnims = AnimsFolder.Moves
-
 local Remotes = RS.Remotes
 
 local ComunicatorFolder = Remotes.Comunicator

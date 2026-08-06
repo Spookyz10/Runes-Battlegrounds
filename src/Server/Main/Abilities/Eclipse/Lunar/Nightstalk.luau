@@ -24,7 +24,7 @@ local DAMAGE = 10
 
 local CIRCLE_OFFSET_FORWARD = 3
 local CIRCLE_OFFSET_DOWN = 3
-local CIRCLE_VFX_DURATION = 3.95
+local CIRCLE_VFX_DURATION = 1
 
 local SPIKE_STAGES = {
 	{ Distance = 7, HitboxSize = Vector3.new(6, 8, 6), Scale = 1 },
@@ -35,23 +35,27 @@ local SPIKE_STAGES = {
 return {
 	Start = function(Player, Tool)
 		local Character = Player.Character
-		local HumRP = Character.HumanoidRootPart
-
+		local Humanoid = Character and Character:FindFirstChild("Humanoid")
+		if not Character or not Humanoid or Humanoid.Health <= 0 then
+			return
+		end
+		SkillCollisionLock:Lock(Character)
+		Humanoid.WalkSpeed = 0
 		Character:AddTag("CantRotate")
+		local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true)
+
+		task.wait(0.7)
+
+		local HumRP = Character.HumanoidRootPart
 
 		if not Character.Parent then
 			Character:RemoveTag("CantRotate")
 			return
 		end
 
-		local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true)
-
 		iFramesService:AddAlliFrames(Character)
-		SkillCollisionLock:Lock(Character)
 
 		SFX:Play("nightstalkInit", HumRP)
-
-		task.wait(0.2)
 
 		local HitList = {}
 
@@ -208,6 +212,8 @@ return {
 		local UserAnimation = MoveAnims.Eclipse.Lunar:FindFirstChild("Nightstalk")
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
 
+		UserTrack:AdjustSpeed(1.5)
+
 		table.insert(
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("onGround"):Once(function()
@@ -227,7 +233,7 @@ return {
 					end
 
 					if UserTrack then
-						UserTrack:AdjustSpeed(1)
+						UserTrack:AdjustSpeed(1.5)
 					end
 				end)
 			end)

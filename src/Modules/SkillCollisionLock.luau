@@ -17,7 +17,7 @@ function SkillCollisionLock:Lock(Character)
 	end
 
 	local data = {
-		WasAnchored = HumRP.Anchored,
+
 		PartStates = {},
 	}
 
@@ -27,8 +27,6 @@ function SkillCollisionLock:Lock(Character)
 			part.CanCollide = false
 		end
 	end
-
-	HumRP.Anchored = true
 
 	ActiveLocks[Character] = data
 
@@ -51,11 +49,6 @@ function SkillCollisionLock:Unlock(Character, data)
 		if part and part.Parent then
 			part.CanCollide = wasCollide
 		end
-	end
-
-	local HumRP = Character:FindFirstChild("HumanoidRootPart")
-	if HumRP then
-		HumRP.Anchored = data.WasAnchored
 	end
 end
 

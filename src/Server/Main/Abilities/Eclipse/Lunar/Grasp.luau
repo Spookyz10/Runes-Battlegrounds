@@ -40,6 +40,8 @@ return {
 			return
 		end
 
+		Humanoid.WalkSpeed = 0
+
 		local casterStun = StunHandler:Stun(Character, nil, true, 0, 0, true)
 		iFramesService:AddAlliFrames(Character)
 
@@ -153,6 +155,7 @@ return {
 		local function doFullCleanup()
 			StunHandler:Unstun(Character, casterStun)
 			iFramesService:RemoveAlliFrames(Character)
+			Humanoid.WalkSpeed = 16
 		end
 
 		local UserAnimation = MoveAnims.Eclipse.Lunar.Grasp

@@ -6,6 +6,7 @@ local Players = game:GetService("Players")
 
 local SvModules = ServerStorage.Modules
 
+local SFXModule = require(ServerStorage.Modules.SFXModule)
 local DamageHandler = require(SvModules.DamageHandler)
 local KnockbackService = require(SvModules.KnockbackModule)
 local iFramesService = require(SvModules.iFramesService)
@@ -58,6 +59,7 @@ local function explode(Character, Position)
 
 	local PreviousiFrameLevel = iFramesService:GetLevel(Character)
 	iFramesService:AddAlliFrames(Character)
+	SFXModule:Play("Moon Explosion", Position)
 	task.delay(0.5, function()
 		if Character and Character.Parent then
 			if PreviousiFrameLevel > 0 then
@@ -285,6 +287,8 @@ function module:Activate(Player)
 				return
 			end
 
+			SFXModule:Play("Lunar Awakening", HumRP)
+
 			ReplicateSet:FireAllClients("LunarAwakenStart", { char = Character })
 			spawnCrater(OriginPosition, { amount = 70, tiltMin = 30, tiltMax = 50 })
 			ReplicateSet:FireAllClients("LunarImpact", { position = OriginPosition })
@@ -377,6 +381,7 @@ function module:Activate(Player)
 			end
 
 			ReplicateSet:FireAllClients("LunarImpact", { position = OriginPosition })
+			SFXModule:Play("EclipseImpact", OriginPosition)
 			spawnCrater(HumRP.Position, { amount = 60, debrisSizeMin = 5, debrisSizeMax = 14, sizemult = 1.4 })
 		end)
 	)

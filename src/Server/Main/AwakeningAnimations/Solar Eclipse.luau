@@ -204,7 +204,7 @@ function module:Activate(Player)
 			if not Character or not Character.Parent or Humanoid.Health <= 0 then
 				return
 			end
-			SFX:Play("Solar Awkening", HumRP)
+			SFX:Play("Solar Awakening", HumRP)
 			ReplicateSet:FireAllClients("GivePlayerAura", { Char = Character, AuraName = "Solar Eclipse" })
 			triggerExplosion(Character, Character.Torso.Position + Vector3.new(0, 200, 0))
 		end)
