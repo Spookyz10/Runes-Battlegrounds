@@ -14,6 +14,7 @@ local RemoteEvents = {
 	InputDetected = "Server",
 	ReplicationLoaded = "Server",
 	UseAbillity = "Server",
+	Awakening = "Server",
 
 	Specials = "Server",
 	SpecialsResult = "Client",
@@ -209,9 +210,8 @@ if RunService:IsServer() then
 
 	for remoteName in ClientInvokeFunctions do
 		local ExistingFolder = ReplicatedStorage:FindFirstChild("Remotes"):FindFirstChild("ClientFunction")
-			or Instance.new("Folder", ReplicatedStorage.Remotes)
-		ExistingFolder.Name = "ClientFunction"
-		if not ExistingFolder:FindFirstChild(remoteName) then
+
+		if ExistingFolder and not ExistingFolder:FindFirstChild(remoteName) then
 			local NewRF = Instance.new("RemoteFunction")
 			NewRF.Name = remoteName
 			NewRF.Parent = ExistingFolder

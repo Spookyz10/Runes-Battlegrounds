@@ -2,7 +2,6 @@ local Perfect = {}
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
-local CollectionService = game:GetService("CollectionService")
 local ServerStorage = game:GetService("ServerStorage")
 local RunService = game:GetService("RunService")
 
@@ -17,24 +16,43 @@ local RagdollHandler = require(SvModules.RagdollHandler)
 local Assets = ServerStorage.Assets
 local Animations = Assets.Animations
 
-local Remotes = ReplicatedStorage.Remotes
-local ReplicateSet = Remotes.Replicate.Set
-
 local StartAirDetect = ServerStorage.Bindables.AirDetector
 
-Perfect.Active = {}
+export type KnockbackParams = {
+	Dot: number?,
+	DotParams: { number }?,
+	LookAt: CFrame?,
+	LookVector: Vector3,
+	LookForce: number,
+	LookFinalForce: number,
+	UpVelocity: Vector3?,
+	UpVelocityTime: number?,
+	StunFloatTime: number?,
+	GroundStunTime: number?,
+	FallingDetectDelay: number?,
+	EscapableCooldown: number?,
+	Escapable: boolean?,
+	DontFreeze: boolean?,
+}
+
+type ActiveData = {
+	KnockbackTrack: AnimationTrack,
+	KnockbackEvents: { RBXScriptConnection },
+	BodyVelocity: BodyVelocity?,
+	BodyGyro: BodyGyro?,
+	EnemyStun: any,
+	Escapable: boolean,
+	Collision: RBXScriptConnection?,
+	StoppedConnection: RBXScriptConnection?,
+	DamageConn: RBXScriptConnection?,
+}
+
+Perfect.Active = {} :: { [Model]: ActiveData }
 
 local MAX_AIR_TIME = 10
 
-local DEBUG = false
-local function dprint(...)
-	if DEBUG then
-		print("[PerfectKB DEBUG]", ...)
-	end
-end
-
-local function resetHumanoidState(EnemyCharacter)
-	local Humanoid = EnemyCharacter:FindFirstChild("Humanoid")
+local function resetHumanoidState(EnemyCharacter: Model)
+	local Humanoid = EnemyCharacter:FindFirstChild("Humanoid") :: Humanoid?
 	if not Humanoid then
 		return
 	end
@@ -54,34 +72,69 @@ local function resetHumanoidState(EnemyCharacter)
 	end
 
 	local Animator = Humanoid:FindFirstChildOfClass("Animator")
-	if Animator then
-		for _, track in Animator:GetPlayingAnimationTracks() do
-			track:AdjustSpeed(1)
-			track:Stop(0)
+	if not Animator then
+		return
+	end
+
+	for _, track in Animator:GetPlayingAnimationTracks() do
+		track:AdjustSpeed(1)
+		track:Stop(0)
+	end
+
+	local idleAnim = Instance.new("Animation")
+	idleAnim.AnimationId = "rbxassetid://507766388"
+	local idleTrack = Animator:LoadAnimation(idleAnim)
+	idleTrack.Priority = Enum.AnimationPriority.Core
+	idleTrack:Play(0)
+
+	task.delay(0.1, function()
+		if idleTrack.IsPlaying then
+			idleTrack:Stop(0.15)
 		end
+		idleAnim:Destroy()
+	end)
+end
 
-		local idleAnim = Instance.new("Animation")
-		idleAnim.AnimationId = "rbxassetid://507766388"
-		local idleTrack = Animator:LoadAnimation(idleAnim)
-		idleTrack.Priority = Enum.AnimationPriority.Core
-		idleTrack:Play(0)
+local function disconnectActive(ActiveData: ActiveData)
+	if ActiveData.DamageConn then
+		ActiveData.DamageConn:Disconnect()
+		ActiveData.DamageConn = nil
+	end
 
-		task.delay(0.1, function()
-			if idleTrack and idleTrack.IsPlaying then
-				idleTrack:Stop(0.15)
-			end
-			idleAnim:Destroy()
-		end)
+	if ActiveData.StoppedConnection then
+		ActiveData.StoppedConnection:Disconnect()
+		ActiveData.StoppedConnection = nil
 	end
 end
 
-function Perfect:Cancel(EnemyCharacter)
+local function finishKnockback(EnemyCharacter: Model, ActiveData: ActiveData)
+	if Perfect.Active[EnemyCharacter] ~= ActiveData then
+		return
+	end
+	Perfect.Active[EnemyCharacter] = nil
+
+	disconnectActive(ActiveData)
+
+	if ActiveData.BodyVelocity and ActiveData.BodyVelocity.Parent then
+		ActiveData.BodyVelocity:Destroy()
+	end
+
+	if ActiveData.BodyGyro and ActiveData.BodyGyro.Parent then
+		ActiveData.BodyGyro:Destroy()
+	end
+
+	StunHandler:Unstun(EnemyCharacter, ActiveData.EnemyStun)
+	EnemyCharacter:RemoveTag("CantRotate")
+	EnemyCharacter:RemoveTag("Knockbacked")
+
+	resetHumanoidState(EnemyCharacter)
+end
+
+function Perfect:Cancel(EnemyCharacter: Model)
 	local Data = Perfect.Active[EnemyCharacter]
 	if not Data then
 		return
 	end
-
-	dprint("Cancel() called for", EnemyCharacter.Name)
 
 	Perfect.Active[EnemyCharacter] = nil
 
@@ -90,21 +143,11 @@ function Perfect:Cancel(EnemyCharacter)
 		Data.Collision = nil
 	end
 
-	if Data.KnockbackEvents then
-		for _, conn in Data.KnockbackEvents do
-			conn:Disconnect()
-		end
+	for _, conn in Data.KnockbackEvents do
+		conn:Disconnect()
 	end
 
-	if Data.DamageConn then
-		Data.DamageConn:Disconnect()
-		Data.DamageConn = nil
-	end
-
-	if Data.StoppedConnection then
-		Data.StoppedConnection:Disconnect()
-		Data.StoppedConnection = nil
-	end
+	disconnectActive(Data)
 
 	if Data.KnockbackTrack then
 		Data.KnockbackTrack:AdjustSpeed(1)
@@ -129,7 +172,7 @@ function Perfect:Cancel(EnemyCharacter)
 	resetHumanoidState(EnemyCharacter)
 end
 
-function Perfect:CanEscape(EnemyCharacter)
+function Perfect:CanEscape(EnemyCharacter: Model): boolean
 	local Data = Perfect.Active[EnemyCharacter]
 	if not Data then
 		return false
@@ -138,7 +181,7 @@ function Perfect:CanEscape(EnemyCharacter)
 	return Data.Escapable ~= false
 end
 
-function Perfect:Escape(EnemyCharacter)
+function Perfect:Escape(EnemyCharacter: Model): boolean
 	if not Perfect:CanEscape(EnemyCharacter) then
 		return false
 	end
@@ -147,43 +190,28 @@ function Perfect:Escape(EnemyCharacter)
 	return true
 end
 
-RagdollHandler.RegisterActiveKnockbackCanceller(function(Character)
+RagdollHandler.RegisterActiveKnockbackCanceller(function(Character: Model)
 	if Perfect.Active[Character] then
 		Perfect:Cancel(Character)
 	end
 end)
 
-function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
-	dprint(
-		"KnockBack() called. Enemy:",
-		EnemyCharacter and EnemyCharacter.Name,
-		"Caster:",
-		Character and Character.Name
-	)
-
-	if not EnemyCharacter then
-		dprint("ABORT: EnemyCharacter is nil")
-		return
-	end
-	if not EnemyCharacter.Parent then
-		dprint("ABORT: EnemyCharacter.Parent is nil")
+function Perfect:KnockBack(_, EnemyCharacter: Model, Params: KnockbackParams, Character: Model)
+	if not EnemyCharacter or not EnemyCharacter.Parent then
 		return
 	end
 
-	local HumanoidRootPart = EnemyCharacter:FindFirstChild("HumanoidRootPart")
+	local HumanoidRootPart = EnemyCharacter:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if not HumanoidRootPart then
-		dprint("ABORT: no HumanoidRootPart on", EnemyCharacter.Name)
 		return
 	end
 
-	local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
+	local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid") :: Humanoid?
 	if not EnemyHumanoid then
-		dprint("ABORT: no Humanoid on", EnemyCharacter.Name)
 		return
 	end
 
 	if EnemyCharacter:HasTag("Ragdolled") then
-		dprint("Enemy is Ragdolled, cancelling ragdoll before knockback so the animation can actually play")
 		RagdollHandler.cancelRagdoll(EnemyHumanoid, nil, false, nil, false, true, true)
 	end
 
@@ -217,53 +245,30 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 	Params.FallingDetectDelay = Params.FallingDetectDelay or 0.715
 	Params.Escapable = Params.Escapable ~= false
 
-	dprint(
-		"Params resolved -> Dot:",
-		Params.Dot,
-		"LookForce:",
-		Params.LookForce,
-		"LookFinalForce:",
-		Params.LookFinalForce,
-		"GroundStunTime:",
-		Params.GroundStunTime,
-		"FallingDetectDelay:",
-		Params.FallingDetectDelay,
-		"Escapable:",
-		Params.Escapable
-	)
-
 	if EnemyHumanoid.Health <= 0 then
-		dprint("ABORT: EnemyHumanoid.Health <= 0 (", EnemyHumanoid.Health, ")")
 		return
 	end
 
 	local Touched = false
 	local StartTime = os.clock()
 
-	local BodyVelocity
-	local BodyGyro
+	local BodyVelocity: BodyVelocity
+	local BodyGyro: BodyGyro?
 
 	local EnemyStun = StunHandler:Stun(EnemyCharacter, nil, true, 0, 0, true)
-	dprint("EnemyStun applied:", EnemyStun)
 
 	local KnockbackAnimation = Animations.Other.Knockback
 	local KnockbackTrack, KnockbackEvents = AnimationService:getAnimationTrack(EnemyCharacter, KnockbackAnimation)
 
 	if not KnockbackTrack then
 		warn("[PerfectKB] KnockbackTrack is nil for", EnemyCharacter.Name, "— animation not loaded?")
-		dprint(
-			"ABORT: KnockbackTrack nil. This usually means AnimationService:loadAnimations() was never called on",
-			EnemyCharacter.Name
-		)
 		StunHandler:Unstun(EnemyCharacter, EnemyStun)
 		return
 	end
 
-	dprint("KnockbackTrack acquired OK:", KnockbackTrack, "IsPlaying:", KnockbackTrack.IsPlaying)
-
 	KnockbackService:makeEnemyFaceCharacter(EnemyCharacter, Character)
 
-	for _, descendant in ipairs(EnemyCharacter:GetDescendants()) do
+	for _, descendant in EnemyCharacter:GetDescendants() do
 		if
 			descendant:IsA("BodyVelocity")
 			or descendant:IsA("BodyAngularVelocity")
@@ -273,9 +278,7 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 			or descendant:IsA("Torque")
 		then
 			descendant:Destroy()
-		end
-
-		if descendant:IsA("BasePart") then
+		elseif descendant:IsA("BasePart") then
 			descendant.AssemblyLinearVelocity = Vector3.zero
 			descendant.AssemblyAngularVelocity = Vector3.zero
 		end
@@ -289,7 +292,6 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 		BodyGyro.P = 20000000
 		BodyGyro.D = 20000000
 		Debris:AddItem(BodyGyro, 15)
-		dprint("BodyGyro created, CFrame:", Params.LookAt)
 	end
 
 	if not Params.UpVelocity then
@@ -297,7 +299,7 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 		BodyVelocity.Parent = HumanoidRootPart
 		BodyVelocity.P = math.huge
 		BodyVelocity.MaxForce = Vector3.new(math.huge, 0, math.huge)
-		BodyVelocity.Velocity = (Params.LookVector * (Params.LookForce * Params.Dot))
+		BodyVelocity.Velocity = Params.LookVector * (Params.LookForce * Params.Dot)
 		Params.StunFloatTime = 0
 	else
 		BodyVelocity = Instance.new("BodyVelocity")
@@ -307,14 +309,7 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 		BodyVelocity.Velocity = (Params.LookVector * (Params.LookForce * Params.Dot)) + Params.UpVelocity
 	end
 
-	dprint(
-		"BodyVelocity created. Velocity:",
-		BodyVelocity.Velocity,
-		"Parent:",
-		BodyVelocity.Parent and BodyVelocity.Parent.Name
-	)
-
-	local ActiveData = {
+	local ActiveData: ActiveData = {
 		KnockbackTrack = KnockbackTrack,
 		KnockbackEvents = KnockbackEvents,
 		BodyVelocity = BodyVelocity,
@@ -327,60 +322,28 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 	}
 	Perfect.Active[EnemyCharacter] = ActiveData
 
-	ActiveData.DamageConn = EnemyHumanoid.HealthChanged:Connect(function(newHealth)
-		local data = Perfect.Active[EnemyCharacter]
-		if not data or data ~= ActiveData then
+	ActiveData.DamageConn = EnemyHumanoid.HealthChanged:Connect(function()
+		if Perfect.Active[EnemyCharacter] ~= ActiveData then
 			return
 		end
 		if KnockbackTrack.IsPlaying and KnockbackTrack.Speed == 0 then
-			dprint("HealthChanged fired while frozen -> cancelling for", EnemyCharacter.Name)
 			Perfect:Cancel(EnemyCharacter)
 		end
 	end)
 
 	ActiveData.StoppedConnection = KnockbackTrack.Stopped:Connect(function()
-		if Perfect.Active[EnemyCharacter] ~= ActiveData then
-			return
-		end
-		dprint("KnockbackTrack.Stopped fired for", EnemyCharacter.Name)
-		Perfect.Active[EnemyCharacter] = nil
-
-		if ActiveData.DamageConn then
-			ActiveData.DamageConn:Disconnect()
-			ActiveData.DamageConn = nil
-		end
-
-		if ActiveData.StoppedConnection then
-			ActiveData.StoppedConnection:Disconnect()
-			ActiveData.StoppedConnection = nil
-		end
-
-		if BodyVelocity and BodyVelocity.Parent then
-			BodyVelocity:Destroy()
-		end
-
-		if BodyGyro and BodyGyro.Parent then
-			BodyGyro:Destroy()
-		end
-
-		StunHandler:Unstun(EnemyCharacter, EnemyStun)
-		EnemyCharacter:RemoveTag("CantRotate")
-		EnemyCharacter:RemoveTag("Knockbacked")
-
-		resetHumanoidState(EnemyCharacter)
+		finishKnockback(EnemyCharacter, ActiveData)
 	end)
 
 	table.insert(
 		KnockbackEvents,
 		KnockbackTrack:GetMarkerReachedSignal("freeze"):Connect(function()
-			dprint("marker 'freeze' reached. DontFreeze:", Params.DontFreeze, "Touched:", Touched)
 			if Params.DontFreeze then
 				return
 			end
 
 			if not Touched then
 				KnockbackTrack:AdjustSpeed(0)
-				dprint("Speed set to 0 (frozen)")
 			end
 		end)
 	)
@@ -388,11 +351,10 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 	table.insert(
 		KnockbackEvents,
 		KnockbackTrack:GetMarkerReachedSignal("impact"):Connect(function()
-			dprint("marker 'impact' reached")
 			if BodyVelocity.Parent then
-				BodyVelocity.MaxForce = Vector3.new(1 * 50000, 0, 1 * 50000)
+				BodyVelocity.MaxForce = Vector3.new(50000, 0, 50000)
 				BodyVelocity.P = 90000
-				BodyVelocity.Velocity = (Params.LookVector * ((Params.LookFinalForce * 1.1) * Params.Dot))
+				BodyVelocity.Velocity = Params.LookVector * (Params.LookFinalForce * 1.1 * Params.Dot)
 			end
 
 			StunHandler:Stun(EnemyCharacter, Params.GroundStunTime, true, 0, 0, true)
@@ -404,11 +366,10 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 	table.insert(
 		KnockbackEvents,
 		KnockbackTrack:GetMarkerReachedSignal("end"):Connect(function()
-			dprint("marker 'end' reached")
 			if BodyVelocity.Parent then
-				BodyVelocity.MaxForce = Vector3.new(1 * 50000, 0, 1 * 50000)
+				BodyVelocity.MaxForce = Vector3.new(50000, 0, 50000)
 				BodyVelocity.P = 90000
-				BodyVelocity.Velocity = (Params.LookVector * ((Params.LookFinalForce * 0.8) * Params.Dot))
+				BodyVelocity.Velocity = Params.LookVector * (Params.LookFinalForce * 0.8 * Params.Dot)
 			end
 		end)
 	)
@@ -416,7 +377,6 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 	table.insert(
 		KnockbackEvents,
 		KnockbackTrack:GetMarkerReachedSignal("getup"):Connect(function()
-			dprint("marker 'getup' reached")
 			EnemyCharacter:RemoveTag("CantRotate")
 			EnemyCharacter:RemoveTag("Knockbacked")
 		end)
@@ -425,36 +385,12 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 	table.insert(
 		KnockbackEvents,
 		KnockbackTrack:GetMarkerReachedSignal("landed"):Connect(function()
-			dprint("marker 'landed' reached")
-			if BodyVelocity and BodyVelocity.Parent then
-				BodyVelocity:Destroy()
-			end
-
-			if BodyGyro and BodyGyro.Parent then
-				BodyGyro:Destroy()
-			end
-
-			StunHandler:Unstun(EnemyCharacter, EnemyStun)
-			EnemyCharacter:RemoveTag("CantRotate")
-			EnemyCharacter:RemoveTag("Knockbacked")
-
-			if Perfect.Active[EnemyCharacter] == ActiveData then
-				Perfect.Active[EnemyCharacter] = nil
-				if ActiveData.DamageConn then
-					ActiveData.DamageConn:Disconnect()
-					ActiveData.DamageConn = nil
-				end
-				if ActiveData.StoppedConnection then
-					ActiveData.StoppedConnection:Disconnect()
-					ActiveData.StoppedConnection = nil
-				end
-			end
+			finishKnockback(EnemyCharacter, ActiveData)
 		end)
 	)
 
 	task.delay(Params.UpVelocityTime, function()
-		if not BodyVelocity or not BodyVelocity.Parent then
-			dprint("UpVelocityTime delay fired but BodyVelocity already gone")
+		if not BodyVelocity.Parent then
 			return
 		end
 
@@ -468,70 +404,34 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 			end)
 		else
 			BodyVelocity.MaxForce = Vector3.new(math.huge, 0, math.huge)
-			dprint("UpVelocityTime delay fired, MaxForce set to flat (no vertical force)")
 		end
 	end)
 
-	local function impact(Time)
-		if Touched then
+	local function impact(Time: number?)
+		if Touched or not Time then
 			return
 		end
-		if not Time then
-			dprint("impact() called with nil Time, ignoring")
-			return
-		end
-
-		dprint("impact() firing. Time:", Time)
 
 		Touched = true
 
 		KnockbackTrack:AdjustSpeed(1)
 
 		if EnemyCharacter:GetAttribute("Ragdolled") == true then
-			dprint("Enemy got Ragdolled attribute true at impact -> cleaning up early")
-			if BodyVelocity and BodyVelocity.Parent then
-				BodyVelocity:Destroy()
-			end
-
-			if BodyGyro and BodyGyro.Parent then
-				BodyGyro:Destroy()
-			end
-
-			StunHandler:Unstun(EnemyCharacter, EnemyStun)
-			EnemyCharacter:RemoveTag("CantRotate")
-			EnemyCharacter:RemoveTag("Knockbacked")
-
-			if Perfect.Active[EnemyCharacter] == ActiveData then
-				Perfect.Active[EnemyCharacter] = nil
-				if ActiveData.DamageConn then
-					ActiveData.DamageConn:Disconnect()
-					ActiveData.DamageConn = nil
-				end
-				if ActiveData.StoppedConnection then
-					ActiveData.StoppedConnection:Disconnect()
-					ActiveData.StoppedConnection = nil
-				end
-			end
+			finishKnockback(EnemyCharacter, ActiveData)
 		end
 	end
 
-	local hasWarnedNoMap = false
-	local Collision
+	local Collision: RBXScriptConnection
 	Collision = RunService.Heartbeat:Connect(function()
 		local FinalTime = os.clock() - StartTime
 
 		if EnemyCharacter:GetAttribute("Stunned") == false or not EnemyCharacter.Parent then
-			dprint(
-				"Heartbeat abort: Stunned attribute false or Parent gone. Stunned attr:",
-				EnemyCharacter:GetAttribute("Stunned")
-			)
 			Collision:Disconnect()
 			impact(0)
 			return
 		end
 
 		if FinalTime >= MAX_AIR_TIME then
-			dprint("Heartbeat: MAX_AIR_TIME reached (", FinalTime, ") forcing impact")
 			Collision:Disconnect()
 			impact(FinalTime)
 			return
@@ -545,30 +445,11 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 		RayParams.FilterType = Enum.RaycastFilterType.Include
 		RayParams.FilterDescendantsInstances = { workspace.Map }
 
-		local rayOrigin = HumanoidRootPart.Position
-		local rayDir = Vector3.new(0, -5, 0)
-
-		local Raycast = workspace:Raycast(rayOrigin, rayDir, RayParams)
+		local Raycast = workspace:Raycast(HumanoidRootPart.Position, Vector3.new(0, -5, 0), RayParams)
 
 		if Raycast then
-			dprint(
-				"Heartbeat: ground raycast HIT at FinalTime",
-				FinalTime,
-				"-> Hit part:",
-				Raycast.Instance and Raycast.Instance:GetFullName()
-			)
 			Collision:Disconnect()
 			impact(FinalTime)
-		elseif not hasWarnedNoMap then
-			hasWarnedNoMap = true
-			dprint(
-				"Heartbeat: ground raycast MISSED at FinalTime",
-				FinalTime,
-				"- rayOrigin:",
-				rayOrigin,
-				"- workspace.Map exists:",
-				workspace:FindFirstChild("Map") ~= nil
-			)
 		end
 	end)
 
@@ -581,8 +462,6 @@ function Perfect:KnockBack(_, EnemyCharacter, Params, Character)
 
 	AnimationService:stopAll(EnemyCharacter)
 	AnimationService:playAnimation(EnemyCharacter, KnockbackAnimation)
-
-	dprint("Knockback animation played on", EnemyCharacter.Name, "- setup complete")
 
 	return { KnockbackTrack }
 end

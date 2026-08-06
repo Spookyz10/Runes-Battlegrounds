@@ -2,38 +2,34 @@ local SvSt = game:GetService("ServerStorage")
 local RS = game:GetService("ReplicatedStorage")
 local TS = game:GetService("TweenService")
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local InfoModule = require(RS.Shared.Info)
-local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
-local Data = require(ReplicatedStorage.Shared.Data).server
+local Data = require(RS.Shared.Data).server
+local RemoteManager = require(RS.Shared.Modules.RemoteManager)
 
 local SvModules = SvSt.Modules
-
 local iFramesHandler = require(SvModules.iFramesService)
 local MovesetHandler = require(SvModules.MovesetHandler)
+local UltimateAnimations = require(SvModules.AwakeningAnimations)
 
-local AwakenAnimations = require(script.Parent.AwakeningAnimations)
+local AwakeningService = {}
 
-local RpRemotes = RS.Remotes
-local AwakeningRemotes = RpRemotes.Awakening
-local AwakeningSet = AwakeningRemotes.Set
-local ReplicateRemotes = RpRemotes.Replicate
-local ReplicateSet = ReplicateRemotes.Set
-
-local function EndAwakening(Player, Awk0C, AwkTween, DeathConn)
+local function EndAwakening(
+	Player: Player,
+	Awk0C: RBXScriptConnection?,
+	AwkTween: Tween?,
+	DeathConn: RBXScriptConnection?
+)
 	if not Player or not Player.Parent then
 		return
 	end
 
 	if Awk0C then
 		Awk0C:Disconnect()
-		Awk0C = nil
 	end
 
 	if DeathConn then
 		DeathConn:Disconnect()
-		DeathConn = nil
 	end
 
 	if AwkTween then
@@ -51,7 +47,6 @@ local function EndAwakening(Player, Awk0C, AwkTween, DeathConn)
 			end
 		end
 		AwkTween:Cancel()
-		AwkTween = nil
 	end
 
 	Player:SetAttribute("Awakened", nil)
@@ -78,25 +73,26 @@ local function EndAwakening(Player, Awk0C, AwkTween, DeathConn)
 		end
 	end
 
-	if Character:FindFirstChild("Humanoid") then
-		Character.Humanoid.WalkSpeed = 16
+	local Humanoid = Character:FindFirstChild("Humanoid") :: Humanoid?
+	if Humanoid then
+		Humanoid.WalkSpeed = 16
 	end
 
 	MovesetHandler:AddBaseMoveset(Player, Player:GetAttribute("Moveset"))
 end
 
-local AwakeningAnimations = {
-	["Astral Shift"] = function(Player)
+local UltimateHandlers: { [string]: (Player: Player) -> () } = {
+	["Astral Shift"] = function(Player: Player)
 		local Moveset = Player:GetAttribute("MovesetMode_Eclipse")
 		if Moveset == "Solar" then
-			AwakenAnimations["Solar Eclipse"]:Activate(Player)
+			UltimateAnimations["Solar Eclipse"]:Activate(Player)
 		elseif Moveset == "Lunar" then
-			AwakenAnimations["Lunar Eclipse"]:Activate(Player)
+			UltimateAnimations["Lunar Eclipse"]:Activate(Player)
 		end
 	end,
 }
 
-local function Awakening(Player)
+function AwakeningService:Activate(Player: Player)
 	task.spawn(function()
 		local Character = Player.Character
 
@@ -110,7 +106,10 @@ local function Awakening(Player)
 			return
 		end
 
-		local AwkProgressObj = Player.AwakeningProgress
+		local AwkProgressObj = Player:FindFirstChild("AwakeningProgress") :: NumberValue?
+		if not AwkProgressObj then
+			return
+		end
 
 		if
 			Character:HasTag("Stunned")
@@ -129,7 +128,11 @@ local function Awakening(Player)
 
 		iFramesHandler:AddAlliFrames(Character)
 
-		AwakeningAnimations[InfoModule.Movesets[CurrentMoveset].UltimateName](Player)
+		local UltimateName = InfoModule.Movesets[CurrentMoveset].UltimateName
+		local Handler = UltimateHandlers[UltimateName]
+		if Handler then
+			Handler(Player)
+		end
 
 		task.delay(0.5, function()
 			MovesetHandler:AddAwakeningMoveset(Player, Player:GetAttribute("Moveset"))
@@ -145,12 +148,13 @@ local function Awakening(Player)
 			{ Value = 0 }
 		)
 
-		local Awk0C
-		local DeathConn
-		local Humanoid = Character:FindFirstChild("Humanoid")
+		local Humanoid = Character:FindFirstChild("Humanoid") :: Humanoid?
+
+		local Awk0C: RBXScriptConnection
+		local DeathConn: RBXScriptConnection?
 
 		Awk0C = AwkProgressObj:GetPropertyChangedSignal("Value"):Connect(function()
-			if Ended == false and AwkProgressObj.Value <= 0 then
+			if not Ended and AwkProgressObj.Value <= 0 then
 				Ended = true
 				EndAwakening(Player, nil, AwkTween, DeathConn)
 			end
@@ -158,14 +162,12 @@ local function Awakening(Player)
 
 		if Humanoid then
 			DeathConn = Humanoid.Died:Connect(function()
-				if Ended == false then
+				if not Ended then
 					Ended = true
 					EndAwakening(Player, Awk0C, AwkTween, nil)
 				end
 			end)
-		end
 
-		if Humanoid then
 			Humanoid.WalkSpeed = 25
 		end
 
@@ -173,24 +175,24 @@ local function Awakening(Player)
 	end)
 end
 
-AwakeningSet.OnServerEvent:Connect(function(Player)
-	if Player.AwakeningProgress.Value < 100 then
-		return
-	end
+local function ClearAwakenedAttribute(Player: Player)
+	Player:SetAttribute("Awakened", nil)
+end
 
-	Awakening(Player)
-end)
-
-Players.PlayerAdded:Connect(function(player)
-	player.CharacterAdded:Connect(function()
-		player:SetAttribute("Awakened", nil)
+Players.PlayerAdded:Connect(function(Player)
+	Player.CharacterAdded:Connect(function()
+		ClearAwakenedAttribute(Player)
 	end)
 end)
 
-for _, player in Players:GetPlayers() do
-	player.CharacterAdded:Connect(function()
-		player:SetAttribute("Awakened", nil)
+for _, Player in Players:GetPlayers() do
+	Player.CharacterAdded:Connect(function()
+		ClearAwakenedAttribute(Player)
 	end)
 end
 
-shared.ActivateAwakening = Awakening
+shared.ActivateAwakening = function(Player: Player)
+	AwakeningService:Activate(Player)
+end
+
+return AwakeningService

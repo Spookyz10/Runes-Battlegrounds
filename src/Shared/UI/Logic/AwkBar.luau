@@ -9,8 +9,7 @@ local UIFunctions = require(ReplicatedStorage.Shared.UI.UIFunctions)
 local Player = UIConstants.Player
 local Character = UIConstants.Character
 
-local AwakeningRemotes = ReplicatedStorage.Remotes.Awakening
-local AwakeningSet = AwakeningRemotes.Set
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
 local BarFrame = UIConstants.AwakeningBar.UltimateBar
 local UltKey = BarFrame.Key
@@ -106,7 +105,7 @@ local function activate()
 		return
 	end
 
-	AwakeningSet:FireServer("Awakening")
+	RemoteManager.FireServer("Awakening")
 end
 
 local function updateProgress()
