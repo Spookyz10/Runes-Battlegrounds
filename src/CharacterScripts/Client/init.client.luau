@@ -8,6 +8,7 @@ local CameraShakeController = require(ReplicatedStorage.Shared.Modules.Functions
 local Loop = require(ReplicatedStorage.Shared.Modules.Functions.Loop)
 local HandleVelocity = require(ReplicatedStorage.Shared.Modules.Functions.HandleVelocity)
 local Tasks = require(ReplicatedStorage.Shared.Modules.Functions.Tasks)
+local FootstepSFX = require(ReplicatedStorage.Shared.Modules.Functions.FootstepSFX)
 
 if script.Parent.Parent:GetAttribute("ClonedChar2") then
 	return script:Destroy()
@@ -127,6 +128,7 @@ heartbeatConnection = RunService.RenderStepped:Connect(function(deltaTime: numbe
 	end
 
 	Humanoid.AutoRotate = not Character:HasTag("CantRotate")
+	FootstepSFX.Step(Character, Humanoid, HumRP, RunTrack.IsPlaying)
 
 	local isMoveLocked: boolean = Humanoid:GetState() == Enum.HumanoidStateType.Climbing
 		or Character:GetAttribute("Ragdolled")

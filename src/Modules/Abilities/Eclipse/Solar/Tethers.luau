@@ -14,6 +14,7 @@ local AnimationService = require(ServerModules.AnimationService)
 local iFramesService = require(ServerModules.iFramesService)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local PerfectKnockback = require(ServerModules.PerfectKnockback)
+local SkillCollision = require(ServerModules.SkillCollision)
 local WeldSystem = require(ReplicatedModules.WeldSystem)
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local SFX = require(ServerModules.SFXModule)
@@ -171,6 +172,9 @@ return {
 		local CasterStun = StunHandler:Stun(Character, nil, true, 0, 0, true)
 		iFramesService:AddAlliFrames(Character)
 
+		Character:AddTag("CantRotate")
+		SkillCollision:Lock(Character)
+
 		local UserAnimation = MoveAnims.Eclipse.Solar.Tethers
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
 
@@ -184,6 +188,18 @@ return {
 		local hitDone = false
 		local Weld = nil
 		local rotateConn = nil
+
+		local casterCleaned = false
+
+		local function cleanupCaster()
+			if casterCleaned then
+				return
+			end
+			casterCleaned = true
+
+			Character:RemoveTag("CantRotate")
+			SkillCollision:Unlock(Character)
+		end
 
 		local function stopRotation()
 			if rotateConn then
@@ -298,6 +314,7 @@ return {
 				VictimStun = StunHandler:Stun(closestEnemy, nil, true, 0, 0, true)
 				closestEnemy:AddTag("CantRotate")
 				closestEnemy:AddTag("Knockbacked")
+				SkillCollision:Lock(closestEnemy)
 
 				pcall(function()
 					HumRP:SetNetworkOwner(nil)
@@ -591,6 +608,11 @@ return {
 
 			stopRotation()
 			cleanupWeld()
+			cleanupCaster()
+
+			if closestEnemy and closestEnemy.Parent then
+				SkillCollision:Unlock(closestEnemy)
+			end
 
 			pcall(function()
 				HumRP:SetNetworkOwner(Player)

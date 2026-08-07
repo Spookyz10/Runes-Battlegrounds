@@ -1,8 +1,8 @@
-local SkillCollisionLock = {}
+local SkillCollision = {}
 
 local ActiveLocks = {}
 
-function SkillCollisionLock:Lock(Character)
+function SkillCollision:Lock(Character)
 	if not Character then
 		return nil
 	end
@@ -33,7 +33,7 @@ function SkillCollisionLock:Lock(Character)
 	return data
 end
 
-function SkillCollisionLock:Unlock(Character, data)
+function SkillCollision:Unlock(Character, data)
 	if not Character then
 		return
 	end
@@ -52,8 +52,8 @@ function SkillCollisionLock:Unlock(Character, data)
 	end
 end
 
-function SkillCollisionLock:IsLocked(Character)
+function SkillCollision:IsLocked(Character)
 	return ActiveLocks[Character] ~= nil
 end
 
-return SkillCollisionLock
+return SkillCollision

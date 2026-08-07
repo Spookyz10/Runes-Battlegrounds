@@ -16,7 +16,6 @@ local CooldownSystem = require(SvModules.CooldownSystem)
 local EvasiveService = require(SvModules.EvasiveService)
 local SFX = require(SvModules.SFXModule)
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
-local CheckBehind = require(ReplicatedStorage.Shared.Modules.Utility.CheckBehind)
 
 local Configs = require(script.Configs)
 
@@ -242,8 +241,6 @@ local function runDisplacementDash(Player, Character, HumRP, Humanoid, Config)
 		end)
 	end
 
-	SFX:Play(Config.Sound or "Dash", HumRP)
-
 	local IsTeleport = StatusEffectHandler:Has(Character, "TpDash")
 
 	if IsTeleport then
@@ -311,6 +308,7 @@ function DashHandler:Dash(Player, Direction)
 
 	CooldownSystem:Set(Character, "Dash_" .. Direction, Config.Cooldown or 2)
 	RemoteManager.FireClient(Player, "ExtraCds", Direction .. "Dash", Config.Cooldown or 2)
+	SFX:Play(Config.Sound or "Dash", HumRP)
 
 	if Config.Type == "Attack" then
 		runAttackDash(Player, Character, HumRP, Humanoid, Config)

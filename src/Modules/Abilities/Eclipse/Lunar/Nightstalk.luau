@@ -11,7 +11,7 @@ local HitboxHandler = require(ServerModules.HitboxHandler)
 local AnimationService = require(ServerModules.AnimationService)
 local iFramesService = require(ServerModules.iFramesService)
 local PerfectKnockback = require(ServerModules.PerfectKnockback)
-local SkillCollisionLock = require(ServerModules.SkillCollisionLock)
+local SkillCollision = require(ServerModules.SkillCollision)
 local SFX = require(ServerModules.SFXModule)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
@@ -39,7 +39,7 @@ return {
 		if not Character or not Humanoid or Humanoid.Health <= 0 then
 			return
 		end
-		SkillCollisionLock:Lock(Character)
+		SkillCollision:Lock(Character)
 		Humanoid.WalkSpeed = 0
 		Character:AddTag("CantRotate")
 		local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true)
@@ -202,7 +202,7 @@ return {
 
 			despawnCircle(initialCircleId)
 
-			SkillCollisionLock:Unlock(Character)
+			SkillCollision:Unlock(Character)
 			iFramesService:RemoveAlliFrames(Character)
 			StunHandler:Unstun(Character, Stun)
 
