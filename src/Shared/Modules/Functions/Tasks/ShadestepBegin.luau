@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local FadeOut = require(ReplicatedStorage.Shared.Modules.Utility.FadeOut)
+local StartUp = ReplicatedStorage.Resources.CharacterAssets.Eclipse.Lunar.Shadestep.Startup
 
 local R6_BODY_PARTS = {
 	"Head",
@@ -15,6 +16,7 @@ local AURA_ATTR = "ShadestepAura"
 local SHADOW_TRANSPARENCY = 0.8
 
 local savedTransparencies = {} -- [char] = { [part] = originalTransparency }
+local savedStartupVFX = {}
 
 local Handlers = {}
 
@@ -26,7 +28,6 @@ function Handlers.ShadestepBeginStart(params)
 
 	savedTransparencies[char] = {}
 
-	-- Deixa todas as BaseParts semi-transparentes (exceto HumanoidRootPart)
 	for _, part in char:GetDescendants() do
 		if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" and not string.find("Hitbox", part.Name) then
 			savedTransparencies[char][part] = part.Transparency
@@ -34,7 +35,6 @@ function Handlers.ShadestepBeginStart(params)
 		end
 	end
 
-	-- Clona a aura de sombra em cada parte R6
 	local shadowAura = ReplicatedStorage.Resources.Auras.Shadow
 	for _, partName in R6_BODY_PARTS do
 		local bodyPart = char:FindFirstChild(partName)
@@ -48,6 +48,11 @@ function Handlers.ShadestepBeginStart(params)
 			clone.Parent = bodyPart
 		end
 	end
+
+	local Clone = StartUp:Clone()
+	Clone.Parent = workspace
+	Clone.CFrame = char.PrimaryPart.CFrame * CFrame.Angles(0, math.rad(180), 0)
+	savedStartupVFX[char] = Clone
 end
 
 function Handlers.ShadestepBeginEnd(params)
@@ -56,7 +61,6 @@ function Handlers.ShadestepBeginEnd(params)
 		return
 	end
 
-	-- Reverte transparência para o valor original
 	local saved = savedTransparencies[char]
 	if saved then
 		for part, transparency in saved do
@@ -67,11 +71,16 @@ function Handlers.ShadestepBeginEnd(params)
 		savedTransparencies[char] = nil
 	end
 
-	-- Remove auras clonadas com fade
 	for _, obj in char:GetDescendants() do
 		if obj:GetAttribute(AURA_ATTR) then
 			FadeOut.OutAndDestroy(obj, 0.5)
 		end
+	end
+
+	local startupVFX = savedStartupVFX[char]
+	if startupVFX then
+		FadeOut.OutAndDestroy(startupVFX, 0.5)
+		savedStartupVFX[char] = nil
 	end
 end
 

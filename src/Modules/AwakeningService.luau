@@ -191,8 +191,4 @@ for _, Player in Players:GetPlayers() do
 	end)
 end
 
-shared.ActivateAwakening = function(Player: Player)
-	AwakeningService:Activate(Player)
-end
-
 return AwakeningService

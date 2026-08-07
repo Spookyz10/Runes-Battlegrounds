@@ -8,6 +8,7 @@ local SvModules = ServerStorage.Modules
 
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local SFXModule = require(ServerStorage.Modules.SFXModule)
+local StunHandler = require(SvModules.StunHandler)
 local DamageHandler = require(SvModules.DamageHandler)
 local KnockbackService = require(SvModules.KnockbackModule)
 local iFramesService = require(SvModules.iFramesService)
@@ -255,13 +256,14 @@ function module:Activate(Player)
 	local indicatorId = "LunarAwaken_" .. Player.UserId
 	local OriginPosition = HumRP.Position
 
-	Humanoid.WalkSpeed = 0
+	local AwakeningStun = StunHandler:Stun(Character, nil, true, 0, 0, true)
 
 	AnimationService:stopAll(Character)
 
 	local AnimTrack, AnimEvents = AnimationService:getAnimationTrack(Character, LunarEclipseAnim)
 	if not AnimTrack then
 		warn("[LunarEclipse] AnimTrack is nil for", Character.Name)
+		StunHandler:Unstun(Character, AwakeningStun)
 		return
 	end
 
@@ -404,11 +406,11 @@ function module:Activate(Player)
 		IndicatorService:Destroy(indicatorId)
 		RemoteManager.FireClient(Player, "ReplicateTask", "LunarAimRestoreCamera", {})
 		RemoteManager.FireAllClients("ReplicateTask", "LunarAwakenEnd", { char = Character })
+		StunHandler:Unstun(Character, AwakeningStun)
 	end)
 
 	AnimationService:playAnimation(Character, LunarEclipseAnim)
 	AnimTrack.Stopped:Wait()
-	Humanoid.WalkSpeed = 16
 
 	RemoteManager.FireAllClients("ReplicateTask", "ShowHotbar")
 	RemoteManager.FireAllClients("ReplicateTask", "ShowAwkbar")

@@ -248,7 +248,7 @@ local function addCooldownToSlot(slot, Tool)
 end
 
 local function equip(Base)
-	local Tool = RemoteManager.InvokeServer("UseAbillity", Base.SkillName.Text)
+	local Tool = RemoteManager.FireServer("UseAbillity", Base.SkillName.Text)
 	if not Tool then
 		return
 	end

@@ -261,7 +261,7 @@ Humanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming, false)
 Humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
 TweenService:Create(Camera, TweenInfo.new(0.5), { FieldOfView = 70 }):Play()
 
-if shared.IsConsole or shared.IsMobile then
+if ClientContext.IsMobile then
 	Camera:GetPropertyChangedSignal("CameraType"):Connect(function()
 		if Camera.CameraType == Enum.CameraType.Custom then
 			Camera.CameraType = Enum.CameraType.Track

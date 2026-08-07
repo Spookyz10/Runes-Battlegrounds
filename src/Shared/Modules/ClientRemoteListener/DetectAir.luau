@@ -1,4 +1,6 @@
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Tasks = require(ReplicatedStorage.Shared.Modules.Functions.Tasks)
 local LocalPlayer = Players.LocalPlayer
 
 local Remote = {}
@@ -37,7 +39,7 @@ local function detectAir(Params)
 				and (rayInstance.Parent.Name == "Tree" or rayInstance.Parent.Parent.Name == "Tree")
 			then
 				if rayInstance:IsDescendantOf(workspace.Map.Destroyables) and not rayInstance:HasTag("Destroyed") then
-					shared.repfire("destroyAmbient", {
+					Tasks["destroyAmbient"]({
 						Parts = { rayInstance },
 						CFrame = CFrame.lookAt(HumRP2.Position, Velocity.Unit),
 						Size = Vector3.new(18, 18, 18),

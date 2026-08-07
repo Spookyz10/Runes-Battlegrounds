@@ -202,7 +202,11 @@ local function runAttackDash(Player, Character, HumRP, Humanoid, Config)
 		end
 		StunHandler:Unstun(Character, Stun)
 		if not Hit then
-			RemoteManager.FireAllClients("DashMiss", { PrimaryPart = HumRP, YAngle = math.pi, Front = true })
+			RemoteManager.FireAllClients(
+				"ReplicateTask",
+				"DashMiss",
+				{ PrimaryPart = HumRP, YAngle = math.pi, Front = true }
+			)
 		end
 	end)
 
@@ -211,7 +215,7 @@ local function runAttackDash(Player, Character, HumRP, Humanoid, Config)
 
 	Character:SetAttribute("Dashing", true)
 	RemoteManager.FireAllClients("ReplicateTask", "ActionHightlight", { char = Character, func = "Dash" })
-	RemoteManager.FireAllClients("DashMiss", { PrimaryPart = HumRP })
+	RemoteManager.FireAllClients("ReplicateTask", "DashMiss", { PrimaryPart = HumRP })
 
 	task.delay(0.7, function()
 		HumRP.AssemblyLinearVelocity = Vector3.new()
@@ -243,11 +247,16 @@ local function runDisplacementDash(Player, Character, HumRP, Humanoid, Config)
 	local IsTeleport = StatusEffectHandler:Has(Character, "TpDash")
 
 	if IsTeleport then
-		RemoteManager.FireClient(Player, "DashTeleport", { Direction = Config.Id, Duration = Duration })
+		RemoteManager.FireClient(
+			Player,
+			"ReplicateTask",
+			"DashTeleport",
+			{ Direction = Config.Id, Duration = Duration }
+		)
 	else
-		RemoteManager.FireAllClients("DashDebris", { func = "Start", char = Character })
+		RemoteManager.FireAllClients("ReplicateTask", "DashDebris", { func = "Start", char = Character })
 		task.delay(Duration, function()
-			RemoteManager.FireAllClients("DashDebris", { func = "Stop", char = Character })
+			RemoteManager.FireAllClients("ReplicateTask", "DashDebris", { func = "Stop", char = Character })
 		end)
 	end
 

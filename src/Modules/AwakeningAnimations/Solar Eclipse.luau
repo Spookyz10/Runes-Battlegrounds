@@ -172,6 +172,8 @@ function module:Activate(Player)
 	local levitationId = nil
 	local fakeDebrisId = nil
 
+	local AwakeningStun = StunHandler:Stun(Character, nil, true, 0, 0, true)
+
 	RemoteManager.FireAllClients("ReplicateTask", "HideHotbar")
 	RemoteManager.FireAllClients("ReplicateTask", "HideAwkbar")
 
@@ -247,6 +249,7 @@ function module:Activate(Player)
 		end
 		RemoteManager.FireClient(Player, "Cutscenes", "SolarAwaken", "End", {})
 		RemoteManager.FireAllClients("ReplicateTask", "SolarAwakenEnd", { char = Character })
+		StunHandler:Unstun(Character, AwakeningStun)
 	end)
 
 	Character:AddTag("CantRotate")
