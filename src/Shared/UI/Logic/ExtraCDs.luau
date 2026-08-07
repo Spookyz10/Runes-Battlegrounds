@@ -4,24 +4,24 @@ local UIConstants = require(ReplicatedStorage.Shared.UI.UIConstants)
 local UIFunctions = require(ReplicatedStorage.Shared.UI.UIFunctions)
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
-local Player = UIConstants.Player
-local PlayerGui = UIConstants.PlayerGui
+local Player: Player = UIConstants.Player
+local PlayerGui: PlayerGui = UIConstants.PlayerGui
 
-local GUI = PlayerGui:WaitForChild("ExtraCds")
-local Main = GUI:WaitForChild("Main")
+local GUI: ScreenGui = PlayerGui:WaitForChild("ExtraCds")
+local Main: GuiObject = GUI:WaitForChild("Main")
 
 local ExtraCds = {}
 
-local function getMain(slot)
+local function getMain(slot: GuiObject): GuiObject?
 	return slot:FindFirstChild("Main")
 end
 
-local function getDarkIcon(slot)
+local function getDarkIcon(slot: GuiObject): GuiObject?
 	local main = getMain(slot)
 	return main and main:FindFirstChild("DarkIcon")
 end
 
-local function getSlot(name: string)
+local function getSlot(name: string): ImageLabel?
 	local slot = Main:FindFirstChild(name)
 	if slot and slot:IsA("ImageLabel") then
 		return slot
@@ -55,6 +55,28 @@ local function resetAllSlots()
 			UIFunctions.ResetCooldownIcon(getDarkIcon(slot))
 		end
 	end
+end
+
+function ExtraCds.SetEvasiveMeter(Progress: number, Threshold: number, Charges: number)
+	local slot = getSlot("Evasive")
+	if not slot then
+		return
+	end
+
+	slot.Visible = true
+
+	local darkIcon = getDarkIcon(slot)
+	if not darkIcon then
+		return
+	end
+
+	if Charges > 0 then
+		UIFunctions.ResetCooldownIcon(darkIcon)
+		return
+	end
+
+	local Alpha: number = Threshold > 0 and (Progress / Threshold) or 0
+	UIFunctions.SetCooldownProgress(darkIcon, Alpha)
 end
 
 function ExtraCds.Init()

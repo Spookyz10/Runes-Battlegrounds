@@ -1,9 +1,6 @@
---Services
 local TweenService = game:GetService("TweenService")
-
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
-
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ClientContext = require(ReplicatedStorage.Shared.Modules.ClientContext)
@@ -12,60 +9,47 @@ local Loop = require(ReplicatedStorage.Shared.Modules.Functions.Loop)
 local HandleVelocity = require(ReplicatedStorage.Shared.Modules.Functions.HandleVelocity)
 local Tasks = require(ReplicatedStorage.Shared.Modules.Functions.Tasks)
 
---Player
 if script.Parent.Parent:GetAttribute("ClonedChar2") then
 	return script:Destroy()
 end
 
-local Player = Players.LocalPlayer
+local Player: Player = Players.LocalPlayer
 
 repeat
 	task.wait()
 until game:GetService("UserInputService").TouchEnabled
 	or game:GetService("UserInputService").KeyboardEnabled
 	or game:GetService("UserInputService").GamepadEnabled
+
 repeat
 	task.wait()
 until Player:FindFirstChild("LoadedData") and Player:HasTag("DataLoaded")
 
-local ConfigFolder = Player:FindFirstChild("Configuration") or Player:WaitForChild("Configuration", 10)
-local Character = Player.Character or Player.CharacterAdded:Wait()
-local Animate = Character:WaitForChild("Animate", 5)
+local ConfigFolder: Folder = Player:FindFirstChild("Configuration") or Player:WaitForChild("Configuration", 10)
+local Character: Model = Player.Character or Player.CharacterAdded:Wait()
+local Animate: Instance = Character:WaitForChild("Animate", 5)
 Animate:WaitForChild("walk"):WaitForChild("WalkAnim")
-local Humanoid = Character:FindFirstChild("Humanoid") or Character:WaitForChild("Humanoid", 10)
-local Animator = Humanoid:FindFirstChild("Animator") or Humanoid:WaitForChild("Animator", 10)
-local HumRP = Character:FindFirstChild("HumanoidRootPart") or Character:WaitForChild("HumanoidRootPart", 10)
+local Humanoid: Humanoid = Character:FindFirstChild("Humanoid") or Character:WaitForChild("Humanoid", 10)
+local Animator: Animator = Humanoid:FindFirstChild("Animator") or Humanoid:WaitForChild("Animator", 10)
+local HumRP: BasePart = Character:FindFirstChild("HumanoidRootPart") or Character:WaitForChild("HumanoidRootPart", 10)
 
-local Head = Character:FindFirstChild("Head") or Character:WaitForChild("Head", 10)
-local Torso = Character:FindFirstChild("Torso") or Character:WaitForChild("Torso", 10)
+local Head: BasePart = Character:FindFirstChild("Head") or Character:WaitForChild("Head", 10)
+local Torso: BasePart = Character:FindFirstChild("Torso") or Character:WaitForChild("Torso", 10)
 
---Raycast Params
-local params = RaycastParams.new()
-params.FilterType = Enum.RaycastFilterType.Include
-params.FilterDescendantsInstances = {
-	workspace.Map.Arena,
-	workspace.Map.Miscellaneous,
-	workspace.Map.Borders,
-}
-params.IgnoreWater = true
+local Camera: Camera = workspace.CurrentCamera
 
---Variables
-local Camera = workspace.CurrentCamera
-
-local LastJump = 0
-local JumpFatigue = 0
-local DragonCamera
-local DeadCamera = false
+local LastJumpTime: number = 0
+local JumpFatigue: number = 0
+local IsDeadCameraActive: boolean = false
 
 task.spawn(function()
 	Animate.walk.WalkAnim.AnimationId = "rbxassetid://98691909912183"
 end)
 
-local RunAnimation = Instance.new("Animation")
-
+local RunAnimation: Animation = Instance.new("Animation")
 RunAnimation.AnimationId = "rbxassetid://85109426953918"
 
-local RunTrack = Animator:LoadAnimation(RunAnimation)
+local RunTrack: AnimationTrack = Animator:LoadAnimation(RunAnimation)
 RunAnimation:Destroy()
 RunTrack.Name = "RunAnimation"
 RunTrack.Looped = true
@@ -79,19 +63,8 @@ CameraShakeController.Init(
 )
 
 local function isRunning()
-	local goalWalkSpeed
-	if Character:GetAttribute("DefaultRunSpeed") ~= nil then
-		goalWalkSpeed = Character:GetAttribute("DefaultRunSpeed")
-	else
-		goalWalkSpeed = 25
-	end
-
-	local goalJumpPower
-	if Character:GetAttribute("DefaultJumpPower") ~= nil then
-		goalJumpPower = Character:GetAttribute("DefaultJumpPower")
-	else
-		goalJumpPower = 50
-	end
+	local goalWalkSpeed: number = Character:GetAttribute("DefaultRunSpeed") or 25
+	local goalJumpPower: number = Character:GetAttribute("DefaultJumpPower") or 50
 
 	Humanoid.WalkSpeed = goalWalkSpeed
 	if Humanoid.WalkSpeed > 0 and Character:HasTag("Awakened") and goalWalkSpeed > 0 then
@@ -106,50 +79,39 @@ local function isRunning()
 	end
 end
 
-local function CheckWalkDirection()
-	local Stun = Character:FindFirstChild("Stunned")
-	if Stun then
-		Humanoid.WalkSpeed = Stun:GetAttribute("WalkSpeed")
-		Humanoid.JumpPower = Stun:GetAttribute("JumpPower")
+local function checkWalkDirection()
+	local StunnedFolder: Folder? = Character:FindFirstChild("Stunned")
+	if StunnedFolder then
+		Humanoid.WalkSpeed = StunnedFolder:GetAttribute("WalkSpeed")
+		Humanoid.JumpPower = StunnedFolder:GetAttribute("JumpPower")
 		if RunTrack.IsPlaying then
 			RunTrack:Stop(0.15)
 		end
 		return
-	else
-		Humanoid.WalkSpeed = Character:GetAttribute("Running") and Character:GetAttribute("DefaultRunSpeed")
-			or Character:GetAttribute("DefaultWalkSpeed")
-		Humanoid.JumpPower = Character:GetAttribute("DefaultJumpPower")
 	end
 
-	local LookVector = Humanoid.MoveDirection:Dot(Camera.CFrame.LookVector)
-	local RightVector = Humanoid.MoveDirection:Dot(Camera.CFrame.RightVector)
+	Humanoid.WalkSpeed = Character:GetAttribute("Running") and Character:GetAttribute("DefaultRunSpeed")
+		or Character:GetAttribute("DefaultWalkSpeed")
+	Humanoid.JumpPower = Character:GetAttribute("DefaultJumpPower")
+
+	local forwardDot: number = Humanoid.MoveDirection:Dot(Camera.CFrame.LookVector)
+	local rightDot: number = Humanoid.MoveDirection:Dot(Camera.CFrame.RightVector)
 
 	if Humanoid.MoveDirection.Magnitude == 0 or Humanoid.WalkSpeed <= 16 then
 		RunTrack:Stop(0.15)
 	end
 
-	if Humanoid.MoveDirection ~= Vector3.zero and math.abs(RightVector) < 0.85 and LookVector >= -0.1 then
+	if Humanoid.MoveDirection ~= Vector3.zero and math.abs(rightDot) < 0.85 and forwardDot >= -0.1 then
 		isRunning()
 	else
 		Character:SetAttribute("Running", false)
-
-		local goalWalkSpeed = (Character:GetAttribute("DefaultWalkSpeed") or 16)
-
-		local goalJumpPower = (Character:GetAttribute("DefaultJumpPower") or 50)
-
-		Humanoid.WalkSpeed = goalWalkSpeed
-		Humanoid.JumpPower = goalJumpPower
+		Humanoid.WalkSpeed = Character:GetAttribute("DefaultWalkSpeed") or 16
+		Humanoid.JumpPower = Character:GetAttribute("DefaultJumpPower") or 50
 	end
 end
 
---Params
-local Oparams = OverlapParams.new()
-Oparams.FilterType = Enum.RaycastFilterType.Include
-Oparams.FilterDescendantsInstances = { workspace.Map }
-
---Connections
-local Heartbeat
-Heartbeat = RunService.RenderStepped:Connect(function(deltaTime)
+local heartbeatConnection: RBXScriptConnection
+heartbeatConnection = RunService.RenderStepped:Connect(function(deltaTime: number)
 	if
 		not Character
 		or not Character.Parent
@@ -160,126 +122,74 @@ Heartbeat = RunService.RenderStepped:Connect(function(deltaTime)
 		or not Humanoid
 		or not Humanoid.Parent
 	then
-		Heartbeat:Disconnect()
+		heartbeatConnection:Disconnect()
 		return
 	end
 
-	if Humanoid then
-		if not Character:HasTag("CantRotate") then
-			Humanoid.AutoRotate = true
+	Humanoid.AutoRotate = not Character:HasTag("CantRotate")
+
+	local isMoveLocked: boolean = Humanoid:GetState() == Enum.HumanoidStateType.Climbing
+		or Character:GetAttribute("Ragdolled")
+		or Character:FindFirstChild("Stunned") ~= nil
+		or Character:HasTag("Blocking")
+
+	if isMoveLocked then
+		if RunTrack.IsPlaying then
+			RunTrack:Stop(0.15)
+		end
+		Character:SetAttribute("Running", false)
+	elseif Humanoid.MoveDirection.Magnitude == 0 then
+		if RunTrack.IsPlaying then
+			RunTrack:Stop(0.15)
+		end
+		Character:SetAttribute("Running", false)
+	end
+
+	if
+		Camera.CameraType ~= Enum.CameraType.Scriptable
+		and not ClientContext.LunarAimActive
+		and not ClientContext.SolarAimActive
+	then
+		local shakeOffset: Vector3 = CameraShakeController.GetOffset()
+		local defaultOffset: Vector3 = Vector3.new(shakeOffset.X, -1.25 + shakeOffset.Y, shakeOffset.Z)
+		local camOffset: Vector3 = defaultOffset
+
+		if Character:HasTag("NoHeadFollow") then
+			camOffset += Vector3.new(0, 1.25, 0)
 		else
-			Humanoid.AutoRotate = false
+			camOffset += HumRP.CFrame:ToObjectSpace(Head.CFrame).Position
 		end
 
-		if Humanoid:GetState() == Enum.HumanoidStateType.Climbing then
-			if RunTrack.IsPlaying then
-				RunTrack:Stop(0.15)
-			end
-
-			Character:SetAttribute("Running", false)
-		elseif Character:GetAttribute("Ragdolled") then
-			if RunTrack.IsPlaying then
-				RunTrack:Stop(0.15)
-			end
-
-			Character:SetAttribute("Running", false)
-		elseif Character:FindFirstChild("Stunned") then
-			if RunTrack.IsPlaying then
-				RunTrack:Stop(0.15)
-			end
-
-			Character:SetAttribute("Running", false)
-		elseif Character:HasTag("Blocking") then
-			if RunTrack.IsPlaying then
-				RunTrack:Stop(0.15)
-			end
-
-			Character:SetAttribute("Running", false)
-		elseif Character:FindFirstChild("dashingForward") and Character:FindFirstChild("Stunned") then
-			if RunTrack.IsPlaying then
-				RunTrack:Stop(0.15)
-			end
-
-			Character:SetAttribute("Running", false)
-		elseif
-			Character:FindFirstChild("Emoting")
-			and Character:FindFirstChild("Ragdolled")
-			and Character:FindFirstChild("Stunned")
-		then
-			if RunTrack.IsPlaying then
-				RunTrack:Stop(0.15)
-			end
-
-			Character:SetAttribute("Running", false)
+		if Character:HasTag("NoHeadLerp") then
+			Humanoid.CameraOffset = camOffset
 		else
-			if Humanoid.MoveDirection.Magnitude > 0 then
-				-- moving, nothing extra needed
-			else
-				if RunTrack.IsPlaying then
-					RunTrack:Stop(0.15)
-				end
+			local lerpedOffset: Vector3 = Humanoid.CameraOffset:Lerp(camOffset, 1 - 2.5E-5 ^ deltaTime)
+			local offsetMagnitude: number = (HumRP.Position - (HumRP.Position + lerpedOffset)).Magnitude
+			local offsetCFrame: CFrame = HumRP.CFrame * CFrame.new(Vector3.new(0, 1.5, 0) + lerpedOffset)
 
-				Character:SetAttribute("Running", false)
+			if offsetMagnitude > 1000 or (offsetCFrame.Position - HumRP.Position).Magnitude > 1000 then
+				lerpedOffset = defaultOffset
 			end
+
+			Humanoid.CameraOffset = lerpedOffset
 		end
 	end
 
-	if Head and HumRP and Torso then
-		if
-			Camera.CameraType ~= Enum.CameraType.Scriptable
-			and not ClientContext.LunarAimActive
-			and not ClientContext.SolarAimActive
-		then
-			local ShakeOffset = CameraShakeController.GetOffset()
-			local defaultOffset = Vector3.new(ShakeOffset.X, -1.25 + ShakeOffset.Y, ShakeOffset.Z)
-			local camOffset = defaultOffset
-
-			if DragonCamera and DragonCamera.Value then
-				camOffset = camOffset
-					+ HumRP.CFrame:ToObjectSpace(
-						DragonCamera.Value.RootPart.Root.UpperMouth["Bone.002"]["Bone.003"].WorldCFrame
-					).Position
-			elseif Character:HasTag("NoHeadFollow") then
-				camOffset = camOffset + Vector3.new(0, 1.25, 0)
-			else
-				camOffset = camOffset + HumRP.CFrame:ToObjectSpace(Head.CFrame).Position
-			end
-
-			if DragonCamera and not DragonCamera.Parent then
-				DragonCamera = nil
-			end
-
-			if Character:HasTag("NoHeadLerp") then
-				Humanoid.CameraOffset = camOffset
-			else
-				local offsetLerp = Humanoid.CameraOffset:Lerp(camOffset, 1 - 2.5E-5 ^ deltaTime)
-				local offsetMagnitude = (HumRP.Position - (HumRP.Position + offsetLerp)).Magnitude
-				local offsetCFrame = HumRP.CFrame * CFrame.new(Vector3.new(0, 1.5, 0) + offsetLerp)
-				if (offsetMagnitude > 1000) or (offsetCFrame.Position - HumRP.Position).Magnitude > 1000 then
-					offsetLerp = defaultOffset
-				end
-
-				Humanoid.CameraOffset = offsetLerp
-			end
-		end
-	end
-
-	if Humanoid.Health == 0 and not DeadCamera then
-		DeadCamera = true
+	if Humanoid.Health == 0 and not IsDeadCameraActive then
+		IsDeadCameraActive = true
 
 		RunService.RenderStepped:Connect(function()
 			if Camera.CameraType == Enum.CameraType.Scriptable then
 				return
 			end
-
-			Camera.CFrame = Camera.CFrame + Humanoid.CameraOffset
+			Camera.CFrame += Humanoid.CameraOffset
 		end)
 	end
 
-	local Stunned = Character:FindFirstChild("Stunned")
-	if Stunned then
-		Humanoid.WalkSpeed = Stunned:GetAttribute("WalkSpeed")
-		Humanoid.JumpPower = Stunned:GetAttribute("JumpPower")
+	local StunnedFolder: Folder? = Character:FindFirstChild("Stunned")
+	if StunnedFolder then
+		Humanoid.WalkSpeed = StunnedFolder:GetAttribute("WalkSpeed")
+		Humanoid.JumpPower = StunnedFolder:GetAttribute("JumpPower")
 
 		if RunTrack.IsPlaying then
 			RunTrack:Stop(0.15)
@@ -289,65 +199,62 @@ Heartbeat = RunService.RenderStepped:Connect(function(deltaTime)
 			or Character:GetAttribute("DefaultWalkSpeed")
 		Humanoid.JumpPower = Character:GetAttribute("DefaultJumpPower")
 
-		CheckWalkDirection()
+		checkWalkDirection()
 	end
 end)
 
-Character:GetAttributeChangedSignal("DefaultRunSpeed"):Connect(CheckWalkDirection)
-Character:GetAttributeChangedSignal("DefaultWalkSpeed"):Connect(CheckWalkDirection)
-Character:GetAttributeChangedSignal("DefaultJumpPower"):Connect(CheckWalkDirection)
+Character:GetAttributeChangedSignal("DefaultRunSpeed"):Connect(checkWalkDirection)
+Character:GetAttributeChangedSignal("DefaultWalkSpeed"):Connect(checkWalkDirection)
+Character:GetAttributeChangedSignal("DefaultJumpPower"):Connect(checkWalkDirection)
 
-Humanoid:GetPropertyChangedSignal("MoveDirection"):Connect(CheckWalkDirection)
+Humanoid:GetPropertyChangedSignal("MoveDirection"):Connect(checkWalkDirection)
+
 Humanoid:GetPropertyChangedSignal("FloorMaterial"):Connect(function()
 	if Humanoid.FloorMaterial == Enum.Material.Air then
-		if RunTrack then
-			RunTrack:AdjustSpeed(0.5)
-		end
+		RunTrack:AdjustSpeed(0.5)
 	else
 		RunTrack:AdjustSpeed(1)
 	end
 end)
+
 Humanoid:GetPropertyChangedSignal("JumpPower"):Connect(function()
-	if Humanoid.JumpPower <= 0 then
-		Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
-	else
-		Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
-	end
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, Humanoid.JumpPower > 0)
 end)
+
 Character:GetAttributeChangedSignal("DefaultJumpPower"):Connect(function()
-	if Character:GetAttribute("DefaultJumpPower") <= 0 then
-		Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
-	else
-		Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
-	end
+	local jumpPower: number = Character:GetAttribute("DefaultJumpPower")
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, jumpPower > 0)
 end)
-Humanoid.Jumping:Connect(function(Active)
-	if Active then
-		if tick() - LastJump > 1.25 then
-			JumpFatigue = 0
-		end
 
-		LastJump = tick()
-		JumpFatigue += 1.5
-
-		local GoalJumpPower = 50
-		if Character:FindFirstChild("DamagerLog") and Character.DamagerLog.TimeRemaining.Value > 20 then
-			JumpFatigue = 0
-		end
-
-		if JumpFatigue > 0 then
-			GoalJumpPower = math.max(GoalJumpPower - JumpFatigue * 1, 27)
-		end
-
-		Humanoid.JumpPower = GoalJumpPower
+Humanoid.Jumping:Connect(function(active: boolean)
+	if not active then
+		return
 	end
+
+	if tick() - LastJumpTime > 1.25 then
+		JumpFatigue = 0
+	end
+
+	LastJumpTime = tick()
+	JumpFatigue += 1.5
+
+	local DamagerLog = Character:FindFirstChild("DamagerLog")
+	if DamagerLog and DamagerLog.TimeRemaining.Value > 20 then
+		JumpFatigue = 0
+	end
+
+	local goalJumpPower: number = 50
+	if JumpFatigue > 0 then
+		goalJumpPower = math.max(goalJumpPower - JumpFatigue, 27)
+	end
+
+	Humanoid.JumpPower = goalJumpPower
 end)
 
 workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
 	Camera = workspace.CurrentCamera
 end)
 
---Runtime
 Humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
 Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
 Humanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming, false)
@@ -369,17 +276,18 @@ end
 Camera.CameraSubject = Humanoid
 
 Humanoid.Died:Connect(function()
-	if Head then
-		if Character:GetAttribute("Override") then
-			return
-		end
-
-		Camera.CameraSubject = Head
-		Head.CanCollide = true
+	if not Head then
+		return
 	end
+	if Character:GetAttribute("Override") then
+		return
+	end
+
+	Camera.CameraSubject = Head
+	Head.CanCollide = true
 end)
 
-Humanoid.StateChanged:Connect(function(oldState, newState)
+Humanoid.StateChanged:Connect(function(oldState: Enum.HumanoidStateType, newState: Enum.HumanoidStateType)
 	if
 		newState == Enum.HumanoidStateType.Ragdoll
 		or newState == Enum.HumanoidStateType.FallingDown
@@ -390,212 +298,145 @@ Humanoid.StateChanged:Connect(function(oldState, newState)
 	end
 end)
 
-HumRP.ChildAdded:Connect(function(BodyVelocity)
-	if BodyVelocity:IsA("BodyVelocity") then
-		if BodyVelocity.Name == "FrontDashVelocity" then
-			Tasks["ClearVelocities"](HumRP, BodyVelocity)
+HumRP.ChildAdded:Connect(function(child: Instance)
+	if child:IsA("BodyVelocity") then
+		if child.Name == "FrontDashVelocity" then
+			Tasks["ClearVelocities"](HumRP, child)
 
 			task.spawn(function()
 				CameraShakeController.AddShake(2.5)
 			end)
 
-			local Speed = 165
-			local stopLoop = nil
+			local speed: number = 165
+			local stopLoop: (() -> ())? = nil
 			stopLoop = Loop.new(function()
-				if Speed > 26 and BodyVelocity and BodyVelocity.Parent then
-					Speed = Speed * 0.95
-
-					BodyVelocity.Velocity = HumRP.CFrame.LookVector * Speed
+				if speed > 26 and child.Parent then
+					speed *= 0.95
+					child.Velocity = HumRP.CFrame.LookVector * speed
 				else
 					stopLoop()
 				end
 			end)
-		elseif BodyVelocity.Name == "moveme" then
-			if BodyVelocity:GetAttribute("RemoveOthers") == true then
-				Tasks["ClearVelocities"](HumRP, BodyVelocity)
+		elseif child.Name == "moveme" then
+			if child:GetAttribute("RemoveOthers") == true then
+				Tasks["ClearVelocities"](HumRP, child)
 			end
 
-			local stopLoop = nil
+			local stopLoop: (() -> ())? = nil
 			stopLoop = Loop.new(function()
-				if not BodyVelocity:GetAttribute("BeganTick") then
-					BodyVelocity:SetAttribute("BeganTick", tick())
+				if not child:GetAttribute("BeganTick") then
+					child:SetAttribute("BeganTick", tick())
 				end
 
-				local Fallout = BodyVelocity:GetAttribute("Fallout") or 0.9
-				local Speed = BodyVelocity:GetAttribute("Speed")
-				if not Speed then
-					BodyVelocity:SetAttribute("Speed", BodyVelocity.Velocity.Magnitude)
-					Speed = BodyVelocity.Velocity.Magnitude
+				local fallout: number = child:GetAttribute("Fallout") or 0.9
+				local speed: number? = child:GetAttribute("Speed")
+				if not speed then
+					child:SetAttribute("Speed", child.Velocity.Magnitude)
+					speed = child.Velocity.Magnitude
 				end
 
-				local GoalSpeed = Speed * Fallout
+				local goalSpeed: number = speed * fallout
 
-				local MinimumSpeed = BodyVelocity:GetAttribute("Goto")
-				if MinimumSpeed and GoalSpeed < MinimumSpeed then
-					GoalSpeed = MinimumSpeed
+				local minimumSpeed: number? = child:GetAttribute("Goto")
+				if minimumSpeed and goalSpeed < minimumSpeed then
+					goalSpeed = minimumSpeed
 				end
 
-				local MinimumSpeedModifier = BodyVelocity:GetAttribute("GotoDown")
-				if MinimumSpeedModifier and MinimumSpeed then
-					BodyVelocity:SetAttribute(
-						"Goto",
-						math.clamp(BodyVelocity:GetAttribute("Goto") - 0.05, MinimumSpeedModifier, 100)
-					)
+				local minimumSpeedModifier: number? = child:GetAttribute("GotoDown")
+				if minimumSpeedModifier and minimumSpeed then
+					child:SetAttribute("Goto", math.clamp(child:GetAttribute("Goto") - 0.05, minimumSpeedModifier, 100))
 				end
 
-				if Fallout > 1 then
-					local SpeedLimit = BodyVelocity:GetAttribute("Limit")
-					if SpeedLimit and SpeedLimit < GoalSpeed then
-						GoalSpeed = SpeedLimit
+				if fallout > 1 then
+					local speedLimit: number? = child:GetAttribute("Limit")
+					if speedLimit and speedLimit < goalSpeed then
+						goalSpeed = speedLimit
 					end
 				end
 
-				local VelocityDirection = HumRP.CFrame.lookVector * GoalSpeed
-				local Inverted = BodyVelocity:GetAttribute("Inverted")
-				local Direction = BodyVelocity:GetAttribute("Direction")
-				if Direction then
-					VelocityDirection = Direction == "Right" and HumRP.CFrame.RightVector * GoalSpeed
-						or -HumRP.CFrame.RightVector * GoalSpeed
+				local velocityDirection: Vector3 = HumRP.CFrame.LookVector * goalSpeed
+
+				local direction: string? = child:GetAttribute("Direction")
+				if direction then
+					velocityDirection = direction == "Right" and HumRP.CFrame.RightVector * goalSpeed
+						or -HumRP.CFrame.RightVector * goalSpeed
 				end
 
-				if Inverted then
-					VelocityDirection = -HumRP.CFrame.lookVector * GoalSpeed
+				if child:GetAttribute("Inverted") then
+					velocityDirection = -HumRP.CFrame.LookVector * goalSpeed
 				end
 
-				if BodyVelocity:GetAttribute("NoY") then
-					VelocityDirection = VelocityDirection * Vector3.new(1, 0, 1)
+				if child:GetAttribute("NoY") then
+					velocityDirection *= Vector3.new(1, 0, 1)
 				end
 
-				BodyVelocity.Velocity = VelocityDirection
-				local SideSpeed = BodyVelocity:GetAttribute("Side")
-				if SideSpeed then
-					BodyVelocity.Velocity = BodyVelocity.Velocity + HumRP.CFrame.RightVector * SideSpeed
-					BodyVelocity:SetAttribute("Side", SideSpeed * BodyVelocity:GetAttribute("SideFallout"))
+				child.Velocity = velocityDirection
+
+				local sideSpeed: number? = child:GetAttribute("Side")
+				if sideSpeed then
+					child.Velocity += HumRP.CFrame.RightVector * sideSpeed
+					child:SetAttribute("Side", sideSpeed * child:GetAttribute("SideFallout"))
 				end
 
-				local Aerial = BodyVelocity:GetAttribute("Aerial")
-				local Monster = BodyVelocity:GetAttribute("Monster")
+				local aerial: number? = child:GetAttribute("Aerial")
+				local isMonster: boolean? = child:GetAttribute("Monster")
 
-				if Aerial then
-					BodyVelocity.Velocity = BodyVelocity.Velocity + Vector3.new(0, Aerial, 0)
-					if not Monster then
-						local AerialCount = 1
+				if aerial then
+					child.Velocity += Vector3.new(0, aerial, 0)
 
-						if BodyVelocity:GetAttribute("AerialDecrease") then
-							AerialCount = BodyVelocity:GetAttribute("AerialDecrease")
+					if not isMonster then
+						local aerialDecrease: number = child:GetAttribute("AerialDecrease") or 1
+						local nextAerial: number = math.max(0, aerial - aerialDecrease)
+						child:SetAttribute("Aerial", nextAerial)
+
+						if nextAerial <= 0 and not child:GetAttribute("YForceImmunity") then
+							child:SetAttribute("Aerial", nil)
+							child.MaxForce = Vector3.new(child.MaxForce.X, 0, child.MaxForce.Z)
 						end
-
-						local MixedAerial = math.max(0, BodyVelocity:GetAttribute("Aerial") - AerialCount)
-						BodyVelocity:SetAttribute("Aerial", MixedAerial)
-
-						if MixedAerial <= 0 and not BodyVelocity:GetAttribute("YForceImmunity") then
-							BodyVelocity:SetAttribute("Aerial", nil)
-							BodyVelocity.MaxForce = Vector3.new(BodyVelocity.MaxForce.X, 0, BodyVelocity.MaxForce.Z)
-						end
-					end
-
-					if Monster then
-						local BeganTick = BodyVelocity:GetAttribute("BeganTick")
-
-						if tick() - BeganTick >= 0.1715 then
-							local AerialDecrease = BodyVelocity:GetAttribute("AerialDecrease") or 0.975
-
-							BodyVelocity:SetAttribute("Aerial", BodyVelocity:GetAttribute("Aerial") * AerialDecrease)
+					else
+						local beganTick: number = child:GetAttribute("BeganTick")
+						if tick() - beganTick >= 0.1715 then
+							local aerialDecrease: number = child:GetAttribute("AerialDecrease") or 0.975
+							child:SetAttribute("Aerial", aerial * aerialDecrease)
 						end
 					end
 				end
 
-				BodyVelocity:SetAttribute("Speed", GoalSpeed)
-				if
-					BodyVelocity:GetAttribute("RagdollCheck")
-					and HumRP.Parent:FindFirstChild("Ragdolled")
-					and BodyVelocity
-					and BodyVelocity.Parent
-				then
-					BodyVelocity:Destroy()
+				child:SetAttribute("Speed", goalSpeed)
+
+				if child:GetAttribute("RagdollCheck") and HumRP.Parent:FindFirstChild("Ragdolled") and child.Parent then
+					child:Destroy()
+					return
 				end
 
-				local DeleteVelocity = false
-				if
-					(Direction or BodyVelocity:GetAttribute("Ohio"))
-					and (HumRP.Parent:FindFirstChild("M1ing") or HumRP.Parent:FindFirstChild("Stunned"))
-				then
-					local CanDo = true
-					local Stunned = HumRP.Parent:FindFirstChild("Stunned")
-
-					if BodyVelocity:GetAttribute("Ohio") and Stunned and Stunned:GetAttribute("MechBypass") then
-						CanDo = false
-					end
-
-					if CanDo then
-						BodyVelocity.MaxForce = Vector3.new(0, 0, 0)
-						DeleteVelocity = true
-					end
+				local shouldDelete: boolean = false
+				if direction and (Character:HasTag("Punching") or HumRP.Parent:FindFirstChild("Stunned")) then
+					child.MaxForce = Vector3.zero
+					shouldDelete = true
 				end
 
+				local endSpeed: number = child:GetAttribute("End") or 26
 				if
-					not BodyVelocity:GetAttribute("EndExclusion")
-						and Speed <= (BodyVelocity:GetAttribute("End") or 26)
-					or not BodyVelocity.Parent
-					or DeleteVelocity
+					(not child:GetAttribute("EndExclusion") and speed <= endSpeed)
+					or not child.Parent
+					or shouldDelete
 				then
 					stopLoop()
-					BodyVelocity:Destroy()
-					Comunicator:FireServer("DeleteBV", { BV = BodyVelocity })
+					child:Destroy()
 				end
 			end)
 		end
-	else
-		if BodyVelocity:IsA("BodyAngularVelocity") then
-			if BodyVelocity.Name ~= "BAV" then
-				if BodyVelocity.P == 1e999 and BodyVelocity.MaxTorque.Y == 1e999 then
-					HandleVelocity(BodyVelocity, Character)
-				end
-
-				task.wait()
-
-				if BodyVelocity.P == 1e999 and BodyVelocity.MaxTorque.Y == 1e999 then
-					HandleVelocity(BodyVelocity, Character)
-				end
-
-				task.wait(0.1)
-
-				if BodyVelocity.P == 1e999 and BodyVelocity.MaxTorque.Y == 1e999 then
-					HandleVelocity(BodyVelocity, Character)
-				end
-			end
-		elseif BodyVelocity:IsA("BodyThrust") then
-			if BodyVelocity.Force.X > 900 then
-				HandleVelocity(BodyVelocity, Character)
-			end
-
-			task.wait()
-
-			if BodyVelocity.Force.X > 900 then
-				HandleVelocity(BodyVelocity, Character)
-			end
-
-			task.wait(0.1)
-
-			if BodyVelocity.Force.X > 900 then
-				HandleVelocity(BodyVelocity, Character)
-			end
-		elseif BodyVelocity:IsA("BodyGyro") then
-			if BodyVelocity.P == 90000 and BodyVelocity.Name ~= "BODYGYRO" then
-				HandleVelocity(BodyVelocity, Character)
-			end
-
-			task.wait()
-
-			if BodyVelocity.P == 90000 and BodyVelocity.Name ~= "BODYGYRO" then
-				HandleVelocity(BodyVelocity, Character)
-			end
-
-			task.wait(0.1)
-
-			if BodyVelocity.P == 90000 and BodyVelocity.Name ~= "BODYGYRO" then
-				HandleVelocity(BodyVelocity, Character)
-			end
+	elseif child:IsA("BodyAngularVelocity") then
+		if child.Name ~= "BAV" and child.P == 1e999 and child.MaxTorque.Y == 1e999 then
+			HandleVelocity(child, Character)
+		end
+	elseif child:IsA("BodyThrust") then
+		if child.Force.X > 900 then
+			HandleVelocity(child, Character)
+		end
+	elseif child:IsA("BodyGyro") then
+		if child.P == 90000 and child.Name ~= "BODYGYRO" then
+			HandleVelocity(child, Character)
 		end
 	end
 end)

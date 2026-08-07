@@ -85,6 +85,34 @@ function UIFunctions.PlayCooldownFill(darkIcon: GuiObject, duration: number, onC
 	tween:Play()
 end
 
+function UIFunctions.SetCooldownProgress(darkIcon: GuiObject, alpha: number)
+	if not darkIcon then
+		return
+	end
+
+	if activeCooldownTweens[darkIcon] then
+		activeCooldownTweens[darkIcon]:Cancel()
+		activeCooldownTweens[darkIcon] = nil
+	end
+
+	alpha = math.clamp(alpha, 0, 1)
+
+	if alpha >= 1 then
+		UIFunctions.ResetCooldownIcon(darkIcon)
+		return
+	end
+
+	local grad = getGradient(darkIcon)
+	if not grad then
+		return
+	end
+
+	darkIcon.ImageTransparency = 0
+	grad.Transparency = DARK_GRADIENT_TRANSPARENCY
+	grad.Rotation = DARK_ROTATION
+	grad.Offset = DARK_OFFSET_START:Lerp(DARK_OFFSET_END, alpha)
+end
+
 function UIFunctions.TweenSlide(target: GuiObject, goal: UDim2, tweenInfo: TweenInfo, onComplete: (() -> ())?)
 	if activeSlideTweens[target] then
 		activeSlideTweens[target]:Cancel()
