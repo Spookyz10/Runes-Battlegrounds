@@ -223,7 +223,7 @@ function Ragdoll.cancelRagdoll(Humanoid, _, DoKnockback, MainPart, isCancel, ful
 		local lookVector = MainPart.CFrame.LookVector
 
 		local knockbackAnim = Assets.Animations.Other.Knockback
-		local knockbackTrack = AnimationService:getAnimationTrack(Character, knockbackAnim)
+		local knockbackTrack, knockbackEvents = AnimationService:getAnimationTrack(Character, knockbackAnim)
 
 		HumRP.CFrame = CFrame.lookAlong(
 			Vector3.new(HumRP.Position.X, MainPart.Position.Y, HumRP.Position.Z),
@@ -243,15 +243,18 @@ function Ragdoll.cancelRagdoll(Humanoid, _, DoKnockback, MainPart, isCancel, ful
 			:Play()
 		game.Debris:AddItem(bv, 0.6)
 
-		knockbackTrack.Stopped:Once(function()
-			pcall(function()
-				bv:Destroy()
-			end)
+		table.insert(
+			knockbackEvents,
+			knockbackTrack.Stopped:Once(function()
+				pcall(function()
+					bv:Destroy()
+				end)
 
-			StunHandler:Unstun(Character, EnemyStun)
-			Character:RemoveTag("CantRotate")
-			Character:RemoveTag("Knockbacked")
-		end)
+				StunHandler:Unstun(Character, EnemyStun)
+				Character:RemoveTag("CantRotate")
+				Character:RemoveTag("Knockbacked")
+			end)
+		)
 
 		AnimationService:playAnimation(Character, knockbackAnim)
 		SFXModule:PlaySound(Assets.Sounds.Other.KnockbackLand, HumRP)

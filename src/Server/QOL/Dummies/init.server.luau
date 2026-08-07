@@ -165,19 +165,7 @@ end
 
 --Events
 SpnDmy.Event:Connect(function(CF, InitialHp, ScriptName)
-	if
-		game.PlaceId == workspace:GetAttribute("DuelsHubPlaceId")
-		or game.PlaceId == workspace:GetAttribute("DuelsPlaceId")
-	then
-		return
-	end
-
 	spawnDummy(CF, InitialHp, ScriptName)
 end)
 
-if
-	game.PlaceId ~= workspace:GetAttribute("DuelsHubPlaceId")
-	and game.PlaceId ~= workspace:GetAttribute("DuelsPlaceId")
-then
-	spawnDummy()
-end
+spawnDummy()

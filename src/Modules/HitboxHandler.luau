@@ -1,5 +1,5 @@
 local RNS = game:GetService("RunService")
-local RS = game:GetService("ReplicatedStorage")
+
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -61,10 +61,6 @@ end
 function HB:_Cast(dt)
 	assert(self.Instance, "There's no instance set for the hitbox")
 	assert(self.Size, "There's no size set for the hitbox")
-
-	if game.PlaceId == workspace:GetAttribute("DuelsHubPlaceId") then
-		return
-	end
 
 	local HitboxCFrame = getCframe[typeof(self.Instance)]
 	if not HitboxCFrame then

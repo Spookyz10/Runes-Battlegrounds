@@ -31,28 +31,43 @@ function module:Knockback(
 	local tweenTime
 	if Humanoid.Health > 0 then
 		local AnimTrack: AnimationTrack
+		local AnimEvents: { RBXScriptConnection }
+
 		if CustomAnimation then
-			AnimTrack = AnimationService:getAnimationTrack(Character, CustomAnimation)
+			AnimTrack, AnimEvents = AnimationService:getAnimationTrack(Character, CustomAnimation)
 			tweenTime = AnimTrack.Length
 			StunHandler:Stun(Character, tweenTime, true, 0, 0, true)
 		else
 			local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true)
-			AnimTrack = AnimationService:getAnimationTrack(Character, knockAnim)
+			AnimTrack, AnimEvents = AnimationService:getAnimationTrack(Character, knockAnim)
 
 			tweenTime = 0.6
-			AnimTrack:GetMarkerReachedSignal("freeze"):Once(function()
-				local inAir = Character:FindFirstChild("inAir")
-				if inAir and checkAir ~= false then
-					AnimTrack:AdjustSpeed(0)
 
-					inAir.Destroying:Once(function()
-						if AnimTrack.IsPlaying == false then
-							return
-						end
+			table.insert(
+				AnimEvents,
+				AnimTrack:GetMarkerReachedSignal("freeze"):Once(function()
+					local inAir = Character:FindFirstChild("inAir")
+					if inAir and checkAir ~= false then
+						AnimTrack:AdjustSpeed(0)
 
-						AnimTrack:AdjustSpeed(1)
+						inAir.Destroying:Once(function()
+							if AnimTrack.IsPlaying == false then
+								return
+							end
 
-						if waitForFloor ~= false and typeof(Velocity) == "Vector3" then
+							AnimTrack:AdjustSpeed(1)
+
+							if waitForFloor ~= false and typeof(Velocity) == "Vector3" then
+								Bodymover:Knockback(Character, {
+									KnockbackType = "VelocityTweenDown",
+									MaxForce = Vector3.new(1, 0, 1) * 100000,
+									Velocity = Velocity,
+									Time = customTime or tweenTime,
+								})
+							end
+						end)
+					else
+						if waitForFloor ~= false then
 							Bodymover:Knockback(Character, {
 								KnockbackType = "VelocityTweenDown",
 								MaxForce = Vector3.new(1, 0, 1) * 100000,
@@ -60,34 +75,28 @@ function module:Knockback(
 								Time = customTime or tweenTime,
 							})
 						end
-					end)
-				else
-					if waitForFloor ~= false then
-						Bodymover:Knockback(Character, {
-							KnockbackType = "VelocityTweenDown",
-							MaxForce = Vector3.new(1, 0, 1) * 100000,
-							Velocity = Velocity,
-							Time = customTime or tweenTime,
-						})
 					end
-				end
-			end)
+				end)
+			)
 
-			AnimTrack.Stopped:Once(function()
-				Character:RemoveTag("Knockbacked")
-				Character:RemoveTag("CantRotate")
+			table.insert(
+				AnimEvents,
+				AnimTrack.Stopped:Once(function()
+					Character:RemoveTag("Knockbacked")
+					Character:RemoveTag("CantRotate")
 
-				if Stun then
-					StunHandler:Unstun(Character, Stun)
-					Stun = nil
-				end
-
-				for _, v in HumRP:GetChildren() do
-					if v:IsA("BodyVelocity") then
-						v:Destroy()
+					if Stun then
+						StunHandler:Unstun(Character, Stun)
+						Stun = nil
 					end
-				end
-			end)
+
+					for _, v in HumRP:GetChildren() do
+						if v:IsA("BodyVelocity") then
+							v:Destroy()
+						end
+					end
+				end)
+			)
 		end
 
 		if LookAtCharacter then
@@ -108,8 +117,6 @@ function module:Knockback(
 				})
 			end
 		end
-		-- AnimationService:stopAll(Character)
-		-- AnimationService:playAnimation(Character, AnimTrack.Animation)
 
 		if not CustomAnimation and checkAir ~= false then
 			ModulesFolder.Parent.Bindables.AirDetector:Fire(Character, nil, nil, -3)

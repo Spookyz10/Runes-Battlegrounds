@@ -62,9 +62,6 @@ function module.new(Player: Player)
 end
 
 function module:Once()
-	if game.PlaceId == workspace:GetAttribute("DuelsHubPlaceId") then
-		return
-	end
 	self.Bridge:FireClient(
 		self.Player,
 		"Once",
@@ -73,9 +70,6 @@ function module:Once()
 end
 
 function module:Start(HitboxTime, Destroy)
-	if game.PlaceId == workspace:GetAttribute("DuelsHubPlaceId") then
-		return
-	end
 	self.Bridge:FireClient(
 		self.Player,
 		"Constant",
