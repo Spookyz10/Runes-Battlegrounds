@@ -13,4 +13,7 @@ ClientContext.Indicators = {}
 
 ClientContext.DestroyedParts = {}
 
+ClientContext.IsMobile = false
+ClientContext.CustomShiftlockActive = false
+
 return ClientContext

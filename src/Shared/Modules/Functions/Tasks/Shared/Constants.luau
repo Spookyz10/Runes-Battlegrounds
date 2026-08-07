@@ -16,7 +16,6 @@ local ParticlesModule = Utility("Particles")
 
 local CamShakePresets = require(RS_Modules.CamShakePresets)
 
-local BoatTween = require(RS_Modules.BoatTween)
 local VoxBreaker = require(RS_Modules.VoxBreaker)
 
 local CharacterAssets = Resources:WaitForChild("CharacterAssets")
@@ -71,7 +70,6 @@ return {
 	Utility = Utility,
 	ParticlesModule = ParticlesModule,
 	CamShakePresets = CamShakePresets,
-	BoatTween = BoatTween,
 	VoxBreaker = VoxBreaker,
 
 	CharacterAssets = CharacterAssets,
