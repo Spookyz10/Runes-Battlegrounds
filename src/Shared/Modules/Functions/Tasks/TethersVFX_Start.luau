@@ -33,16 +33,6 @@ local function spawnFlareArms(casterChar)
 	return spawned
 end
 
---[[
-	Spawna as correntes (FlareChains) e anima o tween do braço do caster até o victim.
-	travelTime: tempo em segundos para a corrente "viajar" visualmente.
-
-	Lógica do tween:
-	  - Cria uma Part âncora na posição do braço do caster
-	  - Tweena essa âncora até a posição do braço do victim durante travelTime
-	  - O Beam da corrente usa Attachment0 = braço do caster, Attachment1 = âncora em movimento
-	  - Ao chegar no destino, reconecta o Beam ao braço do victim (posição final travada)
-]]
 local function spawnFlareChains(casterChar, victimChar, travelTime)
 	local template = TethersAssets:FindFirstChild("FlareChains")
 	if not template then
@@ -62,7 +52,6 @@ local function spawnFlareChains(casterChar, victimChar, travelTime)
 		local chain = template:Clone()
 		chain.Parent = casterArm
 
-		-- Âncora viajante: começa no braço do caster e vai até o braço do victim
 		local travelAnchor = Instance.new("Part")
 		travelAnchor.Name = "ChainTravelAnchor"
 		travelAnchor.Anchored = true
@@ -71,28 +60,23 @@ local function spawnFlareChains(casterChar, victimChar, travelTime)
 		travelAnchor.CanQuery = false
 		travelAnchor.Transparency = 1
 		travelAnchor.Size = Vector3.new(0.1, 0.1, 0.1)
-		travelAnchor.CFrame = casterArm.CFrame -- começa no braço do caster
+		travelAnchor.CFrame = casterArm.CFrame
 		travelAnchor.Parent = workspace.Debris
 
 		local travelAttachment = Instance.new("Attachment")
 		travelAttachment.Parent = travelAnchor
 
-		-- Reconecta o Attachment1 do beam para a âncora viajante durante o tween
 		for _, beam in chain:GetDescendants() do
 			if beam:IsA("Beam") then
 				beam.Attachment1 = travelAttachment
 			end
 		end
 
-		-- VictimPart: vai para o braço do victim após o tween terminar
 		local victimPart = chain:FindFirstChild("Victim")
 
-		-- Tween da âncora do braço do caster até o braço do victim
 		if victimArm and travelTime and travelTime > 0 then
 			local targetCF = victimArm.CFrame
 
-			-- Usa Heartbeat para atualizar o destino dinamicamente (victim pode estar caindo)
-			-- durante o travel, e no fim ancora no victim
 			local elapsed = 0
 			local startCF = travelAnchor.CFrame
 			local conn
@@ -108,25 +92,29 @@ local function spawnFlareChains(casterChar, victimChar, travelTime)
 					travelAnchor:Destroy()
 					return
 				end
+				if not chain or not chain.Parent then
+					conn:Disconnect()
+					if travelAnchor and travelAnchor.Parent then
+						travelAnchor:Destroy()
+					end
+					return
+				end
 
 				local t = math.clamp(elapsed / travelTime, 0, 1)
-				-- Ease out: corrente acelera no início e desacelera ao chegar
+
 				local easedT = 1 - (1 - t) ^ 2
 
-				-- Destino atualizado a cada frame (victim pode se mover enquanto cai lentamente)
 				local currentTarget = (victimArm and victimArm.Parent) and victimArm.CFrame or targetCF
 				travelAnchor.CFrame = startCF:Lerp(currentTarget, easedT)
 
 				if t >= 1 then
 					conn:Disconnect()
 
-					-- Chegou: move o VictimPart para o braço do victim e reconecta o beam
 					if victimPart and victimArm and victimArm.Parent then
 						victimPart.Parent = victimArm
 
 						for _, beam in chain:GetDescendants() do
 							if beam:IsA("Beam") then
-								-- Reconecta para o attachment do victimArm (posição final)
 								local finalAttach = victimArm:FindFirstChildOfClass("Attachment")
 								if finalAttach then
 									beam.Attachment1 = finalAttach
@@ -135,7 +123,6 @@ local function spawnFlareChains(casterChar, victimChar, travelTime)
 						end
 					end
 
-					-- Limpa a âncora viajante, não é mais necessária
 					travelAnchor:Destroy()
 				end
 			end)
@@ -147,7 +134,6 @@ local function spawnFlareChains(casterChar, victimChar, travelTime)
 				travelConn = conn,
 			})
 		else
-			-- Sem travelTime: comportamento original (coloca imediatamente no victim)
 			if victimPart and victimArm then
 				victimPart.Parent = victimArm
 			end
@@ -168,7 +154,7 @@ end
 return function(params)
 	local casterChar = params.casterChar
 	local victimChar = params.victimChar
-	local travelTime = params.travelTime or 0 -- novo parâmetro vindo do server
+	local travelTime = params.travelTime or 0
 
 	if not casterChar then
 		return

@@ -6,6 +6,7 @@ local Players = game:GetService("Players")
 
 local SvModules = ServerStorage.Modules
 
+local IndicatorService = require(ReplicatedStorage.Shared.Modules.IndicatorService)
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local SFXModule = require(ServerStorage.Modules.SFXModule)
 local StunHandler = require(SvModules.StunHandler)
@@ -15,7 +16,7 @@ local iFramesService = require(SvModules.iFramesService)
 local HitboxHandler = require(SvModules.HitboxHandler)
 local RagdollHandler = require(SvModules.RagdollHandler)
 local AnimationService = require(SvModules.AnimationService)
-local IndicatorService = require(SvModules.IndicatorService)
+
 local DestructionService = require(SvModules.DestructionSystem)
 
 local Assets = ServerStorage.Assets

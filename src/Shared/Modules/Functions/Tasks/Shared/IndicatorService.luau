@@ -1,5 +1,3 @@
-local RunService = game:GetService("RunService")
-
 local Constants = require(script.Parent.Constants)
 local RunService = Constants.RunService
 
@@ -25,7 +23,7 @@ function IndicatorService:Create(params)
 
 	local asset = params.asset
 	local character = params.character
-	local ownerId = params.ownerId
+
 	local getRayOrigin = params.getRayOrigin
 	local getDirection = params.getDirection
 

@@ -5,7 +5,7 @@ local CutsceneController = require(ReplicatedStorage.Shared.Modules.CutsceneCont
 local Remote = {}
 
 function Remote:Activate(name: string, action: string, params)
-	CutsceneController:Handle(name, action, params)
+	CutsceneController:Dispatch(name, action, params)
 end
 
 return Remote

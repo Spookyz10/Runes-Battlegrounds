@@ -3,7 +3,9 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local ClientContext = require(ReplicatedStorage.Shared.Modules.ClientContext)
+local IndicatorService = require(ReplicatedStorage.Shared.Modules.Functions.Tasks.Shared.IndicatorService)
 
 local Remote = {}
 
@@ -21,10 +23,7 @@ function Remote:Invoke(Params)
 			return Params.Object.CFrame
 		end
 	elseif Func == "GetIndicatorPosition" then
-		if not ClientContext.IndicatorService then
-			return nil
-		end
-		return ClientContext.IndicatorService:GetPosition(Params.id)
+		return IndicatorService:GetPosition(Params.id)
 	elseif Func == "IsPartDestroyed" then
 		return table.find(ClientContext.DestroyedParts, Params.Part) ~= nil
 	end
