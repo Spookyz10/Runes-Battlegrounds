@@ -19,7 +19,6 @@ local ClientContext = require(RS.Shared.Modules.ClientContext)
 local ClientRemoteListener = require(ReplicatedStorage.Shared.Modules.ClientRemoteListener)
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
-local CutsceneController = require(RS.Shared.Modules.CutsceneController)
 local Functions = require(ReplicatedStorage.Shared.Modules.Functions)
 local Tasks = require(ReplicatedStorage.Shared.Modules.Functions.Tasks)
 local IndicatorService = require(ReplicatedStorage.Shared.Modules.Functions.Tasks.Shared.IndicatorService)
@@ -44,7 +43,6 @@ shared.IsMobile = UIS.TouchEnabled == true
 local shiftlockActive = false
 
 RotationController:SetCharacter(Character, HumRP, Humanoid)
-CutsceneController:Listen()
 
 RunService.RenderStepped:Connect(function()
 	if not HumRP or not HumRP.Parent then

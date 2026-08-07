@@ -4,7 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Function = {}
 
-function Function.AddAppareance(Player, Character, HumanoidDescription)
+function Function.Add(Player, Character, HumanoidDescription)
 	if not Player or not Character or not Character.Parent then
 		return
 	end
@@ -15,20 +15,10 @@ function Function.AddAppareance(Player, Character, HumanoidDescription)
 		return
 	end
 
-	local PlayersModel = Players:GetCharacterAppearanceInfoAsync(userId)
 	HumanoidDescription = HumanoidDescription or Players:GetHumanoidDescriptionFromUserIdAsync(userId)
 
 	if HumanoidDescription then
 		Humanoid:ApplyDescription(HumanoidDescription)
-	end
-
-	if PlayersModel then
-		local Face = PlayersModel:FindFirstChild("face")
-		if Face then
-			Character.Head.face.Texture = Face.Texture
-		end
-
-		PlayersModel:Destroy()
 	end
 
 	for _, Accessory in Character:GetChildren() do

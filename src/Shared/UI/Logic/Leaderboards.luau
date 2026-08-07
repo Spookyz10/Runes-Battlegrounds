@@ -1,11 +1,10 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
+
 local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
-
-local Remotes = ReplicatedStorage:WaitForChild("Remotes")
-local LeaderboardsGet = Remotes:WaitForChild("Leaderboards"):WaitForChild("Get")
 
 local BoardFolders = {
 	Kills = "Kills",
@@ -99,11 +98,8 @@ local function LoadBoard(board)
 		return
 	end
 
-	local ok, entries = pcall(function()
-		return LeaderboardsGet:InvokeServer(board)
-	end)
-
-	if not ok or not entries then
+	local entries = RemoteManager.InvokeServer("Leaderboards", board)
+	if not entries then
 		return
 	end
 

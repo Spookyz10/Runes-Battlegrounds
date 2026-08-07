@@ -4,10 +4,7 @@ local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local UIConstants = require(ReplicatedStorage.Shared.UI.UIConstants)
-
-local Remotes = ReplicatedStorage.Remotes
-local CombatSet = Remotes.Combat.Set
-local Comunicator = Remotes.Comunicator.Set
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
 local Player = UIConstants.Player
 local PlayerGui = UIConstants.PlayerGui
@@ -132,7 +129,7 @@ local function doPunch()
 end
 
 local function doPunchEnd()
-	CombatSet:FireServer("PunchEnd")
+	RemoteManager.FireServer("Combat", "PunchEnd")
 end
 
 local function doBlockStart()
@@ -141,15 +138,11 @@ local function doBlockStart()
 		return
 	end
 
-	CombatSet:FireServer("Block", { Stage = true })
-
-	if Character:FindFirstChild("Emoting") then
-		Comunicator:FireServer("StopEmote")
-	end
+	RemoteManager.FireServer("Combat", "Block", { Stage = true })
 end
 
 local function doBlockEnd()
-	CombatSet:FireServer("Block", { Stage = false })
+	RemoteManager.FireServer("Combat", "Block", { Stage = false })
 end
 
 local function doShiftlockPress()

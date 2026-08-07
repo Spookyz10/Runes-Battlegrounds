@@ -9,6 +9,7 @@ local PhysicsService = game:GetService("PhysicsService")
 
 local SvModules = ServerStorage.Modules
 
+local AddAppereance = require(ReplicatedStorage.Shared.Modules.Functions.AddAppereance)
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local ServerRemoteListener = require(ServerStorage.Modules.ServerRemoteListener)
 
@@ -203,7 +204,7 @@ function CharacterAdded(Character)
 	end
 
 	task.spawn(function()
-		shared.AddAppareance(Player, Character)
+		AddAppereance.Add(Player, Character)
 	end)
 
 	Humanoid.Died:Once(function()

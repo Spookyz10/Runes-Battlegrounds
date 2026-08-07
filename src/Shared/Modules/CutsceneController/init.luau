@@ -7,7 +7,6 @@ local LocalPlayer = Players.LocalPlayer
 
 local CameraRigs = ReplicatedStorage.Resources.CameraRigs
 local CutsceneAnimations = ReplicatedStorage.Resources.Animations.Cutscenes
-local CutscenesSet = ReplicatedStorage.Remotes.Cutscenes.Set
 
 local Controller = {}
 
@@ -85,8 +84,6 @@ function Controller:PlayRig(name, Character, params)
 		return nil
 	end
 
-	-- Teleport manual (em vez de WeldConstraint) — necessário pois a PrimaryPart
-	-- do rig costuma estar Anchored, o que faz o WeldConstraint não ter efeito algum.
 	activeGoalPart = goalPart
 	activeOffset = Offset
 	activeRigPrimary = RigPrimary
@@ -117,7 +114,7 @@ function Controller:PlayRig(name, Character, params)
 		if activeGoalPart and activeGoalPart.Parent and activeRigPrimary and activeRigPrimary.Parent then
 			local currentPivot = Rig:GetPivot()
 			local targetCFrame = activeGoalPart.CFrame * activeOffset
-			-- Preserva o offset entre PrimaryPart e o pivot do modelo (caso não sejam coincidentes)
+
 			local pivotOffset = activeRigPrimary.CFrame:ToObjectSpace(currentPivot)
 			Rig:PivotTo(targetCFrame * pivotOffset)
 		end

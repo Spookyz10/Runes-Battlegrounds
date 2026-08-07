@@ -39,10 +39,6 @@ local HumRP = Character:FindFirstChild("HumanoidRootPart") or Character:WaitForC
 local Head = Character:FindFirstChild("Head") or Character:WaitForChild("Head", 10)
 local Torso = Character:FindFirstChild("Torso") or Character:WaitForChild("Torso", 10)
 
---Remotes
-local Remotes = ReplicatedStorage.Remotes
-local Comunicator = Remotes.Comunicator.Set
-
 --Raycast Params
 local params = RaycastParams.new()
 params.FilterType = Enum.RaycastFilterType.Include
@@ -215,13 +211,6 @@ Heartbeat = RunService.RenderStepped:Connect(function(deltaTime)
 			end
 
 			Character:SetAttribute("Running", false)
-		elseif
-			Humanoid:GetState() == Enum.HumanoidStateType.Jumping
-			or Humanoid:GetState() == Enum.HumanoidStateType.Freefall
-		then
-			if Character:FindFirstChild("Emoting") then
-				Comunicator:FireServer("StopEmote")
-			end
 		else
 			if Humanoid.MoveDirection.Magnitude > 0 then
 				-- moving, nothing extra needed

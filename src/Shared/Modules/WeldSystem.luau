@@ -1,9 +1,7 @@
 local Debris = game:GetService("Debris")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local RunService = game:GetService("RunService")
 
-local Tasks = require(ReplicatedStorage.Shared.Modules.Functions.Tasks)
 local RemoteManager = require(script.Parent.RemoteManager)
 
 local WSys = {}
@@ -16,6 +14,28 @@ function WSys.new(Part0, Part1, Offset, LifeTime)
 		Offset = Offset,
 		LifeTime = LifeTime,
 	}, WSys)
+end
+
+local function ClearVelocities(Part: Part, Ignore: BodyVelocity?)
+	for _, Velocity in Part:GetDescendants() do
+		if
+			Velocity ~= Ignore
+			and (
+				Velocity:IsA("BodyVelocity")
+				or Velocity:IsA("LinearVelocity")
+				or Velocity:IsA("BodyPosition")
+				or Velocity:IsA("BodyGyro")
+				or Velocity:IsA("BodyAngularVelocity")
+				or Velocity:IsA("BodyMover")
+				or Velocity:IsA("BodyForce")
+				or Velocity:IsA("BodyThrust")
+				or Velocity:IsA("AngularVelocity")
+				or Velocity:IsA("VelocityMotor")
+			)
+		then
+			Velocity:Destroy()
+		end
+	end
 end
 
 function WSys:Start(TweenTime, Player)
@@ -99,7 +119,7 @@ function WSys:Start(TweenTime, Player)
 		if RunService:IsServer() and Player then
 			Part1:SetNetworkOwner(Player)
 
-			Tasks["ClearVelocities"](Part1)
+			ClearVelocities(Part1)
 
 			RemoteManager.FireClient(Player, "ReplicateTask", "smoothweld", {
 				Character = Part0.Parent,

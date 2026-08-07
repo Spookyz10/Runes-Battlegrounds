@@ -7,16 +7,11 @@ local TweenService = game:GetService("TweenService")
 local InfoModule = require(ReplicatedStorage.Shared.Info)
 local UIConstants = require(ReplicatedStorage.Shared.UI.UIConstants)
 local UIFunctions = require(ReplicatedStorage.Shared.UI.UIFunctions)
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
 local Player = UIConstants.Player
-local PlayerGui = UIConstants.PlayerGui
 
 local Backpack = Player:WaitForChild("Moveset")
-
-local Remotes = ReplicatedStorage.Remotes
-local AbilitiesHandlerFolder = Remotes.AbilitiesHandler
-local AbilitieRemote_Get = AbilitiesHandlerFolder.Get
-local MovesetHandlerRemote = Remotes.MovesetHandler
 
 local HotbarFrame = UIConstants.Hotbar.Hotbar
 
@@ -253,7 +248,7 @@ local function addCooldownToSlot(slot, Tool)
 end
 
 local function equip(Base)
-	local Tool = AbilitieRemote_Get:InvokeServer(Base.SkillName.Text)
+	local Tool = RemoteManager.InvokeServer("AbilitiesHandler", Base.SkillName.Text)
 	if not Tool then
 		return
 	end
@@ -418,11 +413,14 @@ function Hotbar.Init()
 		end
 	end
 
-	MovesetHandlerRemote.OnClientEvent:Connect(function(Goal)
-		if Goal == "removeCooldowns" then
-			Hotbar.ResetCooldowns()
-		end
-	end)
+	local MovesetHandlerRemote = RemoteManager.GetRemote("MovesetHandler", "Client")
+	if MovesetHandlerRemote then
+		MovesetHandlerRemote.OnClientEvent:Connect(function(Goal)
+			if Goal == "removeCooldowns" then
+				Hotbar.ResetCooldowns()
+			end
+		end)
+	end
 
 	Backpack.ChildAdded:Connect(addTool)
 	Backpack.ChildRemoved:Connect(removeTool)

@@ -2,16 +2,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local UIConstants = require(ReplicatedStorage.Shared.UI.UIConstants)
 local UIFunctions = require(ReplicatedStorage.Shared.UI.UIFunctions)
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
 local Player = UIConstants.Player
 local PlayerGui = UIConstants.PlayerGui
 
 local GUI = PlayerGui:WaitForChild("ExtraCds")
 local Main = GUI:WaitForChild("Main")
-
-local Remotes = ReplicatedStorage.Remotes
-local SpecialsSet = Remotes.Specials.Set
-local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
 local ExtraCds = {}
 
@@ -61,12 +58,6 @@ local function resetAllSlots()
 end
 
 function ExtraCds.Init()
-	SpecialsSet.OnClientEvent:Connect(function(action, params)
-		if action == "Activated" and not params.IsUlt then
-			ExtraCds.StartCooldown("Special", params.Cooldown)
-		end
-	end)
-
 	Player.CharacterAdded:Connect(function()
 		resetAllSlots()
 

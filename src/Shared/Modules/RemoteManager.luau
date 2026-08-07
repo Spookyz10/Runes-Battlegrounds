@@ -24,11 +24,15 @@ local RemoteEvents = {
 
 	Ragdoll = "Client",
 	DetectAir = "Client",
-	StopEmote = "Server",
+
+	Comunicator = "Server",
+	MovesetHandler = "Client",
 }
 
 local RemoteFunctions = {
 	Evasive = "Server",
+	Leaderboards = "Server",
+	AbilitiesHandler = "Server",
 }
 
 local ClientInvokeFunctions = {
@@ -205,6 +209,15 @@ if RunService:IsServer() then
 			local NewRemote = Instance.new("RemoteEvent")
 			NewRemote.Name = remoteName
 			NewRemote.Parent = ExistingFolder
+		end
+	end
+
+	for remoteName: string, folder: string in RemoteFunctions do
+		local ExistingFolder = ReplicatedStorage:FindFirstChild("Remotes"):FindFirstChild(folder)
+		if ExistingFolder and not ExistingFolder:FindFirstChild(remoteName) then
+			local NewRF = Instance.new("RemoteFunction")
+			NewRF.Name = remoteName
+			NewRF.Parent = ExistingFolder
 		end
 	end
 
