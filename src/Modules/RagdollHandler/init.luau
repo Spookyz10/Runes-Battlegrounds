@@ -273,10 +273,8 @@ function Ragdoll.ragdoll(Humanoid, Duration, HardRagdoll, Ragdoller, _, _, check
 
 	local Character = Humanoid.Parent
 	local Player = Players:GetPlayerFromCharacter(Character)
-	local RagdollerPlayer = Players:GetPlayerFromCharacter(Ragdoller)
 
 	local HumRP = Character.HumanoidRootPart
-	local WasRagdolled = Character:HasTag("Ragdolled")
 
 	cancelActiveKnockbacks(Character)
 
@@ -418,11 +416,9 @@ function Ragdoll.ragdoll(Humanoid, Duration, HardRagdoll, Ragdoller, _, _, check
 							nil,
 							nil,
 							function(EnemyCharacter)
-								local EnemyPlayer = Players:GetPlayerFromCharacter(EnemyCharacter)
 								local EnemyHumanoid = EnemyCharacter.Humanoid
-								local EnemyHumRP = EnemyCharacter.HumanoidRootPart
 
-								local HitInfo = DamageHandler:TakeDamage(
+								DamageHandler:TakeDamage(
 									Character,
 									EnemyHumanoid,
 									12,

@@ -51,8 +51,6 @@ function Interface:Start()
 		return nil
 	end
 
-	ClientContext.repfire = repfire
-
 	local ResetBindable = Instance.new("BindableEvent")
 	ResetBindable.Event:Connect(function()
 		ComSet:FireServer("ResetCharacter")

@@ -1,10 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
-local Remotes = ReplicatedStorage.Remotes
-local ReplicateSet = Remotes.Replicate.Set
-local ComGet = Remotes.Comunicator.Get
-
 local IndicatorService = {}
 
 function IndicatorService:Create(params)
@@ -27,7 +23,7 @@ end
 
 function IndicatorService:GetPosition(Player, id)
 	local ok, result = pcall(function()
-		return ComGet:InvokeClient(Player, { Func = "GetIndicatorPosition", id = id })
+		return RemoteManager.InvokeClient(Player, "ClientQuery", { Func = "GetIndicatorPosition", id = id })
 	end)
 
 	if ok and typeof(result) == "Vector3" then
