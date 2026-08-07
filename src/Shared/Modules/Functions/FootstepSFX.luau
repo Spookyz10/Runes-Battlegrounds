@@ -9,6 +9,9 @@ local FootstepSFX = {}
 local lastMaterial: Enum.Material? = nil
 local lastPlayTime: number = 0
 
+local WALK_INTERVAL = 0.35
+local RUN_INTERVAL = 0.25
+
 local RaycastFilter = RaycastParams.new()
 RaycastFilter.FilterType = Enum.RaycastFilterType.Exclude
 
@@ -17,23 +20,25 @@ local function getSoundsForMaterial(material: Enum.Material): Folder?
 end
 
 function FootstepSFX.Step(Character: Model, Humanoid: Humanoid, HumRP: BasePart, forcePlay: boolean?)
-	RaycastFilter.FilterDescendantsInstances = { Character, workspace.CurrentCamera }
-
 	local isClimbing: boolean = Humanoid:GetState() == Enum.HumanoidStateType.Climbing
 	local isSwimming: boolean = Humanoid:GetState() == Enum.HumanoidStateType.Swimming
+	local isMoving: boolean = Humanoid.MoveDirection.Magnitude > 0
+
+	if not (isMoving or isClimbing or isSwimming) then
+		return
+	end
+
+	local interval: number = forcePlay and RUN_INTERVAL or WALK_INTERVAL
+	if tick() - lastPlayTime < interval then
+		return
+	end
+
+	RaycastFilter.FilterDescendantsInstances = { Character, workspace.CurrentCamera }
 
 	local rayLength: number = forcePlay and -5 or -3.5
 	local ray: RaycastResult? = workspace:Raycast(HumRP.Position, Vector3.new(0, rayLength, 0), RaycastFilter)
 
 	if not (ray or isClimbing or isSwimming) then
-		return
-	end
-
-	local rayIsStill: boolean = ray ~= nil
-		and ray.Instance:IsA("BasePart")
-		and ray.Instance.AssemblyLinearVelocity.Magnitude < 1
-
-	if not (rayIsStill or tick() - lastPlayTime > 0.35 or forcePlay) then
 		return
 	end
 
@@ -48,7 +53,7 @@ function FootstepSFX.Step(Character: Model, Humanoid: Humanoid, HumRP: BasePart,
 		local children = soundList:GetChildren()
 		local sound: Sound = children[math.random(#children)]
 
-		SFXModule:PlayInstance(sound, HumRP, isClimbing and 1.25 + math.random() * 0.15 or nil, sound.Volume)
+		SFXModule:PlayInstance(sound, HumRP, isClimbing and 1.25 + math.random() * 0.15 or nil)
 	end
 
 	lastMaterial = material
