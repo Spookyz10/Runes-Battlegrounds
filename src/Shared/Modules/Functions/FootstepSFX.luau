@@ -1,6 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local SoundsModule = require(ReplicatedStorage.Shared.Modules.SoundsModule)
+local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 
 local MoveSounds: Folder = ReplicatedStorage.Resources.SFX.MoveSounds
 
@@ -48,7 +48,7 @@ function FootstepSFX.Step(Character: Model, Humanoid: Humanoid, HumRP: BasePart,
 		local children = soundList:GetChildren()
 		local sound: Sound = children[math.random(#children)]
 
-		SoundsModule:PlaySound(sound, HumRP, isClimbing and 1.25 + math.random() * 0.15 or nil, sound.Volume)
+		SFXModule:PlayInstance(sound, HumRP, isClimbing and 1.25 + math.random() * 0.15 or nil, sound.Volume)
 	end
 
 	lastMaterial = material

@@ -14,8 +14,9 @@ local RagdollHandler = require(SvModules.RagdollHandler)
 local StatusEffectHandler = require(SvModules.StatusEffectHandler)
 local CooldownSystem = require(SvModules.CooldownSystem)
 local EvasiveService = require(SvModules.EvasiveService)
-local SFX = require(SvModules.SFXModule)
+
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
+local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 
 local Configs = require(script.Configs)
 
@@ -103,7 +104,7 @@ local function runAttackDash(Player, Character, HumRP, Humanoid, Config)
 		AnimEvents,
 		AnimTrack:GetMarkerReachedSignal("hit"):Once(function()
 			local HitAnims = Config.HitAnimations and Config.HitAnimations()
-			SFX:Play(Config.HitSound or "Hit", HumRP)
+			SFXModule:Play(Config.HitSound or "Hit", HumRP)
 
 			HitboxHandler:SimpleOnce(
 				HumRP,
@@ -308,7 +309,7 @@ function DashHandler:Dash(Player, Direction)
 
 	CooldownSystem:Set(Character, "Dash_" .. Direction, Config.Cooldown or 2)
 	RemoteManager.FireClient(Player, "ExtraCds", Direction .. "Dash", Config.Cooldown or 2)
-	SFX:Play(Config.Sound or "Dash", HumRP)
+	SFXModule:Play(Config.Sound or "Dash", HumRP)
 
 	if Config.Type == "Attack" then
 		runAttackDash(Player, Character, HumRP, Humanoid, Config)

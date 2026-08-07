@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local ServerModules = ServerStorage.Modules
 
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
+local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 local StunHandler = require(ServerModules.StunHandler)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
@@ -12,7 +13,6 @@ local AnimationService = require(ServerModules.AnimationService)
 local iFramesService = require(ServerModules.iFramesService)
 local PerfectKnockback = require(ServerModules.PerfectKnockback)
 local DestructionService = require(ServerModules.DestructionSystem)
-local SFX = require(ServerModules.SFXModule)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 
@@ -58,7 +58,7 @@ return {
 
 					local soundName = HIT_SOUNDS[hitSoundIndex]
 					if soundName and HumRP then
-						SFX:Play(soundName, HumRP)
+						SFXModule:Play(soundName, HumRP)
 					end
 
 					HitboxHandler:SimpleOnce(
@@ -153,7 +153,7 @@ return {
 			UserTrack:GetMarkerReachedSignal("punch"):Once(function()
 				local HitList = {}
 
-				SFX:Play("prowlHit3", HumRP)
+				SFXModule:Play("prowlHit3", HumRP)
 
 				HitboxHandler:SimpleOnce(
 					HumRP,

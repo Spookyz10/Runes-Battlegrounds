@@ -6,6 +6,7 @@ local TweenService = game:GetService("TweenService")
 local ServerModules = ServerStorage.Modules
 
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
+local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 local StunHandler = require(ServerModules.StunHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
 local iFramesService = require(ServerModules.iFramesService)
@@ -13,7 +14,6 @@ local HitboxHandler = require(ServerModules.HitboxHandler)
 local AnimationService = require(ServerModules.AnimationService)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local BodymoverService = require(ServerModules.BodymoverService)
-local SFX = require(ServerModules.SFXModule)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 
@@ -156,7 +156,7 @@ return {
 				UserEvents,
 				UserTrack:GetMarkerReachedSignal("jump"):Connect(function()
 					RemoteManager.FireAllClients("ReplicateTask", "SolarImpact", { char = Character })
-					SFX:Play("EclipseImpact", HumRP.Position)
+					SFXModule:Play("EclipseImpact", HumRP.Position)
 				end)
 			)
 
@@ -174,7 +174,7 @@ return {
 
 					RemoteManager.FireAllClients("ReplicateTask", "SolarHit", { char = Character })
 					RemoteManager.FireAllClients("ReplicateTask", "Cataclysm", { char = Character })
-					SFX:Play("Cataclysm", HumRP.Position)
+					SFXModule:Play("Cataclysm", HumRP.Position)
 
 					DamageHandler:TakeDamage(
 						Character,
@@ -302,7 +302,7 @@ return {
 				UserEvents,
 				UserTrack:GetMarkerReachedSignal("landed"):Once(function()
 					RemoteManager.FireAllClients("ReplicateTask", "SolarImpact", { char = Character })
-					SFX:Play("EclipseImpact", HumRP.Position)
+					SFXModule:Play("EclipseImpact", HumRP.Position)
 				end)
 			)
 
@@ -322,7 +322,7 @@ return {
 		local function grabVictim(Tool)
 			local FoundVictim = nil
 
-			SFX:Play("CataclysmStartup", HumRP)
+			SFXModule:Play("CataclysmStartup", HumRP)
 			RemoteManager.FireAllClients(
 				"ReplicateTask",
 				"CataclysmWindup",

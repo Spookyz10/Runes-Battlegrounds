@@ -5,11 +5,11 @@ local ServerModules = ServerStorage.Modules
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
+local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 local StunHandler = require(ServerModules.StunHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local AnimationService = require(ServerModules.AnimationService)
 local HitboxHandler = require(ServerModules.HitboxHandler)
-local SFX = require(ServerModules.SFXModule)
 
 local DURATION = 10
 local DAMAGE_TAKEN_MULT = 0.8
@@ -39,7 +39,7 @@ local function cleanUp(
 	end
 
 	if loopSound then
-		SFX:Stop(loopSound)
+		SFXModule:Stop(loopSound)
 	end
 
 	for EnemyCharacter, baseSpeed in slowedEnemies do
@@ -118,8 +118,8 @@ return {
 					{ Char = Character, Enabled = true, Duration = DURATION }
 				)
 
-				SFX:Play("ImmolatedStart", HumRP)
-				local loopSound = SFX:Play("immolatedLoop", HumRP)
+				SFXModule:Play("ImmolatedStart", HumRP)
+				local loopSound = SFXModule:Play("immolatedLoop", HumRP)
 
 				local diedConnection
 				local slowedEnemies = {}
@@ -133,7 +133,7 @@ return {
 							break
 						end
 
-						SFX:Play("immolatedPulse", HumRP)
+						SFXModule:Play("immolatedPulse", HumRP)
 
 						RemoteManager.FireAllClients("ReplicateTask", "ImmolatedPulse", { position = HumRP.Position })
 

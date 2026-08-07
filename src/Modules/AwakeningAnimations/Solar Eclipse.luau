@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local SvModules = ServerStorage.Modules
 
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
+local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 local StunHandler = require(SvModules.StunHandler)
 local DamageHandler = require(SvModules.DamageHandler)
 local KnockbackService = require(SvModules.KnockbackModule)
@@ -12,7 +13,6 @@ local iFramesService = require(SvModules.iFramesService)
 local RagdollHandler = require(SvModules.RagdollHandler)
 local AnimationService = require(SvModules.AnimationService)
 local DestructionService = require(SvModules.DestructionSystem)
-local SFX = require(SvModules.SFXModule)
 
 local Assets = ServerStorage.Assets
 local Animations = Assets.Animations
@@ -139,7 +139,7 @@ local function triggerLandingImpact(Character, Position)
 	local ImpactStun = StunHandler:Stun(Character, 0.4, true, 0, 0, true)
 
 	RemoteManager.FireAllClients("ReplicateTask", "SolarImpact", { char = Character })
-	SFX:Play("EclipseImpact", Position)
+	SFXModule:Play("EclipseImpact", Position)
 	triggerJumpCrater(Character, Position)
 
 	task.delay(0.4, function()
@@ -182,7 +182,7 @@ function module:Activate(Player)
 		AnimTrack:GetMarkerReachedSignal("jump"):Connect(function()
 			RemoteManager.FireAllClients("ReplicateTask", "SolarAwakenStart", { char = Character })
 			RemoteManager.FireAllClients("ReplicateTask", "SolarImpact", { char = Character })
-			SFX:Play("EclipseImpact", HumRP.Position)
+			SFXModule:Play("EclipseImpact", HumRP.Position)
 			triggerJumpCrater(Character, HumRP.Position)
 			levitationId = DestructionService:LevitateArea(HumRP.Position, LEVITATE_RADIUS, Player)
 			fakeDebrisId = DestructionService:SpawnFakeDebris(Character, {
@@ -203,7 +203,7 @@ function module:Activate(Player)
 			if not Character or not Character.Parent or Humanoid.Health <= 0 then
 				return
 			end
-			SFX:Play("Solar Awakening", HumRP)
+			SFXModule:Play("Solar Awakening", HumRP)
 			RemoteManager.FireAllClients(
 				"ReplicateTask",
 				"GivePlayerAura",

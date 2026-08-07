@@ -1,8 +1,5 @@
-local RS = game:GetService("ReplicatedStorage")
-local RNS = game:GetService("RunService")
-local CS = game:GetService("CollectionService")
 local SvSt = game:GetService("ServerStorage")
-local TS = game:GetService("TweenService")
+
 local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -13,12 +10,12 @@ local Assets = SvSt.Assets
 
 local SvModules = SvSt.Modules
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
+local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 local StunHandler = require(SvModules.StunHandler)
 local AnimationService = require(SvModules.AnimationService)
 local NewKnockback = require(SvModules.BodymoverService)
 local HitboxHandler = require(SvModules.HitboxHandler)
 local DamageHandler = require(SvModules.DamageHandler)
-local SoundsModule = require(SvModules.SoundsModule)
 
 local Ragdoll = {}
 
@@ -99,7 +96,6 @@ function Ragdoll.cancelRagdoll(Humanoid, _, DoKnockback, MainPart, isCancel, ful
 	local Character = Humanoid.Parent
 	local Player = Players:GetPlayerFromCharacter(Character)
 	local HumRP = Character.HumanoidRootPart
-	local Animator = Humanoid.Animator
 
 	if fullCancel == true then
 		for _, v in Character:GetChildren() do
@@ -258,7 +254,7 @@ function Ragdoll.cancelRagdoll(Humanoid, _, DoKnockback, MainPart, isCancel, ful
 		end)
 
 		AnimationService:playAnimation(Character, knockbackAnim)
-		SoundsModule:PlaySound(Assets.Sounds.Other.KnockbackLand, HumRP)
+		SFXModule:PlaySound(Assets.Sounds.Other.KnockbackLand, HumRP)
 	end
 end
 

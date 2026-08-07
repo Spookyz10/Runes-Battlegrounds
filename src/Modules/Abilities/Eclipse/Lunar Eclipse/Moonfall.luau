@@ -7,6 +7,7 @@ local Players = game:GetService("Players")
 local SvModules = ServerStorage.Modules
 
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
+local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 local DamageHandler = require(SvModules.DamageHandler)
 local iFramesService = require(SvModules.iFramesService)
 local HitboxHandler = require(SvModules.HitboxHandler)
@@ -15,7 +16,6 @@ local AnimationService = require(SvModules.AnimationService)
 local StunHandler = require(SvModules.StunHandler)
 local DestructionSystem = require(SvModules.DestructionSystem)
 local SceneObjectReservation = require(SvModules.SceneObjectReservation)
-local SFX = require(SvModules.SFXModule)
 
 local Animations = ServerStorage.Assets.Animations.Moves
 local StrikeAnim = Animations.Eclipse.Lunar.Awakening.Moonfall
@@ -221,8 +221,8 @@ local function applyGravityFieldCompensationDamage(data)
 	end
 
 	RemoteManager.FireAllClients("ReplicateTask", "LunarImpact", { position = position })
-	SFX:Play("EclipseImpact", position)
-	SFX:Play("Moonfall3", position)
+	SFXModule:Play("EclipseImpact", position)
+	SFXModule:Play("Moonfall3", position)
 
 	if Player then
 		RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", { Intensity = 10, Last = 0.8 })
@@ -272,8 +272,8 @@ local function impactIsland(data, impactPosition)
 	local Character = data.Character
 	local Player = data.Player
 
-	SFX:Play("Moonfall3", impactPosition)
-	SFX:Play("EclipseImpact", impactPosition)
+	SFXModule:Play("Moonfall3", impactPosition)
+	SFXModule:Play("EclipseImpact", impactPosition)
 
 	RemoteManager.FireAllClients("ReplicateTask", "Ground Crater", {
 		Seed = math.random(1, 2147483647),
@@ -544,7 +544,7 @@ return {
 		Humanoid.WalkSpeed = 0
 		iFramesService:RemoveAlliFrames(Character)
 
-		SFX:Play("Moonfall1", HumRP)
+		SFXModule:Play("Moonfall1", HumRP)
 
 		local removingConn
 		local diedConn
@@ -586,10 +586,10 @@ return {
 				local gravPos = ActiveState[Character] and ActiveState[Character].GravityPos
 				if gravPos then
 					RemoteManager.FireAllClients("ReplicateTask", "LunarImpact", { position = gravPos })
-					SFX:Play("EclipseImpact", gravPos)
+					SFXModule:Play("EclipseImpact", gravPos)
 				end
 
-				SFX:Play("Moonfall2", HumRP)
+				SFXModule:Play("Moonfall2", HumRP)
 
 				task.wait(0.1)
 				HumRP.CFrame = HumRP.CFrame + Vector3.new(JUMP_X_OFFSET, JUMP_HEIGHT, 0)
@@ -690,7 +690,7 @@ return {
 					local gravPos = ActiveState[Character] and ActiveState[Character].GravityPos
 					if gravPos then
 						RemoteManager.FireAllClients("ReplicateTask", "LunarImpact", { position = gravPos })
-						SFX:Play("EclipseImpact", gravPos)
+						SFXModule:Play("EclipseImpact", gravPos)
 					end
 				end
 

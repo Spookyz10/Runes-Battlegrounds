@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local ServerModules = ServerStorage.Modules
 
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
+local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 local StunHandler = require(ServerModules.StunHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
 local HitboxHandler = require(ServerModules.HitboxHandler)
@@ -12,7 +13,6 @@ local AnimationService = require(ServerModules.AnimationService)
 local iFramesService = require(ServerModules.iFramesService)
 local PerfectKnockback = require(ServerModules.PerfectKnockback)
 local SkillCollision = require(ServerModules.SkillCollision)
-local SFX = require(ServerModules.SFXModule)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 
@@ -55,7 +55,7 @@ return {
 
 		iFramesService:AddAlliFrames(Character)
 
-		SFX:Play("nightstalkInit", HumRP)
+		SFXModule:Play("nightstalkInit", HumRP)
 
 		local HitList = {}
 
@@ -165,7 +165,7 @@ return {
 				Position = spikePosition,
 			})
 
-			SFX:Play("spike", spikePosition)
+			SFXModule:Play("spike", spikePosition)
 
 			RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", { Intensity = 1.5, Last = 0.2 })
 

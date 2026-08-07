@@ -17,7 +17,7 @@ local PerfectKnockback = require(ServerModules.PerfectKnockback)
 local SkillCollision = require(ServerModules.SkillCollision)
 local WeldSystem = require(ReplicatedModules.WeldSystem)
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
-local SFX = require(ServerModules.SFXModule)
+local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 
@@ -238,7 +238,7 @@ return {
 			UserTrack:GetMarkerReachedSignal("pull"):Once(function()
 				UserTrack:AdjustSpeed(0)
 
-				SFX:Play("tethersStart", HumRP)
+				SFXModule:Play("tethersStart", HumRP)
 
 				task.wait(0.2)
 
@@ -328,7 +328,7 @@ return {
 					travelTime = CHAIN_TRAVEL_TIME,
 				})
 
-				SFX:Play("tethersChains", EnemyHumRP)
+				SFXModule:Play("tethersChains", EnemyHumRP)
 
 				task.wait(CHAIN_TRAVEL_TIME)
 
@@ -401,7 +401,7 @@ return {
 						Vector3.new(EnemyHumRP.Position.X, HumRP.Position.Y, EnemyHumRP.Position.Z)
 					)
 
-					SFX:Play("tethersBind", EnemyHumRP)
+					SFXModule:Play("tethersBind", EnemyHumRP)
 
 					Weld = WeldSystem.new(HumRP, EnemyHumRP, WELD_OFFSET, -1)
 					Weld:Start(WELD_TIME, EnemyPlayer, Player)
@@ -496,7 +496,7 @@ return {
 			UserTrack:GetMarkerReachedSignal("hit"):Once(function()
 				stopRotation()
 				cleanupWeld()
-				SFX:Play("tethersKick", HumRP)
+				SFXModule:Play("tethersKick", HumRP)
 
 				if hitDone then
 					return

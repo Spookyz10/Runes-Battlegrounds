@@ -5,12 +5,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerModules = ServerStorage.Modules
 
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
+local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 local StunHandler = require(ServerModules.StunHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local AnimationService = require(ServerModules.AnimationService)
-local SFX = require(ServerModules.SFXModule)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 
@@ -90,7 +90,7 @@ return {
 		table.insert(
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("start"):Once(function()
-				SFX:Play("shadestepCharge", HumRP)
+				SFXModule:Play("shadestepCharge", HumRP)
 				RemoteManager.FireAllClients(
 					"ReplicateTask",
 					"ShadestepBegin",
@@ -153,7 +153,7 @@ return {
 					return
 				end
 
-				SFX:Play("shadestepTeleport", HumRP)
+				SFXModule:Play("shadestepTeleport", HumRP)
 
 				local dashTween = TweenService:Create(
 					HumRP,
@@ -236,7 +236,7 @@ return {
 					end
 				)
 
-				SFX:Play("shadestepBeam", HumRP)
+				SFXModule:Play("shadestepBeam", HumRP)
 
 				RemoteManager.FireAllClients("ReplicateTask", "ShadestepFireball", {
 					func = "Launch",

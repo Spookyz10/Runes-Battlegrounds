@@ -5,6 +5,7 @@ local SvSt = ServerStorage
 local ServerModules = ServerStorage.Modules
 
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
+local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 local StunHandler = require(ServerModules.StunHandler)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
@@ -14,7 +15,6 @@ local PerfectKnockback = require(ServerModules.PerfectKnockback)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local BodymoverService = require(ServerModules.BodymoverService)
 local StatusEffectHandler = require(ServerModules.StatusEffectHandler)
-local SFX = require(ServerModules.SFXModule)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 
@@ -52,7 +52,7 @@ return {
 			UserTrack:GetMarkerReachedSignal("freeze"):Once(function()
 				UserTrack:AdjustSpeed(0)
 
-				SFX:Play("sunquakeWindup", HumRP)
+				SFXModule:Play("sunquakeWindup", HumRP)
 				RemoteManager.FireAllClients("ReplicateTask", "SunquakeVFX", { char = Character })
 
 				task.delay(1, function()
@@ -109,7 +109,7 @@ return {
 								return
 							end
 
-							SFX:Play("sunquakeExplosion", EnemyHumRP)
+							SFXModule:Play("sunquakeExplosion", EnemyHumRP)
 
 							EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
 

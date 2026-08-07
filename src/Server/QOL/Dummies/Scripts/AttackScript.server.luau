@@ -3,13 +3,14 @@ local HumRP = Character.HumanoidRootPart
 local Humanoid = Character.Humanoid
 
 local RNS = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
+local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 local AnimationService = require(ServerStorage.Modules.AnimationService)
 local HitboxHandler = require(ServerStorage.Modules.HitboxHandler)
 local iFramesService = require(ServerStorage.Modules.iFramesService)
 local DamageHandler = require(ServerStorage.Modules.DamageHandler)
-local SoundsModule = require(ServerStorage.Modules.SoundsModule)
 
 local Animations = ServerStorage.Assets.Animations
 
@@ -67,9 +68,9 @@ RNS.Heartbeat:Connect(function()
 							SFX = ServerStorage.Assets.Sounds.Combat.Hits.Blocked
 						end
 
-						SoundsModule:PlaySound(SFX, EnemyHumRP)
+						SFXModule:PlaySound(SFX, EnemyHumRP)
 					else
-						SoundsModule:PlaySound(ServerStorage.Assets.Sounds.Combat.Hits.Default["1"], EnemyHumRP)
+						SFXModule:PlaySound(ServerStorage.Assets.Sounds.Combat.Hits.Default["1"], EnemyHumRP)
 					end
 				end
 
@@ -90,6 +91,6 @@ RNS.Heartbeat:Connect(function()
 
 		AnimationService:playAnimation(Character, PunchAnim)
 
-		SoundsModule:PlaySound(ServerStorage.Assets.Sounds.Combat.Swings.Default["1"], HumRP)
+		SFXModule:PlaySound(ServerStorage.Assets.Sounds.Combat.Swings.Default["1"], HumRP)
 	end
 end)

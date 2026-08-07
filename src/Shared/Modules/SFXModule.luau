@@ -1,4 +1,6 @@
-local module = {}
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local SFXFolder = ReplicatedStorage.Resources.SFX
 
 local getCF = {
 	["CFrame"] = function(Value)
@@ -12,7 +14,17 @@ local getCF = {
 
 local soundAttachments = setmetatable({}, { __mode = "k" })
 
-function module:PlaySound(OriginalSound, Part, PlaybackSpeed, _, FadeOutParams, TimePosition)
+local sounds = {}
+
+for _, v in SFXFolder.Main:GetDescendants() do
+	if v:IsA("Sound") then
+		sounds[v.Name] = v
+	end
+end
+
+local module = {}
+
+local function PlaySound(OriginalSound, Part, PlaybackSpeed, _, FadeOutParams, TimePosition)
 	local partType = typeof(Part)
 	local ParentPart = nil
 
@@ -38,7 +50,7 @@ function module:PlaySound(OriginalSound, Part, PlaybackSpeed, _, FadeOutParams, 
 
 		if Sound.Looped == false then
 			task.delay(Sound.TimeLength + 5, function()
-				module:StopSound(Sound)
+				module:StopInstance(Sound)
 			end)
 
 			if FadeOutParams then
@@ -52,7 +64,7 @@ function module:PlaySound(OriginalSound, Part, PlaybackSpeed, _, FadeOutParams, 
 	return Sound
 end
 
-function module:StopSound(Sound)
+function module:StopInstance(Sound)
 	if not Sound then
 		return
 	end
@@ -68,6 +80,31 @@ function module:StopSound(Sound)
 	if attachment and attachment.Parent then
 		attachment:Destroy()
 	end
+end
+
+function module:PlayInstance(OriginalSound, Part, PlaybackSpeed, FadeOutParams, TimePosition)
+	return PlaySound(OriginalSound, Part, PlaybackSpeed, nil, FadeOutParams, TimePosition)
+end
+
+function module:Play(name, location, playbackSpeed, fadeOutParams, timePosition)
+	local sound = sounds[name]
+
+	if not sound then
+		warn("[SFX] Sound not found: " .. tostring(name))
+		return
+	end
+	return PlaySound(sound, location, playbackSpeed, nil, fadeOutParams, timePosition)
+end
+
+function module:Stop(soundInstance)
+	if not soundInstance then
+		return
+	end
+	module:StopInstance(soundInstance)
+end
+
+function module:Get(name)
+	return sounds[name]
 end
 
 return module

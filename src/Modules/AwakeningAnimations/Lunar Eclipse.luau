@@ -8,7 +8,8 @@ local SvModules = ServerStorage.Modules
 
 local IndicatorService = require(ReplicatedStorage.Shared.Modules.IndicatorService)
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
-local SFXModule = require(ServerStorage.Modules.SFXModule)
+local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
+
 local StunHandler = require(SvModules.StunHandler)
 local DamageHandler = require(SvModules.DamageHandler)
 local KnockbackService = require(SvModules.KnockbackModule)

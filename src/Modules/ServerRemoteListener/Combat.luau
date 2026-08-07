@@ -1,11 +1,13 @@
 local RS = game:GetService("ReplicatedStorage")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SvSt = game:GetService("ServerStorage")
 
 local RemoteManager = require(RS.Shared.Modules.RemoteManager)
+local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 
 local SvModules = SvSt.Modules
 local AnimationService = require(SvModules.AnimationService)
-local SoundsModule = require(SvModules.SoundsModule)
+
 local M1Handler = require(SvModules.M1Handler)
 
 local Assets = SvSt.Assets
@@ -44,7 +46,7 @@ local function Block(Player)
 	local Stopped
 
 	local Anim = Animations.Combat.Block
-	SoundsModule:PlaySound(CombatSounds.Blocking.Start, HumRP)
+	SFXModule:PlaySound(CombatSounds.Blocking.Start, HumRP)
 
 	local function stopBlock()
 		if Stopped then
@@ -66,7 +68,7 @@ local function Block(Player)
 			Character:RemoveTag(Action)
 		end
 
-		SoundsModule:PlaySound(CombatSounds.Blocking.Stop, HumRP)
+		SFXModule:PlaySound(CombatSounds.Blocking.Stop, HumRP)
 
 		RemoteManager.FireAllClients("ReplicateTask", "ActionHightlight", { char = Character, func = "BlockEnd" })
 	end

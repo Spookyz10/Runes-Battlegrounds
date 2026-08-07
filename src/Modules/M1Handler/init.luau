@@ -1,15 +1,15 @@
-local RS = game:GetService("ReplicatedStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SvSt = game:GetService("ServerStorage")
 
 local SvModules = SvSt.Modules
 
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
+local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 local DamageHandler = require(SvModules.DamageHandler)
 local HitboxHandler = require(SvModules.HitboxHandler)
 local AnimationService = require(SvModules.AnimationService)
 local iFramesService = require(SvModules.iFramesService)
-local SFX = require(SvModules.SFXModule)
+
 local KnockbackPresets = require(script.KnockbackPresets)
 
 local Configs = {}
@@ -130,7 +130,7 @@ function M1Handler:Punch(Player)
 	table.insert(
 		PunchEvents,
 		PunchAnimTrack:GetMarkerReachedSignal("hit"):Connect(function()
-			SFX:Play(Step.HitSound or "Hit", HumRP)
+			SFXModule:Play(Step.HitSound or "Hit", HumRP)
 
 			HitboxHandler:SimpleOnce(
 				HumRP,

@@ -6,13 +6,13 @@ local TweenService = game:GetService("TweenService")
 local ServerModules = ServerStorage.Modules
 
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
+local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 local StunHandler = require(ServerModules.StunHandler)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local AnimationService = require(ServerModules.AnimationService)
-local SFX = require(ServerModules.SFXModule)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 
@@ -87,7 +87,7 @@ return {
 				return
 			end
 
-			SFX:Play("graspHit", EnemyHumRP)
+			SFXModule:Play("graspHit", EnemyHumRP)
 
 			if enemyChar:HasTag("Ragdolled") then
 				RagdollHandler.cancelRagdoll(EnemyHum, nil, false, nil, true, true, false)
@@ -181,7 +181,7 @@ return {
 			UserTrack:GetMarkerReachedSignal("summon"):Once(function()
 				UserTrack:AdjustSpeed(0)
 
-				SFX:Play("graspTravel", HumRP)
+				SFXModule:Play("graspTravel", HumRP)
 
 				local lv = HumRP.CFrame.LookVector
 				local lookFlat = Vector3.new(lv.X, 0, lv.Z).Unit
@@ -257,7 +257,7 @@ return {
 				for _, enemyChar in pullList do
 					local EnemyHumRP = enemyChar:FindFirstChild("HumanoidRootPart")
 					if EnemyHumRP and EnemyHumRP.Parent then
-						SFX:Play("graspPull", EnemyHumRP)
+						SFXModule:Play("graspPull", EnemyHumRP)
 						TweenService:Create(
 							EnemyHumRP,
 							TweenInfo.new(PULL_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
