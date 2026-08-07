@@ -15,6 +15,7 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ClientContext = require(RS.Shared.Modules.ClientContext)
+local Loop = require(RS.Shared.Modules.Functions.Loop)
 
 local ClientRemoteListener = require(ReplicatedStorage.Shared.Modules.ClientRemoteListener)
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
@@ -36,7 +37,7 @@ local Animator: Animator = Humanoid:FindFirstChild("Animator") or Humanoid:WaitF
 local HumRP: BasePart = Character:FindFirstChild("HumanoidRootPart") or Character:WaitForChild("HumanoidRootPart", 10)
 local Camera: Camera = workspace.CurrentCamera
 
-shared.IsMobile = UIS.TouchEnabled == true
+ClientContext.IsMobile = UIS.TouchEnabled == true
 
 local shiftlockActive: boolean = false
 
@@ -70,9 +71,9 @@ Player:GetPropertyChangedSignal("Character"):Connect(function()
 
 	RotationController:SetCharacter(Character, HumRP, Humanoid)
 
-	if shared.IsMobile then
+	if ClientContext.IsMobile then
 		shiftlockActive = true
-		shared.customShiftlockActive = true
+		ClientContext.CustomShiftlockActive = true
 		RotationController:Request("shiftlock", 1, function()
 			return workspace.CurrentCamera.CFrame.LookVector
 		end)
@@ -113,13 +114,13 @@ local function checkCharacterAvailability(): boolean
 end
 
 local function punch()
-	if checkCharacterAvailability() and not shared.buildenabled then
+	if checkCharacterAvailability() then
 		RemoteManager.FireServer("Combat", "PunchStart")
 	end
 end
 
 local function dashCheck()
-	if not checkCharacterAvailability() or shared.buildenabled then
+	if not checkCharacterAvailability() then
 		return
 	end
 
@@ -234,13 +235,13 @@ local function dashCheck()
 
 		dashTrack:Play()
 
-		stopLoop = shared.loop(function()
+		stopLoop = Loop.new(function(stop)
 			if speed > 5 and dashVelocity.Parent then
 				speed *= 0.91
 				HumRP.CFrame = CFrame.lookAlong(HumRP.Position, Camera.CFrame.LookVector * Vector3.new(1, 0, 1))
 				dashVelocity.Velocity = (HumRP.CFrame.RightVector * sideMultiplier) * speed
 			else
-				stopLoop()
+				stop()
 				if dashVelocity.Parent then
 					dashVelocity:Destroy()
 				end
@@ -303,7 +304,7 @@ local function dashCheck()
 		dashTrack:Play()
 
 		local stopLoop: (() -> ())? = nil
-		stopLoop = shared.loop(function()
+		stopLoop = Loop.new(function(stop)
 			if dashVelocity.Parent then
 				speed *= 0.91
 				if speed <= 10 then
@@ -312,7 +313,7 @@ local function dashCheck()
 				HumRP.CFrame = CFrame.lookAlong(HumRP.Position, Camera.CFrame.LookVector * Vector3.new(1, 0, 1))
 				dashVelocity.Velocity = -HumRP.CFrame.LookVector * speed
 			else
-				stopLoop()
+				stop()
 				gameSettings.RotationType = Enum.RotationType.MovementRelative
 			end
 		end)
@@ -392,10 +393,6 @@ UIS.InputBegan:Connect(function(input: InputObject, gameProcessedEvent: boolean)
 				)
 			end
 		end)
-	elseif input.KeyCode == Enum.KeyCode.B then
-		if shared.emotegui then
-			shared.emotegui()
-		end
 	elseif input.KeyCode == Enum.KeyCode.R then
 		if not gameProcessedEvent then
 			local isAwakened: boolean = Character:GetAttribute("Awakened") == true

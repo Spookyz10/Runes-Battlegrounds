@@ -1,3 +1,4 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
 return {
@@ -5,7 +6,7 @@ return {
 		Id = "FrontDash",
 		Type = "Attack",
 		Animation = function()
-			return ServerStorage.Resources.Animations.Dashes.DashFront
+			return ReplicatedStorage.Resources.Animations.Dashes.DashFront
 		end,
 		Cooldown = 5,
 		Speed = 40000,
