@@ -14,10 +14,6 @@ local AnimationService = require(SvModules.AnimationService)
 local DestructionService = require(SvModules.DestructionSystem)
 local SFX = require(SvModules.SFXModule)
 
-local Remotes = ReplicatedStorage.Remotes
-local ReplicateSet = Remotes.Replicate.Set
-local CutscenesSet = Remotes.Cutscenes.Set
-
 local Assets = ServerStorage.Assets
 local Animations = Assets.Animations
 local SolarEclipseAnim = Animations.Awakenings["Solar Eclipse"]
@@ -249,13 +245,13 @@ function module:Activate(Player)
 			DestructionService:CancelFakeDebris(fakeDebrisId)
 			fakeDebrisId = nil
 		end
-		CutscenesSet:FireClient(Player, "SolarAwaken", "End", {})
+		RemoteManager.FireClient(Player, "Cutscenes", "SolarAwaken", "End", {})
 		RemoteManager.FireAllClients("ReplicateTask", "SolarAwakenEnd", { char = Character })
 	end)
 
 	Character:AddTag("CantRotate")
 	AnimationService:playAnimation(Character, SolarEclipseAnim)
-	CutscenesSet:FireClient(Player, "SolarAwaken", "Start", { Offset = CFrame.new(0, -3, 0) })
+	RemoteManager.FireClient(Player, "Cutscenes", "SolarAwaken", "Start", { Offset = CFrame.new(0, -3, 0) })
 	AnimTrack.Stopped:Wait()
 	Character:RemoveTag("CantRotate")
 	RemoteManager.FireAllClients("ReplicateTask", "ShowHotbar")

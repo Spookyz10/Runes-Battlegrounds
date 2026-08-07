@@ -17,8 +17,6 @@ local SFX = require(ServerModules.SFXModule)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 
-local CutscenesSet = ReplicatedStorage.Remotes.Cutscenes.Set
-
 local WindupAnimation = MoveAnims.Eclipse.Solar.Awakening["Cataclysm Windup"]
 local UserAnimation = MoveAnims.Eclipse.Solar.Awakening.Cataclysm
 local VictimAnimation = MoveAnims.Eclipse.Solar.Awakening["Cataclysm Victim"]
@@ -119,13 +117,20 @@ return {
 		end
 
 		local function startCutscene()
-			CutscenesSet:FireClient(Player, "Cataclysm", "Start", { Offset = CFrame.new(0, -6, 0), goalPart = HumRP })
+			RemoteManager.FireClient(
+				Player,
+				"Cutscenes",
+				"Cataclysm",
+				"Start",
+				{ Offset = CFrame.new(0, -6, 0), goalPart = HumRP }
+			)
 
 			if HitCharacter and HitCharacter.Parent then
 				local VictimPlayer = Players:GetPlayerFromCharacter(HitCharacter)
 				if VictimPlayer then
-					CutscenesSet:FireClient(
+					RemoteManager.FireClient(
 						VictimPlayer,
+						"Cutscenes",
 						"Cataclysm",
 						"Start",
 						{ Offset = CFrame.new(0, -6, 0), goalPart = HumRP }

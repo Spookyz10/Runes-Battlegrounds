@@ -4,8 +4,6 @@ local Players = game:GetService("Players")
 
 local ServerModules = ServerStorage.Modules
 
-local RemotesContainer = ReplicatedStorage.Remotes
-
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local StunHandler = require(ServerModules.StunHandler)
 local HitboxHandler = require(ServerModules.HitboxHandler)
@@ -17,7 +15,6 @@ local DestructionService = require(ServerModules.DestructionSystem)
 local SFX = require(ServerModules.SFXModule)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
-local ReplicateSet = RemotesContainer.Replicate.Set
 
 local HIT_DAMAGE = { 3, 3 }
 local PUNCH_DAMAGE = 5
@@ -254,7 +251,7 @@ return {
 					Char = Character,
 				})
 
-				ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 8, Last = 0.5 })
+				RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", { Intensity = 8, Last = 0.5 })
 			end)
 		)
 

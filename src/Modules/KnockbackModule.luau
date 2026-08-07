@@ -6,8 +6,6 @@ local StunHandler = require(ModulesFolder.StunHandler)
 local Bodymover = require(ModulesFolder.BodymoverService)
 local AnimationService = require(ModulesFolder.AnimationService)
 
-local ReplicateSet = game.ReplicatedStorage.Remotes.Replicate.Set
-
 local knockAnim = ModulesFolder.Parent.Assets.Animations.Other.Knockback
 
 local MapRayParams = RaycastParams.new()

@@ -12,9 +12,6 @@ HitboxBool.Changed:Connect(function()
 	DebugHitboxes = HitboxBool.Value
 end)
 
-local Remotes = RS.Remotes
-local ReplicateSet = Remotes.Replicate.Set
-
 local overlapParams = OverlapParams.new()
 overlapParams.FilterType = Enum.RaycastFilterType.Include
 overlapParams.FilterDescendantsInstances = { workspace.Live }

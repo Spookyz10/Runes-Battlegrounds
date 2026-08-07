@@ -5,7 +5,9 @@ local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterPlayer = game:GetService("StarterPlayer")
 
+local Tasks = require(StarterPlayer.StarterPlayerScripts.Player.Replication.Functions.Tasks)
 local ClientContext = require(ReplicatedStorage.Shared.Modules.ClientContext)
 local CameraShakeController = require(ReplicatedStorage.Shared.Modules.Functions.CameraShakerController)
 local Loop = require(ReplicatedStorage.Shared.Modules.Functions.Loop)
@@ -403,7 +405,7 @@ end)
 HumRP.ChildAdded:Connect(function(BodyVelocity)
 	if BodyVelocity:IsA("BodyVelocity") then
 		if BodyVelocity.Name == "FrontDashVelocity" then
-			shared.clearVelocities(HumRP, BodyVelocity)
+			Tasks["ClearVelocities"](HumRP, BodyVelocity)
 
 			task.spawn(function()
 				CameraShakeController.AddShake(2.5)
@@ -422,7 +424,7 @@ HumRP.ChildAdded:Connect(function(BodyVelocity)
 			end)
 		elseif BodyVelocity.Name == "moveme" then
 			if BodyVelocity:GetAttribute("RemoveOthers") == true then
-				shared.clearVelocities(HumRP, BodyVelocity)
+				Tasks["ClearVelocities"](HumRP, BodyVelocity)
 			end
 
 			local stopLoop = nil

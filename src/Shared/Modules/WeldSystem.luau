@@ -1,30 +1,9 @@
 local Debris = game:GetService("Debris")
 
 local RunService = game:GetService("RunService")
-
-local ReplicateSet = game.ReplicatedStorage.Remotes.Replicate.Set
-
-local function clearVelocities(Part: Part, Ignore: BodyVelocity?)
-	for _, Velocity in Part:GetDescendants() do
-		if
-			Velocity ~= Ignore
-			and (
-				Velocity:IsA("BodyVelocity")
-				or Velocity:IsA("LinearVelocity")
-				or Velocity:IsA("BodyPosition")
-				or Velocity:IsA("BodyAngularVelocity")
-				or Velocity:IsA("BodyMover")
-				or Velocity:IsA("BodyForce")
-				or Velocity:IsA("BodyThrust")
-				or Velocity:IsA("AngularVelocity")
-				or Velocity:IsA("VelocityMotor")
-				or Velocity:IsA("BodyGyro")
-			)
-		then
-			Velocity:Destroy()
-		end
-	end
-end
+local StarterPlayer = game:GetService("StarterPlayer")
+local RemoteManager = require(script.Parent.RemoteManager)
+local Tasks = require(StarterPlayer.StarterPlayerScripts.Player.Replication.Functions.Tasks)
 
 local WSys = {}
 WSys.__index = WSys
@@ -119,9 +98,9 @@ function WSys:Start(TweenTime, Player)
 		if RunService:IsServer() and Player then
 			Part1:SetNetworkOwner(Player)
 
-			clearVelocities(Part1)
+			Tasks["ClearVelocities"](Part1)
 
-			ReplicateSet:FireClient(Player, "smoothweld", {
+			RemoteManager.FireClient(Player, "ReplicateTask", "smoothweld", {
 				Character = Part0.Parent,
 				EnemyCharacter = Part1.Parent,
 				TweenTime = TweenTime,

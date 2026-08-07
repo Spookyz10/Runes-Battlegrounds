@@ -12,8 +12,6 @@ local iFramesService = require(SvModules.iFramesService)
 local SFX = require(SvModules.SFXModule)
 local KnockbackPresets = require(script.KnockbackPresets)
 
-local ReplicateSet = RS.Remotes.Replicate.Set
-
 local Configs = {}
 for _, module in script.Configs:GetChildren() do
 	if module:IsA("ModuleScript") then

@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
 local TS = game:GetService("TweenService")
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
 local BMS = {}
 
@@ -54,7 +55,7 @@ function BMS:Knockback(Character, Data)
 	end
 
 	if not Character:HasTag("Ragdolled") then
-		ReplicatedStorage.Remotes.Replicate.Set:FireAllClients("RemoveAllBodyMovers", Character)
+		RemoteManager.FireAllClients("ReplicateTask", "RemoveAllBodyMovers", Character)
 		for _, BodyMover: BodyVelocity in Character:GetDescendants() do
 			if BodyMover:IsA("BodyVelocity") or BodyMover:IsA("LinearVelocity") or BodyMover:IsA("BodyPosition") then
 				BodyMover:Destroy()

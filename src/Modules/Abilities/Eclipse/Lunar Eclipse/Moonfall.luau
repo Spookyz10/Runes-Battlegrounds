@@ -17,9 +17,6 @@ local DestructionSystem = require(SvModules.DestructionSystem)
 local SceneObjectReservation = require(SvModules.SceneObjectReservation)
 local SFX = require(SvModules.SFXModule)
 
-local Remotes = ReplicatedStorage.Remotes
-local ReplicateSet = Remotes.Replicate.Set
-
 local Animations = ServerStorage.Assets.Animations.Moves
 local StrikeAnim = Animations.Eclipse.Lunar.Awakening.Moonfall
 
@@ -228,7 +225,7 @@ local function applyGravityFieldCompensationDamage(data)
 	SFX:Play("Moonfall3", position)
 
 	if Player then
-		ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 10, Last = 0.8 })
+		RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", { Intensity = 10, Last = 0.8 })
 	end
 
 	HitboxHandler:SimpleOnce(position, IMPACT_SIZE, nil, { Character }, "Box", nil, function(EnemyCharacter)
@@ -298,7 +295,7 @@ local function impactIsland(data, impactPosition)
 	})
 
 	if Player then
-		ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 12, Last = 1 })
+		RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", { Intensity = 12, Last = 1 })
 	end
 
 	HitboxHandler:SimpleOnce(impactPosition, IMPACT_SIZE, nil, { Character }, "Box", nil, function(EnemyCharacter)

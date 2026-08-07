@@ -17,9 +17,6 @@ local AnimationService = require(SvModules.AnimationService)
 local IndicatorService = require(SvModules.IndicatorService)
 local DestructionService = require(SvModules.DestructionSystem)
 
-local Remotes = ReplicatedStorage.Remotes
-local ReplicateSet = Remotes.Replicate.Set
-
 local Assets = ServerStorage.Assets
 local Animations = Assets.Animations
 local LunarEclipseAnim = Animations.Awakenings["Lunar Eclipse"]
@@ -95,7 +92,7 @@ local function explode(Character, Position)
 	})
 
 	if Player then
-		ReplicateSet:FireClient(Player, "ShakeCamera", { Intensity = 10, Last = 1 })
+		RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", { Intensity = 10, Last = 1 })
 	end
 
 	DestructionService:ApplyRadialImpact(Position, MOON_IMPACT_RADIUS, MOON_IMPACT_FORCE, Player, nil)
@@ -280,7 +277,12 @@ function module:Activate(Player)
 				return
 			end
 
-			ReplicateSet:FireClient(Player, "StartLunarAimControl", { Duration = AIM_CONTROL_MAX_DURATION })
+			RemoteManager.FireClient(
+				Player,
+				"ReplicateTask",
+				"StartLunarAimControl",
+				{ Duration = AIM_CONTROL_MAX_DURATION }
+			)
 			IndicatorService:Create({
 				id = indicatorId,
 				character = Character,
@@ -332,7 +334,7 @@ function module:Activate(Player)
 
 			local LaunchOrigin = Torso.Position + Vector3.new(0, 70, 0)
 
-			ReplicateSet:FireClient(Player, "StopLunarAimControl", { RestoreCamera = false })
+			RemoteManager.FireClient(Player, "ReplicateTask", "StopLunarAimControl", { RestoreCamera = false })
 
 			local launchPosition = IndicatorService:GetPosition(Player, indicatorId)
 			IndicatorService:Destroy(indicatorId)
@@ -398,9 +400,9 @@ function module:Activate(Player)
 			isAirborne = false
 		end
 
-		ReplicateSet:FireClient(Player, "StopLunarAimControl", { RestoreCamera = false })
+		RemoteManager.FireClient(Player, "ReplicateTask", "StopLunarAimControl", { RestoreCamera = false })
 		IndicatorService:Destroy(indicatorId)
-		ReplicateSet:FireClient(Player, "LunarAimRestoreCamera", {})
+		RemoteManager.FireClient(Player, "ReplicateTask", "LunarAimRestoreCamera", {})
 		RemoteManager.FireAllClients("ReplicateTask", "LunarAwakenEnd", { char = Character })
 	end)
 

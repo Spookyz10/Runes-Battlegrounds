@@ -17,6 +17,7 @@ local RS = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Tasks = require(script.Functions.Tasks)
 local ClientContext = require(RS.Shared.Modules.ClientContext)
 
 local Remotes = RS.Remotes
@@ -196,7 +197,7 @@ local function DashCheck()
 		end
 
 		LastSideDash = tick()
-		shared.clearVelocities(HumRP)
+		Tasks["ClearVelocities"](HumRP)
 		Character:SetAttribute("SideDashing", true)
 
 		if Humanoid:GetState() == Enum.HumanoidStateType.Physics then
@@ -275,7 +276,7 @@ local function DashCheck()
 		end
 
 		LastBackDash = tick()
-		shared.clearVelocities(HumRP)
+		Tasks["ClearVelocities"](HumRP)
 		Character:SetAttribute("Dashing", true)
 
 		if Humanoid:GetState() == Enum.HumanoidStateType.Physics then
@@ -330,7 +331,10 @@ local function DashCheck()
 		end)
 	end
 
-	Comunicator:FireServer("Keypress", { Key = Enum.KeyCode.Q, Direction = currDirection, ClientCFrame = HumRP.CFrame })
+	RemoteManager.FireServer(
+		"Keypress",
+		{ Key = Enum.KeyCode.Q, Direction = currDirection, ClientCFrame = HumRP.CFrame }
+	)
 end
 
 local Keycodes = Enum.KeyCode
