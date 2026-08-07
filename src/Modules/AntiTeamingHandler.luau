@@ -1,6 +1,7 @@
 local AntiTeamingHandler = {}
 
 local iFramesService = require(script.Parent.iFramesService)
+local CombatEvents = require(script.Parent.CombatEvents)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
@@ -42,6 +43,7 @@ local function activateBuff(Character)
 	Character:SetAttribute("AntiTeamingDamageMult", DAMAGE_MULT)
 
 	RemoteManager.FireAllClients("ReplicateTask", "AntiTeamingActivated", { char = Character })
+	RemoteManager.FireAllClients("ReplicateTask", "ActionHightlight", { char = Character, func = "AntiTeamStart" })
 
 	task.delay(IFRAME_DURATION, function()
 		if Character and Character.Parent then
@@ -58,6 +60,11 @@ local function activateBuff(Character)
 			Character:SetAttribute("AntiTeamingBuff", nil)
 			Character:SetAttribute("AntiTeamingDamageMult", nil)
 			RemoteManager.FireAllClients("ReplicateTask", "AntiTeamingExpired", { char = Character })
+			RemoteManager.FireAllClients(
+				"ReplicateTask",
+				"ActionHightlight",
+				{ char = Character, func = "AntiTeamEnd" }
+			)
 		end
 
 		if tracking[Character] then
@@ -125,7 +132,12 @@ function AntiTeamingHandler:Cleanup(Character)
 	if Character and Character.Parent then
 		Character:SetAttribute("AntiTeamingBuff", nil)
 		Character:SetAttribute("AntiTeamingDamageMult", nil)
+		RemoteManager.FireAllClients("ReplicateTask", "ActionHightlight", { char = Character, func = "AntiTeamEnd" })
 	end
 end
+
+CombatEvents.DamageDealt:Connect(function(Damager, Damaged, Damage)
+	AntiTeamingHandler:OnDamageReceived(Damaged, Damager, Damage)
+end)
 
 return AntiTeamingHandler

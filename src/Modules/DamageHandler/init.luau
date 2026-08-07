@@ -13,6 +13,7 @@ local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local Data = require(ReplicatedStorage.Shared.Data).server
 local AnimationService = require(SvModules.AnimationService)
 local AntiTeamingHandler = require(SvModules.AntiTeamingHandler)
+local AwakeningService = require(SvModules.AwakeningService)
 local CombatEvents = require(SvModules.CombatEvents)
 
 local CheckBehind = Utility("CheckBehind")
@@ -148,8 +149,6 @@ function module:TakeDamage(
 
 					CombatEvents.DamageDealt:Fire(Damager, Damaged, FinisherRequirement or Damage, Type)
 
-					AntiTeamingHandler:OnDamageReceived(Damaged, Damager, FinisherRequirement or Damage)
-
 					RemoteManager.FireAllClients("ReplicateTask", "ActionHightlight", { char = Damaged, func = "Hit" })
 				end
 			else
@@ -157,8 +156,6 @@ function module:TakeDamage(
 				AddDealtDamage(Damaged, Damager, Damage)
 
 				CombatEvents.DamageDealt:Fire(Damager, Damaged, Damage, Type)
-
-				AntiTeamingHandler:OnDamageReceived(Damaged, Damager, Damage)
 
 				RemoteManager.FireAllClients("ReplicateTask", "ActionHightlight", { char = Damaged, func = "Hit" })
 
@@ -241,12 +238,7 @@ function module:TakeDamage(
 				end
 
 				if addAwkProgress == true or addAwkProgress == nil then
-					if not Damager:HasTag("Awakened") then
-						DamagerPlayer.AwakeningProgress.Value += Damage / 3
-					end
-					if DamagerPlayer.AwakeningProgress.Value > 100 then
-						DamagerPlayer.AwakeningProgress.Value = 100
-					end
+					AwakeningService:GiveProgress(DamagerPlayer, Damage / 3)
 				end
 			end
 		end

@@ -38,7 +38,11 @@ function Remote:Activate(Player: Player, Ability: string)
 		return
 	end
 
-	local Duration = Tool:GetAttribute("CDS") or 0
+	local Duration = AbilityModule.Cooldown
+	if Duration == nil then
+		Duration = Tool:GetAttribute("CDS") or 0
+	end
+
 	if Duration > -1 then
 		CooldownSystem:Set(Character, Ability, Duration)
 	end

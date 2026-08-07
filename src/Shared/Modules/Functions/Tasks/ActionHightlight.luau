@@ -6,6 +6,12 @@ local HOLD_IN_TIME = 0.08
 local HOLD_OUT_TIME = 0.15
 
 local WHITE = Color3.new(1, 1, 1)
+local ANTITEAM_COLOR = Color3.fromRGB(255, 140, 0)
+
+local HOLD_COLORS = {
+	Block = WHITE,
+	AntiTeam = ANTITEAM_COLOR,
+}
 
 local State = {}
 
@@ -29,7 +35,7 @@ end
 
 local function getState(Character)
 	if not State[Character] then
-		State[Character] = { Holding = false, Tween = nil }
+		State[Character] = { Holding = false, Tween = nil, ActiveKinds = {}, LastKind = nil }
 
 		Character.Destroying:Once(function()
 			State[Character] = nil
@@ -51,6 +57,8 @@ local function flash(Character)
 		data.Tween:Cancel()
 	end
 
+	Highlight.FillColor = WHITE
+	Highlight.OutlineColor = WHITE
 	Highlight.FillTransparency = 1
 	Highlight.OutlineTransparency = 1
 
@@ -82,11 +90,19 @@ local function flash(Character)
 	end)
 end
 
-local function hold(Character)
+local function hold(Character, Kind)
+	Kind = Kind or "Block"
+
 	local Highlight = getHighlight(Character)
 	local data = getState(Character)
 
+	data.ActiveKinds[Kind] = true
+	data.LastKind = Kind
 	data.Holding = true
+
+	local Color = HOLD_COLORS[Kind] or WHITE
+	Highlight.FillColor = Color
+	Highlight.OutlineColor = Color
 
 	if data.Tween then
 		data.Tween:Cancel()
@@ -102,15 +118,31 @@ local function hold(Character)
 	tween:Play()
 end
 
-local function release(Character)
+local function release(Character, Kind)
+	Kind = Kind or "Block"
+
 	local Highlight = Character:FindFirstChild("ActionHighlight")
 	local data = getState(Character)
 
-	data.Holding = false
+	data.ActiveKinds[Kind] = nil
 
 	if not Highlight then
 		return
 	end
+
+	local RemainingKind = next(data.ActiveKinds)
+
+	if RemainingKind then
+		data.LastKind = RemainingKind
+
+		local Color = HOLD_COLORS[RemainingKind] or WHITE
+		Highlight.FillColor = Color
+		Highlight.OutlineColor = Color
+
+		return
+	end
+
+	data.Holding = false
 
 	if data.Tween then
 		data.Tween:Cancel()
@@ -137,8 +169,12 @@ return function(params)
 	if func == "Hit" or func == "Dash" or func == "M1" then
 		flash(Character)
 	elseif func == "BlockStart" then
-		hold(Character)
+		hold(Character, "Block")
 	elseif func == "BlockEnd" then
-		release(Character)
+		release(Character, "Block")
+	elseif func == "AntiTeamStart" then
+		hold(Character, "AntiTeam")
+	elseif func == "AntiTeamEnd" then
+		release(Character, "AntiTeam")
 	end
 end
