@@ -31,7 +31,7 @@ local function applyRagdollVelocity(Character, Velocity, MaxForce, Time)
 		bv.P = 10000
 		bv.Parent = part
 
-		Debris:AddItem(bv, Time or 0.15)
+		Debris:AddItem(bv, Time or 0.3)
 	end
 end
 

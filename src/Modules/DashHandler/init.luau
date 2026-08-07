@@ -139,50 +139,50 @@ local function runAttackDash(Player, Character, HumRP, Humanoid, Config)
 					Hit = true
 
 					local IsNear = table.find(NearEnemys, EnemyCharacter) ~= nil
-					local BehindOk, IsBehind = pcall(CheckBehind, HumRP, EnemyHumRP)
-					IsBehind = BehindOk and IsBehind or false
 
-					if (IsNear or IsBehind) and not PreventVelocity then
-						PreventVelocity = true
-						if Velocity and Velocity.Parent then
-							Velocity:Destroy()
-						end
-						HumRP.AssemblyLinearVelocity = Vector3.zero
-					end
-
-					if not KnockbackApplied then
-						KnockbackApplied = true
-
-						if EnemyCharacter:HasTag("Ragdolled") then
-							RagdollHandler.cancelRagdoll(EnemyHumanoid, nil, false, nil, false, true)
+					if IsNear then
+						if not PreventVelocity then
+							PreventVelocity = true
+							if Velocity and Velocity.Parent then
+								Velocity:Destroy()
+							end
+							HumRP.AssemblyLinearVelocity = Vector3.zero
 						end
 
-						EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
+						if not KnockbackApplied then
+							KnockbackApplied = true
 
-						local Forward = HumRP.CFrame.LookVector
-						local LookCFrame =
-							CFrame.lookAt(HumRP.Position, HumRP.Position + Vector3.new(Forward.X, 0, Forward.Z))
-						local Dot = LookCFrame.LookVector:Dot((EnemyHumRP.Position - HumRP.Position).Unit)
-						if EnemyHumanoid.FloorMaterial ~= Enum.Material.Air then
-							Dot = 1
-						end
+							if EnemyCharacter:HasTag("Ragdolled") then
+								RagdollHandler.cancelRagdoll(EnemyHumanoid, nil, false, nil, false, true)
+							end
 
-						local KB = Config.Knockback
-						local Ok, Err = pcall(function()
-							PerfectKnockback:KnockBack(nil, EnemyCharacter, {
-								LookVector = LookCFrame.LookVector,
-								LookForce = KB.LookForce,
-								LookFinalForce = KB.LookFinalForce,
-								LookAt = LookCFrame,
-								GroundStunTime = KB.GroundStunTime,
-								Escapable = KB.Escapable,
-								FallingDetectDelay = KB.FallingDetectDelay,
-								Dot = Dot,
-								DotParams = KB.DotParams,
-							}, Character)
-						end)
-						if not Ok then
-							warn("[DashHandler] KnockBack failed: " .. tostring(Err))
+							EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
+
+							local Forward = HumRP.CFrame.LookVector
+							local LookCFrame =
+								CFrame.lookAt(HumRP.Position, HumRP.Position + Vector3.new(Forward.X, 0, Forward.Z))
+							local Dot = LookCFrame.LookVector:Dot((EnemyHumRP.Position - HumRP.Position).Unit)
+							if EnemyHumanoid.FloorMaterial ~= Enum.Material.Air then
+								Dot = 1
+							end
+
+							local KB = Config.Knockback
+							local Ok, Err = pcall(function()
+								PerfectKnockback:KnockBack(nil, EnemyCharacter, {
+									LookVector = LookCFrame.LookVector,
+									LookForce = KB.LookForce,
+									LookFinalForce = KB.LookFinalForce,
+									LookAt = LookCFrame,
+									GroundStunTime = KB.GroundStunTime,
+									Escapable = KB.Escapable,
+									FallingDetectDelay = KB.FallingDetectDelay,
+									Dot = Dot,
+									DotParams = KB.DotParams,
+								}, Character)
+							end)
+							if not Ok then
+								warn("[DashHandler] KnockBack failed: " .. tostring(Err))
+							end
 						end
 					end
 				end
