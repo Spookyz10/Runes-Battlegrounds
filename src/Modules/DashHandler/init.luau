@@ -16,7 +16,7 @@ local CooldownSystem = require(SvModules.CooldownSystem)
 local EvasiveService = require(SvModules.EvasiveService)
 local SFX = require(SvModules.SFXModule)
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
-local CheckBehind = require(ReplicatedStorage.Shared.Utility.CheckBehind)
+local CheckBehind = require(ReplicatedStorage.Shared.Modules.Utility.CheckBehind)
 
 local Configs = require(script.Configs)
 

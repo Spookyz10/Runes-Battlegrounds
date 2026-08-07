@@ -1,8 +1,5 @@
 local Player = game.Players.LocalPlayer
 
-local FunctionsHandler = require(script.Functions).new()
-task.spawn(FunctionsHandler.Start, FunctionsHandler)
-
 repeat
 	task.wait()
 until game:GetService("UserInputService").TouchEnabled or game:GetService("UserInputService").KeyboardEnabled
@@ -17,22 +14,19 @@ local RS = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Tasks = require(script.Functions.Tasks)
 local ClientContext = require(RS.Shared.Modules.ClientContext)
-
-local Remotes = RS.Remotes
-local ComRemotes = Remotes.Comunicator
-local Comunicator = ComRemotes.Set
-local Getter = ComRemotes.Get
-local CombatRemotes = Remotes.Combat
-local CombatSet = CombatRemotes.Set
-local SpecialsSet = Remotes.Specials.Set
 
 local ClientRemoteListener = require(ReplicatedStorage.Shared.Modules.ClientRemoteListener)
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
-local IndicatorService = require(script.Functions.Tasks.Shared.IndicatorService)
-local RotationController = require(script.Functions.Tasks.Shared.RotationController)
+
 local CutsceneController = require(RS.Shared.Modules.CutsceneController)
+local Functions = require(ReplicatedStorage.Shared.Modules.Functions)
+local Tasks = require(ReplicatedStorage.Shared.Modules.Functions.Tasks)
+local IndicatorService = require(ReplicatedStorage.Shared.Modules.Functions.Tasks.Shared.IndicatorService)
+local RotationController = require(ReplicatedStorage.Shared.Modules.Functions.Tasks.Shared.RotationController)
+
+Functions.new()
+task.spawn(Functions.Start, Functions)
 
 local Animations = RS.Resources.Animations
 
@@ -374,9 +368,6 @@ UIS.InputBegan:Connect(function(input, gameProccessedEvent)
 			RunService.Heartbeat:Wait()
 			if not Character:FindFirstChild("Stunned") then
 				RemoteManager.FireServer("Combat", "Block", { Stage = true })
-				if Character:FindFirstChild("Emoting") then
-					Comunicator:FireServer("StopEmote")
-				end
 			end
 		end)
 		DoBlock()

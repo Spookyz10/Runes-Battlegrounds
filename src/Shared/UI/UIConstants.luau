@@ -8,8 +8,6 @@ UIConstants.PlayerGui = UIConstants.Player:WaitForChild("PlayerGui")
 UIConstants.Hotbar = UIConstants.PlayerGui:WaitForChild("Hotbar")
 UIConstants.AwakeningBar = UIConstants.PlayerGui:WaitForChild("AwakeningBar")
 UIConstants.ExtraCds = UIConstants.PlayerGui:WaitForChild("ExtraCds")
-UIConstants.Emotes = UIConstants.PlayerGui:WaitForChild("Emotes")
-UIConstants.Chat = UIConstants.PlayerGui:WaitForChild("Chat")
 
 UIConstants.Character = UIConstants.Player.Character or UIConstants.Player.CharacterAdded:Wait()
 

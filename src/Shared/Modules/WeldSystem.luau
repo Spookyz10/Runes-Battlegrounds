@@ -1,9 +1,10 @@
 local Debris = game:GetService("Debris")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local RunService = game:GetService("RunService")
-local StarterPlayer = game:GetService("StarterPlayer")
+
+local Tasks = require(ReplicatedStorage.Shared.Modules.Functions.Tasks)
 local RemoteManager = require(script.Parent.RemoteManager)
-local Tasks = require(StarterPlayer.StarterPlayerScripts.Player.Replication.Functions.Tasks)
 
 local WSys = {}
 WSys.__index = WSys

@@ -1,123 +1,109 @@
---Services
-local SvSt = game:GetService("ServerStorage")
-local RS = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
 local Players = game:GetService("Players")
 local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
---Comunication
-local Remotes = RS.Remotes
+local Bindables = ServerStorage.Bindables
+local AirDetectorBindable = Bindables.AirDetector
 
-local Comunicator = Remotes.Comunicator.Set
+local MapOverlapParams = OverlapParams.new()
+MapOverlapParams.FilterType = Enum.RaycastFilterType.Include
+MapOverlapParams.FilterDescendantsInstances = { workspace.Map }
 
-local Bindables = SvSt.Bindables
-
-local AD_Bindable = Bindables.AirDetector
-
---Params
-local MapOVParams = OverlapParams.new()
-MapOVParams.FilterType = Enum.RaycastFilterType.Include
-MapOVParams.FilterDescendantsInstances = { workspace.Map }
-
---Functions
-local function endAir(Character: Model)
-	if not Character or not Character.Parent then
+local function endAirDetection(character: Model)
+	if not character or not character.Parent then
 		return
 	end
 
-	Character:SetAttribute("TouchedGround", tick())
+	character:SetAttribute("TouchedGround", tick())
 
-	for _, v in Character:GetChildren() do
-		if v.Name == "inAir" then
-			v:Destroy()
+	for _, child in character:GetChildren() do
+		if child.Name == "inAir" then
+			child:Destroy()
 		end
 	end
 end
 
-local function StartAirDetection(Character, _, isRagdoll, justDown, customClampDivider, customParams)
-	local HumRP = Character:FindFirstChild("HumanoidRootPart")
-	if not HumRP or HumRP.Anchored == true then
+local function startAirDetection(character, _, isRagdoll, justDown, customClampDivider, customParams)
+	local rootPart = character:FindFirstChild("HumanoidRootPart")
+	if not rootPart or rootPart.Anchored == true then
 		return
 	end
 
-	local Player
+	local owningPlayer
 	pcall(function()
-		Player = HumRP:GetNetworkOwner()
+		owningPlayer = rootPart:GetNetworkOwner()
 	end)
 
-	local inAir = Character:FindFirstChild("inAir")
-	if not inAir then
-		Character:SetAttribute("lastAir", tick())
+	local inAirValue = character:FindFirstChild("inAir")
+	if not inAirValue then
+		character:SetAttribute("lastAir", tick())
 
-		inAir = Instance.new("BoolValue")
-		inAir.Name = "inAir"
-		inAir.Parent = Character
+		inAirValue = Instance.new("BoolValue")
+		inAirValue.Name = "inAir"
+		inAirValue.Parent = character
 	end
 
 	task.spawn(function()
-		if not Player then
-			local ClosestPlayer = { Player = nil, Distance = nil }
-			for _, Player2 in Players:GetPlayers() do
-				local HumRP2: BasePart = Player2.Character:FindFirstChild("HumanoidRootPart")
+		if not owningPlayer then
+			local closestPlayer, closestDistance
 
-				if HumRP2 then
-					local Distance = (HumRP2.Position - HumRP.Position).Magnitude
+			for _, otherPlayer in Players:GetPlayers() do
+				local otherRoot: BasePart = otherPlayer.Character
+					and otherPlayer.Character:FindFirstChild("HumanoidRootPart")
 
-					if ClosestPlayer.Player then
-						if Distance < ClosestPlayer.Distance then
-							ClosestPlayer.Player = Player2
-							ClosestPlayer.Distance = Distance
-						end
-					else
-						ClosestPlayer.Player = Player2
-						ClosestPlayer.Distance = Distance
+				if otherRoot then
+					local distance = (otherRoot.Position - rootPart.Position).Magnitude
+
+					if not closestDistance or distance < closestDistance then
+						closestPlayer = otherPlayer
+						closestDistance = distance
 					end
 				end
 			end
 
-			Player = ClosestPlayer.Player
+			owningPlayer = closestPlayer
 		end
 
-		if Player and HumRP.Anchored == false then
+		if owningPlayer and rootPart.Anchored == false then
 			pcall(function()
-				HumRP:SetNetworkOwner(Player)
+				rootPart:SetNetworkOwner(owningPlayer)
 			end)
 
-			local Bridge = Instance.new("RemoteEvent")
-			Bridge.Name = Player.UserId .. " | " .. os.clock()
-			Bridge.Parent = Player
-			Debris:AddItem(Bridge, 30 + Player:GetNetworkPing())
+			local bridge = Instance.new("RemoteEvent")
+			bridge.Name = owningPlayer.UserId .. " | " .. os.clock()
+			bridge.Parent = owningPlayer
+			Debris:AddItem(bridge, 30 + owningPlayer:GetNetworkPing())
 
-			local Receive: RBXScriptConnection
-			Receive = Bridge.OnServerEvent:Connect(function(Sender)
-				if Sender ~= Player then
+			local receiveConnection: RBXScriptConnection
+			receiveConnection = bridge.OnServerEvent:Connect(function(sender)
+				if sender ~= owningPlayer then
 					return
 				end
 
-				endAir(Character)
+				endAirDetection(character)
 
 				pcall(function()
-					Receive:Disconnect()
+					receiveConnection:Disconnect()
 				end)
 				pcall(function()
-					Bridge:Destroy()
+					bridge:Destroy()
 				end)
 			end)
 
-			RemoteManager.FireClient(Player, "DetectAir", {
-				Bridge = Bridge.Name,
-				Char = Character,
+			RemoteManager.FireClient(owningPlayer, "DetectAir", {
+				Bridge = bridge.Name,
+				Char = character,
 				ragdoll = isRagdoll,
 				justdown = justDown and -math.abs(justDown),
 				customClamp = customClampDivider,
 				customParams = customParams,
 			})
 		else
-			endAir(Character)
+			endAirDetection(character)
 		end
 	end)
 end
 
-AD_Bindable.Event:Connect(StartAirDetection)
-shared.StartAirDetection = StartAirDetection
+AirDetectorBindable.Event:Connect(startAirDetection)

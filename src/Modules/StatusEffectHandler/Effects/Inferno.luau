@@ -1,4 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
 return {
 	Id = "Inferno",
