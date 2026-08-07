@@ -18,26 +18,25 @@ return {
 				Solar = {
 					"Sunquake",
 					"Undawn",
-					"Immolate",
-					"Solar Chains",
+					"Immolated",
+					"Tethers",
 				},
 			},
 			Ultimate = {
 				Lunar = {
-					"Crater Impact",
-					"Supernova Slash",
+					"Moonfall",
 				},
 				Solar = {
-					-- ults solares
+					"Cataclysm",
 				},
 			},
 			Special = {
-				Cost = 0,
-				Cooldown = 1,
+				Cost = 5,
+				Cooldown = 5,
 				Action = "SwapMode",
 			},
 			UltimateSpecial = {
-				Cost = 5,
+				Cost = 0,
 				Cooldown = 5,
 				Action = "SwapMode",
 			},

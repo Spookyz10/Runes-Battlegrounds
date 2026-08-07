@@ -43,7 +43,7 @@ local function resolveNearEnemies(Character, HumRP, Radius)
 end
 
 local function runAttackDash(Player, Character, HumRP, Humanoid, Config)
-	local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true)
+	local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
 	local NearEnemys = resolveNearEnemies(Character, HumRP, Config.NearEnemyRadius or 15)
 	local PreventVelocity = #NearEnemys > 0
 	local KnockbackApplied = false
@@ -233,7 +233,7 @@ end
 local function runDisplacementDash(Player, Character, HumRP, Humanoid, Config)
 	local Duration = Config.Duration or 1.017
 
-	StunHandler:Stun(Character, Duration, true, 0, 0, true)
+	StunHandler:Stun(Character, Duration, true, 0, 0, true, nil, false)
 
 	if Config.IFrames then
 		iFramesService:AddBaseiFrames(Character)

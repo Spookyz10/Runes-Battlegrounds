@@ -13,6 +13,7 @@ local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local Data = require(ReplicatedStorage.Shared.Data).server
 local AnimationService = require(SvModules.AnimationService)
 local AntiTeamingHandler = require(SvModules.AntiTeamingHandler)
+local CombatEvents = require(SvModules.CombatEvents)
 
 local CheckBehind = Utility("CheckBehind")
 
@@ -145,6 +146,8 @@ function module:TakeDamage(
 					Hum:TakeDamage(FinisherRequirement or Damage)
 					AddDealtDamage(Damaged, Damager, Damage)
 
+					CombatEvents.DamageDealt:Fire(Damager, Damaged, FinisherRequirement or Damage, Type)
+
 					AntiTeamingHandler:OnDamageReceived(Damaged, Damager, FinisherRequirement or Damage)
 
 					RemoteManager.FireAllClients("ReplicateTask", "ActionHightlight", { char = Damaged, func = "Hit" })
@@ -152,6 +155,8 @@ function module:TakeDamage(
 			else
 				Hum:TakeDamage(Damage)
 				AddDealtDamage(Damaged, Damager, Damage)
+
+				CombatEvents.DamageDealt:Fire(Damager, Damaged, Damage, Type)
 
 				AntiTeamingHandler:OnDamageReceived(Damaged, Damager, Damage)
 

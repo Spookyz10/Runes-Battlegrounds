@@ -79,7 +79,7 @@ return {
 			return
 		end
 
-		local CasterStun = StunHandler:Stun(Character, nil, true, 0, 0, true)
+		local CasterStun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
 		iFramesService:AddAlliFrames(Character)
 
 		local UserAnimation = MoveAnims.Eclipse.Solar.Immolated

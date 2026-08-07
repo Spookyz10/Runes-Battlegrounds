@@ -42,7 +42,7 @@ return {
 		SkillCollision:Lock(Character)
 		Humanoid.WalkSpeed = 0
 		Character:AddTag("CantRotate")
-		local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true)
+		local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
 
 		task.wait(0.7)
 

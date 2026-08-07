@@ -37,7 +37,7 @@ return {
 		local Character = Player.Character
 		local HumRP = Character.HumanoidRootPart
 
-		local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true)
+		local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
 		iFramesService:AddAlliFrames(Character)
 
 		local UserAnimation = MoveAnims.Eclipse.Lunar["Prowl"]

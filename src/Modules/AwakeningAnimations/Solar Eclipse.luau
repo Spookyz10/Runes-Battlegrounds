@@ -172,7 +172,7 @@ function module:Activate(Player)
 	local levitationId = nil
 	local fakeDebrisId = nil
 
-	local AwakeningStun = StunHandler:Stun(Character, nil, true, 0, 0, true)
+	local AwakeningStun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
 
 	RemoteManager.FireAllClients("ReplicateTask", "HideHotbar")
 	RemoteManager.FireAllClients("ReplicateTask", "HideAwkbar")

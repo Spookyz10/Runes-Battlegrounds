@@ -99,12 +99,12 @@ local function AddStarterPlayer(Player)
 		leaderstats.Name = "leaderstats"
 	end
 
-	local Kills = leaderstats:FindFirstChild("Kills") or Instance.new("NumberValue", leaderstats)
-	Kills.Name = "Kills"
-	Kills.Value = Data[Player].Kills()
-	Data[Player].Kills.Changed(function(kills, oldKills)
-		Kills.Value = kills
-	end)
+	-- local Kills = leaderstats:FindFirstChild("Kills") or Instance.new("NumberValue", leaderstats)
+	-- Kills.Name = "Kills"
+	-- Kills.Value = Data[Player].Kills()
+	-- Data[Player].Kills.Changed(function(kills, oldKills)
+	-- 	Kills.Value = kills
+	-- end)
 
 	local TotalKills = leaderstats:FindFirstChild("Total Kills") or Instance.new("NumberValue", leaderstats)
 	TotalKills.Name = "Total Kills"

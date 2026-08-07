@@ -258,7 +258,7 @@ function module:Activate(Player)
 	local indicatorId = "LunarAwaken_" .. Player.UserId
 	local OriginPosition = HumRP.Position
 
-	local AwakeningStun = StunHandler:Stun(Character, nil, true, 0, 0, true)
+	local AwakeningStun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
 
 	AnimationService:stopAll(Character)
 

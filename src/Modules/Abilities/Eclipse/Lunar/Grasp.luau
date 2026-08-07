@@ -42,7 +42,7 @@ return {
 
 		Humanoid.WalkSpeed = 0
 
-		local casterStun = StunHandler:Stun(Character, nil, true, 0, 0, true)
+		local casterStun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
 		iFramesService:AddAlliFrames(Character)
 
 		local grabbed = {}

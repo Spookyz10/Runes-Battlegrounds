@@ -80,7 +80,7 @@ return {
 		end
 
 		iFramesService:AddAlliFrames(Character)
-		activeStun = StunHandler:Stun(Character, nil, true, 0, 0, true)
+		activeStun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
 		Character:AddTag("CantRotate")
 
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)

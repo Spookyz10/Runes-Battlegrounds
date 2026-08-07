@@ -23,6 +23,9 @@ local GRADIENT_TARGETS = {
 local POS_SHOWN = UDim2.new(0.5, 0, 1, -90)
 local POS_HIDDEN = UDim2.new(0.5, 0, 1, 55)
 
+local DAMAGE_PER_PERCENT = 3
+local DAMAGE_REQUIRED = 100 * DAMAGE_PER_PERCENT
+
 local DeviceUltKey = UserInputService.TouchEnabled and "[PRESS]" or "[G]"
 
 local AwakeningProgress = nil
@@ -130,7 +133,8 @@ local function updateProgress()
 		stopAwakeningDisplay()
 		UltKey.Visible = false
 		ProgressLabel.Visible = true
-		ProgressLabel.Text = string.format("%.1f%%", AwakeningProgress.Value)
+		local damageDone = math.floor(AwakeningProgress.Value * DAMAGE_PER_PERCENT)
+		ProgressLabel.Text = string.format("%d/%d (%.0f%%)", damageDone, DAMAGE_REQUIRED, AwakeningProgress.Value)
 	end
 end
 

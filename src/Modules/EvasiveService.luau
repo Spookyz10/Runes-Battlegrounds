@@ -10,7 +10,10 @@ local iFramesService = require(ModulesFolder.iFramesService)
 local PerfectKnockback = require(ModulesFolder.PerfectKnockback)
 
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
+local CombatEvents = require(ModulesFolder.CombatEvents)
+
 local THRESHOLD = 20
+local MAX_CHARGES = 1
 local ESCAPE_IFRAME_TIME = 1
 
 local RagdollHandler
@@ -44,12 +47,20 @@ function module:AddProgress(Character, Amount)
 		return
 	end
 
-	local Progress = (Character:GetAttribute("EvasivaProgress") or 0) + Amount
 	local Charges = Character:GetAttribute("EvasivaCharges") or 0
+	if Charges >= MAX_CHARGES then
+		return
+	end
 
-	while Progress >= THRESHOLD do
+	local Progress = (Character:GetAttribute("EvasivaProgress") or 0) + Amount
+
+	while Progress >= THRESHOLD and Charges < MAX_CHARGES do
 		Progress -= THRESHOLD
 		Charges += 1
+	end
+
+	if Charges >= MAX_CHARGES then
+		Progress = 0
 	end
 
 	Character:SetAttribute("EvasivaProgress", Progress)
@@ -167,8 +178,13 @@ Players.PlayerAdded:Connect(function(Player)
 	Player.CharacterAdded:Connect(function(Character)
 		Character:SetAttribute("EvasivaProgress", 0)
 		Character:SetAttribute("EvasivaCharges", 0)
-		sendUpdate(Character)
+		module:AddProgress(Character, THRESHOLD)
 	end)
+end)
+
+CombatEvents.DamageDealt:Connect(function(Damager, Damaged, Damage)
+	module:AddProgress(Damaged, Damage)
+	module:AddProgress(Damager, Damage)
 end)
 
 return module
