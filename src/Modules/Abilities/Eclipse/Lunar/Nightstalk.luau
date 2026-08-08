@@ -67,22 +67,19 @@ return {
 			return Vector3.new(0, 0, -1)
 		end
 
-		local function spawnCircle(id, position)
-			RemoteManager.FireAllClients("ReplicateTask", "CircleVFX", { func = "Start", id = id, position = position })
+		local function spawnCircle(id, char, offset)
+			RemoteManager.FireAllClients(
+				"ReplicateTask",
+				"CircleVFX",
+				{ func = "Start", id = id, char = char, offset = offset }
+			)
 		end
 
 		local function despawnCircle(id)
 			RemoteManager.FireAllClients("ReplicateTask", "CircleVFX", { func = "Stop", id = id })
 		end
 
-		local lookFlat = getLookFlat()
-
-		spawnCircle(
-			initialCircleId,
-			Character.HumanoidRootPart.Position
-				+ lookFlat * CIRCLE_OFFSET_FORWARD
-				+ Vector3.new(0, -CIRCLE_OFFSET_DOWN, 0)
-		)
+		spawnCircle(initialCircleId, Character, CFrame.new(0, -CIRCLE_OFFSET_DOWN, -CIRCLE_OFFSET_FORWARD))
 
 		local function isValidEnemy(EnemyCharacter)
 			local EnemyHumanoid = EnemyCharacter and EnemyCharacter:FindFirstChild("Humanoid")
@@ -173,7 +170,7 @@ return {
 
 			circleCounter += 1
 			local circleId = tostring(Character) .. "_Nightstalk_Spike_" .. circleCounter
-			spawnCircle(circleId, spikePosition)
+			spawnCircle(circleId, Character, CFrame.new(0, -3, -stage.Distance))
 
 			task.delay(CIRCLE_VFX_DURATION, function()
 				despawnCircle(circleId)
