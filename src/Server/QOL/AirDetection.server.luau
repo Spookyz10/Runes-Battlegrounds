@@ -31,6 +31,13 @@ local function startAirDetection(character, _, isRagdoll, justDown, customClampD
 		return
 	end
 
+	if character:FindFirstChild("Dummy") then
+		task.spawn(function()
+			endAirDetection(character)
+		end)
+		return
+	end
+
 	local owningPlayer
 	pcall(function()
 		owningPlayer = rootPart:GetNetworkOwner()
