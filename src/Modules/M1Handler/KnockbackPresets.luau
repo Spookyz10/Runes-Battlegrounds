@@ -35,7 +35,7 @@ KnockbackPresets.RagdollForward = function(Character, EnemyCharacter, HumRP, Ene
 	NewKnockback:Knockback(EnemyCharacter, {
 		KnockbackType = "Velocity",
 		MaxForce = Vector3.new(100000, 100000, 100000),
-		Velocity = pushFlat * 45 + Vector3.new(0, 20, 0),
+		Velocity = pushFlat * 30 + Vector3.new(0, 14, 0),
 	})
 
 	ServerStorage.Bindables.AirDetector:Fire(EnemyCharacter, nil, true, nil, 6.2)

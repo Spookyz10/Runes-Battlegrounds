@@ -235,6 +235,15 @@ local function runDisplacementDash(Player, Character, HumRP, Humanoid, Config)
 
 	if not Config.NoStun then
 		StunHandler:Stun(Character, Duration, true, 0, 0, true, nil, false)
+	else
+		-- Side dashes (Left/Right): não damos stun completo (o jogador pode dar M1/block
+		-- normalmente), só travamos novos dashes até a duration do dash acabar.
+		Character:AddTag("CantDash")
+		task.delay(Duration, function()
+			if Character and Character.Parent then
+				Character:RemoveTag("CantDash")
+			end
+		end)
 	end
 
 	if Config.IFrames then
@@ -277,6 +286,10 @@ function DashHandler:Dash(Player, Direction)
 	local Humanoid = Character:FindFirstChild("Humanoid")
 	local HumRP = Character:FindFirstChild("HumanoidRootPart")
 	if not Humanoid or not HumRP then
+		return
+	end
+
+	if Character:HasTag("CantDash") then
 		return
 	end
 

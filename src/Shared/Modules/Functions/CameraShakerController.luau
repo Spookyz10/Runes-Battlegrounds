@@ -12,7 +12,7 @@ function CameraShakeController.Init(Camera, PlayerConfigFolder, ShakerClass, Ren
 	ConfigFolder = PlayerConfigFolder
 
 	if CameraShaker then
-		CameraShaker:Destroy()
+		CameraShaker:Stop()
 		CameraShaker = nil
 	end
 

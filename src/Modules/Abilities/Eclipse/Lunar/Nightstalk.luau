@@ -22,6 +22,9 @@ local UP_FORCE = 90
 local UP_VELOCITY_TIME = 0.15
 local DAMAGE = 10
 
+local KNOCK_FORCE = 30
+local KNOCK_FINAL_FORCE = 25
+
 local CIRCLE_OFFSET_FORWARD = 3
 local CIRCLE_OFFSET_DOWN = 3
 local CIRCLE_VFX_DURATION = 1
@@ -135,14 +138,19 @@ return {
 				FlatLookVector = getLookFlat()
 			end
 
+			local lookCF = EnemyHumRP and CFrame.lookAt(EnemyHumRP.Position, EnemyHumRP.Position + FlatLookVector)
+				or nil
+
 			PerfectKnockback:KnockBack(nil, EnemyCharacter, {
 				LookVector = FlatLookVector,
-				LookForce = 0,
-				LookFinalForce = 0,
+				LookForce = KNOCK_FORCE,
+				LookFinalForce = KNOCK_FINAL_FORCE,
+				LookAt = lookCF,
 				UpVelocity = Vector3.new(0, UP_FORCE, 0),
 				UpVelocityTime = UP_VELOCITY_TIME,
 				GroundStunTime = RAGDOLL_TIME,
 				FallingDetectDelay = 0.3,
+				Dot = 1,
 				DontFreeze = false,
 				Escapable = true,
 			}, Character)
