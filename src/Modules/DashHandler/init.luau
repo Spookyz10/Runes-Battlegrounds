@@ -233,7 +233,9 @@ end
 local function runDisplacementDash(Player, Character, HumRP, Humanoid, Config)
 	local Duration = Config.Duration or 1.017
 
-	StunHandler:Stun(Character, Duration, true, 0, 0, true, nil, false)
+	if not Config.NoStun then
+		StunHandler:Stun(Character, Duration, true, 0, 0, true, nil, false)
+	end
 
 	if Config.IFrames then
 		iFramesService:AddBaseiFrames(Character)

@@ -44,10 +44,6 @@ return {
 		Character:AddTag("CantRotate")
 		local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
 
-		task.wait(0.7)
-
-		local HumRP = Character.HumanoidRootPart
-
 		if not Character.Parent then
 			Character:RemoveTag("CantRotate")
 			return
@@ -55,7 +51,7 @@ return {
 
 		iFramesService:AddAlliFrames(Character)
 
-		SFXModule:Play("nightstalkInit", HumRP)
+		SFXModule:Play("nightstalkInit", Character.HumanoidRootPart)
 
 		local HitList = {}
 
@@ -63,7 +59,7 @@ return {
 		local initialCircleId = tostring(Character) .. "_Nightstalk_Initial"
 
 		local function getLookFlat()
-			local lv = HumRP.CFrame.LookVector
+			local lv = Character.HumanoidRootPart.CFrame.LookVector
 			local flat = Vector3.new(lv.X, 0, lv.Z)
 			if flat.Magnitude > 0 then
 				return flat.Unit
@@ -80,10 +76,13 @@ return {
 		end
 
 		local lookFlat = getLookFlat()
-		local initialCirclePosition = HumRP.Position
-			+ lookFlat * CIRCLE_OFFSET_FORWARD
-			+ Vector3.new(0, -CIRCLE_OFFSET_DOWN, 0)
-		spawnCircle(initialCircleId, initialCirclePosition)
+
+		spawnCircle(
+			initialCircleId,
+			Character.HumanoidRootPart.Position
+				+ lookFlat * CIRCLE_OFFSET_FORWARD
+				+ Vector3.new(0, -CIRCLE_OFFSET_DOWN, 0)
+		)
 
 		local function isValidEnemy(EnemyCharacter)
 			local EnemyHumanoid = EnemyCharacter and EnemyCharacter:FindFirstChild("Humanoid")
@@ -130,7 +129,8 @@ return {
 			end
 
 			local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
-			local KnockLookVector = EnemyHumRP and (EnemyHumRP.Position - HumRP.Position) or getLookFlat()
+			local KnockLookVector = EnemyHumRP and (EnemyHumRP.Position - Character.HumanoidRootPart.Position)
+				or getLookFlat()
 			local FlatLookVector = Vector3.new(KnockLookVector.X, 0, KnockLookVector.Z)
 			if FlatLookVector.Magnitude > 0.001 then
 				FlatLookVector = FlatLookVector.Unit
@@ -158,7 +158,9 @@ return {
 
 		local function fireStage(stage)
 			local stageLookFlat = getLookFlat()
-			local spikePosition = HumRP.Position + Vector3.new(0, -3, 0) + stageLookFlat * stage.Distance
+			local spikePosition = Character.HumanoidRootPart.Position
+				+ Vector3.new(0, -3, 0)
+				+ stageLookFlat * stage.Distance
 
 			RemoteManager.FireAllClients("ReplicateTask", "createSpike", {
 				Scale = stage.Scale,
@@ -178,7 +180,7 @@ return {
 			end)
 
 			HitboxHandler:SimpleOnce(
-				HumRP,
+				Character.HumanoidRootPart,
 				stage.HitboxSize,
 				CFrame.new(0, 0, -stage.Distance),
 				{ Character },
@@ -212,7 +214,7 @@ return {
 		local UserAnimation = MoveAnims.Eclipse.Lunar:FindFirstChild("Nightstalk")
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
 
-		UserTrack:AdjustSpeed(1.5)
+		UserTrack:AdjustSpeed(2)
 
 		table.insert(
 			UserEvents,
@@ -233,7 +235,7 @@ return {
 					end
 
 					if UserTrack then
-						UserTrack:AdjustSpeed(1.5)
+						UserTrack:AdjustSpeed(2)
 					end
 				end)
 			end)

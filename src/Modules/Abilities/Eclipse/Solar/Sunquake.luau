@@ -29,6 +29,7 @@ local BLOCKED_UP_FORCE = 25
 local BLOCKED_RAGDOLL_TIME = 2.5
 
 return {
+	Cooldown = 10,
 	Start = function(Player, Tool)
 		local Character = Player.Character
 		if not Character then

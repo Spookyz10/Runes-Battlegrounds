@@ -63,15 +63,19 @@ function ExtraCds.SetEvasiveMeter(Progress: number, Threshold: number, Charges: 
 		return
 	end
 
-	slot.Visible = true
-
 	local darkIcon = getDarkIcon(slot)
-	if not darkIcon then
+
+	if Charges > 0 then
+		slot.Visible = false
+		if darkIcon then
+			UIFunctions.ResetCooldownIcon(darkIcon)
+		end
 		return
 	end
 
-	if Charges > 0 then
-		UIFunctions.ResetCooldownIcon(darkIcon)
+	slot.Visible = true
+
+	if not darkIcon then
 		return
 	end
 

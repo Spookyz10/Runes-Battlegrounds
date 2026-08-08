@@ -63,6 +63,8 @@ local function cleanUp(
 end
 
 return {
+	Cooldown = 30,
+
 	Start = function(Player, Tool)
 		local Character = Player.Character
 		if not Character then

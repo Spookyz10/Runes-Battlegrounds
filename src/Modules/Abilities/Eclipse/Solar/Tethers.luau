@@ -157,6 +157,8 @@ local function doHitEffects(
 end
 
 return {
+	Cooldown = 5,
+
 	Start = function(Player, Tool)
 		local Character = Player.Character
 		if not Character then

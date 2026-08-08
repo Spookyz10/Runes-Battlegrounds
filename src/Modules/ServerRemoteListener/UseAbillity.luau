@@ -45,6 +45,10 @@ function Remote:Activate(Player: Player, Ability: string)
 
 	if Duration > -1 then
 		CooldownSystem:Set(Character, Ability, Duration)
+
+		if Duration > 0 then
+			RemoteManager.FireClient(Player, "StartCooldown", Ability, Duration)
+		end
 	end
 
 	RemoteManager.FireAllClients("ActionHightlight", { char = Character, func = "Hit" })

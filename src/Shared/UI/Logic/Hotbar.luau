@@ -225,8 +225,7 @@ local function shineIconEffect(slot)
 	Debris:AddItem(shine, 0.6)
 end
 
-local function addCooldownToSlot(slot, Tool)
-	local cds = Tool:GetAttribute("CDS")
+local function addCooldownToSlot(slot, Duration, SkillName)
 	local icon = getIcon(slot)
 	if not icon then
 		return
@@ -234,16 +233,36 @@ local function addCooldownToSlot(slot, Tool)
 
 	icon.ImageColor3 = COLOR_COOLDOWN
 
-	UIFunctions.PlayCooldownFill(getDarkIcon(slot), cds, function()
-		if Tool.Name == getBase(slot).SkillName.Text then
+	UIFunctions.PlayCooldownFill(getDarkIcon(slot), Duration, function()
+		local base = getBase(slot)
+		if base and base.SkillName.Text == SkillName then
 			shineIconEffect(slot)
 		end
 	end)
 
-	if cds > 0 then
-		TweenService:Create(icon, TweenInfo.new(cds, Enum.EasingStyle.Linear), { ImageColor3 = COLOR_READY }):Play()
+	if Duration > 0 then
+		TweenService:Create(icon, TweenInfo.new(Duration, Enum.EasingStyle.Linear), { ImageColor3 = COLOR_READY })
+			:Play()
 	else
 		icon.ImageColor3 = COLOR_READY
+	end
+end
+
+function Hotbar.StartCooldown(SkillName: string, Duration: number)
+	if not Duration or Duration <= 0 then
+		return
+	end
+
+	for _, slot in HotbarFrame:GetChildren() do
+		if not slot:IsA("ImageLabel") then
+			continue
+		end
+
+		local base = getBase(slot)
+		if base and base.SkillName.Text == SkillName then
+			addCooldownToSlot(slot, Duration, SkillName)
+			return
+		end
 	end
 end
 
@@ -256,27 +275,6 @@ local function equip(Base)
 	local Character = Player.Character
 	if Character then
 		Character:RemoveTag("Move Selected")
-	end
-
-	local cds = Tool:GetAttribute("CDS")
-	if cds == 0 then
-		return
-	end
-
-	local slot = Base.Parent.Parent
-
-	if Tool:GetAttribute("onCDS") ~= true then
-		local changedSignal
-		changedSignal = Tool:GetAttributeChangedSignal("onCDS"):Connect(function()
-			if Tool:GetAttribute("onCDS") == true or Tool:GetAttribute("CDS") == 0 then
-				changedSignal:Disconnect()
-				if Tool:GetAttribute("CDS") ~= 0 then
-					addCooldownToSlot(slot, Tool)
-				end
-			end
-		end)
-	else
-		addCooldownToSlot(slot, Tool)
 	end
 end
 

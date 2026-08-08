@@ -27,6 +27,8 @@ local RemoteEvents = {
 
 	Comunicator = "Server",
 	MovesetHandler = "Client",
+
+	StartCooldown = "Client",
 }
 
 local RemoteFunctions = {

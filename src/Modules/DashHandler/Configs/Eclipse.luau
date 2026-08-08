@@ -36,10 +36,12 @@ return {
 		Id = "LeftDash",
 		Type = "Displacement",
 		Duration = 0.6,
+		NoStun = true,
 	},
 	Right = {
 		Id = "RightDash",
 		Type = "Displacement",
 		Duration = 0.6,
+		NoStun = true,
 	},
 }
