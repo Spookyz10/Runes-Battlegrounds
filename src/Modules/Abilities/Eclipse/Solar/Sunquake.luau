@@ -64,6 +64,8 @@ return {
 
 					local HitList = {}
 
+					SFXModule:Play("sunquakeExplosion", HumRP)
+
 					HitboxHandler:SimpleOnce(
 						HumRP,
 						HITBOX_SIZE,
@@ -108,8 +110,6 @@ return {
 							if HitInfo.Countered then
 								return
 							end
-
-							SFXModule:Play("sunquakeExplosion", EnemyHumRP)
 
 							EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
 

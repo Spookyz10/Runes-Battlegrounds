@@ -173,6 +173,7 @@ return {
 		iFramesService:AddAlliFrames(Character)
 
 		Character:AddTag("CantRotate")
+		HumRP.Anchored = true
 		SkillCollision:Lock(Character)
 
 		local UserAnimation = MoveAnims.Eclipse.Solar.Tethers
@@ -198,6 +199,7 @@ return {
 			casterCleaned = true
 
 			Character:RemoveTag("CantRotate")
+			HumRP.Anchored = false
 			SkillCollision:Unlock(Character)
 		end
 

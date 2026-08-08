@@ -10,7 +10,14 @@ local RemoteManager = require(RS.Shared.Modules.RemoteManager)
 local SvModules = SvSt.Modules
 local iFramesHandler = require(SvModules.iFramesService)
 local MovesetHandler = require(SvModules.MovesetHandler)
-local UltimateAnimations = require(SvModules.AwakeningAnimations)
+local UltimateAnimations
+
+local function getUltimateAnimations()
+	if not UltimateAnimations then
+		UltimateAnimations = require(SvModules.AwakeningAnimations)
+	end
+	return UltimateAnimations
+end
 
 local AwakeningService = {}
 
@@ -87,9 +94,9 @@ local UltimateHandlers: { [string]: (Player: Player) -> () } = {
 	["Astral Shift"] = function(Player: Player)
 		local Moveset = Player:GetAttribute("MovesetMode_Eclipse")
 		if Moveset == "Solar" then
-			UltimateAnimations["Solar Eclipse"]:Activate(Player)
+			getUltimateAnimations()["Solar Eclipse"]:Activate(Player)
 		elseif Moveset == "Lunar" then
-			UltimateAnimations["Lunar Eclipse"]:Activate(Player)
+			getUltimateAnimations()["Lunar Eclipse"]:Activate(Player)
 		end
 	end,
 }
