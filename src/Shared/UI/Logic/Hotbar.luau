@@ -38,8 +38,8 @@ local TWEEN_SLIDE = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirect
 
 local POS_DOWN = UDim2.new(0.5, 0, 0.5, 125)
 local POS_UP = UDim2.new(0.5, 0, 0.5, 0)
-local POS_SHOWN = UDim2.new(0.5, -327, 1, -70)
-local POS_HIDDEN = UDim2.new(0.5, -327, 1, 55)
+local POS_SHOWN = UDim2.new(0.228, 0, 0.85, 0)
+local POS_HIDDEN = UDim2.new(0.228, 0, 2, 0)
 
 local COLOR_COOLDOWN = Color3.new(0, 0, 0)
 local COLOR_READY = Color3.new(1, 1, 1)
