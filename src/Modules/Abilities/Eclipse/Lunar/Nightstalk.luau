@@ -10,6 +10,7 @@ local StunHandler = require(ServerModules.StunHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local AnimationService = require(ServerModules.AnimationService)
+local SkillCancelHandler = require(ServerModules.SkillCancelHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local PerfectKnockback = require(ServerModules.PerfectKnockback)
 local SkillCollision = require(ServerModules.SkillCollision)
@@ -36,6 +37,7 @@ local SPIKE_STAGES = {
 }
 
 return {
+	Cooldown = 15,
 	Start = function(Player, Tool)
 		local Character = Player.Character
 		local Humanoid = Character and Character:FindFirstChild("Humanoid")
@@ -46,13 +48,12 @@ return {
 		Humanoid.WalkSpeed = 0
 		Character:AddTag("CantRotate")
 		local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
+		local onDamageCancel
 
 		if not Character.Parent then
 			Character:RemoveTag("CantRotate")
 			return
 		end
-
-		iFramesService:AddAlliFrames(Character)
 
 		SFXModule:Play("nightstalkInit", Character.HumanoidRootPart)
 
@@ -92,7 +93,7 @@ return {
 			if table.find(HitList, EnemyCharacter) then
 				return false
 			end
-			if iFramesService:HasiFrame(EnemyCharacter, Tool.Name) then
+			if iFramesService:HasiFrame(EnemyCharacter, 1) then
 				return false
 			end
 			if EnemyHumanoid.Health <= 0 or EnemyHumanoid:GetState() == Enum.HumanoidStateType.Dead then
@@ -210,7 +211,8 @@ return {
 			despawnCircle(initialCircleId)
 
 			SkillCollision:Unlock(Character)
-			iFramesService:RemoveAlliFrames(Character)
+			SkillCancelHandler:Unregister(Character, onDamageCancel)
+			iFramesService:RemoveiFrames(Character, "Base")
 			StunHandler:Unstun(Character, Stun)
 
 			Character:RemoveTag("CantRotate")
@@ -219,11 +221,22 @@ return {
 		local UserAnimation = MoveAnims.Eclipse.Lunar:FindFirstChild("Nightstalk")
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
 
+		onDamageCancel = function()
+			if UserTrack and UserTrack.IsPlaying then
+				UserTrack:Stop()
+			end
+		end
+
+		SkillCancelHandler:Register(Character, onDamageCancel)
+
 		UserTrack:AdjustSpeed(2)
 
 		table.insert(
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("onGround"):Once(function()
+				SkillCancelHandler:Unregister(Character, onDamageCancel)
+				iFramesService:AddBaseiFrames(Character)
+
 				task.spawn(function()
 					UserTrack:AdjustSpeed(0)
 

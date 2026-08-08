@@ -36,7 +36,7 @@ RNS.Heartbeat:Connect(function()
 					if
 						EnemyCharacter == Character
 						or EnemyHumanoid.Health <= 0
-						or iFramesService:HasiFrame(EnemyCharacter, "M1")
+						or iFramesService:HasiFrame(EnemyCharacter, 1)
 						or EnemyCharacter:HasTag("Ragdolled")
 					then
 						return

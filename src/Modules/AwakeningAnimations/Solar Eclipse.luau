@@ -174,8 +174,8 @@ function module:Activate(Player)
 
 	local AwakeningStun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
 
-	RemoteManager.FireAllClients("ReplicateTask", "HideHotbar")
-	RemoteManager.FireAllClients("ReplicateTask", "HideAwkbar")
+	RemoteManager.FireClient(Player, "ReplicateTask", "HideHotbar")
+	RemoteManager.FireClient(Player, "ReplicateTask", "HideAwkBar")
 
 	table.insert(
 		AnimEvents,

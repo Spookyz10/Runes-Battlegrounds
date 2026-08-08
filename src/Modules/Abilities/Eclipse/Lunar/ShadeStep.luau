@@ -8,6 +8,7 @@ local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 local StunHandler = require(ServerModules.StunHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
+local SkillCancelHandler = require(ServerModules.SkillCancelHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local AnimationService = require(ServerModules.AnimationService)
@@ -48,6 +49,7 @@ local function getSafeRange(originPos, lookFlat, range)
 end
 
 return {
+	Cooldown = 15,
 	Start = function(Player, Tool)
 		local Character = Player.Character
 		if not Character then
@@ -62,6 +64,8 @@ return {
 
 		local cleanupDone = false
 		local activeStun = nil
+		local cancelled = false
+		local onDamageCancel
 
 		local function doFullCleanup()
 			if cleanupDone then
@@ -76,14 +80,25 @@ return {
 			end
 
 			Character:RemoveTag("CantRotate")
-			iFramesService:RemoveAlliFrames(Character)
+			SkillCancelHandler:Unregister(Character, onDamageCancel)
 		end
 
-		iFramesService:AddAlliFrames(Character)
 		activeStun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
 		Character:AddTag("CantRotate")
 
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
+
+		onDamageCancel = function()
+			if cancelled then
+				return
+			end
+			cancelled = true
+			if UserTrack then
+				UserTrack:Stop()
+			end
+		end
+
+		SkillCancelHandler:Register(Character, onDamageCancel)
 
 		local dashBlocked = false
 
@@ -124,7 +139,7 @@ return {
 					if not EnemyHum or EnemyHum.Health <= 0 then
 						return
 					end
-					if iFramesService:HasiFrame(enemyChar, Tool.Name) then
+					if iFramesService:HasiFrame(enemyChar, 1) then
 						return
 					end
 					table.insert(dashHitList, enemyChar)
@@ -229,7 +244,7 @@ return {
 						if not EnemyHum or EnemyHum.Health <= 0 then
 							return
 						end
-						if iFramesService:HasiFrame(enemyChar, Tool.Name) then
+						if iFramesService:HasiFrame(enemyChar, 1) then
 							return
 						end
 						table.insert(fireballHitList, enemyChar)

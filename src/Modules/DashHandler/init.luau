@@ -117,7 +117,7 @@ local function runAttackDash(Player, Character, HumRP, Humanoid, Config)
 					local EnemyHumanoid = EnemyCharacter.Humanoid
 					local EnemyHumRP = EnemyCharacter.HumanoidRootPart
 
-					if EnemyHumanoid.Health <= 0 or iFramesService:HasiFrame(EnemyCharacter, "M1") then
+					if EnemyHumanoid.Health <= 0 or iFramesService:HasiFrame(EnemyCharacter, 1) then
 						return
 					end
 

@@ -8,6 +8,7 @@ local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 local StunHandler = require(ServerModules.StunHandler)
 local iFramesService = require(ServerModules.iFramesService)
+local SkillCancelHandler = require(ServerModules.SkillCancelHandler)
 local AnimationService = require(ServerModules.AnimationService)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 
@@ -82,14 +83,27 @@ return {
 		end
 
 		local CasterStun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
-		iFramesService:AddAlliFrames(Character)
+		local cancelled = false
+		local onDamageCancel
 
 		local UserAnimation = MoveAnims.Eclipse.Solar.Immolated
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
 
+		onDamageCancel = function()
+			if cancelled then
+				return
+			end
+			cancelled = true
+			if UserTrack then
+				UserTrack:Stop()
+			end
+		end
+
+		SkillCancelHandler:Register(Character, onDamageCancel)
+
 		if not UserTrack then
 			warn("[Immolated] UserTrack is nil for", Character.Name)
-			iFramesService:RemoveAlliFrames(Character)
+			SkillCancelHandler:Unregister(Character, onDamageCancel)
 			StunHandler:Unstun(Character, CasterStun)
 			return
 		end
@@ -104,7 +118,7 @@ return {
 				end
 				activated = true
 
-				iFramesService:RemoveAlliFrames(Character)
+				SkillCancelHandler:Unregister(Character, onDamageCancel)
 				StunHandler:Unstun(Character, CasterStun)
 
 				local immolateStun = StunHandler:Stun(Character, 0.35, true, 0, 0, true)
@@ -221,7 +235,7 @@ return {
 			end
 
 			if not activated then
-				iFramesService:RemoveAlliFrames(Character)
+				SkillCancelHandler:Unregister(Character, onDamageCancel)
 				StunHandler:Unstun(Character, CasterStun)
 			end
 		end)

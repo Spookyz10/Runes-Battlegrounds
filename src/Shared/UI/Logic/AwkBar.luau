@@ -20,8 +20,8 @@ local GRADIENT_TARGETS = {
 	BarFrame.Progress.RuneFrame,
 }
 
-local POS_SHOWN = UDim2.new(0.5, 0, 1, -90)
-local POS_HIDDEN = UDim2.new(0.5, 0, 1, 55)
+local POS_SHOWN = UDim2.new(0.49, 0, 0.78, 0)
+local POS_HIDDEN = UDim2.new(0.49, 0, 2, 0)
 
 local DAMAGE_PER_PERCENT = 3
 local DAMAGE_REQUIRED = 100 * DAMAGE_PER_PERCENT
@@ -92,7 +92,7 @@ local function startAwakeningDisplay()
 		local remaining = math.max(0, (AwakeningProgress.Value / 100) * ultTime)
 		ProgressLabel.Visible = true
 		UltKey.Visible = false
-		ProgressLabel.Text = string.format("%d.%02d", math.floor(remaining), math.floor((remaining % 1) * 100))
+		ProgressLabel.Text = string.format("%.2fs", remaining)
 	end)
 end
 

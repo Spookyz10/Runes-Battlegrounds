@@ -20,7 +20,7 @@ return {
 			return
 		end
 
-		iFramesService:AddAlliFrames(Character)
+		iFramesService:AddBaseiFrames(Character)
 
 		local hitList = {}
 
@@ -39,7 +39,7 @@ return {
 				if not EnemyHum or EnemyHum.Health <= 0 then
 					return
 				end
-				if iFramesService:HasiFrame(enemyChar, Tool.Name) then
+				if iFramesService:HasiFrame(enemyChar, 1) then
 					return
 				end
 				table.insert(hitList, enemyChar)

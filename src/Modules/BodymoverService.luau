@@ -44,22 +44,10 @@ function BMS:Knockback(Character, Data)
 
 	Data.MaxForce = Data.MaxForce or Vector3.new(math.huge, math.huge, math.huge)
 
-	if Character:HasTag("Ragdolled") then
-		if Data.KnockbackType == "Velocity" or not Data.KnockbackType then
-			applyRagdollVelocity(Character, Data.Velocity, Data.MaxForce, Data.Time)
-			return
-		elseif Data.KnockbackType == "VelocityTweenDown" then
-			applyRagdollVelocity(Character, Data.Velocity, Data.MaxForce, Data.Time)
-			return
-		end
-	end
-
-	if not Character:HasTag("Ragdolled") then
-		RemoteManager.FireAllClients("ReplicateTask", "RemoveAllBodyMovers", Character)
-		for _, BodyMover: BodyVelocity in Character:GetDescendants() do
-			if BodyMover:IsA("BodyVelocity") or BodyMover:IsA("LinearVelocity") or BodyMover:IsA("BodyPosition") then
-				BodyMover:Destroy()
-			end
+	RemoteManager.FireAllClients("ReplicateTask", "RemoveAllBodyMovers", Character)
+	for _, BodyMover: BodyVelocity in Character:GetDescendants() do
+		if BodyMover:IsA("BodyVelocity") or BodyMover:IsA("LinearVelocity") or BodyMover:IsA("BodyPosition") then
+			BodyMover:Destroy()
 		end
 	end
 

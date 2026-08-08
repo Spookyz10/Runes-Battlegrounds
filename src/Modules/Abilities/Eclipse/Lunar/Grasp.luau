@@ -10,6 +10,7 @@ local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 local StunHandler = require(ServerModules.StunHandler)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
+local SkillCancelHandler = require(ServerModules.SkillCancelHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local AnimationService = require(ServerModules.AnimationService)
@@ -28,6 +29,7 @@ local HAND_DAMAGE = 5
 local PULL_DAMAGE = 5
 
 return {
+	Cooldown = 20,
 	Start = function(Player, Tool)
 		local Character = Player.Character
 		if not Character then
@@ -43,7 +45,8 @@ return {
 		Humanoid.WalkSpeed = 0
 
 		local casterStun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
-		iFramesService:AddAlliFrames(Character)
+		local cancelled = false
+		local onDamageCancel
 
 		local grabbed = {}
 		local hitbox = nil
@@ -64,7 +67,7 @@ return {
 			if EnemyHum.Health <= 0 then
 				return
 			end
-			if iFramesService:HasiFrame(enemyChar, Tool.Name) then
+			if iFramesService:HasiFrame(enemyChar, 1) then
 				return
 			end
 
@@ -169,16 +172,32 @@ return {
 
 		local function doFullCleanup()
 			StunHandler:Unstun(Character, casterStun)
-			iFramesService:RemoveAlliFrames(Character)
+			SkillCancelHandler:Unregister(Character, onDamageCancel)
+			iFramesService:RemoveiFrames(Character, "Base")
 			Humanoid.WalkSpeed = 16
 		end
 
 		local UserAnimation = MoveAnims.Eclipse.Lunar.Grasp
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
 
+		onDamageCancel = function()
+			if cancelled then
+				return
+			end
+			cancelled = true
+			if UserTrack and UserTrack.IsPlaying then
+				UserTrack:Stop()
+			end
+		end
+
+		SkillCancelHandler:Register(Character, onDamageCancel)
+
 		table.insert(
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("summon"):Once(function()
+				SkillCancelHandler:Unregister(Character, onDamageCancel)
+				iFramesService:AddBaseiFrames(Character)
+
 				UserTrack:AdjustSpeed(0)
 
 				SFXModule:Play("graspTravel", HumRP)

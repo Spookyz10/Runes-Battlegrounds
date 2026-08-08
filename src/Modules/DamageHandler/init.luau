@@ -183,9 +183,18 @@ function module:TakeDamage(
 
 			if StunTime then
 				if typeof(StunTime) == "table" then
-					StunHandler:Stun(Damaged, StunTime[1], bypassStunImmunity, StunTime[2], StunTime[3])
+					StunHandler:Stun(
+						Damaged,
+						StunTime[1],
+						bypassStunImmunity,
+						StunTime[2],
+						StunTime[3],
+						nil,
+						nil,
+						false
+					)
 				else
-					StunHandler:Stun(Damaged, StunTime, bypassStunImmunity)
+					StunHandler:Stun(Damaged, StunTime, bypassStunImmunity, nil, nil, nil, nil, false)
 				end
 			end
 

@@ -1,12 +1,5 @@
 local module = {}
 
-local PierceLevels = {
-	M1 = 1,
-	M2 = 2,
-	Special = 2,
-	Unblockable = 3,
-}
-
 function module:HasiFrame(Character, pierceLevel)
 	local current = Character:GetAttribute("iFrames") or 0
 	if current <= 0 then
@@ -16,13 +9,6 @@ function module:HasiFrame(Character, pierceLevel)
 	local level = pierceLevel
 	if level == nil then
 		level = 0
-	elseif typeof(level) == "string" then
-		local mapped = PierceLevels[level]
-		if mapped == nil then
-			warn("[iFramesService] Unknown pierce level name '" .. level .. "', defaulting to 0")
-			mapped = 0
-		end
-		level = mapped
 	elseif typeof(level) ~= "number" then
 		warn("[iFramesService] Invalid pierceLevel type '" .. typeof(level) .. "', defaulting to 0")
 		level = 0

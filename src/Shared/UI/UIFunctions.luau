@@ -2,8 +2,8 @@ local TweenService = game:GetService("TweenService")
 
 local UIFunctions = {}
 
-local DARK_OFFSET_START = Vector2.new(0, -0.4)
-local DARK_OFFSET_END = Vector2.new(0, 0.4)
+local DARK_OFFSET_START = Vector2.new(0, -0.2)
+local DARK_OFFSET_END = Vector2.new(0, 0.2)
 local DARK_ROTATION = -90
 
 local DARK_GRADIENT_TRANSPARENCY = NumberSequence.new({

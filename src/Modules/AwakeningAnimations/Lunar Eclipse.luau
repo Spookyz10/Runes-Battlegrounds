@@ -269,8 +269,8 @@ function module:Activate(Player)
 		return
 	end
 
-	RemoteManager.FireAllClients("ReplicateTask", "HideHotbar")
-	RemoteManager.FireAllClients("ReplicateTask", "HideAwkbar")
+	RemoteManager.FireClient(Player, "ReplicateTask", "HideHotbar")
+	RemoteManager.FireClient(Player, "ReplicateTask", "HideAwkBar")
 
 	local isAirborne = false
 

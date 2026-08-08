@@ -10,6 +10,7 @@ local StunHandler = require(ServerModules.StunHandler)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
 local AnimationService = require(ServerModules.AnimationService)
+local SkillCancelHandler = require(ServerModules.SkillCancelHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local PerfectKnockback = require(ServerModules.PerfectKnockback)
 local RagdollHandler = require(ServerModules.RagdollHandler)
@@ -43,10 +44,23 @@ return {
 		end
 
 		local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
-		iFramesService:AddAlliFrames(Character)
 
 		local UserAnimation = MoveAnims.Eclipse.Solar.Sunquake
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
+
+		local cancelled = false
+		local onDamageCancel
+		onDamageCancel = function()
+			if cancelled then
+				return
+			end
+			cancelled = true
+			if UserTrack and UserTrack.IsPlaying then
+				UserTrack:Stop()
+			end
+		end
+
+		SkillCancelHandler:Register(Character, onDamageCancel)
 
 		table.insert(
 			UserEvents,
@@ -87,7 +101,7 @@ return {
 							if EnemyHumanoid.Health <= 0 then
 								return
 							end
-							if iFramesService:HasiFrame(EnemyCharacter, Tool.Name) then
+							if iFramesService:HasiFrame(EnemyCharacter, 1) then
 								return
 							end
 
@@ -168,7 +182,7 @@ return {
 				v:Disconnect()
 			end
 
-			iFramesService:RemoveAlliFrames(Character)
+			SkillCancelHandler:Unregister(Character, onDamageCancel)
 			StunHandler:Unstun(Character, Stun)
 		end)
 

@@ -46,7 +46,7 @@ return {
 		end
 
 		local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
-		iFramesService:AddAlliFrames(Character)
+		iFramesService:AddBaseiFrames(Character)
 
 		local UserAnimation = MoveAnims.Eclipse.Solar.Undawn
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
@@ -110,7 +110,7 @@ return {
 							return
 						end
 
-						if iFramesService:HasiFrame(EnemyCharacter, Tool.Name) then
+						if iFramesService:HasiFrame(EnemyCharacter, 1) then
 							return
 						end
 

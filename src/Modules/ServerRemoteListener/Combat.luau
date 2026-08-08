@@ -46,7 +46,6 @@ local function Block(Player)
 	local Stopped
 
 	local Anim = Animations.Combat.Block
-	SFXModule:PlaySound(CombatSounds.Blocking.Start, HumRP)
 
 	local function stopBlock()
 		if Stopped then
@@ -67,8 +66,6 @@ local function Block(Player)
 		for _, Action in ipairs(Actions) do
 			Character:RemoveTag(Action)
 		end
-
-		SFXModule:PlaySound(CombatSounds.Blocking.Stop, HumRP)
 
 		RemoteManager.FireAllClients("ReplicateTask", "ActionHightlight", { char = Character, func = "BlockEnd" })
 	end

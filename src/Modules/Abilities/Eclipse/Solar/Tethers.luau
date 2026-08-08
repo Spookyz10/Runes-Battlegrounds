@@ -12,6 +12,7 @@ local HitboxHandler = require(ServerModules.HitboxHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
 local AnimationService = require(ServerModules.AnimationService)
 local iFramesService = require(ServerModules.iFramesService)
+local SkillCancelHandler = require(ServerModules.SkillCancelHandler)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local PerfectKnockback = require(ServerModules.PerfectKnockback)
 local SkillCollision = require(ServerModules.SkillCollision)
@@ -112,7 +113,7 @@ local function doHitEffects(
 	Tool
 )
 	StunHandler:Unstun(closestEnemy, VictimStun)
-	iFramesService:RemoveAlliFrames(closestEnemy)
+	iFramesService:RemoveiFrames(closestEnemy, "Base")
 	closestEnemy:RemoveTag("CantRotate")
 	closestEnemy:RemoveTag("Knockbacked")
 
@@ -152,7 +153,8 @@ local function doHitEffects(
 		RemoteManager.FireClient(EnemyPlayer, "ReplicateTask", "ShakeCamera", { Intensity = 4, Last = 0.4 })
 	end
 
-	iFramesService:RemoveAlliFrames(Character)
+	SkillCancelHandler:Unregister(Character, onDamageCancel)
+	iFramesService:RemoveiFrames(Character, "Base")
 	StunHandler:Unstun(Character, CasterStun)
 end
 
@@ -172,14 +174,27 @@ return {
 		end
 
 		local CasterStun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
-		iFramesService:AddAlliFrames(Character)
+		local cancelled = false
+		local onDamageCancel
+
+		local UserAnimation = MoveAnims.Eclipse.Solar.Tethers
+		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
+
+		onDamageCancel = function()
+			if cancelled then
+				return
+			end
+			cancelled = true
+			if UserTrack and UserTrack.IsPlaying then
+				UserTrack:Stop()
+			end
+		end
+
+		SkillCancelHandler:Register(Character, onDamageCancel)
 
 		Character:AddTag("CantRotate")
 		HumRP.Anchored = true
 		SkillCollision:Lock(Character)
-
-		local UserAnimation = MoveAnims.Eclipse.Solar.Tethers
-		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
 
 		local closestEnemy = nil
 		local EnemyHumanoid = nil
@@ -266,7 +281,7 @@ return {
 					if hum.Health <= 0 or hum:GetState() == Enum.HumanoidStateType.Dead then
 						continue
 					end
-					if iFramesService:HasiFrame(char, Tool.Name) then
+					if iFramesService:HasiFrame(char, 1) then
 						continue
 					end
 					if not isInAir(char) then
@@ -281,7 +296,8 @@ return {
 				end
 
 				if not closestEnemy then
-					iFramesService:RemoveAlliFrames(Character)
+					SkillCancelHandler:Unregister(Character, onDamageCancel)
+					iFramesService:RemoveiFrames(Character, "Base")
 					StunHandler:Unstun(Character, CasterStun)
 					UserTrack:Stop()
 					return
@@ -293,7 +309,8 @@ return {
 
 				if not EnemyHumanoid or not EnemyHumRP then
 					closestEnemy = nil
-					iFramesService:RemoveAlliFrames(Character)
+					SkillCancelHandler:Unregister(Character, onDamageCancel)
+					iFramesService:RemoveiFrames(Character, "Base")
 					StunHandler:Unstun(Character, CasterStun)
 					UserTrack:Stop()
 					return
@@ -341,7 +358,8 @@ return {
 				end
 				if not closestEnemy or not closestEnemy.Parent then
 					stopRotation()
-					iFramesService:RemoveAlliFrames(Character)
+					SkillCancelHandler:Unregister(Character, onDamageCancel)
+					iFramesService:RemoveiFrames(Character, "Base")
 					StunHandler:Unstun(Character, CasterStun)
 					UserTrack:AdjustSpeed(1)
 					return
@@ -536,7 +554,7 @@ return {
 						if Hum.Health <= 0 then
 							return
 						end
-						if iFramesService:HasiFrame(EnemyCharacter, Tool.Name) then
+						if iFramesService:HasiFrame(EnemyCharacter, 1) then
 							return
 						end
 
@@ -599,7 +617,8 @@ return {
 						Tool
 					)
 				else
-					iFramesService:RemoveAlliFrames(Character)
+					SkillCancelHandler:Unregister(Character, onDamageCancel)
+					iFramesService:RemoveiFrames(Character, "Base")
 					StunHandler:Unstun(Character, CasterStun)
 				end
 			end)
@@ -627,12 +646,13 @@ return {
 				end)
 			end
 
-			iFramesService:RemoveAlliFrames(Character)
+			SkillCancelHandler:Unregister(Character, onDamageCancel)
+			iFramesService:RemoveiFrames(Character, "Base")
 			StunHandler:Unstun(Character, CasterStun)
 
 			if closestEnemy and closestEnemy.Parent and VictimStun then
 				StunHandler:Unstun(closestEnemy, VictimStun)
-				iFramesService:RemoveAlliFrames(closestEnemy)
+				iFramesService:RemoveiFrames(closestEnemy, "Base")
 				closestEnemy:RemoveTag("CantRotate")
 				closestEnemy:RemoveTag("Knockbacked")
 			end

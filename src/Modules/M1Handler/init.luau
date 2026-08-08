@@ -148,7 +148,7 @@ function M1Handler:Punch(Player)
 						or (Step.IgnoreRagdollCheck ~= true and (EnemyHumanoid.Health <= 0 or EnemyCharacter:HasTag(
 							"Ragdolled"
 						)))
-						or iFramesService:HasiFrame(EnemyCharacter, "M1")
+						or iFramesService:HasiFrame(EnemyCharacter, 1)
 					then
 						return
 					end

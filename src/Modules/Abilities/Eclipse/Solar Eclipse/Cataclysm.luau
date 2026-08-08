@@ -39,6 +39,7 @@ local SPLASH_RAGDOLL_TIME = 10
 local WALKSPEED_FREEZE_DELAY = 0.2
 
 return {
+	Cooldown = 15,
 	Start = function(Player, Tool)
 		local Character = Player.Character
 		if not Character then
@@ -54,7 +55,7 @@ return {
 		local OriginalWalkSpeed = Humanoid.WalkSpeed
 
 		local CasterStun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
-		iFramesService:AddAlliFrames(Character)
+		iFramesService:AddStrongiFrames(Character)
 
 		Humanoid.WalkSpeed = 0
 
@@ -87,7 +88,7 @@ return {
 				CasterLocked = false
 			end
 
-			iFramesService:RemoveAlliFrames(Character)
+			iFramesService:RemoveiFrames(Character, "Strong")
 			StunHandler:Unstun(Character, CasterStun)
 
 			if Humanoid and Humanoid.Parent then
@@ -227,7 +228,7 @@ return {
 							then
 								return
 							end
-							if iFramesService:HasiFrame(SplashCharacter, Tool.Name) then
+							if iFramesService:HasiFrame(SplashCharacter, 2) then
 								return
 							end
 
@@ -345,7 +346,7 @@ return {
 					if EnemyHumanoid.Health <= 0 or EnemyHumanoid:GetState() == Enum.HumanoidStateType.Dead then
 						return
 					end
-					if iFramesService:HasiFrame(EnemyCharacter, Tool.Name) then
+					if iFramesService:HasiFrame(EnemyCharacter, 2) then
 						return
 					end
 

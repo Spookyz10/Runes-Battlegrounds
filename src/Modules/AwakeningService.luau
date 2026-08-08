@@ -6,6 +6,7 @@ local Players = game:GetService("Players")
 local InfoModule = require(RS.Shared.Info)
 local Data = require(RS.Shared.Data).server
 local RemoteManager = require(RS.Shared.Modules.RemoteManager)
+local SFXModule = require(RS.Shared.Modules.SFXModule)
 
 local SvModules = SvSt.Modules
 local iFramesHandler = require(SvModules.iFramesService)
@@ -19,9 +20,39 @@ local function getUltimateAnimations()
 	return UltimateAnimations
 end
 
+local AwakeningMusicFolder = RS.Resources.Music.Awakenings
+
 local AwakeningService = {}
 
 local ActiveAwakenings = {}
+local ActiveAwakeningMusic = {}
+
+local function stopAwakeningMusic(Player)
+	local Sound = ActiveAwakeningMusic[Player]
+	if not Sound then
+		return
+	end
+
+	ActiveAwakeningMusic[Player] = nil
+	SFXModule:StopInstance(Sound)
+end
+
+local function playAwakeningMusic(Player, Character, MusicName)
+	local HumRP = Character:FindFirstChild("HumanoidRootPart")
+	if not HumRP then
+		return
+	end
+
+	local MusicAsset = AwakeningMusicFolder:FindFirstChild(MusicName)
+	if not MusicAsset then
+		return
+	end
+
+	stopAwakeningMusic(Player)
+
+	local Sound = SFXModule:PlayInstance(MusicAsset, HumRP)
+	ActiveAwakeningMusic[Player] = Sound
+end
 
 local function EndAwakening(
 	Player: Player,
@@ -40,6 +71,8 @@ local function EndAwakening(
 	if DeathConn then
 		DeathConn:Disconnect()
 	end
+
+	stopAwakeningMusic(Player)
 
 	if AwkTween then
 		if AwkTween.PlaybackState ~= Enum.PlaybackState.Completed then
@@ -145,6 +178,7 @@ local function doActivate(Player: Player, Bypass: boolean?)
 	local UltimateName = InfoModule.Movesets[CurrentMoveset].UltimateName
 	local Handler = UltimateHandlers[UltimateName]
 	if Handler then
+		playAwakeningMusic(Player, Character, UltimateName)
 		Handler(Player)
 	end
 
@@ -267,5 +301,9 @@ for _, Player in Players:GetPlayers() do
 		ClearAwakenedAttribute(Player)
 	end)
 end
+
+Players.PlayerRemoving:Connect(function(Player)
+	stopAwakeningMusic(Player)
+end)
 
 return AwakeningService

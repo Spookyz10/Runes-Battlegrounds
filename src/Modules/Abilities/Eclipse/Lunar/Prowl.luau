@@ -9,6 +9,7 @@ local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 local StunHandler = require(ServerModules.StunHandler)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
+local SkillCancelHandler = require(ServerModules.SkillCancelHandler)
 local AnimationService = require(ServerModules.AnimationService)
 local iFramesService = require(ServerModules.iFramesService)
 local PerfectKnockback = require(ServerModules.PerfectKnockback)
@@ -33,15 +34,29 @@ local BLOCK_SLOW_TIME = 1
 local HIT_SOUNDS = { "prowlHit1", "prowlHit2", "prowlHit3" }
 
 return {
+	Cooldown = 15,
 	Start = function(Player, Tool)
 		local Character = Player.Character
 		local HumRP = Character.HumanoidRootPart
 
 		local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
-		iFramesService:AddAlliFrames(Character)
 
 		local UserAnimation = MoveAnims.Eclipse.Lunar["Prowl"]
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
+
+		local cancelled = false
+		local onDamageCancel
+		onDamageCancel = function()
+			if cancelled then
+				return
+			end
+			cancelled = true
+			if UserTrack and UserTrack.IsPlaying then
+				UserTrack:Stop()
+			end
+		end
+
+		SkillCancelHandler:Register(Character, onDamageCancel)
 
 		local hitSoundIndex = 1
 
@@ -74,7 +89,7 @@ return {
 							end
 
 							local EnemyHumanoid = EnemyCharacter.Humanoid
-							if iFramesService:HasiFrame(EnemyCharacter, Tool.Name) then
+							if iFramesService:HasiFrame(EnemyCharacter, 1) then
 								return
 							end
 							if EnemyHumanoid.Health <= 0 or EnemyHumanoid:GetState() == Enum.HumanoidStateType.Dead then
@@ -177,7 +192,7 @@ return {
 						if EnemyCharacter:HasTag("Ragdolled") then
 							return
 						end
-						if iFramesService:HasiFrame(EnemyCharacter, Tool.Name) then
+						if iFramesService:HasiFrame(EnemyCharacter, 1) then
 							return
 						end
 
@@ -260,7 +275,7 @@ return {
 				v:Disconnect()
 			end
 
-			iFramesService:RemoveAlliFrames(Character)
+			SkillCancelHandler:Unregister(Character, onDamageCancel)
 			StunHandler:Unstun(Character, Stun)
 		end)
 

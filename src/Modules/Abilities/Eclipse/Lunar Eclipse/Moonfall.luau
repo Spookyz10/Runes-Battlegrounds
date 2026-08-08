@@ -10,6 +10,7 @@ local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 local DamageHandler = require(SvModules.DamageHandler)
 local iFramesService = require(SvModules.iFramesService)
+local SkillCancelHandler = require(SvModules.SkillCancelHandler)
 local HitboxHandler = require(SvModules.HitboxHandler)
 local RagdollHandler = require(SvModules.RagdollHandler)
 local AnimationService = require(SvModules.AnimationService)
@@ -482,6 +483,9 @@ local function cleanup(data)
 		return
 	end
 	data.Cancelled = true
+	if data.CancelFn then
+		SkillCancelHandler:Unregister(data.Character, data.CancelFn)
+	end
 
 	local Character = data.Character
 	if data.IsAirborne then
@@ -508,6 +512,7 @@ local function cleanup(data)
 end
 
 return {
+	Cooldown = 16,
 	Start = function(Player, Tool)
 		local Character = Player.Character
 		if not Character or not Character.Parent then
@@ -540,9 +545,38 @@ return {
 		data.PreviousiFrameLevel = iFramesService:GetLevel(Character)
 		data.GroundReturnPosition = HumRP.Position
 
-		StunHandler:Stun(Character, 8, true)
+		local GroundStun = StunHandler:Stun(Character, 8, true)
+		if GroundStun then
+			GroundStun.Destroying:Once(function()
+				if data.Cancelled then
+					return
+				end
+				cleanup(data)
+				if AnimTrack and AnimTrack.IsPlaying then
+					AnimTrack:Stop()
+				end
+			end)
+		end
+
 		Humanoid.WalkSpeed = 0
 		iFramesService:RemoveAlliFrames(Character)
+
+		local cancelled = false
+		local function onDamageCancel()
+			if cancelled then
+				return
+			end
+			cancelled = true
+			if data.Cancelled then
+				return
+			end
+			cleanup(data)
+			if AnimTrack and AnimTrack.IsPlaying then
+				AnimTrack:Stop()
+			end
+		end
+		data.CancelFn = onDamageCancel
+		SkillCancelHandler:Register(Character, onDamageCancel)
 
 		SFXModule:Play("Moonfall1", HumRP)
 
@@ -571,7 +605,7 @@ return {
 				if data.Cancelled or not Character.Parent or Humanoid.Health <= 0 then
 					return
 				end
-				iFramesService:AddAlliFrames(Character)
+				SkillCancelHandler:Unregister(Character, data.CancelFn)
 				startGravityField(data, HumRP.Position)
 			end)
 		)
@@ -582,6 +616,8 @@ return {
 				if data.Cancelled or not Character.Parent or Humanoid.Health <= 0 then
 					return
 				end
+				SkillCancelHandler:Unregister(Character, data.CancelFn)
+				iFramesService:AddBaseiFrames(Character)
 
 				local gravPos = ActiveState[Character] and ActiveState[Character].GravityPos
 				if gravPos then
