@@ -6,10 +6,6 @@ local HitboxQuery = require(script.Parent.HitboxQuery)
 local HitboxVisual = require(script.Parent.Hitbox)
 
 local function drawDebug(HitboxParameters)
-	if not (RunService:IsStudio()) then
-		return
-	end
-
 	HitboxVisual({
 		Method = "Box",
 		Size = HitboxParameters.Size,

@@ -100,7 +100,6 @@ local function runAttackDash(Player, Character, HumRP, Humanoid, Config)
 				return
 			end
 
-			AnimTrack:AdjustSpeed(0)
 			Velocity.Parent = HumRP
 			Debris:AddItem(Velocity, 0.85)
 
@@ -116,6 +115,13 @@ local function runAttackDash(Player, Character, HumRP, Humanoid, Config)
 				resumeDash(false)
 			end
 			DashHitbox:Start(1, false)
+		end)
+	)
+
+	table.insert(
+		AnimEvents,
+		AnimTrack:GetMarkerReachedSignal("freeze"):Once(function()
+			AnimTrack:AdjustSpeed(0)
 		end)
 	)
 
