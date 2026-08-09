@@ -127,6 +127,7 @@ function ActiveState.new(Character, Player)
 		GravityPos = nil,
 		GravityActive = false,
 		GravityConn = nil,
+		GravityVictims = nil,
 		Island = nil,
 		IslandOriginal = nil,
 		IslandConn = nil,
@@ -138,7 +139,26 @@ function ActiveState.new(Character, Player)
 	return data
 end
 
+local function releaseGravityVictims(data)
+	if not data.GravityVictims then
+		return
+	end
+
+	for otherChar in pairs(data.GravityVictims) do
+		if otherChar and otherChar.Parent then
+			local otherHum = otherChar:FindFirstChild("Humanoid")
+			if otherHum then
+				RagdollHandler.cancelRagdoll(otherHum)
+			end
+		end
+	end
+
+	data.GravityVictims = nil
+end
+
 local function stopGravityField(data)
+	releaseGravityVictims(data)
+
 	if not data.GravityActive then
 		return
 	end
@@ -155,8 +175,18 @@ end
 local function startGravityField(data, position)
 	data.GravityPos = position
 	data.GravityActive = true
+	data.GravityVictims = data.GravityVictims or {}
 
 	RemoteManager.FireAllClients("ReplicateTask", "Gravity", { func = "start", char = data.Character, pos = position })
+
+	local function captureGravityVictim(otherChar, otherHum)
+		if data.GravityVictims[otherChar] then
+			return
+		end
+
+		data.GravityVictims[otherChar] = true
+		RagdollHandler.ragdoll(otherHum, -1)
+	end
 
 	for _, plr in Players:GetPlayers() do
 		local otherChar = plr.Character
@@ -174,8 +204,7 @@ local function startGravityField(data, position)
 			and math.abs(delta.Y) <= GRAVITY_HALF_SIZE.Y
 			and math.abs(delta.Z) <= GRAVITY_HALF_SIZE.Z
 		then
-			StunHandler:Stun(otherChar, 2, true)
-			RagdollHandler.ragdoll(otherHum, 2)
+			captureGravityVictim(otherChar, otherHum)
 		end
 	end
 
@@ -205,8 +234,7 @@ local function startGravityField(data, position)
 				and math.abs(delta.Y) <= GRAVITY_HALF_SIZE.Y
 				and math.abs(delta.Z) <= GRAVITY_HALF_SIZE.Z
 			then
-				StunHandler:Stun(otherChar, GRAVITY_STUN_TICK + 0.4, true)
-				RagdollHandler.ragdoll(otherHum, GRAVITY_STUN_TICK + 0.4)
+				captureGravityVictim(otherChar, otherHum)
 			end
 		end
 	end)
@@ -343,6 +371,7 @@ local function travelIslandToPlayer(data, Character, HumRP)
 	local risenPos = startPos + Vector3.new(0, ISLAND_RISE_HEIGHT, 0)
 
 	local hitSet = {}
+	local lastImpactTick = 0
 	local overlapParams = OverlapParams.new()
 	overlapParams.FilterType = Enum.RaycastFilterType.Include
 	overlapParams.FilterDescendantsInstances = { workspace.Map.Destroyables }
@@ -350,6 +379,11 @@ local function travelIslandToPlayer(data, Character, HumRP)
 	local islandSize = getModelSize(Island) + Vector3.new(6, 6, 6)
 
 	local function applyDestructionAt(pos, direction)
+		if os.clock() - lastImpactTick < 0.1 then
+			return
+		end
+		lastImpactTick = os.clock()
+
 		local pivot = CFrame.new(pos) * startRot
 		local touching = workspace:GetPartBoundsInBox(pivot, islandSize, overlapParams)
 		for _, part in touching do
@@ -545,7 +579,7 @@ return {
 		data.PreviousiFrameLevel = iFramesService:GetLevel(Character)
 		data.GroundReturnPosition = HumRP.Position
 
-		local GroundStun = StunHandler:Stun(Character, 8, true)
+		local GroundStun = StunHandler:Stun(Character, 15, true)
 		if GroundStun then
 			GroundStun.Destroying:Once(function()
 				if data.Cancelled then

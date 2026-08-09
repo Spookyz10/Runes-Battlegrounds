@@ -39,10 +39,15 @@ function SpecialsHandler:Activate(Player, isUlt, MovesetHandler)
 	if not Character then
 		return
 	end
-	if Character:HasTag("Stunned") or (Character:HasTag("Awakened") == false and isUlt) then
-		if isUlt then
-			return
-		end
+	local isAwakened = Character:HasTag("Awakened") or Character:GetAttribute("Awakened") == true
+	if Character:HasTag("Stunned") then
+		return
+	end
+	if isUlt and not isAwakened then
+		return
+	end
+	if not isUlt and isAwakened then
+		return
 	end
 
 	local ok = Special.Activate(Player, isUlt, MovesetHandler)

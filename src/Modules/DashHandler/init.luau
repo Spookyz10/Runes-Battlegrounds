@@ -8,9 +8,8 @@ local StunHandler = require(SvModules.StunHandler)
 local iFramesService = require(SvModules.iFramesService)
 local AnimationService = require(SvModules.AnimationService)
 local HitboxHandler = require(SvModules.HitboxHandler)
+local ReplicatedHitboxes = require(SvModules.ReplicatedHitboxes)
 local DamageHandler = require(SvModules.DamageHandler)
-local PerfectKnockback = require(SvModules.PerfectKnockback)
-local RagdollHandler = require(SvModules.RagdollHandler)
 local StatusEffectHandler = require(SvModules.StatusEffectHandler)
 local CooldownSystem = require(SvModules.CooldownSystem)
 local EvasiveService = require(SvModules.EvasiveService)
@@ -28,27 +27,12 @@ local function getConfig(Player, Direction)
 	return MovesetConfigs[Direction]
 end
 
-local function resolveNearEnemies(Character, HumRP, Radius)
-	local Near = {}
-	for _, Other in workspace.Live:GetChildren() do
-		if Other == Character then
-			continue
-		end
-		local OtherHumRP = Other:FindFirstChild("HumanoidRootPart")
-		if OtherHumRP and (OtherHumRP.Position - HumRP.Position).Magnitude < Radius then
-			table.insert(Near, Other)
-		end
-	end
-	return Near
-end
-
 local function runAttackDash(Player, Character, HumRP, Humanoid, Config)
 	local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
-	local NearEnemys = resolveNearEnemies(Character, HumRP, Config.NearEnemyRadius or 15)
-	local PreventVelocity = #NearEnemys > 0
-	local KnockbackApplied = false
 	local Hit = false
 	local Ended = false
+	local DashHitbox
+	local DashResumed = false
 
 	local Animation = Config.Animation()
 	local AnimTrack, AnimEvents = AnimationService:getAnimationTrack(Character, Animation)
@@ -57,11 +41,15 @@ local function runAttackDash(Player, Character, HumRP, Humanoid, Config)
 		return
 	end
 
-	local Velocity
-	if not PreventVelocity then
-		Velocity = Instance.new("BodyVelocity")
-		Velocity.Name = Config.Id .. "Velocity"
-		Velocity.MaxForce = Vector3.new(Config.Speed, 0, Config.Speed)
+	local Velocity = Instance.new("BodyVelocity")
+	Velocity.Name = Config.Id .. "Velocity"
+	Velocity.MaxForce = Vector3.new(Config.Speed, 0, Config.Speed)
+
+	local function destroyDashHitbox()
+		if DashHitbox then
+			DashHitbox:Destroy()
+			DashHitbox = nil
+		end
 	end
 
 	local function endDash()
@@ -70,35 +58,49 @@ local function runAttackDash(Player, Character, HumRP, Humanoid, Config)
 		end
 		Ended = true
 		Character:SetAttribute("Dashing", false)
+		destroyDashHitbox()
 		if Velocity and Velocity.Parent then
 			Velocity:Destroy()
 		end
 		AnimTrack:AdjustSpeed(1)
 	end
 
+	local function resumeDash()
+		if Ended or DashResumed then
+			return
+		end
+
+		DashResumed = true
+		AnimTrack:AdjustSpeed(1)
+		destroyDashHitbox()
+	end
+
 	table.insert(
 		AnimEvents,
-		AnimTrack:GetMarkerReachedSignal("freeze"):Once(function()
+		AnimTrack:GetMarkerReachedSignal("jump"):Once(function()
 			if Ended then
-				AnimTrack:AdjustSpeed(1)
 				return
 			end
+
 			AnimTrack:AdjustSpeed(0)
+			Velocity.Parent = HumRP
+			Debris:AddItem(Velocity, 0.85)
+
+			DashHitbox = ReplicatedHitboxes.new(Player)
+			DashHitbox.Instance = HumRP
+			DashHitbox.Size = Config.Hitbox.Size
+			DashHitbox.Offset = Config.Hitbox.Offset
+			DashHitbox.Ignore = { Character }
+			DashHitbox.onTouch = function()
+				resumeDash()
+			end
+			DashHitbox:Start(0.45, false)
+
+			task.delay(0.45, function()
+				resumeDash()
+			end)
 		end)
 	)
-
-	if not PreventVelocity then
-		table.insert(
-			AnimEvents,
-			AnimTrack:GetMarkerReachedSignal("jump"):Once(function()
-				if PreventVelocity then
-					return
-				end
-				Velocity.Parent = HumRP
-				Debris:AddItem(Velocity, 0.85)
-			end)
-		)
-	end
 
 	table.insert(
 		AnimEvents,
@@ -137,54 +139,6 @@ local function runAttackDash(Player, Character, HumRP, Humanoid, Config)
 					end
 
 					Hit = true
-
-					local IsNear = table.find(NearEnemys, EnemyCharacter) ~= nil
-
-					if IsNear then
-						if not PreventVelocity then
-							PreventVelocity = true
-							if Velocity and Velocity.Parent then
-								Velocity:Destroy()
-							end
-							HumRP.AssemblyLinearVelocity = Vector3.zero
-						end
-
-						if not KnockbackApplied then
-							KnockbackApplied = true
-
-							if EnemyCharacter:HasTag("Ragdolled") then
-								RagdollHandler.cancelRagdoll(EnemyHumanoid, nil, false, nil, false, true)
-							end
-
-							EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
-
-							local Forward = HumRP.CFrame.LookVector
-							local LookCFrame =
-								CFrame.lookAt(HumRP.Position, HumRP.Position + Vector3.new(Forward.X, 0, Forward.Z))
-							local Dot = LookCFrame.LookVector:Dot((EnemyHumRP.Position - HumRP.Position).Unit)
-							if EnemyHumanoid.FloorMaterial ~= Enum.Material.Air then
-								Dot = 1
-							end
-
-							local KB = Config.Knockback
-							local Ok, Err = pcall(function()
-								PerfectKnockback:KnockBack(nil, EnemyCharacter, {
-									LookVector = LookCFrame.LookVector,
-									LookForce = KB.LookForce,
-									LookFinalForce = KB.LookFinalForce,
-									LookAt = LookCFrame,
-									GroundStunTime = KB.GroundStunTime,
-									Escapable = KB.Escapable,
-									FallingDetectDelay = KB.FallingDetectDelay,
-									Dot = Dot,
-									DotParams = KB.DotParams,
-								}, Character)
-							end)
-							if not Ok then
-								warn("[DashHandler] KnockBack failed: " .. tostring(Err))
-							end
-						end
-					end
 				end
 			)
 
@@ -200,6 +154,7 @@ local function runAttackDash(Player, Character, HumRP, Humanoid, Config)
 		for _, v in AnimEvents do
 			v:Disconnect()
 		end
+		destroyDashHitbox()
 		StunHandler:Unstun(Character, Stun)
 		if not Hit then
 			RemoteManager.FireAllClients(
