@@ -65,7 +65,16 @@ local function runAttackDash(Player, Character, HumRP, Humanoid, Config)
 		AnimTrack:AdjustSpeed(1)
 	end
 
-	local function resumeDash()
+	local function killVelocity()
+		if Velocity and Velocity.Parent then
+			Velocity.Velocity = Vector3.new()
+		end
+		if HumRP and HumRP.Parent then
+			HumRP.AssemblyLinearVelocity = Vector3.new(0, HumRP.AssemblyLinearVelocity.Y, 0)
+		end
+	end
+
+	local function resumeDash(WasHit)
 		if Ended or DashResumed then
 			return
 		end
@@ -73,6 +82,15 @@ local function runAttackDash(Player, Character, HumRP, Humanoid, Config)
 		DashResumed = true
 		AnimTrack:AdjustSpeed(1)
 		destroyDashHitbox()
+
+		if WasHit then
+			task.delay(0.1, function()
+				if Ended then
+					return
+				end
+				killVelocity()
+			end)
+		end
 	end
 
 	table.insert(
@@ -92,13 +110,12 @@ local function runAttackDash(Player, Character, HumRP, Humanoid, Config)
 			DashHitbox.Offset = Config.Hitbox.Offset
 			DashHitbox.Ignore = { Character }
 			DashHitbox.onTouch = function()
-				resumeDash()
+				resumeDash(true)
 			end
-			DashHitbox:Start(0.45, false)
-
-			task.delay(0.45, function()
-				resumeDash()
-			end)
+			DashHitbox.onTimeout = function()
+				resumeDash(false)
+			end
+			DashHitbox:Start(1, false)
 		end)
 	)
 
@@ -117,7 +134,6 @@ local function runAttackDash(Player, Character, HumRP, Humanoid, Config)
 				nil,
 				function(EnemyCharacter)
 					local EnemyHumanoid = EnemyCharacter.Humanoid
-					local EnemyHumRP = EnemyCharacter.HumanoidRootPart
 
 					if EnemyHumanoid.Health <= 0 or iFramesService:HasiFrame(EnemyCharacter, 1) then
 						return
@@ -191,8 +207,6 @@ local function runDisplacementDash(Player, Character, HumRP, Humanoid, Config)
 	if not Config.NoStun then
 		StunHandler:Stun(Character, Duration, true, 0, 0, true, nil, false)
 	else
-		-- Side dashes (Left/Right): não damos stun completo (o jogador pode dar M1/block
-		-- normalmente), só travamos novos dashes até a duration do dash acabar.
 		Character:AddTag("CantDash")
 		task.delay(Duration, function()
 			if Character and Character.Parent then

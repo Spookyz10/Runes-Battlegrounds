@@ -1,3 +1,4 @@
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
@@ -23,17 +24,21 @@ function module.new(Player: Player)
 		Offset = CFrame.new(0, 0, 0),
 		Characters = {},
 		onTouch = function(EnemyCharacter: Model) end,
+		onTimeout = nil,
 		functionAfterDestroy = function() end,
 		ResetCharactersList = false,
 		Bridge = Bridge,
 		Player = Player,
 		destroyAfterOnce = false,
+		_debugConn = nil,
+		_timeoutThread = nil,
+		_stopped = false,
 	}, module)
 
 	RemoteManager.FireClient(Player, "ReplicateTask", "SetupHitboxBridge", { BridgeId = Bridge.Name })
 
 	Bridge.OnServerEvent:Connect(function(ReceivedPlayer, TouchedEnemies)
-		if ReceivedPlayer ~= Player then
+		if ReceivedPlayer ~= Player or MetaTable._stopped then
 			return
 		end
 
@@ -70,32 +75,90 @@ function module:Once()
 end
 
 function module:Start(HitboxTime, Destroy)
+	self._stopped = false
+
 	self.Bridge:FireClient(
 		self.Player,
 		"Constant",
 		{ Instance = self.Instance, Size = self.Size, Offset = self.Offset, Ignore = self.Ignore }
 	)
 
-	if HitboxTime then
-		task.delay(HitboxTime, function()
-			if self ~= nil and self.Stop ~= nil and self.Destroy ~= nil then
-				if Destroy == true then
-					self:Destroy()
-				else
-					self:Stop()
+	if RunService:IsStudio() then
+		if self._debugConn then
+			self._debugConn:Disconnect()
+			self._debugConn = nil
+		end
+
+		self._debugConn = RunService.Heartbeat:Connect(function()
+			if not self.Instance or not self.Instance.Parent or self._stopped then
+				if self._debugConn then
+					self._debugConn:Disconnect()
+					self._debugConn = nil
 				end
+				return
+			end
+		end)
+	end
+
+	if self._timeoutThread then
+		task.cancel(self._timeoutThread)
+		self._timeoutThread = nil
+	end
+
+	if HitboxTime then
+		self._timeoutThread = task.delay(HitboxTime, function()
+			self._timeoutThread = nil
+
+			if self._stopped then
+				return
+			end
+
+			local HadNoHits = #self.Characters == 0
+
+			if Destroy == true then
+				self:Destroy()
+			else
+				self:Stop()
+			end
+
+			if HadNoHits and self.onTimeout then
+				self.onTimeout()
 			end
 		end)
 	end
 end
 
 function module:Stop()
+	self._stopped = true
+
+	if self._debugConn then
+		self._debugConn:Disconnect()
+		self._debugConn = nil
+	end
+
+	if self._timeoutThread then
+		task.cancel(self._timeoutThread)
+		self._timeoutThread = nil
+	end
+
 	local StopConstant = Instance.new("BoolValue")
 	StopConstant.Name = "StopConstant"
 	StopConstant.Parent = self.Bridge
 end
 
 function module:Destroy()
+	self._stopped = true
+
+	if self._debugConn then
+		self._debugConn:Disconnect()
+		self._debugConn = nil
+	end
+
+	if self._timeoutThread then
+		task.cancel(self._timeoutThread)
+		self._timeoutThread = nil
+	end
+
 	local Bridge: RemoteEvent = self.Bridge
 
 	if Bridge then
