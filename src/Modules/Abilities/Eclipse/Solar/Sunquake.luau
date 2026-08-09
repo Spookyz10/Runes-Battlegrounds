@@ -7,6 +7,7 @@ local ServerModules = ServerStorage.Modules
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 local StunHandler = require(ServerModules.StunHandler)
+local AirDetectionService = require(ServerModules.AirDetectionService)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
 local AnimationService = require(ServerModules.AnimationService)
@@ -167,7 +168,9 @@ return {
 								}, Character)
 							end
 
-							SvSt.Bindables.AirDetector:Fire(EnemyCharacter, nil, true)
+							AirDetectionService:Start(EnemyCharacter, {
+								ragdoll = true,
+							})
 							-- StatusEffectHandler:Apply(EnemyCharacter, "Inferno", {
 							-- 	Duration = INFERNO_DURATION,
 							-- 	Source = Character,

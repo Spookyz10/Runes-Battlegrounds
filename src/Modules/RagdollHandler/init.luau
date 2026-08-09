@@ -4,7 +4,7 @@ local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local StartAirDetection = SvSt.Bindables.AirDetector
+local AirDetectionService = require(SvSt.Modules.AirDetectionService)
 
 local Assets = SvSt.Assets
 
@@ -462,7 +462,9 @@ function Ragdoll.ragdoll(Humanoid, Duration, HardRagdoll, Ragdoller, _, _, check
 		end)
 	else
 		if checkAir ~= false then
-			StartAirDetection:Fire(Character, false, true)
+			AirDetectionService:Start(Character, {
+				ragdoll = true,
+			})
 		end
 	end
 

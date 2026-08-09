@@ -8,6 +8,7 @@ local ServerModules = ServerStorage.Modules
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 local StunHandler = require(ServerModules.StunHandler)
+local AirDetectionService = require(ServerModules.AirDetectionService)
 local DamageHandler = require(ServerModules.DamageHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local HitboxHandler = require(ServerModules.HitboxHandler)
@@ -265,7 +266,9 @@ return {
 								})
 							end)
 
-							ServerStorage.Bindables.AirDetector:Fire(SplashCharacter, nil, true)
+							AirDetectionService:Start(SplashCharacter, {
+								ragdoll = true,
+							})
 
 							local SplashPlayer = Players:GetPlayerFromCharacter(SplashCharacter)
 							if SplashPlayer then

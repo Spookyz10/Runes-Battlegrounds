@@ -5,6 +5,7 @@ local ModulesFolder = script.Parent
 local StunHandler = require(ModulesFolder.StunHandler)
 local Bodymover = require(ModulesFolder.BodymoverService)
 local AnimationService = require(ModulesFolder.AnimationService)
+local AirDetectionService = require(ModulesFolder.AirDetectionService)
 
 local knockAnim = ModulesFolder.Parent.Assets.Animations.Other.Knockback
 
@@ -119,7 +120,9 @@ function module:Knockback(
 		end
 
 		if not CustomAnimation and checkAir ~= false then
-			ModulesFolder.Parent.Bindables.AirDetector:Fire(Character, nil, nil, -3)
+			AirDetectionService:Start(Character, {
+				justDown = 3,
+			})
 		end
 	elseif typeof(Velocity) == "Vector3" then
 		Bodymover:Knockback(

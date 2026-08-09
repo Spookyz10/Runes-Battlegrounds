@@ -4,6 +4,7 @@ local SvModules = ServerStorage.Modules
 local RagdollHandler = require(SvModules.RagdollHandler)
 local NewKnockback = require(SvModules.BodymoverService)
 local PerfectKnockback = require(SvModules.PerfectKnockback)
+local AirDetectionService = require(SvModules.AirDetectionService)
 
 local KnockbackPresets = {}
 
@@ -38,7 +39,10 @@ KnockbackPresets.RagdollForward = function(Character, EnemyCharacter, HumRP, Ene
 		Velocity = pushFlat * 30 + Vector3.new(0, 14, 0),
 	})
 
-	ServerStorage.Bindables.AirDetector:Fire(EnemyCharacter, nil, true, nil, 6.2)
+	AirDetectionService:Start(EnemyCharacter, {
+		ragdoll = true,
+		customClamp = 6.2,
+	})
 end
 
 KnockbackPresets.RagdollUppercut = function(Character, EnemyCharacter, HumRP, EnemyHumRP)
@@ -50,7 +54,10 @@ KnockbackPresets.RagdollUppercut = function(Character, EnemyCharacter, HumRP, En
 		Velocity = Vector3.new(0, 75, 0),
 	})
 
-	ServerStorage.Bindables.AirDetector:Fire(EnemyCharacter, nil, true, nil, 6.2)
+	AirDetectionService:Start(EnemyCharacter, {
+		ragdoll = true,
+		customClamp = 6.2,
+	})
 end
 
 KnockbackPresets.RagdollDownslam = function(Character, EnemyCharacter, HumRP, EnemyHumRP)

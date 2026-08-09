@@ -12,11 +12,10 @@ local StunHandler = require(SvModules.StunHandler)
 local AnimationService = require(SvModules.AnimationService)
 local KnockbackService = require(SvModules.BodymoverService)
 local RagdollHandler = require(SvModules.RagdollHandler)
+local AirDetectionService = require(SvModules.AirDetectionService)
 
 local Assets = ServerStorage.Assets
 local Animations = Assets.Animations
-
-local StartAirDetect = ServerStorage.Bindables.AirDetector
 
 export type KnockbackParams = {
 	Dot: number?,
@@ -251,6 +250,8 @@ function Perfect:KnockBack(_, EnemyCharacter: Model, Params: KnockbackParams, Ch
 
 	local Touched = false
 	local StartTime = os.clock()
+	local GroundConfirmStrikes = 0
+	local REQUIRED_GROUND_STRIKES = 2
 
 	local BodyVelocity: BodyVelocity
 	local BodyGyro: BodyGyro?
@@ -441,6 +442,11 @@ function Perfect:KnockBack(_, EnemyCharacter: Model, Params: KnockbackParams, Ch
 			return
 		end
 
+		if HumanoidRootPart.AssemblyLinearVelocity.Y > 0 then
+			GroundConfirmStrikes = 0
+			return
+		end
+
 		local RayParams = RaycastParams.new()
 		RayParams.FilterType = Enum.RaycastFilterType.Include
 		RayParams.FilterDescendantsInstances = { workspace.Map }
@@ -448,8 +454,13 @@ function Perfect:KnockBack(_, EnemyCharacter: Model, Params: KnockbackParams, Ch
 		local Raycast = workspace:Raycast(HumanoidRootPart.Position, Vector3.new(0, -5, 0), RayParams)
 
 		if Raycast then
-			Collision:Disconnect()
-			impact(FinalTime)
+			GroundConfirmStrikes += 1
+			if GroundConfirmStrikes >= REQUIRED_GROUND_STRIKES then
+				Collision:Disconnect()
+				impact(FinalTime)
+			end
+		else
+			GroundConfirmStrikes = 0
 		end
 	end)
 
@@ -458,7 +469,9 @@ function Perfect:KnockBack(_, EnemyCharacter: Model, Params: KnockbackParams, Ch
 	EnemyCharacter:AddTag("Knockbacked")
 	EnemyCharacter:AddTag("CantRotate")
 
-	StartAirDetect:Fire(EnemyCharacter, 0, false)
+	AirDetectionService:Start(EnemyCharacter, {
+		justDown = 3,
+	})
 
 	AnimationService:stopAll(EnemyCharacter)
 	AnimationService:playAnimation(EnemyCharacter, KnockbackAnimation)

@@ -68,9 +68,14 @@ function Remote:Activate(Params)
 		return
 	end
 
+	local isRunning = true
+	Bridge.Destroying:Once(function()
+		isRunning = false
+	end)
+
 	task.spawn(function()
 		local Detected = detectAir(Params)
-		if Detected and Bridge and Bridge.Parent then
+		if isRunning and Detected and Bridge and Bridge.Parent then
 			Bridge:FireServer()
 		end
 	end)

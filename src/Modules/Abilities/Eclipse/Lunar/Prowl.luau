@@ -45,6 +45,19 @@ return {
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
 
 		local cancelled = false
+		local punchVFXStarted = false
+		local punchVFXEnded = false
+
+		local function endPunchVFX()
+			if punchVFXStarted and not punchVFXEnded then
+				punchVFXEnded = true
+				RemoteManager.FireAllClients("ReplicateTask", "ProwlPunch", {
+					func = "End",
+					Char = Character,
+				})
+			end
+		end
+
 		local onDamageCancel
 		onDamageCancel = function()
 			if cancelled then
@@ -153,6 +166,10 @@ return {
 
 					if i == 2 then
 						task.delay(0.2, function()
+							if cancelled or punchVFXEnded then
+								return
+							end
+							punchVFXStarted = true
 							RemoteManager.FireAllClients("ReplicateTask", "ProwlPunch", {
 								func = "Start",
 								Char = Character,
@@ -261,10 +278,7 @@ return {
 					end
 				)
 
-				RemoteManager.FireAllClients("ReplicateTask", "ProwlPunch", {
-					func = "End",
-					Char = Character,
-				})
+				endPunchVFX()
 
 				RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", { Intensity = 8, Last = 0.5 })
 			end)
@@ -274,6 +288,8 @@ return {
 			for _, v in UserEvents do
 				v:Disconnect()
 			end
+
+			endPunchVFX()
 
 			SkillCancelHandler:Unregister(Character, onDamageCancel)
 			StunHandler:Unstun(Character, Stun)
