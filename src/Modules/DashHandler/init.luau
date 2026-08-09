@@ -1,6 +1,7 @@
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
+local RunService = game:GetService("RunService")
 
 local SvModules = ServerStorage.Modules
 
@@ -36,6 +37,7 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 	local DashHitbox
 	local DashResumed = false
 	local HitList = {}
+	local SlopeClampConn
 
 	local Animation = Config.Animation()
 	local AnimTrack, AnimEvents = AnimationService:getAnimationTrack(Character, Animation)
@@ -47,6 +49,28 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 	local Velocity = Instance.new("BodyVelocity")
 	Velocity.Name = Config.Id .. "Velocity"
 	Velocity.MaxForce = Vector3.new(Config.Speed, 0, Config.Speed)
+
+	local function stopSlopeClamp()
+		if SlopeClampConn then
+			SlopeClampConn:Disconnect()
+			SlopeClampConn = nil
+		end
+	end
+
+	local function startSlopeClamp()
+		stopSlopeClamp()
+		SlopeClampConn = RunService.Heartbeat:Connect(function()
+			if not HumRP or not HumRP.Parent then
+				stopSlopeClamp()
+				return
+			end
+
+			local Vel = HumRP.AssemblyLinearVelocity
+			if Vel.Y > 0 then
+				HumRP.AssemblyLinearVelocity = Vector3.new(Vel.X, 0, Vel.Z)
+			end
+		end)
+	end
 
 	local function destroyDashHitbox()
 		if DashHitbox then
@@ -64,6 +88,7 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 		Ended = true
 		Character:SetAttribute("Dashing", false)
 		destroyDashHitbox()
+		stopSlopeClamp()
 		if Velocity and Velocity.Parent then
 			Velocity:Destroy()
 		end
@@ -160,6 +185,7 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 
 			Velocity.Parent = HumRP
 			Debris:AddItem(Velocity, 0.85)
+			startSlopeClamp()
 		end)
 	)
 
@@ -213,6 +239,7 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 			v:Disconnect()
 		end
 		destroyDashHitbox()
+		stopSlopeClamp()
 		StunHandler:Unstun(Character, Stun)
 		if not Hit then
 			RemoteManager.FireAllClients(

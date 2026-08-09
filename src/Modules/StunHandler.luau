@@ -89,6 +89,39 @@ local function updateContainerAttributes(Container, WalkSpeed, JumpPower, Escapa
 	end
 end
 
+local function recomputeContainerAttributes(State)
+	local Container = State.Folder
+	if not Container or not Container.Parent then
+		return
+	end
+
+	local WalkSpeed, JumpPower, Escapable = nil, nil, nil
+
+	for _, SourceFolder in Container:GetChildren() do
+		local sw = SourceFolder:GetAttribute("WalkSpeed")
+		local jp = SourceFolder:GetAttribute("JumpPower")
+		local esc = SourceFolder:GetAttribute("Escapable")
+
+		if sw ~= nil then
+			WalkSpeed = WalkSpeed and math.min(WalkSpeed, sw) or sw
+		end
+		if jp ~= nil then
+			JumpPower = JumpPower and math.min(JumpPower, jp) or jp
+		end
+		if esc ~= nil then
+			if Escapable == nil then
+				Escapable = esc
+			else
+				Escapable = Escapable and esc
+			end
+		end
+	end
+
+	Container:SetAttribute("WalkSpeed", WalkSpeed)
+	Container:SetAttribute("JumpPower", JumpPower)
+	Container:SetAttribute("Escapable", Escapable ~= false)
+end
+
 local function removeSourceEntry(Character, SourceKey)
 	local State = module.Active[Character]
 	if not State then
@@ -127,6 +160,8 @@ local function removeSourceEntry(Character, SourceKey)
 
 		module.Active[Character] = nil
 		module.Cache[Character] = nil
+	else
+		recomputeContainerAttributes(State)
 	end
 
 	return true

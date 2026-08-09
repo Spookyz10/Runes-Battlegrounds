@@ -72,18 +72,20 @@ local function findGroundY(position)
 	return position.Y
 end
 
-local function pickIsland(nearPosition)
-	local best, bestDist = nil, math.huge
+local function pickIsland()
+	local Available = {}
+
 	for _, model in IslandsFolder:GetChildren() do
 		if model:IsA("Model") and not SceneObjectReservation:IsReserved(model) then
-			local pivotPos = model:GetPivot().Position
-			local dist = (pivotPos - nearPosition).Magnitude
-			if dist < bestDist then
-				best, bestDist = model, dist
-			end
+			table.insert(Available, model)
 		end
 	end
-	return best
+
+	if #Available == 0 then
+		return nil
+	end
+
+	return Available[math.random(1, #Available)]
 end
 
 local function getModelSize(model)
@@ -178,8 +180,11 @@ local function captureGravityVictim(data, otherChar, otherHum)
 
 	victimData.AutoReleaseThread = task.delay(GRAVITY_FREEZE_AUTO_RELEASE, function()
 		victimData.AutoReleaseThread = nil
-		if data.GravityVictims and data.GravityVictims[otherChar] == victimData and victimData.StunFolder then
-			StunHandler:Unstun(otherChar, victimData.StunFolder)
+		if data.GravityVictims and data.GravityVictims[otherChar] == victimData then
+			if victimData.StunFolder then
+				StunHandler:Unstun(otherChar, victimData.StunFolder)
+			end
+			releaseGravityVictim(data, otherChar, victimData)
 		end
 	end)
 
@@ -187,9 +192,8 @@ local function captureGravityVictim(data, otherChar, otherHum)
 		if data.GravityVictims and data.GravityVictims[otherChar] == victimData then
 			if victimData.StunFolder then
 				StunHandler:Unstun(otherChar, victimData.StunFolder)
-			else
-				releaseGravityVictim(data, otherChar, victimData)
 			end
+			releaseGravityVictim(data, otherChar, victimData)
 		end
 	end)
 
@@ -204,8 +208,11 @@ local function captureGravityVictim(data, otherChar, otherHum)
 
 	if otherHum then
 		victimData.DiedConn = otherHum.Died:Once(function()
-			if data.GravityVictims and data.GravityVictims[otherChar] == victimData and victimData.StunFolder then
-				StunHandler:Unstun(otherChar, victimData.StunFolder)
+			if data.GravityVictims and data.GravityVictims[otherChar] == victimData then
+				if victimData.StunFolder then
+					StunHandler:Unstun(otherChar, victimData.StunFolder)
+				end
+				releaseGravityVictim(data, otherChar, victimData)
 			end
 		end)
 	end
@@ -262,15 +269,20 @@ local function releaseGravityVictims(data)
 		return
 	end
 
+	local pending = {}
 	for otherChar, victimData in pairs(data.GravityVictims) do
-		if victimData.StunFolder then
-			StunHandler:Unstun(otherChar, victimData.StunFolder)
-		else
-			releaseGravityVictim(data, otherChar, victimData)
-		end
+		table.insert(pending, { otherChar = otherChar, victimData = victimData })
 	end
 
 	data.GravityVictims = nil
+
+	for _, entry in pending do
+		local otherChar, victimData = entry.otherChar, entry.victimData
+		if victimData.StunFolder then
+			StunHandler:Unstun(otherChar, victimData.StunFolder)
+		end
+		releaseGravityVictim(data, otherChar, victimData)
+	end
 end
 
 local function stopGravityField(data)
@@ -330,10 +342,13 @@ local function startGravityField(data, position)
 			return
 		end
 		local victimData = data.GravityVictims[Damaged]
-		if not victimData or not victimData.StunFolder then
+		if not victimData then
 			return
 		end
-		StunHandler:Unstun(Damaged, victimData.StunFolder)
+		if victimData.StunFolder then
+			StunHandler:Unstun(Damaged, victimData.StunFolder)
+		end
+		releaseGravityVictim(data, Damaged, victimData)
 	end)
 
 	data.GravityConn = RunService.Heartbeat:Connect(function()
@@ -781,7 +796,7 @@ return {
 
 				AnimTrack:AdjustSpeed(0)
 
-				local IslandOriginal = pickIsland(HumRP.Position)
+				local IslandOriginal = pickIsland()
 				local Clone = IslandOriginal
 					and SceneObjectReservation:Reserve(IslandOriginal, "LunarStrike", Player, ISLAND_RESERVE_DURATION)
 
