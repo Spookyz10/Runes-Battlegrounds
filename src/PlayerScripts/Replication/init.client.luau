@@ -113,16 +113,11 @@ local function checkCharacterAvailability(): boolean
 		and Humanoid:GetState() ~= Enum.HumanoidStateType.Dead
 end
 
--- Mesma noção de "trapped" usada em EvasiveService:IsTrapped no server (ragdoll,
--- stun ou preso num PerfectKnockback), só que lida no client a partir das tags
--- já replicadas. Precisamos disso pra saber, ANTES de aplicar as guardas locais
--- de dash, se estamos numa situação em que o server vai tratar isso como uma
--- fuga (Evasive) e converter Front -> Left/Right.
 local function isTrapped(): boolean
 	if not Character then
 		return false
 	end
-	return Character:HasTag("Ragdolled") or Character:HasTag("Stunned") or Character:HasTag("Knockbacked")
+	return Character:HasTag("Ragdolled") or Character:HasTag("Stunned")
 end
 
 local function hasEvasiveCharge(): boolean

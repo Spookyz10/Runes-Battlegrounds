@@ -327,11 +327,11 @@ function DashHandler:Dash(Player, Direction)
 		return
 	end
 
-	if Character:HasTag("CantDash") then
+	local Trapped = EvasiveService:IsTrapped(Character)
+
+	if not Trapped and Character:HasTag("CantDash") then
 		return
 	end
-
-	local Trapped = EvasiveService:IsTrapped(Character)
 
 	if Direction == "Front" and Trapped then
 		local Side = HumRP.CFrame.RightVector:Dot(Humanoid.MoveDirection)
