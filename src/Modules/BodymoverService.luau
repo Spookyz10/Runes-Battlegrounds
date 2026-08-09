@@ -1,111 +1,166 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
 local Debris = game:GetService("Debris")
 local TS = game:GetService("TweenService")
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
+export type KnockbackData = {
+	Velocity: Vector3?,
+	Position: Vector3?,
+	MaxForce: Vector3?,
+	KnockbackType: string?,
+	P: number?,
+	D: number?,
+	Time: number?,
+	Style: string?,
+	Direction: string?,
+	Inverse: boolean?,
+	ApplyAngular: boolean?,
+	Owner: Player?,
+}
+
 local BMS = {}
 
-local function getRagdollParts(Character)
-	local parts = {}
-	for _, v in Character:GetDescendants() do
-		if v:IsA("BasePart") and not v.Name:find("Hitbox_") then
-			table.insert(parts, v)
-		end
-	end
-	return parts
-end
+local function TakeNetworkOwnership(RootPart: BasePart): Player?
+	local OriginalOwner: Player? = nil
 
-local function applyRagdollVelocity(Character, Velocity, MaxForce, Time)
-	pcall(function()
-		Character.HumanoidRootPart:SetNetworkOwner(nil)
+	local Ok, CurrentOwner = pcall(function()
+		return RootPart:GetNetworkOwner()
 	end)
 
-	for _, part in getRagdollParts(Character) do
-		pcall(function()
-			part:SetNetworkOwner(nil)
-		end)
-
-		local bv = Instance.new("BodyVelocity")
-		bv.MaxForce = MaxForce
-		bv.Velocity = Velocity
-		bv.P = 10000
-		bv.Parent = part
-
-		Debris:AddItem(bv, Time or 0.3)
+	if Ok then
+		OriginalOwner = CurrentOwner
 	end
+
+	pcall(function()
+		if RootPart:CanSetNetworkOwnership() then
+			RootPart:SetNetworkOwner(nil)
+		end
+	end)
+
+	return OriginalOwner
 end
 
-function BMS:Knockback(Character, Data)
-	if not Data.Velocity and not Data.Position then
+local function RestoreNetworkOwnership(Character: Model, OriginalOwner: Player?)
+	if not Character or not Character.Parent then
 		return
 	end
 
-	local Bodymover
+	if Character:HasTag("Ragdolled") or Character:FindFirstChild("Ragdoll") then
+		return
+	end
+
+	local RootPart = Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not RootPart or not RootPart.Parent then
+		return
+	end
+
+	pcall(function()
+		if RootPart:CanSetNetworkOwnership() then
+			RootPart:SetNetworkOwner(OriginalOwner)
+		end
+	end)
+end
+
+function BMS:Knockback(Character: Model, Data: KnockbackData): BodyMover?
+	if not Data.Velocity and not Data.Position then
+		return nil
+	end
 
 	Data.MaxForce = Data.MaxForce or Vector3.new(math.huge, math.huge, math.huge)
 
 	RemoteManager.FireAllClients("ReplicateTask", "RemoveAllBodyMovers", Character)
-	for _, BodyMover: BodyVelocity in Character:GetDescendants() do
+	for _, BodyMover in Character:GetDescendants() do
 		if BodyMover:IsA("BodyVelocity") or BodyMover:IsA("LinearVelocity") or BodyMover:IsA("BodyPosition") then
 			BodyMover:Destroy()
 		end
 	end
 
+	local RootPart = Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local OriginalOwner: Player? = nil
+
+	if RootPart then
+		local Player = Data.Owner or Players:GetPlayerFromCharacter(Character)
+		OriginalOwner = Player
+		TakeNetworkOwnership(RootPart)
+	end
+
+	local Bodymover: BodyMover
+
 	if Data.KnockbackType == "Velocity" or not Data.KnockbackType then
-		Bodymover = Instance.new("BodyVelocity")
-		Bodymover.MaxForce = Data.MaxForce
-		Bodymover.Velocity = Data.Velocity
+		local Velocity = Instance.new("BodyVelocity")
+		Velocity.MaxForce = Data.MaxForce
+		Velocity.Velocity = Data.Velocity :: Vector3
 		if Data.P then
-			Bodymover.P = Data.P
+			Velocity.P = Data.P
 		end
 		if Data.D then
-			Bodymover.D = Data.D
+			Velocity.D = Data.D
 		end
+		Bodymover = Velocity
 	elseif Data.KnockbackType == "Position" then
-		Bodymover = Instance.new("BodyPosition")
-		Bodymover.MaxForce = Data.MaxForce
-		Bodymover.Position = Data.Position
+		local Position = Instance.new("BodyPosition")
+		Position.MaxForce = Data.MaxForce
+		Position.Position = Data.Position :: Vector3
 		if Data.P then
-			Bodymover.P = Data.P
+			Position.P = Data.P
 		end
 		if Data.D then
-			Bodymover.D = Data.D
+			Position.D = Data.D
 		end
+		Bodymover = Position
 	elseif Data.KnockbackType == "Linear" then
-		Bodymover = Instance.new("LinearVelocity")
-		Bodymover.ForceLimitMode = Enum.ForceLimitMode.PerAxis
-		Bodymover.MaxAxesForce = Data.MaxForce
-		Bodymover.VectorVelocity = Data.Velocity
+		local Linear = Instance.new("LinearVelocity")
+		Linear.ForceLimitMode = Enum.ForceLimitMode.PerAxis
+		Linear.MaxAxesForce = Data.MaxForce
+		Linear.VectorVelocity = Data.Velocity :: Vector3
 		if Data.P then
-			Bodymover.P = Data.P
+			Linear.P = Data.P
 		end
 		if Data.D then
-			Bodymover.D = Data.D
+			Linear.D = Data.D
 		end
-		Bodymover.Attachment0 = Character.HumanoidRootPart.RootAttachment
+		Linear.Attachment0 = (Character.HumanoidRootPart :: BasePart).RootAttachment
+		Bodymover = Linear
 	elseif Data.KnockbackType == "VelocityTweenDown" then
-		Bodymover = Instance.new("BodyVelocity")
-		Bodymover.MaxForce = Data.MaxForce
+		local Velocity = Instance.new("BodyVelocity")
+		Velocity.MaxForce = Data.MaxForce
 		if Data.P then
-			Bodymover.P = Data.P
+			Velocity.P = Data.P
 		end
 		if Data.D then
-			Bodymover.D = Data.D
+			Velocity.D = Data.D
 		end
 
-		local easingStyle = Enum.EasingStyle[Data.Style or "Sine"]
-		local easingDirection = Enum.EasingDirection[Data.Direction or "Out"]
+		local EasingStyle = Enum.EasingStyle[Data.Style or "Sine"]
+		local EasingDirection = Enum.EasingDirection[Data.Direction or "Out"]
 
 		if Data.Inverse == true then
-			Bodymover.Velocity = Vector3.zero
-
-			TS:Create(Bodymover, TweenInfo.new(Data.Time, easingStyle, easingDirection), { Velocity = Data.Velocity })
+			Velocity.Velocity = Vector3.zero
+			TS
+				:Create(
+					Velocity,
+					TweenInfo.new(Data.Time or 0, EasingStyle, EasingDirection),
+					{ Velocity = Data.Velocity }
+				)
 				:Play()
 		else
-			Bodymover.Velocity = Data.Velocity
-			TS:Create(Bodymover, TweenInfo.new(Data.Time, easingStyle, easingDirection), { Velocity = Vector3.zero })
+			Velocity.Velocity = Data.Velocity :: Vector3
+			TS
+				:Create(
+					Velocity,
+					TweenInfo.new(Data.Time or 0, EasingStyle, EasingDirection),
+					{ Velocity = Vector3.zero }
+				)
 				:Play()
 		end
+
+		Bodymover = Velocity
+	else
+		if RootPart then
+			RestoreNetworkOwnership(Character, OriginalOwner)
+		end
+		return nil
 	end
 
 	if Character:FindFirstChild("Humanoid") then
@@ -113,37 +168,38 @@ function BMS:Knockback(Character, Data)
 	else
 		Bodymover.Parent = Character
 
-		if typeof(Data.Owner) == "Player" then
+		if typeof(Data.Owner) == "Instance" and Data.Owner:IsA("Player") then
 			Character:SetNetworkOwner(Data.Owner)
 		end
 	end
 
 	if Data.ApplyAngular then
-		local BasePart: BasePart = Character:FindFirstChild("HumanoidRootPart") or Character
-		if BasePart:IsA("BasePart") then
-			BasePart.AssemblyAngularVelocity =
-				Vector3.new(math.random(-270, 270), math.random(-270, 270), math.random(-270, 270))
-		end
+		local BasePart = (Character:FindFirstChild("HumanoidRootPart") or Character) :: BasePart
+		BasePart.AssemblyAngularVelocity =
+			Vector3.new(math.random(-270, 270), math.random(-270, 270), math.random(-270, 270))
 	end
 
-	if Data.Time then
-		Debris:AddItem(Bodymover, Data.Time)
-	else
-		Debris:AddItem(Bodymover, 0.1)
+	local Duration = Data.Time or 0.1
+	Debris:AddItem(Bodymover, Duration)
+
+	if RootPart then
+		task.delay(Duration, function()
+			RestoreNetworkOwnership(Character, OriginalOwner)
+		end)
 	end
 
 	return Bodymover
 end
 
-function BMS:makeEnemyFaceCharacter(Enemy, Character, to)
-	if to == true then
-		Enemy.HumanoidRootPart.CFrame =
-			CFrame.lookAt(Enemy.HumanoidRootPart.Position, Character.HumanoidRootPart.Position)
+function BMS:makeEnemyFaceCharacter(Enemy: Model, Character: Model, To: boolean?)
+	local EnemyRoot = Enemy.HumanoidRootPart :: BasePart
+	local CharacterRoot = Character.HumanoidRootPart :: BasePart
+
+	if To == true then
+		EnemyRoot.CFrame = CFrame.lookAt(EnemyRoot.Position, CharacterRoot.Position)
 	else
-		Enemy.HumanoidRootPart.CFrame = CFrame.lookAlong(
-			Enemy.HumanoidRootPart.Position,
-			Character.HumanoidRootPart.CFrame.LookVector
-		) * CFrame.Angles(0, math.pi, 0)
+		EnemyRoot.CFrame = CFrame.lookAlong(EnemyRoot.Position, CharacterRoot.CFrame.LookVector)
+			* CFrame.Angles(0, math.pi, 0)
 	end
 end
 

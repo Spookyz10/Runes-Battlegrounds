@@ -7,7 +7,7 @@ local SvModules = ServerStorage.Modules
 local StunHandler = require(SvModules.StunHandler)
 local iFramesService = require(SvModules.iFramesService)
 local AnimationService = require(SvModules.AnimationService)
-local HitboxHandler = require(SvModules.HitboxHandler)
+
 local ReplicatedHitboxes = require(SvModules.ReplicatedHitboxes)
 local DamageHandler = require(SvModules.DamageHandler)
 local StatusEffectHandler = require(SvModules.StatusEffectHandler)
@@ -21,18 +21,21 @@ local Configs = require(script.Configs)
 
 local DashHandler = {}
 
+local DASH_HIT_SANITY_TOLERANCE = 15
+
 local function getConfig(Player, Direction)
 	local Moveset = Player:GetAttribute("Moveset") or "Default"
 	local MovesetConfigs = Configs[Moveset] or Configs.Default
 	return MovesetConfigs[Direction]
 end
 
-local function runAttackDash(Player, Character, HumRP, Humanoid, Config)
+local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, Humanoid: Humanoid, Config)
 	local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
 	local Hit = false
 	local Ended = false
 	local DashHitbox
 	local DashResumed = false
+	local HitList = {}
 
 	local Animation = Config.Animation()
 	local AnimTrack, AnimEvents = AnimationService:getAnimationTrack(Character, Animation)
@@ -75,7 +78,7 @@ local function runAttackDash(Player, Character, HumRP, Humanoid, Config)
 		end
 	end
 
-	local function resumeDash(WasHit)
+	local function resumeDash(WasHit: boolean)
 		if Ended or DashResumed then
 			return
 		end
@@ -89,6 +92,61 @@ local function runAttackDash(Player, Character, HumRP, Humanoid, Config)
 		if Velocity and Velocity.Parent then
 			Velocity:Destroy()
 		end
+	end
+
+	local function applyHit(EnemyCharacter: Model)
+		if Ended or HitList[EnemyCharacter] then
+			return
+		end
+
+		local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid") :: Humanoid?
+		local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if not EnemyHumanoid or not EnemyHumRP or EnemyHumanoid.Health <= 0 then
+			return
+		end
+
+		if not HumRP or not HumRP.Parent then
+			return
+		end
+
+		local Distance = (EnemyHumRP.Position - HumRP.Position).Magnitude
+		local MaxSanityDistance = Config.Hitbox.Size.Z + DASH_HIT_SANITY_TOLERANCE
+
+		if Distance > MaxSanityDistance then
+			return
+		end
+
+		if iFramesService:HasiFrame(EnemyCharacter, 1) then
+			return
+		end
+
+		HitList[EnemyCharacter] = true
+
+		local HitAnims = Config.HitAnimations and Config.HitAnimations()
+		SFXModule:Play(Config.HitSound or "Hit", HumRP)
+
+		local HitInfo = DamageHandler:TakeDamage(
+			Character,
+			EnemyHumanoid,
+			Config.Damage,
+			Config.StunTime,
+			HitAnims and HitAnims[tostring(math.random(1, 3))],
+			true,
+			true,
+			true
+		)
+
+		if HitInfo.Countered then
+			return
+		end
+
+		Hit = true
+
+		resumeDash(true)
+
+		task.delay(0.05, function()
+			StunHandler:Unstun(Character, Stun)
+		end)
 	end
 
 	table.insert(
@@ -106,9 +164,7 @@ local function runAttackDash(Player, Character, HumRP, Humanoid, Config)
 			DashHitbox.Size = Config.Hitbox.Size
 			DashHitbox.Offset = Config.Hitbox.Offset
 			DashHitbox.Ignore = { Character }
-			DashHitbox.onTouch = function()
-				resumeDash(true)
-			end
+			DashHitbox.onTouch = applyHit
 			DashHitbox.onTimeout = function()
 				resumeDash(false)
 			end
@@ -120,53 +176,6 @@ local function runAttackDash(Player, Character, HumRP, Humanoid, Config)
 		AnimEvents,
 		AnimTrack:GetMarkerReachedSignal("freeze"):Once(function()
 			AnimTrack:AdjustSpeed(0)
-		end)
-	)
-
-	table.insert(
-		AnimEvents,
-		AnimTrack:GetMarkerReachedSignal("hit"):Once(function()
-			local HitAnims = Config.HitAnimations and Config.HitAnimations()
-			SFXModule:Play(Config.HitSound or "Hit", HumRP)
-
-			HitboxHandler:SimpleOnce(
-				HumRP,
-				Config.Hitbox.Size,
-				Config.Hitbox.Offset,
-				{ Character },
-				nil,
-				nil,
-				function(EnemyCharacter)
-					local EnemyHumanoid = EnemyCharacter.Humanoid
-
-					if EnemyHumanoid.Health <= 0 or iFramesService:HasiFrame(EnemyCharacter, 1) then
-						return
-					end
-
-					local HitInfo = DamageHandler:TakeDamage(
-						Character,
-						EnemyHumanoid,
-						Config.Damage,
-						Config.StunTime,
-						HitAnims and HitAnims[tostring(math.random(1, 3))],
-						true,
-						true,
-						true
-					)
-
-					if HitInfo.Countered then
-						return
-					end
-
-					Hit = true
-				end
-			)
-
-			if Hit then
-				task.delay(0.05, function()
-					StunHandler:Unstun(Character, Stun)
-				end)
-			end
 		end)
 	)
 
