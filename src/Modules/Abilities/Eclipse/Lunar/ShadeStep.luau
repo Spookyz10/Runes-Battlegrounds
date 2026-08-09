@@ -74,6 +74,12 @@ return {
 			cleanupDone = true
 			Humanoid.WalkSpeed = 16
 
+			RemoteManager.FireAllClients(
+				"ReplicateTask",
+				"ShadestepBegin",
+				{ func = "ShadestepBeginEnd", char = Character }
+			)
+
 			if activeStun then
 				StunHandler:Unstun(Character, activeStun)
 				activeStun = nil

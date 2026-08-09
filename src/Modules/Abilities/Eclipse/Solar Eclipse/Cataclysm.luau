@@ -88,6 +88,7 @@ return {
 				CasterLocked = false
 			end
 
+			RemoteManager.FireAllClients("ReplicateTask", "CataclysmWindup", { func = "Stop", char = Character })
 			iFramesService:RemoveiFrames(Character, "Strong")
 			StunHandler:Unstun(Character, CasterStun)
 

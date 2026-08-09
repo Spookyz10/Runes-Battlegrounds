@@ -3,7 +3,11 @@ local Debris = Constants.Debris
 local ParticlesModule = Constants.ParticlesModule
 local CharacterAssets = Constants.CharacterAssets
 
-return function(Params)
+local ACTIVE = {}
+
+local Handlers = {}
+
+function Handlers.Start(Params)
 	local Character = Params.char
 	if not Character or not Character.Parent then
 		return
@@ -24,6 +28,26 @@ return function(Params)
 	Clone.WorldPosition = HumRP.Position + Vector3.new(0, -3, 0)
 
 	ParticlesModule.Emit(Clone)
-
+	ACTIVE[Character] = Clone
 	Debris:AddItem(Clone, 5)
+end
+
+function Handlers.Stop(Params)
+	local Character = Params.char
+	if not Character then
+		return
+	end
+
+	local Clone = ACTIVE[Character]
+	if Clone and Clone.Parent then
+		Clone:Destroy()
+	end
+	ACTIVE[Character] = nil
+end
+
+return function(Params)
+	local Handler = Handlers[Params.func or "Start"]
+	if Handler then
+		Handler(Params)
+	end
 end

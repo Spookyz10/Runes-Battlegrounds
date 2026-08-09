@@ -55,6 +55,7 @@ return {
 				return
 			end
 			cancelled = true
+			RemoteManager.FireAllClients("ReplicateTask", "SunquakeVFX", { func = "Stop", char = Character })
 			if UserTrack and UserTrack.IsPlaying then
 				UserTrack:Stop()
 			end
@@ -182,6 +183,7 @@ return {
 				v:Disconnect()
 			end
 
+			RemoteManager.FireAllClients("ReplicateTask", "SunquakeVFX", { func = "Stop", char = Character })
 			SkillCancelHandler:Unregister(Character, onDamageCancel)
 			StunHandler:Unstun(Character, Stun)
 		end)

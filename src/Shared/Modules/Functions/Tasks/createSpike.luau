@@ -8,15 +8,20 @@ local EMERGE_TIME = 0.25
 local KEEP_TIME = 0.5
 local SINK_TIME = 0.5
 
+local ACTIVE = {}
+
 local function easeOutBack(t)
 	local c1 = 1.70158
 	local c3 = c1 + 1
 	return 1 + c3 * (t - 1) ^ 3 + c1 * (t - 1) ^ 2
 end
 
-return function(Params)
+local Handlers = {}
+
+function Handlers.Start(Params)
 	local Position = Params.Position
 	local Scale = Params.Scale or 1
+	local Id = Params.id
 
 	if not Position then
 		return
@@ -30,6 +35,11 @@ return function(Params)
 	local Spike = SpikeAsset:Clone()
 	Spike.Parent = workspace.Debris
 	Spike:ScaleTo(Scale)
+
+	if Id then
+		ACTIVE[Id] = ACTIVE[Id] or {}
+		table.insert(ACTIVE[Id], Spike)
+	end
 
 	local restCFrame = CFrame.new(Position)
 	local depth = Spike:GetExtentsSize().Y
@@ -78,4 +88,31 @@ return function(Params)
 	end)
 
 	Debris:AddItem(Spike, EMERGE_TIME + KEEP_TIME + SINK_TIME + 0.2)
+end
+
+function Handlers.Stop(Params)
+	local Id = Params.id
+	if not Id then
+		return
+	end
+
+	local List = ACTIVE[Id]
+	if not List then
+		return
+	end
+
+	for _, Spike in ipairs(List) do
+		if Spike and Spike.Parent then
+			Spike:Destroy()
+		end
+	end
+
+	ACTIVE[Id] = nil
+end
+
+return function(Params)
+	local Handler = Handlers[Params.func or "Start"]
+	if Handler then
+		Handler(Params)
+	end
 end

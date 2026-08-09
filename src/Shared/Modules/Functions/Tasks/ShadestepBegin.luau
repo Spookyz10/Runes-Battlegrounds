@@ -29,7 +29,7 @@ function Handlers.ShadestepBeginStart(params)
 	savedTransparencies[char] = {}
 
 	for _, part in char:GetDescendants() do
-		if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" and not string.find("Hitbox", part.Name) then
+		if part:IsA("BasePart") and not string.find(part.Name, "Hitbox") then
 			savedTransparencies[char][part] = part.Transparency
 			part.Transparency = SHADOW_TRANSPARENCY
 		end

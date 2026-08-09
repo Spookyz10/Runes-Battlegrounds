@@ -1,5 +1,6 @@
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
@@ -46,6 +47,7 @@ return {
 
 		local casterStun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
 		local cancelled = false
+		local pullHappened = false
 		local onDamageCancel
 
 		local grabbed = {}
@@ -60,6 +62,7 @@ return {
 
 			local EnemyHum = enemyChar:FindFirstChild("Humanoid")
 			local EnemyHumRP = enemyChar:FindFirstChild("HumanoidRootPart")
+			local EnemyPlayer = Players:GetPlayerFromCharacter(enemyChar)
 
 			if not EnemyHum or not EnemyHumRP then
 				return
@@ -117,6 +120,7 @@ return {
 			grabbed[enemyChar] = {
 				humanoid = EnemyHum,
 				freezeToken = freezeToken,
+				player = EnemyPlayer,
 			}
 		end
 
@@ -146,6 +150,12 @@ return {
 						EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
 						Hum.PlatformStand = false
 						Hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+
+						if data.player then
+							pcall(function()
+								EnemyHumRP:SetNetworkOwner(data.player)
+							end)
+						end
 					end
 					if data.freezeToken then
 						StunHandler:Unstun(enemyChar, data.freezeToken)
@@ -261,6 +271,7 @@ return {
 		table.insert(
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("pull"):Once(function()
+				pullHappened = true
 				stopHand()
 
 				local lv = HumRP.CFrame.LookVector
@@ -330,7 +341,7 @@ return {
 			end
 
 			stopHand()
-			releaseGrabbed(POST_PULL_STUN_EXTRA)
+			releaseGrabbed(pullHappened and POST_PULL_STUN_EXTRA or 0)
 			doFullCleanup()
 		end)
 

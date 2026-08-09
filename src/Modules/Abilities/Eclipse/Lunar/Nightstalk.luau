@@ -49,6 +49,7 @@ return {
 		Character:AddTag("CantRotate")
 		local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
 		local onDamageCancel
+		local cancelled = false
 
 		if not Character.Parent then
 			Character:RemoveTag("CantRotate")
@@ -207,6 +208,7 @@ return {
 				return
 			end
 			cleanedUp = true
+			cancelled = true
 
 			despawnCircle(initialCircleId)
 
@@ -222,6 +224,10 @@ return {
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
 
 		onDamageCancel = function()
+			if cancelled then
+				return
+			end
+			cancelled = true
 			if UserTrack and UserTrack.IsPlaying then
 				UserTrack:Stop()
 			end
@@ -234,14 +240,13 @@ return {
 		table.insert(
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("onGround"):Once(function()
-				SkillCancelHandler:Unregister(Character, onDamageCancel)
 				iFramesService:AddBaseiFrames(Character)
 
 				task.spawn(function()
 					UserTrack:AdjustSpeed(0)
 
 					for index, stage in SPIKE_STAGES do
-						if not Character.Parent then
+						if cancelled or not Character.Parent then
 							return
 						end
 
@@ -252,7 +257,7 @@ return {
 						end
 					end
 
-					if UserTrack then
+					if UserTrack and not cancelled then
 						UserTrack:AdjustSpeed(2)
 					end
 				end)
