@@ -68,6 +68,7 @@ local function runAttackDash(Player, Character, HumRP, Humanoid, Config)
 	local function killVelocity()
 		if Velocity and Velocity.Parent then
 			Velocity.Velocity = Vector3.new()
+			Velocity.MaxForce = Vector3.new()
 		end
 		if HumRP and HumRP.Parent then
 			HumRP.AssemblyLinearVelocity = Vector3.new(0, HumRP.AssemblyLinearVelocity.Y, 0)
@@ -83,13 +84,10 @@ local function runAttackDash(Player, Character, HumRP, Humanoid, Config)
 		AnimTrack:AdjustSpeed(1)
 		destroyDashHitbox()
 
-		if WasHit then
-			task.delay(0.1, function()
-				if Ended then
-					return
-				end
-				killVelocity()
-			end)
+		killVelocity()
+
+		if Velocity and Velocity.Parent then
+			Velocity:Destroy()
 		end
 	end
 

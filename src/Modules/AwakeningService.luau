@@ -182,9 +182,7 @@ local function doActivate(Player: Player, Bypass: boolean?)
 		Handler(Player)
 	end
 
-	task.delay(0.5, function()
-		MovesetHandler:AddAwakeningMoveset(Player, Player:GetAttribute("Moveset"))
-	end)
+	MovesetHandler:AddAwakeningMoveset(Player, Player:GetAttribute("Moveset"))
 
 	iFramesHandler:RemoveAlliFrames(Character)
 
