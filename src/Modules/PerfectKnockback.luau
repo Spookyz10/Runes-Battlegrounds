@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
 local ServerStorage = game:GetService("ServerStorage")
 local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 
 local SvModules = ServerStorage.Modules
 
@@ -44,6 +45,8 @@ type ActiveData = {
 	Collision: RBXScriptConnection?,
 	StoppedConnection: RBXScriptConnection?,
 	DamageConn: RBXScriptConnection?,
+	OriginalOwner: Player?,
+	OwnerRestored: boolean,
 }
 
 Perfect.Active = {} :: { [Model]: ActiveData }
@@ -106,6 +109,24 @@ local function disconnectActive(ActiveData: ActiveData)
 	end
 end
 
+local function restoreOwnership(EnemyCharacter: Model, ActiveData: ActiveData)
+	if ActiveData.OwnerRestored then
+		return
+	end
+	ActiveData.OwnerRestored = true
+
+	local HumanoidRootPart = EnemyCharacter:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not HumanoidRootPart or not HumanoidRootPart.Parent then
+		return
+	end
+
+	pcall(function()
+		if HumanoidRootPart:CanSetNetworkOwnership() then
+			HumanoidRootPart:SetNetworkOwner(ActiveData.OriginalOwner)
+		end
+	end)
+end
+
 local function finishKnockback(EnemyCharacter: Model, ActiveData: ActiveData)
 	if Perfect.Active[EnemyCharacter] ~= ActiveData then
 		return
@@ -126,6 +147,7 @@ local function finishKnockback(EnemyCharacter: Model, ActiveData: ActiveData)
 	EnemyCharacter:RemoveTag("CantRotate")
 	EnemyCharacter:RemoveTag("Knockbacked")
 
+	restoreOwnership(EnemyCharacter, ActiveData)
 	resetHumanoidState(EnemyCharacter)
 end
 
@@ -168,6 +190,7 @@ function Perfect:Cancel(EnemyCharacter: Model)
 	EnemyCharacter:RemoveTag("CantRotate")
 	EnemyCharacter:RemoveTag("Knockbacked")
 
+	restoreOwnership(EnemyCharacter, Data)
 	resetHumanoidState(EnemyCharacter)
 end
 
@@ -248,6 +271,20 @@ function Perfect:KnockBack(_, EnemyCharacter: Model, Params: KnockbackParams, Ch
 		return
 	end
 
+	local OriginalOwner: Player? = nil
+	local ok, currentOwner = pcall(function()
+		return HumanoidRootPart:GetNetworkOwner()
+	end)
+	if ok then
+		OriginalOwner = currentOwner
+	end
+
+	pcall(function()
+		if HumanoidRootPart:CanSetNetworkOwnership() then
+			HumanoidRootPart:SetNetworkOwner(nil)
+		end
+	end)
+
 	local Touched = false
 	local StartTime = os.clock()
 	local GroundContactStart = nil
@@ -265,6 +302,11 @@ function Perfect:KnockBack(_, EnemyCharacter: Model, Params: KnockbackParams, Ch
 	if not KnockbackTrack then
 		warn("[PerfectKB] KnockbackTrack is nil for", EnemyCharacter.Name, "— animation not loaded?")
 		StunHandler:Unstun(EnemyCharacter, EnemyStun)
+		pcall(function()
+			if HumanoidRootPart:CanSetNetworkOwnership() then
+				HumanoidRootPart:SetNetworkOwner(OriginalOwner)
+			end
+		end)
 		return
 	end
 
@@ -321,6 +363,8 @@ function Perfect:KnockBack(_, EnemyCharacter: Model, Params: KnockbackParams, Ch
 		Collision = nil,
 		StoppedConnection = nil,
 		DamageConn = nil,
+		OriginalOwner = OriginalOwner,
+		OwnerRestored = false,
 	}
 	Perfect.Active[EnemyCharacter] = ActiveData
 
@@ -427,7 +471,7 @@ function Perfect:KnockBack(_, EnemyCharacter: Model, Params: KnockbackParams, Ch
 	Collision = RunService.Heartbeat:Connect(function()
 		local FinalTime = os.clock() - StartTime
 
-		if EnemyCharacter:GetAttribute("Stunned") == false or not EnemyCharacter.Parent then
+		if not EnemyStun or not EnemyStun.Parent or not EnemyCharacter.Parent then
 			Collision:Disconnect()
 			impact(0)
 			return

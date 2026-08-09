@@ -425,8 +425,8 @@ function module:Activate(Player)
 	AnimationService:playAnimation(Character, LunarEclipseAnim)
 	AnimTrack.Stopped:Wait()
 
-	RemoteManager.FireAllClients("ReplicateTask", "ShowHotbar")
-	RemoteManager.FireAllClients("ReplicateTask", "ShowAwkbar")
+	RemoteManager.FireClient(Player, "ReplicateTask", "ShowHotbar")
+	RemoteManager.FireClient(Player, "ReplicateTask", "ShowAwkBar")
 end
 
 return module

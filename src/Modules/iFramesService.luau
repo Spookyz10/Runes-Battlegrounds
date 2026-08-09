@@ -1,5 +1,9 @@
 local module = {}
 
+local Players = game:GetService("Players")
+
+local SPAWN_IFRAME_DURATION = 5
+
 function module:HasiFrame(Character, pierceLevel)
 	local current = Character:GetAttribute("iFrames") or 0
 	if current <= 0 then
@@ -62,6 +66,40 @@ end
 
 function module:GetLevel(Character)
 	return Character:GetAttribute("iFrames") or 0
+end
+
+local function grantSpawnProtection(Character)
+	local Token = {}
+	Character:SetAttribute("SpawnProtectionToken", tick())
+	local ThisToken = Character:GetAttribute("SpawnProtectionToken")
+
+	module:AddAlliFrames(Character)
+
+	task.delay(SPAWN_IFRAME_DURATION, function()
+		if not Character or not Character.Parent then
+			return
+		end
+		if Character:GetAttribute("SpawnProtectionToken") ~= ThisToken then
+			return
+		end
+		module:RemoveAlliFrames(Character)
+	end)
+end
+
+Players.PlayerAdded:Connect(function(Player)
+	Player.CharacterAdded:Connect(function(Character)
+		grantSpawnProtection(Character)
+	end)
+end)
+
+for _, Player in Players:GetPlayers() do
+	Player.CharacterAdded:Connect(function(Character)
+		grantSpawnProtection(Character)
+	end)
+
+	if Player.Character then
+		grantSpawnProtection(Player.Character)
+	end
 end
 
 return module

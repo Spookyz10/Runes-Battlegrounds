@@ -51,7 +51,7 @@ local function startExplosionField(Character, Position)
 	RemoteManager.FireAllClients("ReplicateTask", "SolarAwakenExplosion", {
 		func = "Start",
 		id = Player.UserId,
-		position = Position,
+		position = Position + Vector3.new(0, 200, 0),
 	})
 
 	local CylinderPart = Instance.new("Part")
@@ -128,17 +128,23 @@ local function startExplosionField(Character, Position)
 				nil
 			)
 			RagdollHandler.ragdoll(EnemyHumanoid, RAGDOLL_DURATION)
-			KnockbackService:Knockback(
-				EnemyCharacter,
-				Vector3.new(0, EXPLOSION_KNOCKUP, 0),
-				nil,
-				nil,
-				nil,
-				nil,
-				nil,
-				false,
-				false
-			)
+
+			task.defer(function()
+				if not EnemyCharacter or not EnemyCharacter.Parent then
+					return
+				end
+				KnockbackService:Knockback(
+					EnemyCharacter,
+					Vector3.new(0, EXPLOSION_KNOCKUP, 0),
+					nil,
+					nil,
+					nil,
+					nil,
+					nil,
+					false,
+					false
+				)
+			end)
 		end
 	end)
 
@@ -206,6 +212,7 @@ function module:Activate(Player)
 	table.insert(
 		AnimEvents,
 		AnimTrack:GetMarkerReachedSignal("jump"):Connect(function()
+			task.wait(0.1)
 			RemoteManager.FireAllClients("ReplicateTask", "SolarAwakenStart", { char = Character })
 			RemoteManager.FireAllClients("ReplicateTask", "SolarImpact", { char = Character })
 			SFXModule:Play("EclipseImpact", HumRP.Position)
@@ -291,8 +298,8 @@ function module:Activate(Player)
 	RemoteManager.FireClient(Player, "Cutscenes", "SolarAwaken", "Start", { Offset = CFrame.new(0, -3, 0) })
 	AnimTrack.Stopped:Wait()
 	Character:RemoveTag("CantRotate")
-	RemoteManager.FireAllClients("ReplicateTask", "ShowHotbar")
-	RemoteManager.FireAllClients("ReplicateTask", "ShowAwkbar")
+	RemoteManager.FireClient(Player, "ReplicateTask", "ShowHotbar")
+	RemoteManager.FireClient(Player, "ReplicateTask", "ShowAwkBar")
 end
 
 return module
