@@ -50,7 +50,9 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 
 	local function destroyDashHitbox()
 		if DashHitbox then
-			DashHitbox:Destroy()
+			pcall(function()
+				DashHitbox:Destroy()
+			end)
 			DashHitbox = nil
 		end
 	end
@@ -158,6 +160,17 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 
 			Velocity.Parent = HumRP
 			Debris:AddItem(Velocity, 0.85)
+		end)
+	)
+
+	table.insert(
+		AnimEvents,
+		AnimTrack:GetMarkerReachedSignal("freeze"):Once(function()
+			if Ended then
+				return
+			end
+
+			AnimTrack:AdjustSpeed(0)
 
 			DashHitbox = ReplicatedHitboxes.new(Player)
 			DashHitbox.Instance = HumRP
@@ -174,8 +187,24 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 
 	table.insert(
 		AnimEvents,
-		AnimTrack:GetMarkerReachedSignal("freeze"):Once(function()
-			AnimTrack:AdjustSpeed(0)
+		AnimTrack:GetMarkerReachedSignal("hit"):Once(function()
+			if Ended then
+				return
+			end
+
+			destroyDashHitbox()
+
+			DashHitbox = ReplicatedHitboxes.new(Player)
+			DashHitbox.Instance = HumRP
+			DashHitbox.Size = Config.Hitbox.Size
+			DashHitbox.Offset = Config.Hitbox.Offset
+			DashHitbox.Ignore = { Character }
+			DashHitbox.onTouch = applyHit
+			DashHitbox:Once()
+
+			task.delay(0.15, function()
+				destroyDashHitbox()
+			end)
 		end)
 	)
 

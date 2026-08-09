@@ -14,6 +14,7 @@ local AnimationService = require(SvModules.AnimationService)
 local KnockbackService = require(SvModules.BodymoverService)
 local RagdollHandler = require(SvModules.RagdollHandler)
 local AirDetectionService = require(SvModules.AirDetectionService)
+local CombatEvents = require(SvModules.CombatEvents)
 
 local Assets = ServerStorage.Assets
 local Animations = Assets.Animations
@@ -47,15 +48,13 @@ type ActiveData = {
 	DamageConn: RBXScriptConnection?,
 	OriginalOwner: Player?,
 	OwnerRestored: boolean,
+	StartTime: number,
 }
 
 Perfect.Active = {} :: { [Model]: ActiveData }
 
 local MAX_AIR_TIME = 10
-
-local function DebugLog(EnemyCharacter: Model, ...)
-	print("[PerfectKB DEBUG]", EnemyCharacter.Name, ...)
-end
+local IGNORE_DAMAGE_WINDOW = 0.05
 
 local function resetHumanoidState(EnemyCharacter: Model)
 	local Humanoid = EnemyCharacter:FindFirstChild("Humanoid") :: Humanoid?
@@ -161,8 +160,6 @@ function Perfect:Cancel(EnemyCharacter: Model)
 		return
 	end
 
-	DebugLog(EnemyCharacter, "Cancel() called, stopping active knockback")
-
 	Perfect.Active[EnemyCharacter] = nil
 
 	if Data.Collision then
@@ -220,7 +217,6 @@ end
 
 RagdollHandler.RegisterActiveKnockbackCanceller(function(Character: Model)
 	if Perfect.Active[Character] then
-		DebugLog(Character, "RagdollHandler active-knockback canceller fired, cancelling")
 		Perfect:Cancel(Character)
 	end
 end)
@@ -240,19 +236,8 @@ function Perfect:KnockBack(_, EnemyCharacter: Model, Params: KnockbackParams, Ch
 		return
 	end
 
-	local IsDummy = EnemyCharacter:FindFirstChild("Dummy") ~= nil
-	DebugLog(
-		EnemyCharacter,
-		"KnockBack() start, IsDummy =",
-		IsDummy,
-		"HasTag Ragdolled =",
-		EnemyCharacter:HasTag("Ragdolled")
-	)
-
 	if EnemyCharacter:HasTag("Ragdolled") then
-		DebugLog(EnemyCharacter, "calling RagdollHandler.cancelRagdoll before knockback")
 		RagdollHandler.cancelRagdoll(EnemyHumanoid, nil, false, nil, false, true, true)
-		DebugLog(EnemyCharacter, "after cancelRagdoll, HasTag Ragdolled =", EnemyCharacter:HasTag("Ragdolled"))
 	end
 
 	Perfect:Cancel(EnemyCharacter)
@@ -286,7 +271,6 @@ function Perfect:KnockBack(_, EnemyCharacter: Model, Params: KnockbackParams, Ch
 	Params.Escapable = Params.Escapable ~= false
 
 	if EnemyHumanoid.Health <= 0 then
-		DebugLog(EnemyCharacter, "aborting, Health <= 0")
 		return
 	end
 
@@ -297,18 +281,12 @@ function Perfect:KnockBack(_, EnemyCharacter: Model, Params: KnockbackParams, Ch
 	if Ok then
 		OriginalOwner = CurrentOwner
 	end
-	DebugLog(EnemyCharacter, "OriginalOwner =", OriginalOwner and OriginalOwner.Name or "nil (server)")
 
 	pcall(function()
 		if HumanoidRootPart:CanSetNetworkOwnership() then
 			HumanoidRootPart:SetNetworkOwner(nil)
 		end
 	end)
-	DebugLog(
-		EnemyCharacter,
-		"SetNetworkOwner(nil) attempted, CanSetNetworkOwnership =",
-		HumanoidRootPart:CanSetNetworkOwnership()
-	)
 
 	local Touched = false
 	local StartTime = os.clock()
@@ -322,8 +300,6 @@ function Perfect:KnockBack(_, EnemyCharacter: Model, Params: KnockbackParams, Ch
 	local EnemyStun = StunHandler:Stun(EnemyCharacter, nil, true, 0, 0, true)
 
 	local KnockbackAnimation = Animations.Other.Knockback
-
-	DebugLog(EnemyCharacter, "HasTag Ragdolled right before getAnimationTrack =", EnemyCharacter:HasTag("Ragdolled"))
 
 	local KnockbackTrack, KnockbackEvents = AnimationService:getAnimationTrack(EnemyCharacter, KnockbackAnimation)
 
@@ -393,21 +369,26 @@ function Perfect:KnockBack(_, EnemyCharacter: Model, Params: KnockbackParams, Ch
 		DamageConn = nil,
 		OriginalOwner = OriginalOwner,
 		OwnerRestored = false,
+		StartTime = StartTime,
 	}
 	Perfect.Active[EnemyCharacter] = ActiveData
 
-	ActiveData.DamageConn = EnemyHumanoid.HealthChanged:Connect(function()
+	ActiveData.DamageConn = CombatEvents.DamageDealt:Connect(function(_, Damaged, _, _)
 		if Perfect.Active[EnemyCharacter] ~= ActiveData then
 			return
 		end
+		if Damaged ~= EnemyCharacter then
+			return
+		end
+		if (os.clock() - ActiveData.StartTime) < IGNORE_DAMAGE_WINDOW then
+			return
+		end
 		if KnockbackTrack.IsPlaying and KnockbackTrack.Speed == 0 then
-			DebugLog(EnemyCharacter, "HealthChanged fired while frozen, cancelling")
 			Perfect:Cancel(EnemyCharacter)
 		end
 	end)
 
 	ActiveData.StoppedConnection = KnockbackTrack.Stopped:Connect(function()
-		DebugLog(EnemyCharacter, "KnockbackTrack.Stopped fired, IsPlaying was", KnockbackTrack.IsPlaying)
 		finishKnockback(EnemyCharacter, ActiveData)
 	end)
 
@@ -493,7 +474,6 @@ function Perfect:KnockBack(_, EnemyCharacter: Model, Params: KnockbackParams, Ch
 		KnockbackTrack:AdjustSpeed(1)
 
 		if EnemyCharacter:GetAttribute("Ragdolled") == true then
-			DebugLog(EnemyCharacter, "impact() saw GetAttribute Ragdolled == true, finishing early")
 			finishKnockback(EnemyCharacter, ActiveData)
 		end
 	end
@@ -553,22 +533,8 @@ function Perfect:KnockBack(_, EnemyCharacter: Model, Params: KnockbackParams, Ch
 		justDown = 3,
 	})
 
-	DebugLog(
-		EnemyCharacter,
-		"HasTag Ragdolled right before stopAll/playAnimation =",
-		EnemyCharacter:HasTag("Ragdolled")
-	)
-
 	AnimationService:stopAll(EnemyCharacter)
-	local PlayedTrack = AnimationService:playAnimation(EnemyCharacter, KnockbackAnimation)
-
-	DebugLog(
-		EnemyCharacter,
-		"playAnimation returned",
-		PlayedTrack ~= nil,
-		"KnockbackTrack.IsPlaying =",
-		KnockbackTrack.IsPlaying
-	)
+	AnimationService:playAnimation(EnemyCharacter, KnockbackAnimation)
 
 	return { KnockbackTrack }
 end

@@ -9,13 +9,7 @@ local AirDetectionService = require(SvModules.AirDetectionService)
 local KnockbackPresets = {}
 
 KnockbackPresets.PushBoth = function(Character, EnemyCharacter, HumRP, EnemyHumRP)
-	local Velocity = HumRP.CFrame.LookVector * 13
-
-	NewKnockback:Knockback(Character, {
-		KnockbackType = "Velocity",
-		MaxForce = Vector3.new(math.huge, 0, math.huge),
-		Velocity = Velocity,
-	})
+	local Velocity = HumRP.CFrame.LookVector * 9
 
 	if not EnemyCharacter:HasTag("Knockbacked") then
 		NewKnockback:Knockback(EnemyCharacter, {
