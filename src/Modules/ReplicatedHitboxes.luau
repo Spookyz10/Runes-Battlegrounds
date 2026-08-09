@@ -35,8 +35,6 @@ function module.new(Player: Player)
 		_stopped = false,
 	}, module)
 
-	RemoteManager.FireClient(Player, "ReplicateTask", "SetupHitboxBridge", { BridgeId = Bridge.Name })
-
 	Bridge.OnServerEvent:Connect(function(ReceivedPlayer, TouchedEnemies)
 		if ReceivedPlayer ~= Player or MetaTable._stopped then
 			return
@@ -66,22 +64,25 @@ function module.new(Player: Player)
 	return MetaTable
 end
 
+local function fireSetup(self, Mode)
+	RemoteManager.FireClient(self.Player, "ReplicateTask", "SetUpHitboxBridge", {
+		BridgeId = self.Bridge.Name,
+		Mode = Mode,
+		Instance = self.Instance,
+		Size = self.Size,
+		Offset = self.Offset,
+		Ignore = self.Ignore,
+	})
+end
+
 function module:Once()
-	self.Bridge:FireClient(
-		self.Player,
-		"Once",
-		{ Instance = self.Instance, Size = self.Size, Offset = self.Offset, Ignore = self.Ignore }
-	)
+	fireSetup(self, "Once")
 end
 
 function module:Start(HitboxTime, Destroy)
 	self._stopped = false
 
-	self.Bridge:FireClient(
-		self.Player,
-		"Constant",
-		{ Instance = self.Instance, Size = self.Size, Offset = self.Offset, Ignore = self.Ignore }
-	)
+	fireSetup(self, "Constant")
 
 	if RunService:IsStudio() then
 		if self._debugConn then
