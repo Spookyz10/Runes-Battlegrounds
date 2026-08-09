@@ -15,6 +15,7 @@ local AnimationService = require(SvModules.AnimationService)
 local AntiTeamingHandler = require(SvModules.AntiTeamingHandler)
 local AwakeningService = require(SvModules.AwakeningService)
 local CombatEvents = require(SvModules.CombatEvents)
+local BadgeAwardService = require(SvModules.BadgeAwardService)
 
 local CheckBehind = Utility("CheckBehind")
 
@@ -237,9 +238,11 @@ function module:TakeDamage(
 								return k + 1
 							end)
 
-							Data[Damager].TotalKills(function(k)
+							local NewTotalKills = Data[Damager].TotalKills(function(k)
 								return k + 1
 							end)
+
+							BadgeAwardService:CheckKills(DamagerPlayer, NewTotalKills)
 
 							Damager:SetAttribute("Streak", (Damager:GetAttribute("Streak") or 0) + 1)
 						end
@@ -302,9 +305,11 @@ Players.PlayerRemoving:Connect(function(DamagedPlayer)
 		return k + 1
 	end)
 
-	Data[Damager].TotalKills(function(k)
+	local NewTotalKills = Data[Damager].TotalKills(function(k)
 		return k + 1
 	end)
+
+	BadgeAwardService:CheckKills(DamagerPlayer, NewTotalKills)
 
 	Damager:SetAttribute("Streak", (Damager:GetAttribute("Streak") or 0) + 1)
 end)

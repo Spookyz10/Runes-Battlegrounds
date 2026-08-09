@@ -15,11 +15,13 @@ local HitboxHandler = require(SvModules.HitboxHandler)
 local RagdollHandler = require(SvModules.RagdollHandler)
 local AnimationService = require(SvModules.AnimationService)
 local StunHandler = require(SvModules.StunHandler)
+local CombatEvents = require(SvModules.CombatEvents)
 local DestructionSystem = require(SvModules.DestructionSystem)
 local SceneObjectReservation = require(SvModules.SceneObjectReservation)
 
 local Animations = ServerStorage.Assets.Animations.Moves
 local StrikeAnim = Animations.Eclipse.Lunar.Awakening.Moonfall
+local GravityAffectedAnim = ServerStorage.Assets.Animations.Other.GravityAffected
 
 local MapRayParams = RaycastParams.new()
 MapRayParams.FilterType = Enum.RaycastFilterType.Include
@@ -30,7 +32,7 @@ MapRayParams.IgnoreWater = true
 local IslandsFolder = workspace.Map.Islands
 
 local GRAVITY_HALF_SIZE = Vector3.new(15, 15, 15)
-local GRAVITY_STUN_TICK = 0.5
+local GRAVITY_FREEZE_AUTO_RELEASE = 15
 local JUMP_HEIGHT = 400
 local JUMP_X_OFFSET = 50
 local ISLAND_HOVER_HEIGHT = 200
@@ -128,6 +130,7 @@ function ActiveState.new(Character, Player)
 		GravityActive = false,
 		GravityConn = nil,
 		GravityVictims = nil,
+		DamageConn = nil,
 		Island = nil,
 		IslandOriginal = nil,
 		IslandConn = nil,
@@ -139,17 +142,131 @@ function ActiveState.new(Character, Player)
 	return data
 end
 
+local releaseGravityVictim
+
+local function captureGravityVictim(data, otherChar, otherHum)
+	if data.GravityVictims[otherChar] then
+		return
+	end
+
+	if data.ReleasedVictims and data.ReleasedVictims[otherChar] then
+		return
+	end
+
+	local otherHumRP = otherChar:FindFirstChild("HumanoidRootPart")
+	if not otherHumRP then
+		return
+	end
+
+	if iFramesService:HasiFrame(otherChar, 1) then
+		return
+	end
+
+	if otherChar:HasTag("Ragdolled") then
+		RagdollHandler.cancelRagdoll(otherHum, nil, false, nil, false, true, true)
+	end
+
+	local victimData = {}
+	data.GravityVictims[otherChar] = victimData
+
+	otherHumRP.AssemblyLinearVelocity = Vector3.zero
+	otherHumRP.AssemblyAngularVelocity = Vector3.zero
+	otherHumRP.Anchored = true
+
+	local stunFolder = StunHandler:Stun(otherChar, nil, true, 0, 0, true, nil, true)
+	victimData.StunFolder = stunFolder
+
+	victimData.AutoReleaseThread = task.delay(GRAVITY_FREEZE_AUTO_RELEASE, function()
+		victimData.AutoReleaseThread = nil
+		if data.GravityVictims and data.GravityVictims[otherChar] == victimData and victimData.StunFolder then
+			StunHandler:Unstun(otherChar, victimData.StunFolder)
+		end
+	end)
+
+	victimData.HardReleaseThread = task.delay(GRAVITY_FREEZE_AUTO_RELEASE + 10, function()
+		if data.GravityVictims and data.GravityVictims[otherChar] == victimData then
+			if victimData.StunFolder then
+				StunHandler:Unstun(otherChar, victimData.StunFolder)
+			else
+				releaseGravityVictim(data, otherChar, victimData)
+			end
+		end
+	end)
+
+	local otherPlayer = Players:GetPlayerFromCharacter(otherChar)
+	victimData.Player = otherPlayer
+	if otherPlayer then
+		RemoteManager.FireClient(otherPlayer, "ReplicateTask", "GravityAffectedVisual", { func = "Start" })
+	end
+
+	AnimationService:stopAll(otherChar)
+	victimData.AnimTrack = AnimationService:playAnimation(otherChar, GravityAffectedAnim)
+
+	if otherHum then
+		victimData.DiedConn = otherHum.Died:Once(function()
+			if data.GravityVictims and data.GravityVictims[otherChar] == victimData and victimData.StunFolder then
+				StunHandler:Unstun(otherChar, victimData.StunFolder)
+			end
+		end)
+	end
+
+	if stunFolder then
+		stunFolder.Destroying:Once(function()
+			releaseGravityVictim(data, otherChar, victimData)
+		end)
+	end
+end
+
+function releaseGravityVictim(data, otherChar, victimData)
+	if not data.GravityVictims or data.GravityVictims[otherChar] ~= victimData then
+		return
+	end
+	data.GravityVictims[otherChar] = nil
+
+	data.ReleasedVictims = data.ReleasedVictims or {}
+	data.ReleasedVictims[otherChar] = true
+
+	if victimData.HardReleaseThread then
+		pcall(task.cancel, victimData.HardReleaseThread)
+		victimData.HardReleaseThread = nil
+	end
+
+	if victimData.AutoReleaseThread then
+		pcall(task.cancel, victimData.AutoReleaseThread)
+		victimData.AutoReleaseThread = nil
+	end
+
+	if victimData.DiedConn then
+		victimData.DiedConn:Disconnect()
+		victimData.DiedConn = nil
+	end
+
+	if victimData.AnimTrack and victimData.AnimTrack.IsPlaying then
+		victimData.AnimTrack:Stop(0.15)
+	end
+
+	if otherChar and otherChar.Parent then
+		local otherHumRP = otherChar:FindFirstChild("HumanoidRootPart")
+		if otherHumRP and otherHumRP.Anchored then
+			otherHumRP.Anchored = false
+		end
+	end
+
+	if victimData.Player then
+		RemoteManager.FireClient(victimData.Player, "ReplicateTask", "GravityAffectedVisual", { func = "Stop" })
+	end
+end
+
 local function releaseGravityVictims(data)
 	if not data.GravityVictims then
 		return
 	end
 
-	for otherChar in pairs(data.GravityVictims) do
-		if otherChar and otherChar.Parent then
-			local otherHum = otherChar:FindFirstChild("Humanoid")
-			if otherHum then
-				RagdollHandler.cancelRagdoll(otherHum)
-			end
+	for otherChar, victimData in pairs(data.GravityVictims) do
+		if victimData.StunFolder then
+			StunHandler:Unstun(otherChar, victimData.StunFolder)
+		else
+			releaseGravityVictim(data, otherChar, victimData)
 		end
 	end
 
@@ -158,6 +275,11 @@ end
 
 local function stopGravityField(data)
 	releaseGravityVictims(data)
+
+	if data.DamageConn then
+		data.DamageConn:Disconnect()
+		data.DamageConn = nil
+	end
 
 	if not data.GravityActive then
 		return
@@ -179,45 +301,7 @@ local function startGravityField(data, position)
 
 	RemoteManager.FireAllClients("ReplicateTask", "Gravity", { func = "start", char = data.Character, pos = position })
 
-	local function captureGravityVictim(otherChar, otherHum)
-		if data.GravityVictims[otherChar] then
-			return
-		end
-
-		data.GravityVictims[otherChar] = true
-		RagdollHandler.ragdoll(otherHum, -1)
-	end
-
-	for _, plr in Players:GetPlayers() do
-		local otherChar = plr.Character
-		if not otherChar or otherChar == data.Character then
-			continue
-		end
-		local otherHumRP = otherChar:FindFirstChild("HumanoidRootPart")
-		local otherHum = otherChar:FindFirstChild("Humanoid")
-		if not otherHumRP or not otherHum or otherHum.Health <= 0 then
-			continue
-		end
-		local delta = otherHumRP.Position - position
-		if
-			math.abs(delta.X) <= GRAVITY_HALF_SIZE.X
-			and math.abs(delta.Y) <= GRAVITY_HALF_SIZE.Y
-			and math.abs(delta.Z) <= GRAVITY_HALF_SIZE.Z
-		then
-			captureGravityVictim(otherChar, otherHum)
-		end
-	end
-
-	local lastTick = os.clock()
-	data.GravityConn = RunService.Heartbeat:Connect(function()
-		if not data.GravityActive then
-			return
-		end
-		if os.clock() - lastTick < GRAVITY_STUN_TICK then
-			return
-		end
-		lastTick = os.clock()
-
+	local function scanForVictims(center)
 		for _, plr in Players:GetPlayers() do
 			local otherChar = plr.Character
 			if not otherChar or otherChar == data.Character then
@@ -228,15 +312,35 @@ local function startGravityField(data, position)
 			if not otherHumRP or not otherHum or otherHum.Health <= 0 then
 				continue
 			end
-			local delta = otherHumRP.Position - data.GravityPos
+			local delta = otherHumRP.Position - center
 			if
 				math.abs(delta.X) <= GRAVITY_HALF_SIZE.X
 				and math.abs(delta.Y) <= GRAVITY_HALF_SIZE.Y
 				and math.abs(delta.Z) <= GRAVITY_HALF_SIZE.Z
 			then
-				captureGravityVictim(otherChar, otherHum)
+				captureGravityVictim(data, otherChar, otherHum)
 			end
 		end
+	end
+
+	scanForVictims(position)
+
+	data.DamageConn = CombatEvents.DamageDealt:Connect(function(_, Damaged, _, _)
+		if not data.GravityVictims then
+			return
+		end
+		local victimData = data.GravityVictims[Damaged]
+		if not victimData or not victimData.StunFolder then
+			return
+		end
+		StunHandler:Unstun(Damaged, victimData.StunFolder)
+	end)
+
+	data.GravityConn = RunService.Heartbeat:Connect(function()
+		if not data.GravityActive or not data.GravityPos then
+			return
+		end
+		scanForVictims(data.GravityPos)
 	end)
 end
 
