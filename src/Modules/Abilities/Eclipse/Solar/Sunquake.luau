@@ -1,7 +1,6 @@
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local SvSt = ServerStorage
 local ServerModules = ServerStorage.Modules
 
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
@@ -16,7 +15,6 @@ local iFramesService = require(ServerModules.iFramesService)
 local PerfectKnockback = require(ServerModules.PerfectKnockback)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local BodymoverService = require(ServerModules.BodymoverService)
-local StatusEffectHandler = require(ServerModules.StatusEffectHandler)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 
@@ -24,7 +22,8 @@ local HITBOX_SIZE = Vector3.new(30, 30, 30)
 local HITBOX_OFFSET = CFrame.new(0, 0, 0)
 local DAMAGE = 15
 local STUN_TIME = 0.4
-local INFERNO_DURATION = 10
+
+local VFX_LINGER_TIME = 6
 
 local BLOCKED_KNOCK_FORCE = 35
 local BLOCKED_UP_FORCE = 25
@@ -171,10 +170,6 @@ return {
 							AirDetectionService:Start(EnemyCharacter, {
 								ragdoll = true,
 							})
-							-- StatusEffectHandler:Apply(EnemyCharacter, "Inferno", {
-							-- 	Duration = INFERNO_DURATION,
-							-- 	Source = Character,
-							-- })
 						end
 					)
 				end)
@@ -186,7 +181,14 @@ return {
 				v:Disconnect()
 			end
 
-			RemoteManager.FireAllClients("ReplicateTask", "SunquakeVFX", { func = "Stop", char = Character })
+			if cancelled then
+				RemoteManager.FireAllClients("ReplicateTask", "SunquakeVFX", { func = "Stop", char = Character })
+			else
+				task.delay(VFX_LINGER_TIME, function()
+					RemoteManager.FireAllClients("ReplicateTask", "SunquakeVFX", { func = "Stop", char = Character })
+				end)
+			end
+
 			SkillCancelHandler:Unregister(Character, onDamageCancel)
 			StunHandler:Unstun(Character, Stun)
 		end)

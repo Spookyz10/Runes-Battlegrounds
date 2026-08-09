@@ -1,6 +1,7 @@
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 
 local SvModules = ServerStorage.Modules
 
@@ -21,36 +22,18 @@ local SolarEclipseAnim = Animations.Awakenings["Solar Eclipse"]
 local EXPLOSION_DAMAGE = 30
 local EXPLOSION_KNOCKUP = 1000
 local RAGDOLL_DURATION = 10
-local CYLINDER_SIZE = Vector3.new(260.573, 110, 110)
+local CYLINDER_SIZE = Vector3.new(300, 200, 200)
 local LEVITATE_RADIUS = CYLINDER_SIZE.X
+
+local EXPLOSION_CHECK_INTERVAL = 0.1
+local EXPLOSION_HIT_COOLDOWN = 1
 
 local module = {}
 
-local function triggerJumpCrater(Character, Position)
-	RemoteManager.FireAllClients("ReplicateTask", "Ground Crater", {
-		Seed = math.random(1, 2147483647),
-		amount = 70,
-		start = Position + Vector3.new(0, 4, 0),
-		["end"] = Vector3.new(0, -20, 0),
-		rings = 3,
-		ringSpacing = 16 * 3,
-		ringSizeGrowth = 1.5,
-		ringGap = 0.20,
-		outwardTilt = true,
-		debrisSizeMin = 4 * 3,
-		debrisSizeMax = 12 * 3,
-		debrisHeightMin = 4 * 1.5,
-		debrisHeightMax = 9 * 1.5,
-		sizemult = 1.3 * 3,
-		tiltMin = 5,
-		tiltMax = 20,
-	})
-end
-
-local function triggerExplosion(Character, Position)
+local function startExplosionField(Character, Position)
 	local Player = Players:GetPlayerFromCharacter(Character)
 	if not Player then
-		return
+		return nil
 	end
 
 	local PreviousiFrameLevel = iFramesService:GetLevel(Character)
@@ -81,28 +64,55 @@ local function triggerExplosion(Character, Position)
 	CylinderPart.CanQuery = false
 	CylinderPart.Transparency = 1
 	CylinderPart.Parent = workspace
+	CylinderPart.Name = "jij"
 
 	local CylinderOverlapParams = OverlapParams.new()
 	CylinderOverlapParams.FilterType = Enum.RaycastFilterType.Include
 	CylinderOverlapParams.FilterDescendantsInstances = { workspace.Live }
 
-	local TouchingParts = workspace:GetPartsInPart(CylinderPart, CylinderOverlapParams)
-	local HitCharacters = {}
+	local hitCooldowns = {}
+	local lastCheck = 0
+	local stopped = false
 
-	for _, Part in TouchingParts do
-		if not Part or not Part.Parent then
-			continue
+	local conn
+	conn = RunService.Heartbeat:Connect(function()
+		if stopped or not CylinderPart.Parent then
+			if conn then
+				conn:Disconnect()
+				conn = nil
+			end
+			return
 		end
-		local EnemyCharacter = Part.Parent
-		if EnemyCharacter == Character then
-			continue
+
+		local now = os.clock()
+		if now - lastCheck < EXPLOSION_CHECK_INTERVAL then
+			return
 		end
-		if table.find(HitCharacters, EnemyCharacter) then
-			continue
-		end
-		local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
-		if EnemyHumanoid and EnemyHumanoid.Health > 0 then
-			table.insert(HitCharacters, EnemyCharacter)
+		lastCheck = now
+
+		local TouchingParts = workspace:GetPartsInPart(CylinderPart, CylinderOverlapParams)
+
+		for _, Part in TouchingParts do
+			if not Part or not Part.Parent then
+				continue
+			end
+			local EnemyCharacter = Part.Parent
+			if EnemyCharacter == Character then
+				continue
+			end
+
+			local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
+			if not EnemyHumanoid or EnemyHumanoid.Health <= 0 then
+				continue
+			end
+
+			local LastHit = hitCooldowns[EnemyCharacter]
+			if LastHit and (now - LastHit) < EXPLOSION_HIT_COOLDOWN then
+				continue
+			end
+
+			hitCooldowns[EnemyCharacter] = now
+
 			DamageHandler:TakeDamage(
 				Character,
 				EnemyHumanoid,
@@ -130,9 +140,25 @@ local function triggerExplosion(Character, Position)
 				false
 			)
 		end
-	end
+	end)
 
-	CylinderPart:Destroy()
+	return {
+		Stop = function()
+			if stopped then
+				return
+			end
+			stopped = true
+
+			if conn then
+				conn:Disconnect()
+				conn = nil
+			end
+
+			if CylinderPart and CylinderPart.Parent then
+				CylinderPart:Destroy()
+			end
+		end,
+	}
 end
 
 local function triggerLandingImpact(Character, Position)
@@ -140,7 +166,6 @@ local function triggerLandingImpact(Character, Position)
 
 	RemoteManager.FireAllClients("ReplicateTask", "SolarImpact", { char = Character })
 	SFXModule:Play("EclipseImpact", Position)
-	triggerJumpCrater(Character, Position)
 
 	task.delay(0.4, function()
 		if Character and Character.Parent then
@@ -171,6 +196,7 @@ function module:Activate(Player)
 
 	local levitationId = nil
 	local fakeDebrisId = nil
+	local explosionField = nil
 
 	local AwakeningStun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
 
@@ -183,7 +209,7 @@ function module:Activate(Player)
 			RemoteManager.FireAllClients("ReplicateTask", "SolarAwakenStart", { char = Character })
 			RemoteManager.FireAllClients("ReplicateTask", "SolarImpact", { char = Character })
 			SFXModule:Play("EclipseImpact", HumRP.Position)
-			triggerJumpCrater(Character, HumRP.Position)
+
 			levitationId = DestructionService:LevitateArea(HumRP.Position, LEVITATE_RADIUS, Player)
 			fakeDebrisId = DestructionService:SpawnFakeDebris(Character, {
 				MinRadius = 100,
@@ -209,7 +235,7 @@ function module:Activate(Player)
 				"GivePlayerAura",
 				{ Char = Character, AuraName = "Solar Eclipse" }
 			)
-			triggerExplosion(Character, Character.Torso.Position + Vector3.new(0, 200, 0))
+			explosionField = startExplosionField(Character, Character.Torso.Position)
 		end)
 	)
 
@@ -217,6 +243,10 @@ function module:Activate(Player)
 		AnimEvents,
 		AnimTrack:GetMarkerReachedSignal("clear"):Connect(function()
 			RemoteManager.FireAllClients("ReplicateTask", "SolarAwakenExplosion", { func = "Stop", id = Player.UserId })
+			if explosionField then
+				explosionField.Stop()
+				explosionField = nil
+			end
 			if levitationId then
 				DestructionService:DropArea(levitationId)
 				levitationId = nil
@@ -239,6 +269,10 @@ function module:Activate(Player)
 	)
 
 	AnimTrack.Stopped:Once(function()
+		if explosionField then
+			explosionField.Stop()
+			explosionField = nil
+		end
 		if levitationId then
 			DestructionService:CancelLevitation(levitationId)
 			levitationId = nil

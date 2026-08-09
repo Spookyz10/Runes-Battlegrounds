@@ -35,7 +35,8 @@ local SPLASH_FORWARD_DISTANCE = 30
 local SPLASH_HITBOX_SIZE = Vector3.new(500, 500, 500)
 local SPLASH_DAMAGE = 30
 local SPLASH_KNOCKUP_FORCE = 300
-local SPLASH_RAGDOLL_TIME = 10
+local SPLASH_RAGDOLL_TIME = 3
+local SPLASH_KNOCKUP_BODY_TIME = 0.3
 
 local WALKSPEED_FREEZE_DELAY = 0.2
 
@@ -252,6 +253,11 @@ return {
 							)
 
 							SplashHumRP.AssemblyLinearVelocity = Vector3.zero
+							SplashHumRP.AssemblyAngularVelocity = Vector3.zero
+
+							pcall(function()
+								SplashHumRP:SetNetworkOwner(nil)
+							end)
 
 							RagdollHandler.ragdoll(SplashHumanoid, SPLASH_RAGDOLL_TIME, nil, nil, nil, nil, true)
 
@@ -259,10 +265,18 @@ return {
 								if not SplashCharacter or not SplashCharacter.Parent then
 									return
 								end
+								if not SplashHumRP or not SplashHumRP.Parent then
+									return
+								end
+
+								SplashHumRP.AssemblyLinearVelocity = Vector3.zero
+								SplashHumRP.AssemblyAngularVelocity = Vector3.zero
+
 								BodymoverService:Knockback(SplashCharacter, {
 									KnockbackType = "Velocity",
 									MaxForce = Vector3.new(1, 100000, 1),
 									Velocity = Vector3.new(0, SPLASH_KNOCKUP_FORCE, 0),
+									Time = SPLASH_KNOCKUP_BODY_TIME,
 								})
 							end)
 

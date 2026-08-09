@@ -6,13 +6,14 @@ local Players = game:GetService("Players")
 
 local SvModules = ServerStorage.Modules
 
+local BodymoverService = require(ServerStorage.Modules.BodymoverService)
 local IndicatorService = require(ReplicatedStorage.Shared.Modules.IndicatorService)
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 
 local StunHandler = require(SvModules.StunHandler)
 local DamageHandler = require(SvModules.DamageHandler)
-local KnockbackService = require(SvModules.KnockbackModule)
+
 local iFramesService = require(SvModules.iFramesService)
 local HitboxHandler = require(SvModules.HitboxHandler)
 local RagdollHandler = require(SvModules.RagdollHandler)
@@ -52,7 +53,17 @@ local module = {}
 local function radialKnockback(Character, EnemyCharacter, EnemyHumanoid, ExplosionPosition, BaseForce, Damage)
 	DamageHandler:TakeDamage(Character, EnemyHumanoid, Damage, 1, nil, false, false, true, true, true, nil, nil)
 	RagdollHandler.ragdoll(EnemyHumanoid, 5)
-	KnockbackService:Knockback(EnemyCharacter, Vector3.new(0, BaseForce, 0), nil, nil, nil, nil, nil, false, false)
+
+	local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
+	if not EnemyHumRP then
+		return
+	end
+
+	BodymoverService:Knockback(EnemyCharacter, {
+		KnockbackType = "Velocity",
+		MaxForce = Vector3.new(1, 100000, 1),
+		Velocity = Vector3.new(0, BaseForce, 0),
+	})
 end
 
 local function explode(Character, Position)

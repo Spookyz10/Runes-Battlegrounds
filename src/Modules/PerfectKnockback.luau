@@ -250,8 +250,9 @@ function Perfect:KnockBack(_, EnemyCharacter: Model, Params: KnockbackParams, Ch
 
 	local Touched = false
 	local StartTime = os.clock()
-	local GroundConfirmStrikes = 0
-	local REQUIRED_GROUND_STRIKES = 2
+	local GroundContactStart = nil
+	local REQUIRED_GROUND_TIME = 0.12
+	local MAX_GROUND_CHECK_DIST = 3.5
 
 	local BodyVelocity: BodyVelocity
 	local BodyGyro: BodyGyro?
@@ -442,8 +443,8 @@ function Perfect:KnockBack(_, EnemyCharacter: Model, Params: KnockbackParams, Ch
 			return
 		end
 
-		if HumanoidRootPart.AssemblyLinearVelocity.Y > 0 then
-			GroundConfirmStrikes = 0
+		if HumanoidRootPart.AssemblyLinearVelocity.Y > 2 then
+			GroundContactStart = nil
 			return
 		end
 
@@ -451,16 +452,20 @@ function Perfect:KnockBack(_, EnemyCharacter: Model, Params: KnockbackParams, Ch
 		RayParams.FilterType = Enum.RaycastFilterType.Include
 		RayParams.FilterDescendantsInstances = { workspace.Map }
 
-		local Raycast = workspace:Raycast(HumanoidRootPart.Position, Vector3.new(0, -5, 0), RayParams)
+		local Raycast =
+			workspace:Raycast(HumanoidRootPart.Position, Vector3.new(0, -MAX_GROUND_CHECK_DIST, 0), RayParams)
 
 		if Raycast then
-			GroundConfirmStrikes += 1
-			if GroundConfirmStrikes >= REQUIRED_GROUND_STRIKES then
+			if not GroundContactStart then
+				GroundContactStart = os.clock()
+			end
+
+			if (os.clock() - GroundContactStart) >= REQUIRED_GROUND_TIME then
 				Collision:Disconnect()
 				impact(FinalTime)
 			end
 		else
-			GroundConfirmStrikes = 0
+			GroundContactStart = nil
 		end
 	end)
 
