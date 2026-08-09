@@ -61,8 +61,8 @@ local function cleanupDebrisObjects()
 	end
 end
 
-local function shiftCFrameWorldY(cf, dy)
-	return CFrame.new(cf.Position + Vector3.new(0, dy, 0)) * cf.Rotation
+local function isHitboxPart(part)
+	return part.Name:find("Hitbox") ~= nil
 end
 
 local function debrisSpawner(config)
@@ -299,7 +299,6 @@ local function debrisSpawner(config)
 			slab.Transparency = 1
 			slab.Parent = workspace.Debris
 
-			local savedCFrame = slab.CFrame
 			local touching = Helpers.getTouchingPartsExceptIgnored(slab)
 			local touchingParts = {}
 			local differentMaterialPart = nil
@@ -311,6 +310,7 @@ local function debrisSpawner(config)
 					not part:IsDescendantOf(workspace.Live)
 					and part.Name ~= "invis"
 					and part.Parent ~= workspace.Debris
+					and not isHitboxPart(part)
 				then
 					if part.Material ~= config.ground.Material then
 						differentMaterialPart = part

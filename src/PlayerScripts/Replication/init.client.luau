@@ -113,6 +113,25 @@ local function checkCharacterAvailability(): boolean
 		and Humanoid:GetState() ~= Enum.HumanoidStateType.Dead
 end
 
+-- Mesma noção de "trapped" usada em EvasiveService:IsTrapped no server (ragdoll,
+-- stun ou preso num PerfectKnockback), só que lida no client a partir das tags
+-- já replicadas. Precisamos disso pra saber, ANTES de aplicar as guardas locais
+-- de dash, se estamos numa situação em que o server vai tratar isso como uma
+-- fuga (Evasive) e converter Front -> Left/Right.
+local function isTrapped(): boolean
+	if not Character then
+		return false
+	end
+	return Character:HasTag("Ragdolled") or Character:HasTag("Stunned") or Character:HasTag("Knockbacked")
+end
+
+local function hasEvasiveCharge(): boolean
+	if not Character then
+		return false
+	end
+	return (Character:GetAttribute("EvasivaCharges") or 0) > 0
+end
+
 local function punch()
 	if checkCharacterAvailability() then
 		RemoteManager.FireServer("Combat", "PunchStart")
@@ -172,17 +191,51 @@ local function dashCheck()
 		currDirection = "Front"
 	end
 
+	-- Fuga (Evasive): se estamos "trapped" (ragdoll/stun/knockback) e temos carga
+	-- disponível, o server SEMPRE trata Front como um side-dash de escape e
+	-- converte pra Left/Right (ver DashHandler:Dash no server). O client precisa
+	-- fazer a MESMA conversão aqui, senão ele tenta rodar a lógica de "Front"
+	-- (que nem existe como branch de movimento) e a fuga fica travada / não
+	-- move o personagem. Também pulamos as guardas locais de tag nesse caso,
+	-- porque elas foram pensadas pro fluxo normal (não-trapped) e bloqueariam
+	-- a fuga antes mesmo do server decidir.
+	local escaping = false
+	if isTrapped() then
+		if not hasEvasiveCharge() then
+			-- Sem carga: não tem fuga possível, deixa o server recusar normalmente
+			-- (ainda assim disparamos o Keypress abaixo pra manter paridade, mas
+			-- não tentamos mover localmente).
+			RemoteManager.FireServer(
+				"Keypress",
+				{ Key = Enum.KeyCode.Q, Direction = currDirection, ClientCFrame = HumRP.CFrame }
+			)
+			return
+		end
+
+		escaping = true
+		if currDirection == "Front" then
+			local Side = HumRP.CFrame.RightVector:Dot(Humanoid.MoveDirection)
+			currDirection = Side < 0 and "Left" or "Right"
+		end
+	end
+
 	if currDirection == "Left" or currDirection == "Right" then
 		if tick() - LastSideDash < 2 then
 			return
 		end
 
-		if not Character:HasTag("Ragdolled") and not Character:HasTag("Knockbacked") then
-			if Character:HasTag("SideDashCD") or Character:HasTag("CantSideDash") or Character:HasTag("Stunned") then
+		if not escaping then
+			if not Character:HasTag("Ragdolled") and not Character:HasTag("Knockbacked") then
+				if
+					Character:HasTag("SideDashCD")
+					or Character:HasTag("CantSideDash")
+					or Character:HasTag("Stunned")
+				then
+					return
+				end
+			elseif Character:HasTag("CantRagdollCancel") or Character:GetAttribute("RagdollCancel") ~= true then
 				return
 			end
-		elseif Character:HasTag("CantRagdollCancel") or Character:GetAttribute("RagdollCancel") ~= true then
-			return
 		end
 
 		LastSideDash = tick()
@@ -255,12 +308,14 @@ local function dashCheck()
 			return
 		end
 
-		if not Character:HasTag("Ragdolled") and not Character:HasTag("Knockbacked") then
-			if Character:HasTag("DashCD") or Character:HasTag("CantDash") or Character:HasTag("Stunned") then
+		if not escaping then
+			if not Character:HasTag("Ragdolled") and not Character:HasTag("Knockbacked") then
+				if Character:HasTag("DashCD") or Character:HasTag("CantDash") or Character:HasTag("Stunned") then
+					return
+				end
+			elseif Character:HasTag("CantRagdollCancel") or Character:GetAttribute("RagdollCancel") ~= true then
 				return
 			end
-		elseif Character:HasTag("CantRagdollCancel") or Character:GetAttribute("RagdollCancel") ~= true then
-			return
 		end
 
 		LastBackDash = tick()
