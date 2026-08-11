@@ -1,8 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
-
 local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
@@ -22,12 +20,13 @@ local BoardColors = {
 }
 
 local RankStyles = { "Top1", "Top2", "Top3" }
-local REFRESH_INTERVAL = 60
 
 local ActiveEntries = {
 	Kills = {},
 	Donated = {},
 }
+
+local LatestData = nil
 
 local Leaderboard = {}
 
@@ -81,7 +80,7 @@ local function CreateEntry(board, rank, data, Container)
 	table.insert(ActiveEntries[board], Entry)
 end
 
-local function LoadBoard(board)
+local function RenderBoard(board, entries)
 	local FolderName = BoardFolders[board]
 	if not FolderName then
 		return
@@ -98,35 +97,46 @@ local function LoadBoard(board)
 		return
 	end
 
-	local entries = RemoteManager.InvokeServer("Leaderboards", board)
-	if not entries then
-		return
-	end
-
 	for _, Entry in ActiveEntries[board] do
 		Entry:Destroy()
 	end
 	table.clear(ActiveEntries[board])
+
+	if not entries then
+		return
+	end
 
 	for rank, data in entries do
 		CreateEntry(board, rank, data, Container)
 	end
 end
 
-function Leaderboard.Refresh()
+function Leaderboard.UpdateFromServer(Data)
+	if not Data then
+		return
+	end
+
+	LatestData = Data
+
 	for board in BoardFolders do
-		LoadBoard(board)
+		RenderBoard(board, Data[board])
+	end
+end
+
+function Leaderboard.Refresh()
+	if not LatestData then
+		return
+	end
+
+	for board in BoardFolders do
+		RenderBoard(board, LatestData[board])
 	end
 end
 
 function Leaderboard.Init()
-	Leaderboard.Refresh()
-
-	task.spawn(function()
-		while task.wait(REFRESH_INTERVAL) do
-			Leaderboard.Refresh()
-		end
-	end)
+	if LatestData then
+		Leaderboard.Refresh()
+	end
 end
 
 return Leaderboard

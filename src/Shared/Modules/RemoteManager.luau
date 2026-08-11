@@ -29,11 +29,12 @@ local RemoteEvents = {
 	MovesetHandler = "Client",
 
 	StartCooldown = "Client",
+
+	LeaderboardsUpdate = "Client",
 }
 
 local RemoteFunctions = {
 	Evasive = "Server",
-	Leaderboards = "Server",
 	AbilitiesHandler = "Server",
 }
 

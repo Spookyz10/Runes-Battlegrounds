@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Data = require(ReplicatedStorage.Shared.Data).server
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
 local module = {}
 
@@ -106,7 +107,6 @@ local function ResolveNames(entries)
 			Value = entry.value,
 		})
 	end
-	print(result)
 	return result
 end
 
@@ -157,6 +157,24 @@ function module:GetTopDonated()
 	return GetTop("Donated")
 end
 
+local function PushBoards()
+	local Payload = {
+		Kills = GetTop("Kills"),
+		Donated = GetTop("Donated"),
+	}
+
+	RemoteManager.FireAllClients("LeaderboardsUpdate", Payload)
+end
+
+local function PushBoardsToPlayer(player)
+	local Payload = {
+		Kills = GetTop("Kills"),
+		Donated = GetTop("Donated"),
+	}
+
+	RemoteManager.FireClient(player, "LeaderboardsUpdate", Payload)
+end
+
 Players.PlayerAdded:Connect(function(player)
 	task.spawn(function()
 		local ok = pcall(function()
@@ -172,11 +190,15 @@ Players.PlayerAdded:Connect(function(player)
 			end
 		end
 		SyncAllBoards(player)
+		PushBoardsToPlayer(player)
 	end)
 end)
 
 for _, player in Players:GetPlayers() do
-	task.spawn(SyncAllBoards, player)
+	task.spawn(function()
+		SyncAllBoards(player)
+		PushBoardsToPlayer(player)
+	end)
 end
 
 Players.PlayerRemoving:Connect(function(player)
@@ -189,6 +211,7 @@ task.spawn(function()
 		for _, player in Players:GetPlayers() do
 			SyncAllBoards(player)
 		end
+		PushBoards()
 	end
 end)
 
@@ -198,20 +221,5 @@ game:BindToClose(function()
 	end
 	task.wait(2)
 end)
-
-local Remotes = ReplicatedStorage:FindFirstChild("Remotes")
-local LeaderboardsRemote = Remotes and Remotes:FindFirstChild("Leaderboards")
-local LeaderboardsGet = LeaderboardsRemote and LeaderboardsRemote:FindFirstChild("Get")
-
-if LeaderboardsGet then
-	LeaderboardsGet.OnServerInvoke = function(Player, Board)
-		if Board == "Kills" then
-			return module:GetTopKills()
-		elseif Board == "Donated" then
-			return module:GetTopDonated()
-		end
-		return {}
-	end
-end
 
 return module

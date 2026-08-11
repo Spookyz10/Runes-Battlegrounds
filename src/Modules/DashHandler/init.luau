@@ -23,6 +23,9 @@ local Configs = require(script.Configs)
 local DashHandler = {}
 
 local DASH_HIT_SANITY_TOLERANCE = 15
+local DASH_INPUT_DEBOUNCE = 0.2
+
+local DashDebounce = {}
 
 local function getConfig(Player, Direction)
 	local Moveset = Player:GetAttribute("Moveset") or "Default"
@@ -273,6 +276,13 @@ end
 local function runDisplacementDash(Player, Character, HumRP, Humanoid, Config)
 	local Duration = Config.Duration or 1.017
 
+	Character:SetAttribute("Dashing", true)
+	task.delay(Duration, function()
+		if Character and Character.Parent then
+			Character:SetAttribute("Dashing", false)
+		end
+	end)
+
 	if not Config.NoStun then
 		StunHandler:Stun(Character, Duration, true, 0, 0, true, nil, false)
 	else
@@ -321,11 +331,24 @@ function DashHandler:Dash(Player, Direction)
 		return
 	end
 
+	if DashDebounce[Character] then
+		return
+	end
+
 	local Humanoid = Character:FindFirstChild("Humanoid")
 	local HumRP = Character:FindFirstChild("HumanoidRootPart")
 	if not Humanoid or not HumRP then
 		return
 	end
+
+	if Character:GetAttribute("Dashing") == true then
+		return
+	end
+
+	DashDebounce[Character] = true
+	task.delay(DASH_INPUT_DEBOUNCE, function()
+		DashDebounce[Character] = nil
+	end)
 
 	local Trapped = EvasiveService:IsTrapped(Character)
 
