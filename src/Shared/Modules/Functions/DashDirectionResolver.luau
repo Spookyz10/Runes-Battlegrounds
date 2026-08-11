@@ -11,6 +11,9 @@ local DashResolver = {}
 
 local LastSideDash = {}
 local LastBackDash = {}
+local LastDashRequest = {}
+
+local DASH_INPUT_DEBOUNCE = 1
 
 function DashResolver.IsTrapped(Character)
 	if not Character then
@@ -257,6 +260,15 @@ function DashResolver.PerformLocalDash(Character, Humanoid, HumRP, Camera, Anima
 end
 
 function DashResolver.PerformDash(Character, Humanoid, HumRP, Camera, Animator)
+	local Now = tick()
+	local LastRequest = LastDashRequest[Character]
+
+	if LastRequest and (Now - LastRequest) < DASH_INPUT_DEBOUNCE then
+		return
+	end
+
+	LastDashRequest[Character] = Now
+
 	local Direction, Trapped, Escaping, CanAct = DashResolver.Resolve(Character, Humanoid, HumRP)
 
 	RemoteManager.FireServer("Keypress", { Key = Enum.KeyCode.Q, Direction = Direction, ClientCFrame = HumRP.CFrame })
@@ -276,6 +288,7 @@ function DashResolver.Cleanup(Character)
 	end
 	LastSideDash[Character] = nil
 	LastBackDash[Character] = nil
+	LastDashRequest[Character] = nil
 end
 
 return DashResolver

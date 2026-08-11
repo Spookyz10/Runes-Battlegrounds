@@ -23,9 +23,23 @@ local Configs = require(script.Configs)
 local DashHandler = {}
 
 local DASH_HIT_SANITY_TOLERANCE = 15
-local DASH_INPUT_DEBOUNCE = 0.2
+local DASH_INPUT_DEBOUNCE = 0.5
 
 local DashDebounce = {}
+
+local AxisKey = {
+	Front = "Dash_Z",
+	Back = "Dash_Z",
+	Left = "Dash_X",
+	Right = "Dash_X",
+}
+
+local AxisPartners = {
+	Front = { "Back" },
+	Back = { "Front" },
+	Left = { "Right" },
+	Right = { "Left" },
+}
 
 local function getConfig(Player, Direction)
 	local Moveset = Player:GetAttribute("Moveset") or "Default"
@@ -372,7 +386,10 @@ function DashHandler:Dash(Player, Direction)
 		if Character:HasTag("Stunned") then
 			return
 		end
-		if CooldownSystem:IsOnCooldown(Character, "Dash_" .. Direction) then
+
+		local CooldownId = AxisKey[Direction] or ("Dash_" .. Direction)
+
+		if CooldownSystem:IsOnCooldown(Character, CooldownId) then
 			return
 		end
 	end
@@ -383,8 +400,16 @@ function DashHandler:Dash(Player, Direction)
 		return
 	end
 
-	CooldownSystem:Set(Character, "Dash_" .. Direction, Config.Cooldown or 2)
-	RemoteManager.FireClient(Player, "ExtraCds", Direction .. "Dash", Config.Cooldown or 2)
+	local Cooldown = Config.Cooldown or 2
+	local CooldownId = AxisKey[Direction] or ("Dash_" .. Direction)
+
+	CooldownSystem:Set(Character, CooldownId, Cooldown)
+	RemoteManager.FireClient(Player, "ExtraCds", Direction .. "Dash", Cooldown)
+
+	for _, PartnerDirection in AxisPartners[Direction] or {} do
+		RemoteManager.FireClient(Player, "ExtraCds", PartnerDirection .. "Dash", Cooldown)
+	end
+
 	SFXModule:Play(Config.Sound or "Dash", HumRP)
 
 	if Config.Type == "Attack" then
