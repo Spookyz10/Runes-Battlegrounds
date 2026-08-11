@@ -1,10 +1,8 @@
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ServerStorage = game:GetService("ServerStorage")
 
 local Data = require(ReplicatedStorage.Shared.Data).server
-local LeaderboardManager = require(ServerStorage.Modules.LeaderboardManager)
 
 local ProductPrices = {
 	[3616886344] = 10,
@@ -29,7 +27,6 @@ local function grantDonation(Player, Amount)
 		return false
 	end
 
-	LeaderboardManager:AddDonation(Player, Amount)
 	return true
 end
 

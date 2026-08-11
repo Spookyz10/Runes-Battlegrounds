@@ -9,6 +9,7 @@ local PhysicsService = game:GetService("PhysicsService")
 
 local SvModules = ServerStorage.Modules
 
+local _LeaderboardManager = require(ServerStorage.Modules.LeaderboardManager)
 local AddAppereance = require(ReplicatedStorage.Shared.Modules.Functions.AddAppereance)
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local ServerRemoteListener = require(ServerStorage.Modules.ServerRemoteListener)

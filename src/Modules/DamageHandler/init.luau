@@ -8,6 +8,7 @@ local SvModules = script.Parent
 
 local StunHandler = require(SvModules.StunHandler)
 local CombatLogger = require(script.CombatLogger)
+
 local Utility = require(RPModules.Utility)
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local Data = require(ReplicatedStorage.Shared.Data).server

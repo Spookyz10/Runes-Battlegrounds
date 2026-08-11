@@ -15,21 +15,17 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ClientContext = require(RS.Shared.Modules.ClientContext)
-local Loop = require(RS.Shared.Modules.Functions.Loop)
 
 local ClientRemoteListener = require(ReplicatedStorage.Shared.Modules.ClientRemoteListener)
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
 local Functions = require(ReplicatedStorage.Shared.Modules.Functions)
-local Tasks = require(ReplicatedStorage.Shared.Modules.Functions.Tasks)
 local RotationController = require(ReplicatedStorage.Shared.Modules.Functions.Tasks.Shared.RotationController)
+local DashResolver = require(ReplicatedStorage.Shared.Modules.Functions.DashDirectionResolver)
+local ShiftlockController = require(ReplicatedStorage.Shared.Modules.Functions.ShiftlockController)
 
 Functions.new()
 task.spawn(Functions.Start, Functions)
-
-local Animations: Folder = RS.Resources.Animations
-
-local gameSettings = UserSettings().GameSettings
 
 local Character: Model = Player.Character or Player.CharacterAdded:Wait()
 local Humanoid: Humanoid = Character:FindFirstChild("Humanoid") or Character:WaitForChild("Humanoid", 10)
@@ -39,7 +35,7 @@ local Camera: Camera = workspace.CurrentCamera
 
 ClientContext.IsMobile = UIS.TouchEnabled == true
 
-local shiftlockActive: boolean = false
+ShiftlockController.SetCamera(Camera)
 
 RotationController:SetCharacter(Character, HumRP, Humanoid)
 
@@ -49,8 +45,8 @@ RunService.RenderStepped:Connect(function()
 	end
 	RotationController:Step()
 
-	if shiftlockActive and not Character:HasTag("CantRotate") and not ClientContext.LunarAimActive then
-		Camera.CFrame *= CFrame.new(1.75, 0, 0)
+	if ShiftlockController.IsActive() and not Character:HasTag("CantRotate") and not ClientContext.LunarAimActive then
+		Camera.CFrame *= ShiftlockController.GetOffset()
 	end
 end)
 
@@ -58,6 +54,8 @@ Player:GetPropertyChangedSignal("Character"):Connect(function()
 	if not Player or not Player.Parent then
 		return
 	end
+
+	DashResolver.Cleanup(Character)
 
 	Character = Player.Character
 
@@ -70,24 +68,14 @@ Player:GetPropertyChangedSignal("Character"):Connect(function()
 	HumRP = Character:FindFirstChild("HumanoidRootPart") or Character:WaitForChild("HumanoidRootPart", 10)
 
 	RotationController:SetCharacter(Character, HumRP, Humanoid)
-
-	if ClientContext.IsMobile then
-		shiftlockActive = true
-		ClientContext.CustomShiftlockActive = true
-		RotationController:Request("shiftlock", 1, function()
-			return workspace.CurrentCamera.CFrame.LookVector
-		end)
-	end
 end)
 
 workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
 	Camera = workspace.CurrentCamera
+	ShiftlockController.SetCamera(Camera)
 end)
 
 local selectedFrame: GuiObject? = nil
-
-local LastSideDash: number = 0
-local LastBackDash: number = 0
 
 local MapRaycastParams = RaycastParams.new()
 MapRaycastParams.FilterType = Enum.RaycastFilterType.Include
@@ -113,20 +101,6 @@ local function checkCharacterAvailability(): boolean
 		and Humanoid:GetState() ~= Enum.HumanoidStateType.Dead
 end
 
-local function isTrapped(): boolean
-	if not Character then
-		return false
-	end
-	return Character:HasTag("Ragdolled") or Character:HasTag("Stunned")
-end
-
-local function hasEvasiveCharge(): boolean
-	if not Character then
-		return false
-	end
-	return (Character:GetAttribute("EvasivaCharges") or 0) > 0
-end
-
 local function punch()
 	if checkCharacterAvailability() then
 		RemoteManager.FireServer("Combat", "PunchStart")
@@ -138,241 +112,7 @@ local function dashCheck()
 		return
 	end
 
-	local rotation: number
-	if UIS.KeyboardEnabled and not UIS.TouchEnabled then
-		if UIS:IsKeyDown(Enum.KeyCode.W) then
-			rotation = 0
-		elseif UIS:IsKeyDown(Enum.KeyCode.S) then
-			rotation = 180
-		elseif UIS:IsKeyDown(Enum.KeyCode.D) then
-			rotation = -90
-		elseif UIS:IsKeyDown(Enum.KeyCode.A) then
-			rotation = 90
-		end
-	else
-		local baseCFrame: CFrame = HumRP.CFrame
-		local reference: CFrame = HumRP.CFrame + Humanoid.MoveDirection * 15
-		local referencePosition: Vector3 = reference.Position
-		local lookVector: Vector3 = (
-			Vector3.new(referencePosition.X, baseCFrame.Position.Y, referencePosition.Z) - baseCFrame.Position
-		).Unit
-		local lookVectorRotation: number = math.deg(math.acos(baseCFrame.LookVector:Dot(lookVector)))
-
-		rotation = 0
-		if lookVectorRotation > -45 and lookVectorRotation < 45 then
-			rotation = 0
-		elseif lookVectorRotation > 135 and lookVectorRotation < 215 then
-			rotation = 180
-		elseif lookVectorRotation >= 45 and lookVectorRotation <= 135 then
-			local rightRef: CFrame = HumRP.CFrame * CFrame.new(15, 0, 0)
-			local leftRef: CFrame = HumRP.CFrame * CFrame.new(-15, 0, 0)
-			rotation = (reference.Position - rightRef.Position).Magnitude
-						> (reference.Position - leftRef.Position).Magnitude
-					and 90
-				or -90
-		end
-	end
-
-	local currDirection: string
-	if rotation == 0 then
-		currDirection = "Front"
-	elseif rotation == 180 then
-		currDirection = "Back"
-	elseif rotation == 90 then
-		currDirection = "Left"
-	elseif rotation == -90 then
-		currDirection = "Right"
-	else
-		currDirection = "Front"
-	end
-
-	-- Fuga (Evasive): se estamos "trapped" (ragdoll/stun/knockback) e temos carga
-	-- disponível, o server SEMPRE trata Front como um side-dash de escape e
-	-- converte pra Left/Right (ver DashHandler:Dash no server). O client precisa
-	-- fazer a MESMA conversão aqui, senão ele tenta rodar a lógica de "Front"
-	-- (que nem existe como branch de movimento) e a fuga fica travada / não
-	-- move o personagem. Também pulamos as guardas locais de tag nesse caso,
-	-- porque elas foram pensadas pro fluxo normal (não-trapped) e bloqueariam
-	-- a fuga antes mesmo do server decidir.
-	local escaping = false
-	if isTrapped() then
-		if not hasEvasiveCharge() then
-			-- Sem carga: não tem fuga possível, deixa o server recusar normalmente
-			-- (ainda assim disparamos o Keypress abaixo pra manter paridade, mas
-			-- não tentamos mover localmente).
-			RemoteManager.FireServer(
-				"Keypress",
-				{ Key = Enum.KeyCode.Q, Direction = currDirection, ClientCFrame = HumRP.CFrame }
-			)
-			return
-		end
-
-		escaping = true
-		if currDirection == "Front" then
-			local Side = HumRP.CFrame.RightVector:Dot(Humanoid.MoveDirection)
-			currDirection = Side < 0 and "Left" or "Right"
-		end
-	end
-
-	if currDirection == "Left" or currDirection == "Right" then
-		if tick() - LastSideDash < 2 then
-			return
-		end
-
-		if not escaping then
-			if not Character:HasTag("Ragdolled") and not Character:HasTag("Knockbacked") then
-				if
-					Character:HasTag("SideDashCD")
-					or Character:HasTag("CantSideDash")
-					or Character:HasTag("Stunned")
-				then
-					return
-				end
-			elseif Character:HasTag("CantRagdollCancel") or Character:GetAttribute("RagdollCancel") ~= true then
-				return
-			end
-		end
-
-		LastSideDash = tick()
-		Tasks["ClearVelocities"](HumRP)
-		Character:SetAttribute("SideDashing", true)
-
-		if Humanoid:GetState() == Enum.HumanoidStateType.Physics then
-			Humanoid:ChangeState(Enum.HumanoidStateType.Running)
-		end
-		if Humanoid.PlatformStand then
-			Humanoid.PlatformStand = false
-		end
-
-		Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
-		task.delay(0.6, function()
-			Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
-		end)
-
-		local dashAnim: Animation = currDirection == "Left" and Animations.Dashes.DashLeft
-			or Animations.Dashes.DashRight
-		local dashTrack: AnimationTrack = Animator:LoadAnimation(dashAnim)
-
-		local speed: number = 200
-		local sideMultiplier: number = currDirection == "Right" and 1 or -1
-
-		gameSettings.RotationType = Enum.RotationType.CameraRelative
-
-		local stopLoop: (() -> ())? = nil
-
-		local dashVelocity: BodyVelocity = Instance.new("BodyVelocity")
-		dashVelocity.MaxForce = Character:HasTag("Slowed") and Vector3.new(10000, 0, 10000)
-			or Vector3.new(50000, 0, 50000)
-		dashVelocity.Parent = HumRP
-
-		dashTrack.Stopped:Once(function()
-			if stopLoop then
-				stopLoop()
-			end
-			if dashVelocity.Parent then
-				dashVelocity:Destroy()
-			end
-
-			HumRP.AssemblyLinearVelocity = Vector3.new(0, HumRP.AssemblyLinearVelocity.Y, 0)
-			gameSettings.RotationType = Enum.RotationType.MovementRelative
-		end)
-
-		task.delay(0.325, function()
-			Character:SetAttribute("SideDashing", false)
-		end)
-
-		dashTrack:Play()
-
-		stopLoop = Loop.new(function(stop)
-			if speed > 5 and dashVelocity.Parent then
-				speed *= 0.91
-				HumRP.CFrame = CFrame.lookAlong(HumRP.Position, Camera.CFrame.LookVector * Vector3.new(1, 0, 1))
-				dashVelocity.Velocity = (HumRP.CFrame.RightVector * sideMultiplier) * speed
-			else
-				stop()
-				if dashVelocity.Parent then
-					dashVelocity:Destroy()
-				end
-
-				HumRP.AssemblyLinearVelocity = Vector3.new(0, HumRP.AssemblyLinearVelocity.Y, 0)
-				gameSettings.RotationType = Enum.RotationType.MovementRelative
-			end
-		end)
-	elseif currDirection == "Back" then
-		if tick() - LastBackDash < 5 then
-			return
-		end
-
-		if not escaping then
-			if not Character:HasTag("Ragdolled") and not Character:HasTag("Knockbacked") then
-				if Character:HasTag("DashCD") or Character:HasTag("CantDash") or Character:HasTag("Stunned") then
-					return
-				end
-			elseif Character:HasTag("CantRagdollCancel") or Character:GetAttribute("RagdollCancel") ~= true then
-				return
-			end
-		end
-
-		LastBackDash = tick()
-		Tasks["ClearVelocities"](HumRP)
-		Character:SetAttribute("Dashing", true)
-
-		if Humanoid:GetState() == Enum.HumanoidStateType.Physics then
-			Humanoid:ChangeState(Enum.HumanoidStateType.Running)
-		end
-		if Humanoid.PlatformStand then
-			Humanoid.PlatformStand = false
-		end
-
-		Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
-		Character:AddTag("CantSideDash")
-		task.delay(1.051, function()
-			Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
-			Character:RemoveTag("CantSideDash")
-		end)
-
-		local dashAnim: Animation = Animations.Dashes.DashBack
-		local dashTrack: AnimationTrack = Animator:LoadAnimation(dashAnim)
-
-		gameSettings.RotationType = Enum.RotationType.CameraRelative
-
-		local speed: number = 260
-
-		local dashVelocity: BodyVelocity = Instance.new("BodyVelocity")
-		dashVelocity.MaxForce = Character:HasTag("Slowed") and Vector3.new(10000, 0, 10000)
-			or Vector3.new(50000, 0, 50000)
-		dashVelocity.Parent = HumRP
-
-		dashTrack.Stopped:Once(function()
-			Character:SetAttribute("Dashing", false)
-			if dashVelocity.Parent then
-				dashVelocity:Destroy()
-			end
-			gameSettings.RotationType = Enum.RotationType.MovementRelative
-		end)
-
-		dashTrack:Play()
-
-		local stopLoop: (() -> ())? = nil
-		stopLoop = Loop.new(function(stop)
-			if dashVelocity.Parent then
-				speed *= 0.91
-				if speed <= 10 then
-					dashVelocity:Destroy()
-				end
-				HumRP.CFrame = CFrame.lookAlong(HumRP.Position, Camera.CFrame.LookVector * Vector3.new(1, 0, 1))
-				dashVelocity.Velocity = -HumRP.CFrame.LookVector * speed
-			else
-				stop()
-				gameSettings.RotationType = Enum.RotationType.MovementRelative
-			end
-		end)
-	end
-
-	RemoteManager.FireServer(
-		"Keypress",
-		{ Key = Enum.KeyCode.Q, Direction = currDirection, ClientCFrame = HumRP.CFrame }
-	)
+	DashResolver.PerformDash(Character, Humanoid, HumRP, Camera, Animator)
 end
 
 local Keycodes = Enum.KeyCode

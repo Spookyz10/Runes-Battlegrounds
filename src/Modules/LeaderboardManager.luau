@@ -2,6 +2,8 @@ local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Data = require(ReplicatedStorage.Shared.Data).server
+
 local module = {}
 
 local STORE_NAMES = {
@@ -9,7 +11,12 @@ local STORE_NAMES = {
 	Donated = "Leaderboard_Donated_AllTime_v1",
 }
 
-local FLUSH_DEBOUNCE = 8
+local DATA_KEYS = {
+	Kills = "TotalKills",
+	Donated = "Donated",
+}
+
+local SYNC_INTERVAL = 60
 local CACHE_LIFETIME = 60
 local TOP_COUNT = 10
 
@@ -18,21 +25,20 @@ for board, name in STORE_NAMES do
 	Stores[board] = DataStoreService:GetOrderedDataStore(name)
 end
 
-local Pending = { Kills = {}, Donated = {} }
-local FlushScheduled = { Kills = {}, Donated = {} }
-
 local Cache = {
 	Kills = { Data = nil, UpdatedAt = 0 },
 	Donated = { Data = nil, UpdatedAt = 0 },
 }
 
-local function SafeUpdateAsync(store, key, delta)
+local LastSynced = { Kills = {}, Donated = {} }
+
+local function SafeUpdateAsync(store, key, value)
 	local attempts = 0
 	while attempts < 5 do
 		attempts += 1
 		local ok = pcall(function()
-			store:UpdateAsync(key, function(old)
-				return (old or 0) + delta
+			store:UpdateAsync(key, function()
+				return value
 			end)
 		end)
 		if ok then
@@ -43,50 +49,42 @@ local function SafeUpdateAsync(store, key, delta)
 	return false
 end
 
-local function FlushPlayerKey(board, userId)
-	local delta = Pending[board][userId]
-	if not delta or delta <= 0 then
-		FlushScheduled[board][userId] = nil
-		return
-	end
-	Pending[board][userId] = 0
-	FlushScheduled[board][userId] = nil
-
-	local key = tostring(userId)
-
-	task.spawn(function()
-		SafeUpdateAsync(Stores[board], key, delta)
-	end)
-end
-
-local function ScheduleFlush(board, userId)
-	if FlushScheduled[board][userId] then
-		return
-	end
-	FlushScheduled[board][userId] = true
-	task.delay(FLUSH_DEBOUNCE, function()
-		FlushPlayerKey(board, userId)
-	end)
-end
-
-local function AddValue(board, player, amount)
+local function SyncPlayer(board, player)
 	if not player or not player:IsA("Player") then
 		return
 	end
-	amount = amount or 1
 
-	local userId = player.UserId
-	Pending[board][userId] = (Pending[board][userId] or 0) + amount
+	local dataKey = DATA_KEYS[board]
+	local playerData = Data.Service:waitForData(player)
+	if not playerData then
+		return
+	end
 
-	ScheduleFlush(board, userId)
+	local ok, currentValue = pcall(function()
+		return playerData[dataKey]()
+	end)
+	if not ok or not currentValue then
+		return
+	end
+
+	if LastSynced[board][player.UserId] == currentValue then
+		return
+	end
+
+	local key = tostring(player.UserId)
+
+	task.spawn(function()
+		local success = SafeUpdateAsync(Stores[board], key, currentValue)
+		if success then
+			LastSynced[board][player.UserId] = currentValue
+		end
+	end)
 end
 
-function module:AddKill(player, amount)
-	AddValue("Kills", player, amount)
-end
-
-function module:AddDonation(player, amount)
-	AddValue("Donated", player, amount)
+local function SyncAllBoards(player)
+	for board in STORE_NAMES do
+		SyncPlayer(board, player)
+	end
 end
 
 local function ResolveNames(entries)
@@ -108,6 +106,7 @@ local function ResolveNames(entries)
 			Value = entry.value,
 		})
 	end
+	print(result)
 	return result
 end
 
@@ -115,7 +114,12 @@ local function FetchTop(store)
 	local ok, pages = pcall(function()
 		return store:GetSortedAsync(false, TOP_COUNT)
 	end)
-	if not ok or not pages then
+	if not ok then
+		warn("[Leaderboard] GetSortedAsync falhou:", pages)
+		return nil
+	end
+	if not pages then
+		warn("[Leaderboard] pages veio nil sem erro")
 		return nil
 	end
 
@@ -123,6 +127,7 @@ local function FetchTop(store)
 		return pages:GetCurrentPage()
 	end)
 	if not ok2 then
+		warn("[Leaderboard] GetCurrentPage falhou:", page)
 		return nil
 	end
 
@@ -152,20 +157,45 @@ function module:GetTopDonated()
 	return GetTop("Donated")
 end
 
-local function FlushAllPending(board)
-	for userId in Pending[board] do
-		FlushPlayerKey(board, userId)
-	end
+Players.PlayerAdded:Connect(function(player)
+	task.spawn(function()
+		local ok = pcall(function()
+			return Data[player] ~= nil
+		end)
+		while not ok or not Data[player] do
+			task.wait(1)
+			ok = pcall(function()
+				return Data[player] ~= nil
+			end)
+			if not player.Parent then
+				return
+			end
+		end
+		SyncAllBoards(player)
+	end)
+end)
+
+for _, player in Players:GetPlayers() do
+	task.spawn(SyncAllBoards, player)
 end
 
 Players.PlayerRemoving:Connect(function(player)
-	FlushPlayerKey("Kills", player.UserId)
-	FlushPlayerKey("Donated", player.UserId)
+	SyncAllBoards(player)
+end)
+
+task.spawn(function()
+	while true do
+		task.wait(SYNC_INTERVAL)
+		for _, player in Players:GetPlayers() do
+			SyncAllBoards(player)
+		end
+	end
 end)
 
 game:BindToClose(function()
-	FlushAllPending("Kills")
-	FlushAllPending("Donated")
+	for _, player in Players:GetPlayers() do
+		SyncAllBoards(player)
+	end
 	task.wait(2)
 end)
 

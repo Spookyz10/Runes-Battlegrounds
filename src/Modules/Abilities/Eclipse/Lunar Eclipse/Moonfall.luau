@@ -689,7 +689,6 @@ return {
 
 		local AnimTrack, AnimEvents = AnimationService:getAnimationTrack(Character, StrikeAnim)
 		if not AnimTrack then
-			warn("[LunarStrike] AnimTrack is nil for", Character.Name)
 			ActiveState[Character] = nil
 			return
 		end
@@ -801,9 +800,6 @@ return {
 					and SceneObjectReservation:Reserve(IslandOriginal, "LunarStrike", Player, ISLAND_RESERVE_DURATION)
 
 				if not Clone then
-					warn(
-						"[LunarStrike] Nenhuma ilha disponível em workspace.Map.Islands, aplicando compensação de dano"
-					)
 					applyGravityFieldCompensationDamage(data)
 					AnimTrack:AdjustSpeed(1)
 					return
