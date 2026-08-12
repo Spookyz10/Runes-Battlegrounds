@@ -15,6 +15,7 @@ local iFramesService = require(ServerModules.iFramesService)
 local PerfectKnockback = require(ServerModules.PerfectKnockback)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local BodymoverService = require(ServerModules.BodymoverService)
+local StatusEffectHandler = require(ServerModules.StatusEffectHandler)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 
@@ -28,6 +29,7 @@ local VFX_LINGER_TIME = 6
 local BLOCKED_KNOCK_FORCE = 35
 local BLOCKED_UP_FORCE = 25
 local BLOCKED_RAGDOLL_TIME = 2.5
+local INFERNO_DURATION = 10
 
 return {
 	Cooldown = 10,
@@ -152,6 +154,8 @@ return {
 								end)
 							else
 								local lookCF = CFrame.lookAt(EnemyHumRP.Position, EnemyHumRP.Position + pushDir)
+
+								StatusEffectHandler:Apply(EnemyCharacter, "Inferno", { Duration = INFERNO_DURATION })
 
 								PerfectKnockback:KnockBack(nil, EnemyCharacter, {
 									LookVector = pushDir,

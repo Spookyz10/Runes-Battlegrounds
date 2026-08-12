@@ -33,6 +33,7 @@ local function clearInferno(EnemyCharacter)
 end
 
 return {
+	Cooldown = 15,
 	Start = function(Player, Tool)
 		local Character = Player.Character
 		if not Character then
