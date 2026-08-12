@@ -31,17 +31,20 @@ return {
 		Type = "Displacement",
 		Duration = 1.017,
 		IFrames = true,
+		Cooldown = 5,
 	},
 	Left = {
 		Id = "LeftDash",
 		Type = "Displacement",
 		Duration = 0.6,
 		NoStun = true,
+		Cooldown = 2,
 	},
 	Right = {
 		Id = "RightDash",
 		Type = "Displacement",
 		Duration = 0.6,
 		NoStun = true,
+		Cooldown = 2,
 	},
 }

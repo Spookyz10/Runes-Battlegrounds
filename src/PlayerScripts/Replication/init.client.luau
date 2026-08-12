@@ -185,8 +185,7 @@ UIS.InputBegan:Connect(function(input: InputObject, gameProcessedEvent: boolean)
 		end)
 	elseif input.KeyCode == Enum.KeyCode.R then
 		if not gameProcessedEvent then
-			local isAwakened: boolean = Character:GetAttribute("Awakened") == true
-			RemoteManager.FireServer("Specials", isAwakened and "ActivateUlt" or "ActivateBase", {})
+			RemoteManager.FireServer("Specials")
 		end
 	end
 end)

@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local InfoModule = require(ReplicatedStorage.Shared.Info)
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local AwakeningService = require(ServerStorage.Modules.AwakeningService)
+local MovesetHandler = require(ServerStorage.Modules.MovesetHandler)
 
 local BASE_COST = 5
 local ULT_COST = 0
@@ -12,7 +13,7 @@ local Special = {}
 
 Special.Cooldown = 5
 
-function Special.Activate(Player, isUlt, MovesetHandler)
+function Special.Activate(Player, isUlt)
 	local Cost = isUlt and ULT_COST or BASE_COST
 
 	local AwkProgressObj = Player:FindFirstChild("AwakeningProgress")

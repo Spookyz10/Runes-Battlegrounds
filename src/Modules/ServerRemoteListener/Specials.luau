@@ -5,7 +5,7 @@ local MovesetHandler = require(ServerStorage.Modules.MovesetHandler)
 
 local Remote = {}
 
-function Remote:Activate(Player: Player, action: string, params)
+function Remote:Activate(Player: Player)
 	if not Player:FindFirstChild("LoadedData") then
 		return
 	end
@@ -15,11 +15,7 @@ function Remote:Activate(Player: Player, action: string, params)
 		return
 	end
 
-	if action == "ActivateBase" then
-		SpecialsHandler:Activate(Player, false, MovesetHandler)
-	elseif action == "ActivateUlt" then
-		SpecialsHandler:Activate(Player, true, MovesetHandler)
-	end
+	SpecialsHandler:Activate(Player, MovesetHandler)
 end
 
 return Remote

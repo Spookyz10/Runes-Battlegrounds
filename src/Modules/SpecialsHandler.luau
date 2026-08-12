@@ -7,7 +7,19 @@ local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local CooldownSystem = require(ServerStorage.Modules.CooldownSystem)
 local Specials = require(ServerStorage.Modules.Specials)
 
-function SpecialsHandler:Activate(Player, isUlt, MovesetHandler)
+function SpecialsHandler:Activate(Player)
+	local Character = Player.Character
+	if not Character then
+		return
+	end
+
+	local isAwakened = Character:HasTag("Awakened") or Character:GetAttribute("Awakened") == true
+	local isUlt = isAwakened
+
+	if Character:HasTag("Stunned") then
+		return
+	end
+
 	local moveset = Player:GetAttribute("Moveset")
 	local moveInfo = InfoModule.Movesets[moveset]
 	if not moveInfo then
@@ -35,22 +47,7 @@ function SpecialsHandler:Activate(Player, isUlt, MovesetHandler)
 		return
 	end
 
-	local Character = Player.Character
-	if not Character then
-		return
-	end
-	local isAwakened = Character:HasTag("Awakened") or Character:GetAttribute("Awakened") == true
-	if Character:HasTag("Stunned") then
-		return
-	end
-	if isUlt and not isAwakened then
-		return
-	end
-	if not isUlt and isAwakened then
-		return
-	end
-
-	local ok = Special.Activate(Player, isUlt, MovesetHandler)
+	local ok = Special.Activate(Player, isUlt)
 	if not ok then
 		return
 	end

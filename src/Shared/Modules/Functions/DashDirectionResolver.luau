@@ -1,3 +1,4 @@
+local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local RS = game:GetService("ReplicatedStorage")
 
@@ -24,9 +25,9 @@ local AxisKey = {
 
 local DirectionCooldown = {
 	Front = 5,
-	Back = 2,
+	Back = 5,
 	Left = 2,
-	Right = 5,
+	Right = 2,
 }
 
 local AxisCooldownExpiry = {}
@@ -50,14 +51,14 @@ local function isAxisOnCooldown(Character, Direction)
 	return tick() < Expiry
 end
 
-local function markAxisUsed(Character, Direction)
+local function markAxisUsed(Character, Direction, Duration: number?)
 	local Axis = AxisKey[Direction]
 	if not Axis then
 		return
 	end
 
 	AxisCooldownExpiry[Character] = AxisCooldownExpiry[Character] or {}
-	AxisCooldownExpiry[Character][Axis] = tick() + (DirectionCooldown[Direction] or 2)
+	AxisCooldownExpiry[Character][Axis] = tick() + (Duration or DirectionCooldown[Direction] or 2)
 end
 
 function DashResolver.IsTrapped(Character)
@@ -316,6 +317,8 @@ function DashResolver.PerformDash(Character, Humanoid, HumRP, Camera, Animator)
 
 	local Direction, Trapped, Escaping, CanAct = DashResolver.Resolve(Character, Humanoid, HumRP)
 
+	RemoteManager.FireServer("Keypress", { Key = Enum.KeyCode.Q, Direction = Direction, ClientCFrame = HumRP.CFrame })
+
 	if not CanAct then
 		return Direction, Trapped, Escaping, CanAct
 	end
@@ -324,31 +327,30 @@ function DashResolver.PerformDash(Character, Humanoid, HumRP, Camera, Animator)
 		return Direction, Trapped, Escaping, false
 	end
 
-	if Direction == "Front" then
+	if Direction ~= "Front" then
 		if not Escaping then
 			markAxisUsed(Character, Direction)
 		end
 
-		RemoteManager.FireServer(
-			"Keypress",
-			{ Key = Enum.KeyCode.Q, Direction = Direction, ClientCFrame = HumRP.CFrame }
-		)
-
-		return Direction, Trapped, Escaping, CanAct
+		DashResolver.PerformLocalDash(Character, Humanoid, HumRP, Camera, Animator, Direction, Escaping)
 	end
-
-	local Approved = RemoteManager.InvokeServer("DashRequest", Direction)
-	if not Approved then
-		return Direction, Trapped, Escaping, false
-	end
-
-	if not Escaping then
-		markAxisUsed(Character, Direction)
-	end
-
-	DashResolver.PerformLocalDash(Character, Humanoid, HumRP, Camera, Animator, Direction, Escaping)
 
 	return Direction, Trapped, Escaping, CanAct
+end
+
+function DashResolver.ConfirmAxisCooldown(SkillName: string, Cooldown: number)
+	local Direction = (SkillName:gsub("Dash$", ""))
+	local Axis = AxisKey[Direction]
+	if not Axis then
+		return
+	end
+
+	local Character = Players.LocalPlayer.Character
+	if not Character then
+		return
+	end
+
+	markAxisUsed(Character, Direction, Cooldown)
 end
 
 function DashResolver.Cleanup(Character)

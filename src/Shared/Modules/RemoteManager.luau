@@ -36,7 +36,6 @@ local RemoteEvents = {
 local RemoteFunctions = {
 	Evasive = "Server",
 	AbilitiesHandler = "Server",
-	DashRequest = "Server",
 }
 
 local ClientInvokeFunctions = {
