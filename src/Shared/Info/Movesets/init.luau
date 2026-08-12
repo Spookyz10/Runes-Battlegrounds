@@ -13,6 +13,7 @@ for _, module in script:GetDescendants() do
 	movesetInfo.Moves = data.Moves or {}
 	movesetInfo.AwakeningMoves = data.AwakeningMoves or {}
 	movesetInfo.Special = data.Special
+	movesetInfo.SpecialDisplay = data.SpecialDisplay
 
 	Movesets[module.Name] = movesetInfo
 

@@ -60,7 +60,7 @@ local function setSkillIcon(clone, icon)
 end
 
 local function addRTemplate(movesetInfo)
-	local Special = movesetInfo.Special
+	local Special = movesetInfo.SpecialDisplay
 	if not Special then
 		return
 	end
@@ -102,7 +102,7 @@ local function showInfo(movesetName)
 
 	selectedMoveset = movesetName
 
-	ItemName.Text = movesetName
+	ItemName.Text = movesetName .. " Rune"
 	RuneBase.Icon.Image = movesetInfo.Icon or "rbxassetid://0"
 	applyRuneGradient(movesetName)
 

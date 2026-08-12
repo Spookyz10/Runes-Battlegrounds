@@ -20,6 +20,29 @@ function Topbar.Hide()
 	end
 end
 
+local function setupRunesButton()
+	local player = UIConstants.Player
+	local playerGui = player:WaitForChild("PlayerGui")
+
+	local runesIcon = IconController.new()
+	runesIcon:setName("Runes")
+	runesIcon:setLabel("Runes")
+
+	runesIcon.selected:Connect(function()
+		local runeSelection = playerGui:FindFirstChild("RuneSelection")
+		if runeSelection then
+			runeSelection.Enabled = true
+		end
+	end)
+
+	runesIcon.deselected:Connect(function()
+		local runeSelection = playerGui:FindFirstChild("RuneSelection")
+		if runeSelection then
+			runeSelection.Enabled = false
+		end
+	end)
+end
+
 function Topbar.Init()
 	local startTick = tick()
 	if GuiService.TopbarInset.Max.Y <= 0 then
@@ -33,6 +56,8 @@ function Topbar.Init()
 
 	local IconModule = RPModules["NewIcon"]
 	IconController = require(IconModule.IconController)
+
+	setupRunesButton()
 
 	local loadedTopBar = Instance.new("BoolValue")
 	loadedTopBar.Name = "loadedTopBar"
