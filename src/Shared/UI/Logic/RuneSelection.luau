@@ -5,6 +5,7 @@ local UIConstants = require(ReplicatedStorage.Shared.UI.UIConstants)
 local UIFunctions = require(ReplicatedStorage.Shared.UI.UIFunctions)
 
 local PlayerGui = UIConstants.PlayerGui
+local Gradients = UIConstants.Gradients
 
 local GUI = PlayerGui:WaitForChild("RuneSelection")
 local Main = GUI:WaitForChild("Main")
@@ -28,10 +29,17 @@ local activeRuneButtons = {}
 local selectedMoveset = nil
 
 local function applyRuneGradient(movesetName)
-	local source = RuneBase:FindFirstChild("Gradients")
-	if source then
-		UIFunctions.ApplyGradientTemplate(RuneBase, source, movesetName)
+	UIFunctions.ApplyGradientTemplate(RuneBase, Gradients, movesetName)
+end
+
+local function applySkillGradient(clone, runeName, customGradient)
+	local skillFrame = clone:FindFirstChild("SkillFrame")
+	local base = skillFrame and skillFrame:FindFirstChild("Base")
+	if not base then
+		return
 	end
+
+	UIFunctions.ApplyGradientTemplateWithFallback(base, Gradients, customGradient, runeName)
 end
 
 local function clearInfoContent()
@@ -64,24 +72,25 @@ local function addRTemplate(movesetInfo)
 	clone.Parent = InfoContent
 end
 
-local function addSkillTemplate(moveName, moveInfo, layoutOrder)
+local function addSkillTemplate(moveName, moveInfo, layoutOrder, runeName)
 	local clone = SkillTemplate:Clone()
 	clone.SkillName.Text = moveName
 	clone.Desc.Text = (moveInfo and moveInfo.Desc) or ""
 	setSkillIcon(clone, moveInfo and moveInfo.Icon)
+	applySkillGradient(clone, runeName, moveInfo and moveInfo.CustomGradient)
 	clone.LayoutOrder = layoutOrder
 	clone.Parent = InfoContent
 end
 
-local function populateSkills(movesetInfo)
+local function populateSkills(movesetName, movesetInfo)
 	addRTemplate(movesetInfo)
 
 	for moveName, moveInfo in movesetInfo.Moves do
-		addSkillTemplate(moveName, moveInfo, 1)
+		addSkillTemplate(moveName, moveInfo, 1, movesetName)
 	end
 
 	for moveName, moveInfo in movesetInfo.AwakeningMoves do
-		addSkillTemplate(moveName, moveInfo, 2)
+		addSkillTemplate(moveName, moveInfo, 2, movesetName)
 	end
 end
 
@@ -98,7 +107,7 @@ local function showInfo(movesetName)
 	applyRuneGradient(movesetName)
 
 	clearInfoContent()
-	populateSkills(movesetInfo)
+	populateSkills(movesetName, movesetInfo)
 end
 
 local function addRune(movesetName, movesetInfo)

@@ -135,14 +135,34 @@ function UIFunctions.TweenSlide(target: GuiObject, goal: UDim2, tweenInfo: Tween
 	return tween
 end
 
-function UIFunctions.ApplyGradientTemplate(container: GuiObject, sourceFolder: Instance, templateName: string)
+local function clearGradients(container: GuiObject)
 	for _, child in container:GetChildren() do
 		if child:IsA("UIGradient") then
 			child:Destroy()
 		end
 	end
+end
+
+function UIFunctions.ApplyGradientTemplate(container: GuiObject, sourceFolder: Instance, templateName: string)
+	clearGradients(container)
 
 	local template = sourceFolder:FindFirstChild(templateName)
+	if template then
+		template:Clone().Parent = container
+	end
+end
+
+function UIFunctions.ApplyGradientTemplateWithFallback(
+	container: GuiObject,
+	sourceFolder: Instance,
+	primaryName: string?,
+	fallbackName: string
+)
+	local template = (primaryName and primaryName ~= "" and sourceFolder:FindFirstChild(primaryName))
+		or sourceFolder:FindFirstChild(fallbackName)
+
+	clearGradients(container)
+
 	if template then
 		template:Clone().Parent = container
 	end

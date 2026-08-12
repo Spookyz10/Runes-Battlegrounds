@@ -8,6 +8,7 @@ local UIFunctions = require(ReplicatedStorage.Shared.UI.UIFunctions)
 
 local Player = UIConstants.Player
 local Character = UIConstants.Character
+local Gradients = UIConstants.Gradients
 
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
@@ -52,13 +53,9 @@ end
 
 local function updateGradients()
 	local name = getGradientName()
-	local source = BarFrame.Progress:FindFirstChild("Gradients")
-	if not source then
-		return
-	end
 
 	for _, target in GRADIENT_TARGETS do
-		UIFunctions.ApplyGradientTemplate(target, source, name)
+		UIFunctions.ApplyGradientTemplate(target, Gradients, name)
 	end
 end
 

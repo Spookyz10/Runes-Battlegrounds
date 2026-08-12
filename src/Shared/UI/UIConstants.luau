@@ -1,4 +1,5 @@
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local UIConstants = {}
 
@@ -8,6 +9,8 @@ UIConstants.PlayerGui = UIConstants.Player:WaitForChild("PlayerGui")
 UIConstants.Hotbar = UIConstants.PlayerGui:WaitForChild("Hotbar")
 UIConstants.AwakeningBar = UIConstants.PlayerGui:WaitForChild("AwakeningBar")
 UIConstants.ExtraCds = UIConstants.PlayerGui:WaitForChild("ExtraCds")
+
+UIConstants.Gradients = ReplicatedStorage.Resources.UI.Gradients
 
 UIConstants.Character = UIConstants.Player.Character or UIConstants.Player.CharacterAdded:Wait()
 

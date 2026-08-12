@@ -14,6 +14,7 @@ local Player = UIConstants.Player
 local Backpack = Player:WaitForChild("Moveset")
 
 local HotbarFrame = UIConstants.Hotbar.Hotbar
+local Gradients = UIConstants.Gradients
 
 local Keys = {
 	["One"] = "1",
@@ -144,16 +145,12 @@ end
 
 local function updateHotbarGradients()
 	local name = getGradientName()
-	local source = HotbarFrame:FindFirstChild("Gradients")
-	if not source then
-		return
-	end
 
 	for _, slot in HotbarFrame:GetChildren() do
 		if slot:IsA("ImageLabel") then
 			local base = getBase(slot)
 			if base then
-				UIFunctions.ApplyGradientTemplate(base, source, name)
+				UIFunctions.ApplyGradientTemplate(base, Gradients, name)
 			end
 		end
 	end
