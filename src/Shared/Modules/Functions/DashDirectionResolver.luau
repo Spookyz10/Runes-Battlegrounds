@@ -15,6 +15,51 @@ local LastDashRequest = {}
 
 local DASH_INPUT_DEBOUNCE = 1
 
+local AxisKey = {
+	Front = "Dash_Z",
+	Back = "Dash_Z",
+	Left = "Dash_X",
+	Right = "Dash_X",
+}
+
+local DirectionCooldown = {
+	Front = 5,
+	Back = 2,
+	Left = 2,
+	Right = 5,
+}
+
+local AxisCooldownExpiry = {}
+
+local function isAxisOnCooldown(Character, Direction)
+	local Axis = AxisKey[Direction]
+	if not Axis then
+		return false
+	end
+
+	local CharacterAxes = AxisCooldownExpiry[Character]
+	if not CharacterAxes then
+		return false
+	end
+
+	local Expiry = CharacterAxes[Axis]
+	if not Expiry then
+		return false
+	end
+
+	return tick() < Expiry
+end
+
+local function markAxisUsed(Character, Direction)
+	local Axis = AxisKey[Direction]
+	if not Axis then
+		return
+	end
+
+	AxisCooldownExpiry[Character] = AxisCooldownExpiry[Character] or {}
+	AxisCooldownExpiry[Character][Axis] = tick() + (DirectionCooldown[Direction] or 2)
+end
+
 function DashResolver.IsTrapped(Character)
 	if not Character then
 		return false
@@ -277,6 +322,14 @@ function DashResolver.PerformDash(Character, Humanoid, HumRP, Camera, Animator)
 		return Direction, Trapped, Escaping, CanAct
 	end
 
+	if not Escaping and isAxisOnCooldown(Character, Direction) then
+		return Direction, Trapped, Escaping, false
+	end
+
+	if not Escaping then
+		markAxisUsed(Character, Direction)
+	end
+
 	DashResolver.PerformLocalDash(Character, Humanoid, HumRP, Camera, Animator, Direction, Escaping)
 
 	return Direction, Trapped, Escaping, CanAct
@@ -289,6 +342,7 @@ function DashResolver.Cleanup(Character)
 	LastSideDash[Character] = nil
 	LastBackDash[Character] = nil
 	LastDashRequest[Character] = nil
+	AxisCooldownExpiry[Character] = nil
 end
 
 return DashResolver

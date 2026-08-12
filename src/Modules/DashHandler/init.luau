@@ -34,13 +34,6 @@ local AxisKey = {
 	Right = "Dash_X",
 }
 
-local AxisPartners = {
-	Front = { "Back" },
-	Back = { "Front" },
-	Left = { "Right" },
-	Right = { "Left" },
-}
-
 local function getConfig(Player, Direction)
 	local Moveset = Player:GetAttribute("Moveset") or "Default"
 	local MovesetConfigs = Configs[Moveset] or Configs.Default
@@ -405,10 +398,6 @@ function DashHandler:Dash(Player, Direction)
 
 	CooldownSystem:Set(Character, CooldownId, Cooldown)
 	RemoteManager.FireClient(Player, "ExtraCds", Direction .. "Dash", Cooldown)
-
-	for _, PartnerDirection in AxisPartners[Direction] or {} do
-		RemoteManager.FireClient(Player, "ExtraCds", PartnerDirection .. "Dash", Cooldown)
-	end
 
 	SFXModule:Play(Config.Sound or "Dash", HumRP)
 

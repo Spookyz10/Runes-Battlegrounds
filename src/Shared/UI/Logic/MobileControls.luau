@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local ClientContext = require(ReplicatedStorage.Shared.Modules.ClientContext)
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
@@ -95,6 +96,14 @@ local function doDash()
 	DashResolver.PerformDash(Character, Humanoid, HumRP, Camera, Animator)
 end
 
+local function doSpecial()
+	if not checkCharacterAvailability() then
+		return
+	end
+
+	RemoteManager.FireServer("Specials")
+end
+
 local function doShiftlockToggle()
 	local active = ShiftlockController.Toggle()
 
@@ -104,61 +113,83 @@ local function doShiftlockToggle()
 	end
 end
 
-local function setupHoldButton(Button, onPress, onRelease)
+local function isInsideButton(Button: GuiObject, ScreenPosition: Vector2): boolean
+	local Position = Button.AbsolutePosition
+	local Size = Button.AbsoluteSize
+
+	return ScreenPosition.X >= Position.X
+		and ScreenPosition.X <= Position.X + Size.X
+		and ScreenPosition.Y >= Position.Y
+		and ScreenPosition.Y <= Position.Y + Size.Y
+end
+
+local function isPressInput(input: InputObject): boolean
+	return input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1
+end
+
+local function setupPassthroughHold(Button, onPress, onRelease)
 	if not Button then
 		return
 	end
 
-	local activeInputConn = nil
+	Button.Active = false
 
-	Button.InputBegan:Connect(function(Input)
-		if
-			Input.UserInputState ~= Enum.UserInputState.Begin
-			or not (
-				Input.UserInputType == Enum.UserInputType.Touch
-				or Input.UserInputType == Enum.UserInputType.MouseButton1
-			)
-		then
+	local TrackedInput: InputObject? = nil
+
+	UserInputService.InputBegan:Connect(function(input)
+		if TrackedInput or not isPressInput(input) then
+			return
+		end
+		if not Button.Visible or not isInsideButton(Button, Vector2.new(input.Position.X, input.Position.Y)) then
 			return
 		end
 
+		TrackedInput = input
 		onPress()
+	end)
 
-		if activeInputConn then
-			activeInputConn:Disconnect()
+	UserInputService.InputEnded:Connect(function(input)
+		if TrackedInput ~= input then
+			return
 		end
-
-		activeInputConn = Input:GetPropertyChangedSignal("UserInputState"):Connect(function()
-			if
-				Input.UserInputState ~= Enum.UserInputState.End
-				and Input.UserInputState ~= Enum.UserInputState.Cancel
-			then
-				return
-			end
-
-			onRelease()
-
-			if activeInputConn then
-				activeInputConn:Disconnect()
-				activeInputConn = nil
-			end
-		end)
+		TrackedInput = nil
+		onRelease()
 	end)
 
 	Button.AncestryChanged:Connect(function(_, parent)
-		if not parent then
+		if not parent and TrackedInput then
+			TrackedInput = nil
 			onRelease()
 		end
 	end)
 end
 
-local function setupTapButton(Button, onTap)
+local function setupPassthroughTap(Button, onTap)
 	if not Button then
 		return
 	end
 
-	Button.Activated:Connect(function()
+	Button.Active = false
+
+	local TrackedInput: InputObject? = nil
+
+	UserInputService.InputBegan:Connect(function(input)
+		if TrackedInput or not isPressInput(input) then
+			return
+		end
+		if not Button.Visible or not isInsideButton(Button, Vector2.new(input.Position.X, input.Position.Y)) then
+			return
+		end
+
+		TrackedInput = input
 		onTap()
+	end)
+
+	UserInputService.InputEnded:Connect(function(input)
+		if TrackedInput ~= input then
+			return
+		end
+		TrackedInput = nil
 	end)
 end
 
@@ -175,12 +206,14 @@ function MobileHUD.Init()
 	Buttons.Dash = HUD:WaitForChild("Dash")
 	Buttons.Block = HUD:WaitForChild("Block")
 	Buttons.Shiftlock = HUD:WaitForChild("Shiftlock")
+	Buttons.Special = HUD:WaitForChild("Special")
 
-	setupHoldButton(Buttons.Attack, doAttackStart, doAttackEnd)
-	setupHoldButton(Buttons.Block, doBlockStart, doBlockEnd)
+	setupPassthroughHold(Buttons.Attack, doAttackStart, doAttackEnd)
+	setupPassthroughHold(Buttons.Block, doBlockStart, doBlockEnd)
 
-	setupTapButton(Buttons.Dash, doDash)
-	setupTapButton(Buttons.Shiftlock, doShiftlockToggle)
+	setupPassthroughTap(Buttons.Dash, doDash)
+	setupPassthroughTap(Buttons.Shiftlock, doShiftlockToggle)
+	setupPassthroughTap(Buttons.Special, doSpecial)
 
 	if Buttons.Shiftlock and Buttons.Shiftlock:IsA("ImageButton") then
 		Buttons.Shiftlock.Image = ShiftlockController.IsActive() and ShiftlockImages.ON or ShiftlockImages.OFF
