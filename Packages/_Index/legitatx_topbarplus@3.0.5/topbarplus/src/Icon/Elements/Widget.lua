@@ -24,30 +24,19 @@ return function(icon, Icon)
 	button.Active = false -- This is essential for mobile scrollers to work when dragging
 	icon.deselected:Connect(function()
 		button.ClipsDescendants = true
-		task.delay(0.2, function()
-			if icon.isSelected then
-				button.ClipsDescendants = false
-			end
+	end)
+	icon.selected:Connect(function()
+		task.defer(function()
+			icon.resizingComplete:Once(function()
+				if icon.isSelected then
+					button.ClipsDescendants = false
+				end
+			end)
 		end)
 	end)
 
-	-- Account for PreferredTransparency which can be set by every player
-	local GuiService = game:GetService("GuiService")
-	icon:setBehaviour("IconButton", "BackgroundTransparency", function(value)
-		local preference = GuiService.PreferredTransparency
-		local newValue = value * preference
-		if value == 1 then
-			return value
-		end
-		return newValue
-	end)
-	icon.janitor:add(GuiService:GetPropertyChangedSignal("PreferredTransparency"):Connect(function()
-		icon:refreshAppearance(button, "BackgroundTransparency")
-	end))
-
 	local iconCorner = Instance.new("UICorner")
 	iconCorner:SetAttribute("Collective", "IconCorners")
-	iconCorner.Name = "UICorner"
 	iconCorner.Parent = button
 
 	local menu = require(script.Parent.Menu)(icon)
@@ -68,7 +57,6 @@ return function(icon, Icon)
 	iconSpotCorner.Parent = iconSpot
 
 	local overlay = iconSpot:Clone()
-	overlay.UICorner.Name = "OverlayUICorner"
 	overlay.Name = "IconOverlay"
 	overlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 	overlay.ZIndex = iconSpot.ZIndex + 1
@@ -192,6 +180,7 @@ return function(icon, Icon)
 
 	local TweenService = game:GetService("TweenService")
 	local resizingCount = 0
+	local repeating = false
 	local function handleLabelAndImageChangesUnstaggered(forceUpdateString)
 
 		-- We defer changes by a frame to eliminate all but 1 requests which
@@ -204,7 +193,7 @@ return function(icon, Icon)
 			local usingIndicator = indicator and indicator.Visible
 			local usingText = usingIndicator or iconLabel.Text ~= ""
 			local usingImage = iconImage.Image ~= "" and iconImage.Image ~= nil
-			local _alignment = Enum.HorizontalAlignment.Center
+			local alignment = Enum.HorizontalAlignment.Center
 			local NORMAL_BUTTON_SIZE = UDim2.fromScale(1, 1)
 			local buttonSize = NORMAL_BUTTON_SIZE
 			if usingImage and not usingText then
@@ -225,7 +214,7 @@ return function(icon, Icon)
 				paddingLeft.Visible = true
 				paddingCenter.Visible = not usingIndicator
 				paddingRight.Visible = not usingIndicator
-				_alignment = Enum.HorizontalAlignment.Left
+				alignment = Enum.HorizontalAlignment.Left
 			end
 			button.Size = buttonSize
 
@@ -342,6 +331,7 @@ return function(icon, Icon)
 				local ContentProvider = game:GetService("ContentProvider")
 				local assets = {fontLink}
 				ContentProvider:PreloadAsync(assets)
+				print("FONT LOADED!!!")
 			end--]]
 
 			-- Afaik there's no way to determine when a Font Family has
@@ -394,22 +384,6 @@ return function(icon, Icon)
 		updateBorderSize()
 	end)
 
-	-- Localization support (refresh icon size whenever player changes language changes in-game)
-	local Players = game:GetService("Players")
-	local localPlayer = Players.LocalPlayer
-	local lastLocaleId = localPlayer.LocaleId
-	icon.janitor:add(localPlayer:GetPropertyChangedSignal("LocaleId"):Connect(function()
-		task.delay(0.2, function()
-			local newLocaleId = localPlayer.LocaleId
-			if newLocaleId ~= lastLocaleId then
-				lastLocaleId = newLocaleId
-				icon:refresh()
-				task.wait(0.5)
-				icon:refresh()
-			end
-		end)
-	end))
-	
 	local iconImageScale = Instance.new("NumberValue")
 	iconImageScale.Name = "IconImageScale"
 	iconImageScale.Parent = iconImage

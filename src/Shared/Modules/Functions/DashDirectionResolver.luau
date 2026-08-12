@@ -58,7 +58,15 @@ local function markAxisUsed(Character, Direction, Duration: number?)
 	end
 
 	AxisCooldownExpiry[Character] = AxisCooldownExpiry[Character] or {}
-	AxisCooldownExpiry[Character][Axis] = tick() + (Duration or DirectionCooldown[Direction] or 2)
+
+	local NewExpiry = tick() + (Duration or DirectionCooldown[Direction] or 2)
+	local CurrentExpiry = AxisCooldownExpiry[Character][Axis]
+
+	if CurrentExpiry and CurrentExpiry <= NewExpiry then
+		return
+	end
+
+	AxisCooldownExpiry[Character][Axis] = NewExpiry
 end
 
 function DashResolver.IsTrapped(Character)

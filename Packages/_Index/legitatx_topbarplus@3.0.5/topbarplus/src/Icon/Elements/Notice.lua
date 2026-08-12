@@ -91,6 +91,7 @@ return function(icon, Icon)
 			completeSignal = noticeComplete,
 			clearNoticeEvent = customClearSignal,
 		}
+		local noticeLabel = icon:getInstance("NoticeLabel")
 		local function updateNotice()
 			icon.noticeChanged:Fire(icon.totalNotices)
 		end

@@ -22,18 +22,19 @@ function SpecialsHandler:Activate(Player)
 
 	local moveset = Player:GetAttribute("Moveset")
 	local moveInfo = InfoModule.Movesets[moveset]
+
 	if not moveInfo then
 		return
 	end
 
 	local config = isUlt and moveInfo.UltimateSpecial or moveInfo.Special
+
 	if not config then
 		return
 	end
 
 	local Special = Specials[config.Action]
 	if not Special or not Special.Activate then
-		warn("SpecialsHandler: special not found:", config.Action)
 		return
 	end
 

@@ -178,11 +178,9 @@ function Utility.clipOutside(icon, instance)
 	valueInstanceCopy.Parent = instance
 
 	local screenGui
-	local Icon = require(icon.iconModule)
-	local container = Icon.container
 	local function updateScreenGui()
 		local originalScreenGui = originalParent:FindFirstAncestorWhichIsA("ScreenGui")
-		screenGui = if string.match(originalScreenGui.Name, "Clipped") then originalScreenGui else container[originalScreenGui.Name.."Clipped"]
+		screenGui = if string.match(originalScreenGui.Name, "Clipped") then originalScreenGui else originalScreenGui.Parent[originalScreenGui.Name.."Clipped"]
 		instance.AnchorPoint = Vector2.new(0, 0)
 		instance.Parent = Utility.getClippedContainer(screenGui)
 	end
@@ -207,6 +205,7 @@ function Utility.clipOutside(icon, instance)
 			return
 		end
 		local isVisible = widget.Visible
+		
 		if isOutsideParent then
 			isVisible = false
 		end
@@ -215,6 +214,7 @@ function Utility.clipOutside(icon, instance)
 	cloneJanitor:add(widget:GetPropertyChangedSignal("Visible"):Connect(updateVisibility))
 
 	local previousScroller
+	local Icon = require(icon.iconModule)
 	local function checkIfOutsideParentXBounds()
 		-- Defer so that roblox's properties reflect their true values
 		task.defer(function()
@@ -236,9 +236,6 @@ function Utility.clipOutside(icon, instance)
 						break
 					end
 					parentInstance = nextParentInstance
-					if parentInstance and parentInstance.Name == "DropdownScroller" then
-						break
-					end
 				end
 			end
 			if not parentInstance then
@@ -296,9 +293,9 @@ function Utility.clipOutside(icon, instance)
 				local viewportWidth = workspace.CurrentCamera.ViewportSize.X
 				local guiWidth = screenGui.AbsoluteSize.X
 				local guiOffset = screenGui.AbsolutePosition.X
-				--local widthDifference = guiOffset - topbarInset.Min.X
-				local oldTopbarCenterOffset = 0--widthDifference/30
-				local offsetX = if Icon.isOldTopbar then guiOffset else viewportWidth - guiWidth - oldTopbarCenterOffset
+				local widthDifference = guiOffset - topbarInset.Min.X
+				local oldTopbarCenterOffset = 0--widthDifference/30 -- I have no idea why this works, it just does
+				local offsetX = if icon.isOldTopbar then guiOffset else viewportWidth - guiWidth - oldTopbarCenterOffset
 				
 				-- Also add additionalOffset
 				offsetX -= additionalOffsetX
@@ -314,10 +311,7 @@ function Utility.clipOutside(icon, instance)
 		-- This defer is essential as the listener may be in a different screenGui to the actor
 		local updatePropertyStaggered = Utility.createStagger(0.01, updateProperty)
 		cloneJanitor:add(clone:GetPropertyChangedSignal(absoluteProperty):Connect(updatePropertyStaggered))
-		cloneJanitor:add(clone:GetAttributeChangedSignal("ForceUpdate"):Connect(function()
-			updatePropertyStaggered()
-		end))
-
+		
 		-- This is to patch a weirddddd bug with ScreenGuis with SreenInsets set to
 		-- 'TopbarSafeInsets'. For some reason the absolute position of gui instances
 		-- within this type of screenGui DO NOT accurately update to match their new
@@ -329,15 +323,6 @@ function Utility.clipOutside(icon, instance)
 		local updatePropertyPatch = Utility.createStagger(0.5, updateProperty, true)
 		cloneJanitor:add(clone:GetPropertyChangedSignal(absoluteProperty):Connect(updatePropertyPatch))
 		
-		-- When the screenGui is resized (such as when chat is hidden/shown), we need
-		-- to update the position of the clone. Ths especially fixes the following:
-		-- https://devforum.roblox.com/t/bug/1017485/1732
-		if property == "Position" then
-			cloneJanitor:add(screenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-				updatePropertyStaggered()
-			end))
-		end
-
 	end
 	task.delay(0.1, checkIfOutsideParentXBounds)
 	checkIfOutsideParentXBounds()
@@ -438,7 +423,7 @@ function Utility.joinFeature(originalIcon, parentIcon, iconsArray, scrollingFram
 		originalIcon:setAlignment(originalIcon.originalAlignment)
 		originalIcon.parentIconUID = false
 		originalIcon.joinedFrame = false
-		--originalIcon:setBehaviour("IconButton", "BackgroundTransparency", nil, true)
+		originalIcon:setBehaviour("IconButton", "BackgroundTransparency", nil, true)
 		originalIcon:removeModification("JoinModification")
 		
 		local parentHasNoChildren = true

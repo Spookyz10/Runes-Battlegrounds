@@ -22,7 +22,6 @@ function Themes.getThemeValue(stateGroup, instanceName, property, iconState)
 			end
 		end
 	end
-	return nil
 end
 
 function Themes.getInstanceValue(instance, property)

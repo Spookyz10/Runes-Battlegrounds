@@ -14,8 +14,6 @@ local GuiService = game:GetService("GuiService")
 
 
 -- LOCAL
-local DEFAULT_HIGHLIGHT_KEY = Enum.KeyCode.DPadUp -- The default key to highlight the topbar icon
-local GAMEPAD_INPUT = Enum.PreferredInput.Gamepad
 local Gamepad = {}
 local Icon
 
@@ -27,7 +25,7 @@ function Gamepad.start(incomingIcon)
 	
 	-- Public variables
 	Icon = incomingIcon
-	Icon.highlightKey = if Icon.highlightKey ~= nil then Icon.highlightKey else DEFAULT_HIGHLIGHT_KEY -- What controller key to highlight the topbar (or set to false to disable)
+	Icon.highlightKey = Enum.KeyCode.DPadUp -- What controller key to highlight the topbar (or set to false to disable)
 	Icon.highlightIcon = false -- Change to a specific icon if you'd like to highlight a specific icon instead of the left-most
 	
 	-- We defer so the developer can make changes before the
@@ -44,14 +42,16 @@ function Gamepad.start(incomingIcon)
 		
 		-- This enables users to instantly open up their last selected icon
 		local previousHighlightedIcon
-		local usedIndicatorOnce = DEFAULT_HIGHLIGHT_KEY ~= Icon.highlightKey
-		local usedBOnce = DEFAULT_HIGHLIGHT_KEY ~= Icon.highlightKey
+		local iconDisplayingHighlightKey
+		local usedIndicatorOnce = false
+		local usedBOnce = false
+		local Utility = require(script.Parent.Parent.Utility)
 		local Selection = require(script.Parent.Parent.Elements.Selection)
 		local function updateSelectedObject()
 			local icon = getIconFromSelectedObject()
-			local isUsingGamepad = UserInputService.PreferredInput == GAMEPAD_INPUT
+			local gamepadEnabled = UserInputService.GamepadEnabled
 			if icon then
-				if isUsingGamepad then
+				if gamepadEnabled then
 					local clickRegion = icon:getInstance("ClickRegion")
 					local selection = icon.selection
 					if not selection then
@@ -66,12 +66,12 @@ function Gamepad.start(incomingIcon)
 				if previousHighlightedIcon and previousHighlightedIcon ~= icon then
 					previousHighlightedIcon:setIndicator()
 				end
-				local newIndicator = if isUsingGamepad and not usedBOnce and not icon.parentIconUID then Enum.KeyCode.ButtonB else nil
+				local newIndicator = if gamepadEnabled and not usedBOnce and not icon.parentIconUID then Enum.KeyCode.ButtonB else nil
 				previousHighlightedIcon = icon
 				Icon.lastHighlightedIcon = icon
 				icon:setIndicator(newIndicator)
 			else
-				local newIndicator = if isUsingGamepad and not usedIndicatorOnce then Icon.highlightKey else nil
+				local newIndicator = if gamepadEnabled and not usedIndicatorOnce then Icon.highlightKey else nil
 				if not previousHighlightedIcon then
 					previousHighlightedIcon = Gamepad.getIconToHighlight()
 				end
@@ -90,18 +90,16 @@ function Gamepad.start(incomingIcon)
 		GuiService:GetPropertyChangedSignal("SelectedObject"):Connect(updateSelectedObject)
 
 		-- This listens for a gamepad being present/added/removed
-		local function preferredInputChanged()
-			local preferredInput = UserInputService.PreferredInput
-			local isUsingGamepad = preferredInput == GAMEPAD_INPUT
-
-			if not isUsingGamepad then
+		local function checkGamepadEnabled()
+			local gamepadEnabled = UserInputService.GamepadEnabled
+			if not gamepadEnabled then
 				usedIndicatorOnce = false
 				usedBOnce = false
 			end
 			updateSelectedObject()
 		end
-		UserInputService:GetPropertyChangedSignal("PreferredInput"):Connect(preferredInputChanged)
-		preferredInputChanged()
+		UserInputService:GetPropertyChangedSignal("GamepadEnabled"):Connect(checkGamepadEnabled)
+		checkGamepadEnabled()
 
 		-- This allows for easy highlighting of the topbar when the
 		-- when ``Icon.highlightKey`` (i.e. DPadUp) is pressed.
