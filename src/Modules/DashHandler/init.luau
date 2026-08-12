@@ -332,24 +332,24 @@ local function runDisplacementDash(Player, Character, HumRP, Humanoid, Config)
 	end
 end
 
-function DashHandler:Dash(Player, Direction)
+function DashHandler:Dash(Player: Player, Direction: string): boolean
 	local Character = Player.Character
 	if not Character then
-		return
+		return false
 	end
 
 	if DashDebounce[Character] then
-		return
+		return false
 	end
 
 	local Humanoid = Character:FindFirstChild("Humanoid")
 	local HumRP = Character:FindFirstChild("HumanoidRootPart")
 	if not Humanoid or not HumRP then
-		return
+		return false
 	end
 
 	if Character:GetAttribute("Dashing") == true then
-		return
+		return false
 	end
 
 	DashDebounce[Character] = true
@@ -360,7 +360,7 @@ function DashHandler:Dash(Player, Direction)
 	local Trapped = EvasiveService:IsTrapped(Character)
 
 	if not Trapped and Character:HasTag("CantDash") then
-		return
+		return false
 	end
 
 	if Direction == "Front" and Trapped then
@@ -370,27 +370,27 @@ function DashHandler:Dash(Player, Direction)
 
 	if Trapped then
 		if not EvasiveService:CanEscape(Character) then
-			return
+			return false
 		end
 		if not EvasiveService:Escape(Character) then
-			return
+			return false
 		end
 	else
 		if Character:HasTag("Stunned") then
-			return
+			return false
 		end
 
 		local CooldownId = AxisKey[Direction] or ("Dash_" .. Direction)
 
 		if CooldownSystem:IsOnCooldown(Character, CooldownId) then
-			return
+			return false
 		end
 	end
 
 	local Config = getConfig(Player, Direction)
 	if not Config then
 		warn("[DashHandler] No dash config for direction " .. Direction)
-		return
+		return false
 	end
 
 	local Cooldown = Config.Cooldown or 2
@@ -406,6 +406,8 @@ function DashHandler:Dash(Player, Direction)
 	else
 		runDisplacementDash(Player, Character, HumRP, Humanoid, Config)
 	end
+
+	return true
 end
 
 return DashHandler

@@ -1,22 +1,22 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GuiService = game:GetService("GuiService")
 
-local RPModules = ReplicatedStorage.Shared.Modules
 local UIConstants = require(ReplicatedStorage.Shared.UI.UIConstants)
 
+local Icon = require(ReplicatedStorage.Packages.topbarplus)
 local Topbar = {}
 
-local IconController = nil
+local runesIcon = nil
 
 function Topbar.Show()
-	if IconController then
-		IconController.setTopbarEnabled(true)
+	if runesIcon then
+		runesIcon:setEnabled(true)
 	end
 end
 
 function Topbar.Hide()
-	if IconController then
-		IconController.setTopbarEnabled(false)
+	if runesIcon then
+		runesIcon:setEnabled(false)
 	end
 end
 
@@ -24,7 +24,7 @@ local function setupRunesButton()
 	local player = UIConstants.Player
 	local playerGui = player:WaitForChild("PlayerGui")
 
-	local runesIcon = IconController.new()
+	runesIcon = Icon.new()
 	runesIcon:setName("Runes")
 	runesIcon:setLabel("Runes")
 
@@ -53,9 +53,6 @@ function Topbar.Init()
 			end
 		end
 	end
-
-	local IconModule = RPModules["NewIcon"]
-	IconController = require(IconModule.IconController)
 
 	setupRunesButton()
 

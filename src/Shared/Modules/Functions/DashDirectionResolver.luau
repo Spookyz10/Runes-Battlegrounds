@@ -316,13 +316,29 @@ function DashResolver.PerformDash(Character, Humanoid, HumRP, Camera, Animator)
 
 	local Direction, Trapped, Escaping, CanAct = DashResolver.Resolve(Character, Humanoid, HumRP)
 
-	RemoteManager.FireServer("Keypress", { Key = Enum.KeyCode.Q, Direction = Direction, ClientCFrame = HumRP.CFrame })
-
 	if not CanAct then
 		return Direction, Trapped, Escaping, CanAct
 	end
 
 	if not Escaping and isAxisOnCooldown(Character, Direction) then
+		return Direction, Trapped, Escaping, false
+	end
+
+	if Direction == "Front" then
+		if not Escaping then
+			markAxisUsed(Character, Direction)
+		end
+
+		RemoteManager.FireServer(
+			"Keypress",
+			{ Key = Enum.KeyCode.Q, Direction = Direction, ClientCFrame = HumRP.CFrame }
+		)
+
+		return Direction, Trapped, Escaping, CanAct
+	end
+
+	local Approved = RemoteManager.InvokeServer("DashRequest", Direction)
+	if not Approved then
 		return Direction, Trapped, Escaping, false
 	end
 

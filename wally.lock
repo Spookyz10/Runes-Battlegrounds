@@ -3,9 +3,14 @@
 registry = "test"
 
 [[package]]
+name = "1foreverhd/topbarplus"
+version = "3.4.0"
+dependencies = []
+
+[[package]]
 name = "azvar/runes-battlegrounds"
 version = "0.1.0"
-dependencies = [["dataservicetyped", "leifstout/dataservicetyped@1.0.4"]]
+dependencies = [["topbarplus", "1foreverhd/topbarplus@3.4.0"], ["dataservicetyped", "leifstout/dataservicetyped@1.0.4"]]
 
 [[package]]
 name = "leifstout/dataservicetyped"

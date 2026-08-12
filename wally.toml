@@ -5,6 +5,7 @@ registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
 
 [dependencies]
+topbarplus = "1foreverhd/topbarplus@3.4.0"
 
 [server-dependencies]
 dataservicetyped = "leifstout/dataservicetyped@1.0.3"
