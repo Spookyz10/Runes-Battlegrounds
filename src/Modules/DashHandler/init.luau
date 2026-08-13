@@ -160,7 +160,7 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 		HitList[EnemyCharacter] = true
 
 		local HitAnims = Config.HitAnimations and Config.HitAnimations()
-		SFXModule:Play(Config.HitSound or "Hit", HumRP)
+		SFXModule:Play("DashHit", HumRP)
 
 		local HitInfo = DamageHandler:TakeDamage(
 			Character,
@@ -252,6 +252,7 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 		stopSlopeClamp()
 		StunHandler:Unstun(Character, Stun)
 		if not Hit then
+			SFXModule:Play("DashMiss", HumRP)
 			RemoteManager.FireAllClients(
 				"ReplicateTask",
 				"DashMiss",
@@ -399,7 +400,11 @@ function DashHandler:Dash(Player: Player, Direction: string): boolean
 	CooldownSystem:Set(Character, CooldownId, Cooldown)
 	RemoteManager.FireClient(Player, "ExtraCds", Direction .. "Dash", Cooldown)
 
-	SFXModule:Play(Config.Sound or "Dash", HumRP)
+	if Config.Type == "Attack" then
+		SFXModule:Play("DashStart", HumRP)
+	else
+		SFXModule:Play("Dash", HumRP)
+	end
 
 	if Config.Type == "Attack" then
 		runAttackDash(Player, Character, HumRP, Humanoid, Config)

@@ -15,6 +15,7 @@ Config.Empowered = {
 	DoFinisher = false,
 	PlayHitEffect = false,
 	Knockback = "PerfectFinisher",
+	HitSound = "M3",
 	Condition = function(Character)
 		return StatusEffectHandler:GetStacks(Character, "FireArms") > 0
 	end,

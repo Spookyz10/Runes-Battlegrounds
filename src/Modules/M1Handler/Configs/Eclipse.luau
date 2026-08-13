@@ -15,6 +15,7 @@ return {
 			Hitbox = DefaultHitbox,
 			Blockable = true,
 			Knockback = "PushBoth",
+			HitSound = "M1",
 		},
 		[2] = {
 			Damage = 2,
@@ -23,6 +24,7 @@ return {
 			Hitbox = DefaultHitbox,
 			Blockable = true,
 			Knockback = "PushBoth",
+			HitSound = "M2",
 		},
 		[3] = {
 			Damage = 2,
@@ -31,6 +33,7 @@ return {
 			Hitbox = DefaultHitbox,
 			Blockable = true,
 			Knockback = "PushBoth",
+			HitSound = "M3",
 		},
 		[4] = {
 			Damage = 4,
@@ -39,6 +42,7 @@ return {
 			Hitbox = DefaultHitbox,
 			Blockable = true,
 			Knockback = "RagdollForward",
+			HitSound = "M3",
 		},
 	},
 	Uppercut = {
@@ -48,6 +52,7 @@ return {
 		Hitbox = { Size = Vector3.new(7, 14, 7), Offset = CFrame.new(0, -3, -3.5) },
 		Blockable = true,
 		Knockback = "RagdollUppercut",
+		HitSound = "Uppercut",
 	},
 	Downslam = {
 		Damage = 4,
@@ -57,5 +62,6 @@ return {
 		Blockable = false,
 		IgnoreRagdollCheck = true,
 		Knockback = "RagdollDownslam",
+		HitSound = "Downslam",
 	},
 }

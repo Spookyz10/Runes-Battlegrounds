@@ -130,7 +130,7 @@ function M1Handler:Punch(Player)
 	table.insert(
 		PunchEvents,
 		PunchAnimTrack:GetMarkerReachedSignal("hit"):Connect(function()
-			SFXModule:Play(Step.HitSound or "Hit", HumRP)
+			SFXModule:Play(Step.HitSound or "M1", HumRP)
 
 			HitboxHandler:SimpleOnce(
 				HumRP,
