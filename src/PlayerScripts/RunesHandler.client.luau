@@ -1,33 +1,42 @@
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players: Players = game:GetService("Players")
+local RunService: RunService = game:GetService("RunService")
+local ReplicatedStorage: ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local FadeOut = require(ReplicatedStorage.Shared.Modules.Utility.FadeOut)
 
-local RunesFolder = ReplicatedStorage.Resources.Runes
+local RunesFolder: Folder = ReplicatedStorage.Resources.Runes
 
-local RUNE_OFFSET = Vector3.new(2.5, 1, 0)
-local BOB_HEIGHT = 0.35
-local BOB_SPEED = 2.2
-local ALIGN_RESPONSIVENESS = 8
-local ALIGN_MAX_FORCE = 15000
-local ALIGN_MAX_TORQUE = 15000
-local FADE_DURATION = 0.4
+local RUNE_OFFSET: Vector3 = Vector3.new(2.5, 1, 0)
+local BOB_HEIGHT: number = 0.35
+local BOB_SPEED: number = 2.2
+local ALIGN_RESPONSIVENESS: number = 8
+local ALIGN_MAX_FORCE: number = 15000
+local ALIGN_MAX_TORQUE: number = 15000
+local FADE_DURATION: number = 0.4
+local PLAYER_RESOLVE_TIMEOUT: number = 5
 
-local activeRunes = {}
+type RuneData = {
+	model: Model,
+	mainPart: BasePart,
+	targetAnchor: Part,
+	conn: RBXScriptConnection,
+	key: string,
+}
 
-local function getRuneKey(Character, Player)
-	local moveset = Character:GetAttribute("Moveset")
+local activeRunes: { [Model]: RuneData } = {}
+
+local function getRuneKey(Character: Model, Player: Player): string?
+	local moveset: string? = Character:GetAttribute("Moveset") :: string?
 	if moveset ~= "Eclipse" then
 		return nil
 	end
 
-	local mode = Player:GetAttribute("MovesetMode_Eclipse")
+	local mode: string? = Player:GetAttribute("MovesetMode_Eclipse") :: string?
 	if not mode then
 		return nil
 	end
 
-	local isAwakened = Character:GetAttribute("Awakened") == true or Character:HasTag("Awakened")
+	local isAwakened: boolean = Character:GetAttribute("Awakened") == true or Character:HasTag("Awakened")
 
 	if isAwakened then
 		return mode .. " Eclipse"
@@ -36,9 +45,9 @@ local function getRuneKey(Character, Player)
 	return mode
 end
 
-local function getFlatCFrame(Torso, extraOffset)
-	local lookVector = Torso.CFrame.LookVector
-	local flatLook = Vector3.new(lookVector.X, 0, lookVector.Z)
+local function getFlatCFrame(Torso: BasePart, extraOffset: Vector3?): CFrame
+	local lookVector: Vector3 = Torso.CFrame.LookVector
+	local flatLook: Vector3 = Vector3.new(lookVector.X, 0, lookVector.Z)
 
 	if flatLook.Magnitude < 0.001 then
 		flatLook = Vector3.new(0, 0, -1)
@@ -46,8 +55,8 @@ local function getFlatCFrame(Torso, extraOffset)
 		flatLook = flatLook.Unit
 	end
 
-	local basePosition = Torso.Position
-	local flatCFrame = CFrame.lookAt(basePosition, basePosition + flatLook)
+	local basePosition: Vector3 = Torso.Position
+	local flatCFrame: CFrame = CFrame.lookAt(basePosition, basePosition + flatLook)
 
 	if extraOffset then
 		flatCFrame = flatCFrame * CFrame.new(extraOffset)
@@ -56,8 +65,8 @@ local function getFlatCFrame(Torso, extraOffset)
 	return flatCFrame
 end
 
-local function destroyRune(Character)
-	local data = activeRunes[Character]
+local function destroyRune(Character: Model)
+	local data: RuneData? = activeRunes[Character]
 	if not data then
 		return
 	end
@@ -75,7 +84,7 @@ local function destroyRune(Character)
 	activeRunes[Character] = nil
 end
 
-local function fadeOutRune(data)
+local function fadeOutRune(data: RuneData)
 	if data.conn then
 		data.conn:Disconnect()
 	end
@@ -85,7 +94,7 @@ local function fadeOutRune(data)
 	end
 
 	if data.targetAnchor and data.targetAnchor.Parent then
-		local TargetAnchor = data.targetAnchor
+		local TargetAnchor: Part = data.targetAnchor
 		task.delay(FADE_DURATION, function()
 			if TargetAnchor and TargetAnchor.Parent then
 				TargetAnchor:Destroy()
@@ -94,23 +103,24 @@ local function fadeOutRune(data)
 	end
 end
 
-local function buildRune(Character, key, spawnCFrame)
-	local RuneTemplate = RunesFolder:FindFirstChild(key)
+local function buildRune(Character: Model, key: string, spawnCFrame: CFrame?)
+	local RuneTemplate: Instance? = RunesFolder:FindFirstChild(key)
 	if not RuneTemplate then
 		return
 	end
 
-	local Torso = Character:FindFirstChild("Torso") or Character:FindFirstChild("UpperTorso")
+	local Torso: BasePart? = (Character:FindFirstChild("Torso") :: BasePart?)
+		or Character:FindFirstChild("UpperTorso") :: BasePart?
 	if not Torso then
 		return
 	end
 
-	spawnCFrame = spawnCFrame or getFlatCFrame(Torso, RUNE_OFFSET)
+	local ResolvedCFrame: CFrame = spawnCFrame or getFlatCFrame(Torso, RUNE_OFFSET)
 
-	local RuneModel = RuneTemplate:Clone()
+	local RuneModel: Model = (RuneTemplate :: Model):Clone()
 	RuneModel.Name = "EquippedRune"
 
-	local MainPart = RuneModel.PrimaryPart or RuneModel:FindFirstChildWhichIsA("BasePart")
+	local MainPart: BasePart? = RuneModel.PrimaryPart or RuneModel:FindFirstChildWhichIsA("BasePart")
 	if not MainPart then
 		RuneModel:Destroy()
 		return
@@ -119,7 +129,7 @@ local function buildRune(Character, key, spawnCFrame)
 		RuneModel.PrimaryPart = MainPart
 	end
 
-	for _, part in RuneModel:GetDescendants() do
+	for _, part: Instance in RuneModel:GetDescendants() do
 		if part:IsA("BasePart") then
 			part.Anchored = false
 			part.CanCollide = false
@@ -128,7 +138,7 @@ local function buildRune(Character, key, spawnCFrame)
 			part.Massless = true
 
 			if part ~= MainPart then
-				local Weld = Instance.new("WeldConstraint")
+				local Weld: WeldConstraint = Instance.new("WeldConstraint")
 				Weld.Part0 = MainPart
 				Weld.Part1 = part
 				Weld.Parent = part
@@ -136,14 +146,14 @@ local function buildRune(Character, key, spawnCFrame)
 		end
 	end
 
-	RuneModel:PivotTo(spawnCFrame)
+	RuneModel:PivotTo(ResolvedCFrame)
 	RuneModel.Parent = Character
 
-	local RuneAttachment = Instance.new("Attachment")
+	local RuneAttachment: Attachment = Instance.new("Attachment")
 	RuneAttachment.Name = "RuneAttachment"
 	RuneAttachment.Parent = MainPart
 
-	local TargetAnchor = Instance.new("Part")
+	local TargetAnchor: Part = Instance.new("Part")
 	TargetAnchor.Name = "RuneTargetAnchor"
 	TargetAnchor.Anchored = true
 	TargetAnchor.CanCollide = false
@@ -151,13 +161,13 @@ local function buildRune(Character, key, spawnCFrame)
 	TargetAnchor.CanQuery = false
 	TargetAnchor.Transparency = 1
 	TargetAnchor.Size = Vector3.new(0.1, 0.1, 0.1)
-	TargetAnchor.CFrame = spawnCFrame
+	TargetAnchor.CFrame = ResolvedCFrame
 	TargetAnchor.Parent = workspace.Debris
 
-	local TargetAttachment = Instance.new("Attachment")
+	local TargetAttachment: Attachment = Instance.new("Attachment")
 	TargetAttachment.Parent = TargetAnchor
 
-	local AlignPosition = Instance.new("AlignPosition")
+	local AlignPosition: AlignPosition = Instance.new("AlignPosition")
 	AlignPosition.Attachment0 = RuneAttachment
 	AlignPosition.Attachment1 = TargetAttachment
 	AlignPosition.MaxForce = ALIGN_MAX_FORCE
@@ -165,7 +175,7 @@ local function buildRune(Character, key, spawnCFrame)
 	AlignPosition.RigidityEnabled = false
 	AlignPosition.Parent = MainPart
 
-	local AlignOrientation = Instance.new("AlignOrientation")
+	local AlignOrientation: AlignOrientation = Instance.new("AlignOrientation")
 	AlignOrientation.Attachment0 = RuneAttachment
 	AlignOrientation.Attachment1 = TargetAttachment
 	AlignOrientation.MaxTorque = ALIGN_MAX_TORQUE
@@ -173,14 +183,14 @@ local function buildRune(Character, key, spawnCFrame)
 	AlignOrientation.RigidityEnabled = false
 	AlignOrientation.Parent = MainPart
 
-	local startTime = os.clock()
+	local startTime: number = os.clock()
 
-	local conn = RunService.Heartbeat:Connect(function()
+	local conn: RBXScriptConnection = RunService.Heartbeat:Connect(function()
 		if not Character.Parent or not Torso.Parent or not TargetAnchor.Parent then
 			return
 		end
 
-		local bobY = math.sin((os.clock() - startTime) * BOB_SPEED) * BOB_HEIGHT
+		local bobY: number = math.sin((os.clock() - startTime) * BOB_SPEED) * BOB_HEIGHT
 		TargetAnchor.CFrame = getFlatCFrame(Torso, RUNE_OFFSET + Vector3.new(0, bobY, 0))
 	end)
 
@@ -195,9 +205,9 @@ local function buildRune(Character, key, spawnCFrame)
 	FadeOut.In(RuneModel, FADE_DURATION)
 end
 
-local function updateRune(Character, Player)
-	local key = getRuneKey(Character, Player)
-	local previous = activeRunes[Character]
+local function updateRune(Character: Model, Player: Player)
+	local key: string? = getRuneKey(Character, Player)
+	local previous: RuneData? = activeRunes[Character]
 
 	if previous and previous.key == key then
 		return
@@ -206,9 +216,10 @@ local function updateRune(Character, Player)
 	activeRunes[Character] = nil
 
 	if key then
-		local Torso = Character:FindFirstChild("Torso") or Character:FindFirstChild("UpperTorso")
+		local Torso: BasePart? = (Character:FindFirstChild("Torso") :: BasePart?)
+			or Character:FindFirstChild("UpperTorso") :: BasePart?
 
-		local spawnCFrame
+		local spawnCFrame: CFrame? = nil
 		if previous and previous.mainPart and previous.mainPart.Parent then
 			spawnCFrame = previous.mainPart.CFrame
 		elseif Torso then
@@ -225,57 +236,72 @@ local function updateRune(Character, Player)
 	end
 end
 
-local function setupCharacter(Character)
-	local Player = Players:GetPlayerFromCharacter(Character)
+local function resolvePlayer(Character: Model): Player?
+	local Player: Player? = Players:GetPlayerFromCharacter(Character)
+	if Player then
+		return Player
+	end
+
+	local startTime: number = os.clock()
+	repeat
+		task.wait()
+		Player = Players:GetPlayerFromCharacter(Character)
+	until Player or not Character.Parent or (os.clock() - startTime) > PLAYER_RESOLVE_TIMEOUT
+
+	return Player
+end
+
+local function setupCharacter(Character: Model)
+	local Player: Player? = resolvePlayer(Character)
 	if not Player then
 		return
 	end
 
 	updateRune(Character, Player)
 
-	local connections = {}
+	local connections: { RBXScriptConnection } = {}
 
 	table.insert(
 		connections,
 		Character:GetAttributeChangedSignal("Moveset"):Connect(function()
-			updateRune(Character, Player)
+			updateRune(Character, Player :: Player)
 		end)
 	)
 
 	table.insert(
 		connections,
 		Character:GetAttributeChangedSignal("Awakened"):Connect(function()
-			updateRune(Character, Player)
+			updateRune(Character, Player :: Player)
 		end)
 	)
 
 	table.insert(
 		connections,
-		Player:GetAttributeChangedSignal("MovesetMode_Eclipse"):Connect(function()
-			updateRune(Character, Player)
+		(Player :: Player):GetAttributeChangedSignal("MovesetMode_Eclipse"):Connect(function()
+			updateRune(Character, Player :: Player)
 		end)
 	)
 
-	Character.AncestryChanged:Once(function(_, parent)
+	Character.AncestryChanged:Once(function(_, parent: Instance?)
 		if parent then
 			return
 		end
 
 		destroyRune(Character)
-		for _, conn in connections do
+		for _, conn: RBXScriptConnection in connections do
 			conn:Disconnect()
 		end
 	end)
 end
 
-for _, Character in workspace.Live:GetChildren() do
-	task.spawn(setupCharacter, Character)
+for _, Character: Instance in workspace.Live:GetChildren() do
+	task.spawn(setupCharacter, Character :: Model)
 end
 
-workspace.Live.ChildAdded:Connect(function(Character)
-	task.spawn(setupCharacter, Character)
+workspace.Live.ChildAdded:Connect(function(Character: Instance)
+	task.spawn(setupCharacter, Character :: Model)
 end)
 
-workspace.Live.ChildRemoved:Connect(function(Character)
-	destroyRune(Character)
+workspace.Live.ChildRemoved:Connect(function(Character: Instance)
+	destroyRune(Character :: Model)
 end)
