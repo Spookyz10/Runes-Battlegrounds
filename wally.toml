@@ -6,6 +6,5 @@ realm = "shared"
 
 [dependencies]
 topbarplus = "legitatx/topbarplus@3.0.5"
-
-[server-dependencies]
 dataservicetyped = "leifstout/dataservicetyped@1.0.3"
+

@@ -1,8 +1,11 @@
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local MarketplaceService = game:GetService("MarketplaceService")
 
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
+local EarlyAccess = require(ReplicatedStorage.Shared.EarlyAccess)
 local MovesetHandler = require(ServerStorage.Modules.MovesetHandler)
+local GamepassService = require(ServerStorage.Modules.GamepassService)
 
 local Remote = {}
 
@@ -21,6 +24,11 @@ function Remote:Activate(Player: Player, MovesetName: string)
 	local Character = Player.Character
 	if not Character or Character:HasTag("Stunned") then
 		notify(Player, "YOU CAN'T CHANGE MOVESETS RIGHT NOW.")
+		return
+	end
+
+	if EarlyAccess:IsEarlyAccess(MovesetName) and not GamepassService:PlayerOwnsEarlyAccess(Player) then
+		MarketplaceService:PromptGamePassPurchase(Player, EarlyAccess.GamepassId)
 		return
 	end
 

@@ -1,9 +1,15 @@
+local MarketplaceService = game:GetService("MarketplaceService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Data = require(ReplicatedStorage.Shared.Data).client
 local InfoModule = require(ReplicatedStorage.Shared.Info)
 local UIConstants = require(ReplicatedStorage.Shared.UI.UIConstants)
 local UIFunctions = require(ReplicatedStorage.Shared.UI.UIFunctions)
+local EarlyAccess = require(ReplicatedStorage.Shared.EarlyAccess)
 
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
+
+local Player = UIConstants.Player
 local PlayerGui = UIConstants.PlayerGui
 local Gradients = UIConstants.Gradients
 
@@ -27,6 +33,13 @@ local RuneSelection = {}
 
 local activeRuneButtons = {}
 local selectedMoveset = nil
+
+local function ownsRune(movesetName)
+	if not EarlyAccess:IsEarlyAccess(movesetName) then
+		return true
+	end
+	return Data.OwnedPasses[EarlyAccess.GamepassId] == true
+end
 
 local function applyRuneGradient(movesetName)
 	UIFunctions.ApplyGradientTemplate(RuneBase, Gradients, movesetName)
@@ -147,7 +160,24 @@ function RuneSelection.Init()
 	populateRunes()
 
 	EquipButton.Activated:Connect(function()
-		print("Equip Rune pressed for:", selectedMoveset)
+		if not selectedMoveset then
+			return
+		end
+
+		if not ownsRune(selectedMoveset) then
+			MarketplaceService:PromptGamePassPurchase(Player, EarlyAccess.GamepassId)
+			return
+		end
+
+		RemoteManager.FireServer("SetMoveset", selectedMoveset)
+	end)
+
+	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, gamepassId, wasPurchased)
+		if player ~= Player or not wasPurchased or gamepassId ~= EarlyAccess.GamepassId then
+			return
+		end
+
+		Data.OwnedPasses[gamepassId] = true
 	end)
 end
 

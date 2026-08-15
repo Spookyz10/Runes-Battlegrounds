@@ -1,8 +1,9 @@
-local ServerStorage = game:GetService("ServerStorage")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local playerClass = {}
 playerClass.__index = playerClass
 
-local DataServiceTyped = require(ServerStorage.ServerPackages.dataservicetyped)
+local DataServiceTyped = require(ReplicatedStorage.Packages.dataservicetyped)
 
 local template = {
 	Moveset = "Eclipse",
