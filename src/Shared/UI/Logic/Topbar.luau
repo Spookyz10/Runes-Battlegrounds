@@ -5,31 +5,37 @@ local UIConstants = require(ReplicatedStorage.Shared.UI.UIConstants)
 local Icon = require(ReplicatedStorage.Packages.topbarplus)
 local Topbar = {}
 
-local runesIcon = Icon.new()
+local MainIcon = Icon.new()
+local StoreIcon = Icon.new()
 
 function Topbar.Show()
-	if runesIcon then
-		runesIcon:setEnabled(true)
+	if MainIcon then
+		MainIcon:setEnabled(true)
+	end
+	if StoreIcon then
+		StoreIcon:setEnabled(true)
 	end
 end
 
 function Topbar.Hide()
-	if runesIcon then
-		runesIcon:setEnabled(false)
+	if MainIcon then
+		MainIcon:setEnabled(false)
+	end
+	if StoreIcon then
+		StoreIcon:setEnabled(false)
 	end
 end
 
-local function setupRunesButton()
+function Topbar.Init()
 	local playerGui = UIConstants.PlayerGui
 
-	runesIcon:setLabel("Runes")
+	MainIcon:setLabel("Runes")
 	local runeSelection = playerGui:FindFirstChild("RuneSelection")
+	MainIcon:bindToggleItem(runeSelection)
 
-	runesIcon:bindToggleItem(runeSelection)
-end
-
-function Topbar.Init()
-	setupRunesButton()
+	StoreIcon:setLabel("Store")
+	local store = playerGui:FindFirstChild("Store")
+	StoreIcon:bindToggleItem(store)
 
 	local loadedTopBar = Instance.new("BoolValue")
 	loadedTopBar.Name = "loadedTopBar"
