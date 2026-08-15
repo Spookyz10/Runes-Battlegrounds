@@ -1,5 +1,6 @@
 return {
 	Info = {
+		Order = 1,
 		Icon = "rbxassetid://0",
 
 		Special = {
@@ -22,8 +23,5 @@ return {
 
 	AwakeningMoves = {},
 
-	SpecialDisplay = {
-		Name = "",
-		Desc = "",
-	},
+	SpecialDisplay = nil,
 }

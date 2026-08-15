@@ -74,12 +74,12 @@ end
 
 local function addRTemplate(movesetInfo)
 	local Special = movesetInfo.SpecialDisplay
-	if not Special then
+	if not Special or not Special.Name or Special.Name == "" then
 		return
 	end
 
 	local clone = RTemplate:Clone()
-	clone.SkillName.Text = Special.Name or "Special"
+	clone.SkillName.Text = Special.Name
 	clone.Desc.Text = Special.Desc or ""
 	clone.LayoutOrder = 0
 	clone.Parent = InfoContent
@@ -114,6 +114,8 @@ local function showInfo(movesetName)
 	end
 
 	selectedMoveset = movesetName
+
+	RuneBase.Visible = true
 
 	ItemName.Text = movesetName .. " Rune"
 	RuneBase.Icon.Image = movesetInfo.Icon or "rbxassetid://0"

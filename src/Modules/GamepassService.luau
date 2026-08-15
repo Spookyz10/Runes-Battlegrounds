@@ -33,7 +33,29 @@ end
 
 function GamepassService:PlayerOwnsEarlyAccess(Player)
 	local playerData = Data.Service:waitForData(Player)
-	return playerData and playerData.OwnedPasses()[EarlyAccess.GamepassId] == true
+	if not playerData then
+		return false
+	end
+
+	if playerData.OwnedPasses()[EarlyAccess.GamepassId] == true then
+		return true
+	end
+
+	local GamepassId = EarlyAccess.GamepassId
+
+	local Ok, Owns = pcall(function()
+		return MarketplaceService:UserOwnsGamePassAsync(Player.UserId, GamepassId)
+	end)
+
+	if Ok and Owns then
+		playerData.OwnedPasses(function(passes)
+			passes[GamepassId] = true
+			return passes
+		end)
+		return true
+	end
+
+	return false
 end
 
 Players.PlayerAdded:Connect(function(Player)

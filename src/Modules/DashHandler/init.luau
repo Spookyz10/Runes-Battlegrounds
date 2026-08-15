@@ -252,7 +252,6 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 		stopSlopeClamp()
 		StunHandler:Unstun(Character, Stun)
 		if not Hit then
-			SFXModule:Play("DashMiss", HumRP)
 			RemoteManager.FireAllClients(
 				"ReplicateTask",
 				"DashMiss",
