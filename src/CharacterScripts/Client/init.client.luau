@@ -83,17 +83,18 @@ end
 local function checkWalkDirection()
 	local StunnedFolder: Folder? = Character:FindFirstChild("Stunned")
 	if StunnedFolder then
-		Humanoid.WalkSpeed = StunnedFolder:GetAttribute("WalkSpeed")
-		Humanoid.JumpPower = StunnedFolder:GetAttribute("JumpPower")
+		Humanoid.WalkSpeed = StunnedFolder:GetAttribute("WalkSpeed") or 0
+		Humanoid.JumpPower = StunnedFolder:GetAttribute("JumpPower") or 0
 		if RunTrack.IsPlaying then
 			RunTrack:Stop(0.15)
 		end
 		return
 	end
 
-	Humanoid.WalkSpeed = Character:GetAttribute("Running") and Character:GetAttribute("DefaultRunSpeed")
+	Humanoid.WalkSpeed = (Character:GetAttribute("Running") and Character:GetAttribute("DefaultRunSpeed"))
 		or Character:GetAttribute("DefaultWalkSpeed")
-	Humanoid.JumpPower = Character:GetAttribute("DefaultJumpPower")
+		or 16
+	Humanoid.JumpPower = Character:GetAttribute("DefaultJumpPower") or 50
 
 	local forwardDot: number = Humanoid.MoveDirection:Dot(Camera.CFrame.LookVector)
 	local rightDot: number = Humanoid.MoveDirection:Dot(Camera.CFrame.RightVector)
@@ -190,16 +191,17 @@ heartbeatConnection = RunService.RenderStepped:Connect(function(deltaTime: numbe
 
 	local StunnedFolder: Folder? = Character:FindFirstChild("Stunned")
 	if StunnedFolder then
-		Humanoid.WalkSpeed = StunnedFolder:GetAttribute("WalkSpeed")
-		Humanoid.JumpPower = StunnedFolder:GetAttribute("JumpPower")
+		Humanoid.WalkSpeed = StunnedFolder:GetAttribute("WalkSpeed") or 0
+		Humanoid.JumpPower = StunnedFolder:GetAttribute("JumpPower") or 0
 
 		if RunTrack.IsPlaying then
 			RunTrack:Stop(0.15)
 		end
 	else
-		Humanoid.WalkSpeed = Character:GetAttribute("Running") and Character:GetAttribute("DefaultRunSpeed")
+		Humanoid.WalkSpeed = (Character:GetAttribute("Running") and Character:GetAttribute("DefaultRunSpeed"))
 			or Character:GetAttribute("DefaultWalkSpeed")
-		Humanoid.JumpPower = Character:GetAttribute("DefaultJumpPower")
+			or 16
+		Humanoid.JumpPower = Character:GetAttribute("DefaultJumpPower") or 50
 
 		checkWalkDirection()
 	end

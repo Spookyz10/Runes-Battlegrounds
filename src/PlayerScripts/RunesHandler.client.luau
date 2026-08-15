@@ -3,6 +3,7 @@ local RunService: RunService = game:GetService("RunService")
 local ReplicatedStorage: ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local FadeOut = require(ReplicatedStorage.Shared.Modules.Utility.FadeOut)
+local InfoModule = require(ReplicatedStorage.Shared.Info)
 
 local RunesFolder: Folder = ReplicatedStorage.Resources.Runes
 
@@ -27,19 +28,28 @@ local activeRunes: { [Model]: RuneData } = {}
 
 local function getRuneKey(Character: Model, Player: Player): string?
 	local moveset: string? = Character:GetAttribute("Moveset") :: string?
-	if moveset ~= "Eclipse" then
+	if not moveset then
 		return nil
 	end
 
-	local mode: string? = Player:GetAttribute("MovesetMode_Eclipse") :: string?
-	if not mode then
+	local movesetInfo = InfoModule.Movesets[moveset]
+	if not movesetInfo then
 		return nil
 	end
 
 	local isAwakened: boolean = Character:GetAttribute("Awakened") == true or Character:HasTag("Awakened")
 
+	if not movesetInfo.Modes then
+		return moveset
+	end
+
+	local mode: string? = (Player:GetAttribute("MovesetMode_" .. moveset) :: string?) or movesetInfo.DefaultMode
+	if not mode then
+		return nil
+	end
+
 	if isAwakened then
-		return mode .. " Eclipse"
+		return mode .. " " .. moveset
 	end
 
 	return mode
@@ -277,8 +287,10 @@ local function setupCharacter(Character: Model)
 
 	table.insert(
 		connections,
-		(Player :: Player):GetAttributeChangedSignal("MovesetMode_Eclipse"):Connect(function()
-			updateRune(Character, Player :: Player)
+		(Player :: Player).AttributeChanged:Connect(function(attr: string)
+			if attr:match("^MovesetMode_") then
+				updateRune(Character, Player :: Player)
+			end
 		end)
 	)
 

@@ -31,6 +31,7 @@ return {
 		Type = "Displacement",
 		Duration = 1.017,
 		IFrames = true,
+		Cooldown = 5,
 	},
 	Left = {
 		Id = "LeftDash",
