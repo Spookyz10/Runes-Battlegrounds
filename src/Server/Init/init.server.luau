@@ -100,18 +100,11 @@ local function AddStarterPlayer(Player)
 		leaderstats.Name = "leaderstats"
 	end
 
-	-- local Kills = leaderstats:FindFirstChild("Kills") or Instance.new("NumberValue", leaderstats)
-	-- Kills.Name = "Kills"
-	-- Kills.Value = Data[Player].Kills()
-	-- Data[Player].Kills.Changed(function(kills, oldKills)
-	-- 	Kills.Value = kills
-	-- end)
-
 	local TotalKills = leaderstats:FindFirstChild("Total Kills") or Instance.new("NumberValue", leaderstats)
 	TotalKills.Name = "Total Kills"
 	TotalKills.Value = Data[Player].TotalKills()
 	Data[Player].TotalKills.Changed(function(kills, oldKills)
-		Kills.Value = kills
+		TotalKills.Value = kills
 	end)
 
 	local Moveset_attr = Player:GetAttribute("Moveset")
@@ -136,31 +129,7 @@ local function AddStarterPlayer(Player)
 	CollectionService:AddTag(Player, "DataLoaded")
 end
 
-local function PlayerAdded(Player)
-	if Player:GetAttribute("Added") == true then
-		return
-	end
-	Player:SetAttribute("Added", true)
-
-	local ok, err = pcall(AddStarterPlayer, Player)
-	if not ok then
-		Player:Kick("Erro ao inicializar personagem.")
-		if RNS:IsStudio() then
-			warn(err)
-		end
-		return
-	end
-
-	Player:SetAttribute("Loaded", true)
-
-	local Character = Player.Character
-	if Character then
-		CharacterAdded(Character)
-	end
-	Player.CharacterAdded:Connect(CharacterAdded)
-end
-
-function CharacterAdded(Character)
+local function CharacterAdded(Character)
 	if not Character:IsDescendantOf(game) then
 		repeat
 			task.wait()
@@ -189,7 +158,10 @@ function CharacterAdded(Character)
 	Player:SetAttribute("Awakened", false)
 
 	iFramesService:AddAlliFrames(Character)
-	AnimationService:loadAnimations(Character)
+
+	task.spawn(function()
+		AnimationService:loadAnimations(Character)
+	end)
 
 	task.delay(4, function()
 		Character:SetAttribute("JustSpawned", nil)
@@ -235,8 +207,6 @@ function CharacterAdded(Character)
 
 	MovesetHandlerModule:AddBaseMoveset(Player, Player:GetAttribute("Moveset"))
 
-	AnimationService:loadAnimations(Character)
-
 	CollisionsModule:SetCollisionGroup(Character, "Players")
 
 	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
@@ -245,6 +215,30 @@ function CharacterAdded(Character)
 	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
 
 	Character:SetAttribute("Moveset", Player:GetAttribute("Moveset"))
+end
+
+local function PlayerAdded(Player)
+	if Player:GetAttribute("Added") == true then
+		return
+	end
+	Player:SetAttribute("Added", true)
+
+	local ok, err = pcall(AddStarterPlayer, Player)
+	if not ok then
+		Player:Kick("Erro ao inicializar personagem.")
+		if RNS:IsStudio() then
+			warn(err)
+		end
+		return
+	end
+
+	Player:SetAttribute("Loaded", true)
+
+	local Character = Player.Character
+	if Character then
+		CharacterAdded(Character)
+	end
+	Player.CharacterAdded:Connect(CharacterAdded)
 end
 
 pcall(function()
