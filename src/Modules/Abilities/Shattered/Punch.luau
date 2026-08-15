@@ -5,7 +5,7 @@ local Players = game:GetService("Players")
 local ServerModules = ServerStorage.Modules
 
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
-local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
+
 local StunHandler = require(ServerModules.StunHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
 local HitboxHandler = require(ServerModules.HitboxHandler)
@@ -64,8 +64,6 @@ return {
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("hit"):Once(function()
 				local HitList = {}
-
-				SFXModule:Play("PunchHit", HumRP)
 
 				HitboxHandler:SimpleOnce(HumRP, HIT_SIZE, HIT_OFFSET, { Character }, nil, nil, function(EnemyCharacter)
 					if table.find(HitList, EnemyCharacter) then

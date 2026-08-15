@@ -34,13 +34,6 @@ local RuneSelection = {}
 local activeRuneButtons = {}
 local selectedMoveset = nil
 
-local function ownsRune(movesetName)
-	if not EarlyAccess:IsEarlyAccess(movesetName) then
-		return true
-	end
-	return Data.OwnedPasses[EarlyAccess.GamepassId] == true
-end
-
 local function applyRuneGradient(movesetName)
 	UIFunctions.ApplyGradientTemplate(RuneBase, Gradients, movesetName)
 end
@@ -159,15 +152,14 @@ function RuneSelection.Hide()
 end
 
 function RuneSelection.Init()
+	repeat
+		task.wait()
+	until game:IsLoaded() and Player:FindFirstChild("LoadedData") and Player:HasTag("DataLoaded")
+
 	populateRunes()
 
 	EquipButton.Activated:Connect(function()
 		if not selectedMoveset then
-			return
-		end
-
-		if not ownsRune(selectedMoveset) then
-			MarketplaceService:PromptGamePassPurchase(Player, EarlyAccess.GamepassId)
 			return
 		end
 
@@ -179,7 +171,10 @@ function RuneSelection.Init()
 			return
 		end
 
-		Data.OwnedPasses[gamepassId] = true
+		Data.OwnedPasses(function(passes)
+			passes[gamepassId] = true
+			return passes
+		end)
 	end)
 end
 

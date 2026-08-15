@@ -18,6 +18,7 @@ return {
 		["Punch"] = {
 			Desc = "Punch them really hard.",
 			Icon = "rbxassetid://0",
+			CustomGradient = "Shattered",
 		},
 	},
 

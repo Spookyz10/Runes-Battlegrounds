@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SvSt = game:GetService("ServerStorage")
+local Data = require(ReplicatedStorage.Shared.Data).server
 local InfoModule = require(ReplicatedStorage.Shared.Info)
 
 local Movesets = SvSt.Movesets
@@ -97,7 +98,7 @@ function module:SetMoveset(Player, MovesetName)
 		return false, "AlreadyEquipped"
 	end
 
-	Player.Configuration.Moveset.Value = MovesetName
+	Data.Service:waitForData(Player).Moveset(MovesetName)
 	Player:SetAttribute("Moveset", MovesetName)
 	Player:LoadCharacter()
 
