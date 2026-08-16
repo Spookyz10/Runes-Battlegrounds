@@ -26,6 +26,11 @@ local ActiveEntries = {
 	Donated = {},
 }
 
+local RenderVersions = {
+	Kills = 0,
+	Donated = 0,
+}
+
 local LatestData = nil
 
 local Leaderboard = {}
@@ -53,7 +58,7 @@ local function ApplyStat(Entry, board, value)
 	Stat.Text = BoardLabels[board] .. ':<br/><font color="rgb(255,255,255)">' .. FormatValue(value) .. "</font>"
 end
 
-local function CreateEntry(board, rank, data, Container)
+local function CreateEntry(board, rank, data, Container, renderVersion)
 	local Template = ReplicatedStorage.Resources.UI.Templates.Leaderboard
 	local Entry = Template:Clone()
 
@@ -62,22 +67,26 @@ local function CreateEntry(board, rank, data, Container)
 	Entry.PlayerName.Text = data.Name
 	ApplyStat(Entry, board, data.Value)
 
-	local success, thumbnail = pcall(
-		Players.GetUserThumbnailAsync,
-		Players,
-		data.UserId,
-		Enum.ThumbnailType.HeadShot,
-		Enum.ThumbnailSize.Size100x100
-	)
-
-	if success then
-		Entry.Player.Image = thumbnail
-	end
-
 	Entry.LayoutOrder = rank
 	Entry.Parent = Container
 
 	table.insert(ActiveEntries[board], Entry)
+
+	-- Buscar thumbnail pode yieldar. Deixar isso fora do render evita que duas
+	-- atualizações iniciais se intercalem e criem entradas duplicadas.
+	task.spawn(function()
+		local success, thumbnail = pcall(
+			Players.GetUserThumbnailAsync,
+			Players,
+			data.UserId,
+			Enum.ThumbnailType.HeadShot,
+			Enum.ThumbnailSize.Size100x100
+		)
+
+		if success and Entry.Parent and RenderVersions[board] == renderVersion then
+			Entry.Player.Image = thumbnail
+		end
+	end)
 end
 
 local function RenderBoard(board, entries)
@@ -97,6 +106,9 @@ local function RenderBoard(board, entries)
 		return
 	end
 
+	RenderVersions[board] += 1
+	local renderVersion = RenderVersions[board]
+
 	for _, Entry in ActiveEntries[board] do
 		Entry:Destroy()
 	end
@@ -107,7 +119,7 @@ local function RenderBoard(board, entries)
 	end
 
 	for rank, data in entries do
-		CreateEntry(board, rank, data, Container)
+		CreateEntry(board, rank, data, Container, renderVersion)
 	end
 end
 

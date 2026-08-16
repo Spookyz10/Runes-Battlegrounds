@@ -3,13 +3,11 @@ local TweenService = game:GetService("TweenService")
 local Constants = require(script.Parent.Shared.Constants)
 local Debris = Constants.Debris
 
--- Cada lado do "<" recebe blocos grandes, progressivamente maiores e com
--- rotação sutil para o efeito não parecer perfeitamente simétrico.
 local HALF_ANGLE = 26
-local BLOCKS_PER_SIDE = 5
+local BLOCKS_PER_SIDE = 7
 local FIRST_DISTANCE = 6
-local DISTANCE_STEP = 8.5
-local FIRST_SIZE = Vector3.new(7, 7, 7)
+local DISTANCE_STEP = 6.5
+local FIRST_SIZE = Vector3.new(3, 3, 3)
 local SIZE_STEP = Vector3.new(0.9, 0.65, 0.9)
 local RISE_TIME = 0.22
 local HOLD_TIME = 7
