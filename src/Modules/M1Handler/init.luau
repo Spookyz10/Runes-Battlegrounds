@@ -158,6 +158,13 @@ function M1Handler:Punch(Player)
 						Damage = Step.GetDamage(Character, EnemyCharacter, Combo)
 					end
 
+					-- Fire Arms (Undawn) concede +2 de dano flat nos M1s
+					-- enquanto o attribute DamageDealtBonus estiver ativo.
+					local DamageBonus = Character:GetAttribute("DamageDealtBonus")
+					if DamageBonus and DamageBonus ~= 0 then
+						Damage += DamageBonus
+					end
+
 					local HitInfo = DamageHandler:TakeDamage(
 						Character,
 						EnemyHumanoid,

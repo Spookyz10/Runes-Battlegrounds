@@ -15,6 +15,7 @@ local SkillCancelHandler = require(ServerModules.SkillCancelHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local NewKnockback = require(ServerModules.BodymoverService)
+local ImpactDebrisService = require(ServerModules.ImpactDebrisService)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 
@@ -26,6 +27,21 @@ local RAGDOLL_TIME = 3
 
 local LAUNCH_FORCE = 130
 local LAUNCH_UP_FORCE = 40
+
+-- Configuração do impacto que acontece quando o inimigo lançado encosta
+-- no chão. Reutiliza o ImpactDebrisService (genérico, outras skills podem
+-- chamar a mesma coisa com parâmetros diferentes).
+local LANDING_IMPACT_CONFIG = {
+	RockCount = 12,
+	Radius = 9,
+	RockSize = Vector3.new(2.2, 2.2, 2.2),
+	Timeout = 10,
+}
+
+local SELF_HIT_SHAKE_INTENSITY = 6
+local SELF_HIT_SHAKE_TIME = 0.4
+local ENEMY_HIT_SHAKE_INTENSITY = 6
+local ENEMY_HIT_SHAKE_TIME = 0.5
 
 return {
 	Cooldown = 15,
@@ -65,6 +81,7 @@ return {
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("hit"):Once(function()
 				local HitList = {}
+				local ConnectedAtLeastOnce = false
 
 				HitboxHandler:SimpleOnce(HumRP, HIT_SIZE, HIT_OFFSET, { Character }, nil, nil, function(EnemyCharacter)
 					if table.find(HitList, EnemyCharacter) then
@@ -107,6 +124,8 @@ return {
 						return
 					end
 
+					ConnectedAtLeastOnce = true
+
 					EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
 
 					local pushDir = HumRP.CFrame.LookVector
@@ -129,16 +148,30 @@ return {
 						})
 					end)
 
+					-- Assiste o inimigo até ele encostar no chão pra gerar
+					-- o impacto de debris no local exato onde ele cair.
+					-- Sistema genérico/reutilizável: outras skills usam o
+					-- mesmo ImpactDebrisService com configs diferentes.
+					ImpactDebrisService:WatchLanding(EnemyCharacter, LANDING_IMPACT_CONFIG)
+
+					-- Screen shake pra quem bateu e pra quem apanhou.
+					RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", {
+						Intensity = SELF_HIT_SHAKE_INTENSITY,
+						Last = SELF_HIT_SHAKE_TIME,
+					})
+
 					local EnemyPlayer = Players:GetPlayerFromCharacter(EnemyCharacter)
 					if EnemyPlayer then
-						RemoteManager.FireClient(
-							EnemyPlayer,
-							"ReplicateTask",
-							"ShakeCamera",
-							{ Intensity = 6, Last = 0.5 }
-						)
+						RemoteManager.FireClient(EnemyPlayer, "ReplicateTask", "ShakeCamera", {
+							Intensity = ENEMY_HIT_SHAKE_INTENSITY,
+							Last = ENEMY_HIT_SHAKE_TIME,
+						})
 					end
 				end)
+
+				-- Debris de impacto pra frente (formato "<") sempre nasce
+				-- quando o soco é dado, acerte ou não.
+				RemoteManager.FireAllClients("ReplicateTask", "PunchWedgeDebris", { char = Character })
 
 				RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", { Intensity = 4, Last = 0.3 })
 			end)
