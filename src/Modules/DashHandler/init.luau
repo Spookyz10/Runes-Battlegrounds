@@ -24,7 +24,6 @@ local DashHandler = {}
 
 local DASH_HIT_SANITY_TOLERANCE = 15
 local DASH_INPUT_DEBOUNCE = 0.5
-local DASH_VELOCITY_SPEED = 120
 
 local DashDebounce = {}
 
@@ -195,7 +194,6 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 				return
 			end
 
-			Velocity.Velocity = HumRP.CFrame.LookVector * DASH_VELOCITY_SPEED
 			Velocity.Parent = HumRP
 			Debris:AddItem(Velocity, 0.85)
 			startSlopeClamp()
