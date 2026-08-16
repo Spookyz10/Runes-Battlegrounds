@@ -8,9 +8,7 @@ local ConfigFolder = nil
 local xShake, yShake, zShake = 0, 0, 0
 local stopCameraShakeLoop = nil
 
-function CameraShakeController.Init(Camera, PlayerConfigFolder, ShakerClass, RenderPriority)
-	ConfigFolder = PlayerConfigFolder
-
+function CameraShakeController.Init(Camera, ShakerClass, RenderPriority)
 	if CameraShaker then
 		CameraShaker:Stop()
 		CameraShaker = nil

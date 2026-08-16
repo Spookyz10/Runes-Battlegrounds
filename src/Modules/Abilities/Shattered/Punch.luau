@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local ServerModules = ServerStorage.Modules
 
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
+local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 
 local StunHandler = require(ServerModules.StunHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
@@ -111,6 +112,8 @@ return {
 					local pushDir = HumRP.CFrame.LookVector
 					local pushFlat = Vector3.new(pushDir.X, 0, pushDir.Z)
 					pushFlat = pushFlat.Magnitude > 0 and pushFlat.Unit or Vector3.new(0, 0, -1)
+
+					SFXModule:Play("Smack", EnemyHumRP)
 
 					RagdollHandler.ragdoll(EnemyHumanoid, RAGDOLL_TIME, nil, nil, nil, nil, true)
 

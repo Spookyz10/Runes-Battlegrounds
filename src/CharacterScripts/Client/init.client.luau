@@ -26,7 +26,6 @@ repeat
 	task.wait()
 until Player:FindFirstChild("LoadedData") and Player:HasTag("DataLoaded")
 
-local ConfigFolder: Folder = Player:FindFirstChild("Configuration") or Player:WaitForChild("Configuration", 10)
 local Character: Model = Player.Character or Player.CharacterAdded:Wait()
 local Animate: Instance = Character:WaitForChild("Animate", 5)
 Animate:WaitForChild("walk"):WaitForChild("WalkAnim")
@@ -58,7 +57,6 @@ RunTrack.Priority = Enum.AnimationPriority.Movement
 
 CameraShakeController.Init(
 	Camera,
-	ConfigFolder,
 	require(ReplicatedStorage.Shared.Modules.CameraShaker),
 	Enum.RenderPriority.Camera.Value
 )

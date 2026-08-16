@@ -10,6 +10,8 @@ local Animations = RS.Resources.Animations
 
 local DashResolver = {}
 
+local __moduleId = tostring(math.random(1, 999999))
+
 local LastSideDash = {}
 local LastBackDash = {}
 local LastDashRequest = {}
@@ -49,7 +51,9 @@ local function isAxisOnCooldown(Character, Direction)
 		return false
 	end
 
-	return tick() < Expiry
+	local onCooldown = tick() < Expiry
+
+	return onCooldown
 end
 
 local function markAxisUsed(Character, Direction, Duration: number?, IsGuess: boolean?)
@@ -68,7 +72,7 @@ local function markAxisUsed(Character, Direction, Duration: number?, IsGuess: bo
 	local NewExpiry = tick() + BaseDuration
 	local CurrentExpiry = AxisCooldownExpiry[Character][Axis]
 
-	if CurrentExpiry and CurrentExpiry <= NewExpiry then
+	if CurrentExpiry and CurrentExpiry > NewExpiry then
 		return
 	end
 
@@ -79,7 +83,17 @@ function DashResolver.IsTrapped(Character)
 	if not Character then
 		return false
 	end
-	return Character:HasTag("Ragdolled") or Character:HasTag("Stunned")
+
+	if Character:HasTag("Ragdolled") then
+		return true
+	end
+
+	local StunnedFolder = Character:FindFirstChild("Stunned")
+	if not StunnedFolder then
+		return false
+	end
+
+	return StunnedFolder:GetAttribute("Escapable") ~= false
 end
 
 function DashResolver.HasEvasiveCharge(Character)
@@ -146,6 +160,7 @@ function DashResolver.Resolve(Character, Humanoid, HumRP)
 	if Trapped then
 		if not DashResolver.HasEvasiveCharge(Character) then
 			CanAct = false
+
 			return Direction, Trapped, Escaping, CanAct
 		end
 
@@ -371,6 +386,7 @@ function DashResolver.Cleanup(Character)
 	if not Character then
 		return
 	end
+
 	LastSideDash[Character] = nil
 	LastBackDash[Character] = nil
 	LastDashRequest[Character] = nil
