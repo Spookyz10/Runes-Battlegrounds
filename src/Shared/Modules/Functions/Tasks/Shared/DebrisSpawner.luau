@@ -220,6 +220,7 @@ local function debrisSpawner(config)
 	local maxDebrisHeight = config.maxDebrisHeight or math.huge
 
 	local basePieceCount = config.amount or 24
+	local squareTiles = config.tileMode == "Square"
 
 	local baseCFrame = CFrame.new(config.cframe.p)
 	baseCFrame = baseCFrame
@@ -241,7 +242,7 @@ local function debrisSpawner(config)
 		local slotIndex = 1
 		while slotIndex <= pieceCount do
 			local mergeCount = 1
-			if rng:NextNumber() < 0.35 and slotIndex + 1 <= pieceCount then
+			if not squareTiles and rng:NextNumber() < 0.35 and slotIndex + 1 <= pieceCount then
 				mergeCount = rng:NextInteger(2, math.min(3, pieceCount - slotIndex + 1))
 			end
 
@@ -272,6 +273,11 @@ local function debrisSpawner(config)
 				* sizeMult
 			slabHeight = math.min(slabHeight, maxDebrisHeight)
 			local slabDepth = randomRange(debrisSizeMin, debrisSizeMax) * 0.55 * sizeMult
+			if squareTiles then
+				local tileSize = randomRange(debrisSizeMin, debrisSizeMax) * sizeMult
+				slabWidth = tileSize
+				slabDepth = tileSize
+			end
 			slab.Size = Vector3.new(slabWidth, slabHeight, slabDepth)
 
 			slab.CFrame = pieceCFrame

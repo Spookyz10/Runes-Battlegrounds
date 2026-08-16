@@ -12,8 +12,9 @@ local Handlers = {}
 
 function Handlers.Indicator(params)
 	local char = params.char
-	local beamPos = params.beamPos
-	if not char or not beamPos then
+	local targetRoot = params.targetRoot
+	local yOffset = params.yOffset
+	if not char or not targetRoot or typeof(yOffset) ~= "number" then
 		return
 	end
 
@@ -23,7 +24,9 @@ function Handlers.Indicator(params)
 
 	local indicator = UndawnAssets.UndawnIndicator:Clone()
 	indicator.Parent = workspace
-	indicator.CFrame = CFrame.new(beamPos.X, beamPos.Y, beamPos.Z)
+	-- A posição vem diretamente da RootPart do alvo, não de um pivot/asset.
+	local rootPosition = targetRoot.Position
+	indicator.CFrame = CFrame.new(rootPosition - Vector3.new(0, yOffset, 0))
 
 	table.insert(activeIndicators[char], indicator)
 end

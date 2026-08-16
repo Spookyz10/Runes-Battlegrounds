@@ -87,6 +87,7 @@ function ImpactDebrisService:WatchLanding(Character, Config)
 			RockCount = RockCount,
 			Radius = Radius,
 			RockSize = RockSize,
+			TileMode = Config.TileMode,
 		})
 
 		if OnLand then

@@ -43,7 +43,7 @@ local function getSafeRange(originPos, lookFlat, range, Character)
 	-- causavam o clipping.
 	local WallRayParams = RaycastParams.new()
 	WallRayParams.FilterType = Enum.RaycastFilterType.Exclude
-	WallRayParams.FilterDescendantsInstances = { Character }
+	WallRayParams.FilterDescendantsInstances = { Character, workspace.Live }
 	WallRayParams.RespectCanCollide = true
 	WallRayParams.IgnoreWater = true
 

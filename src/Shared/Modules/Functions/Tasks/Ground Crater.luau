@@ -86,6 +86,7 @@ return function(config)
 			ringSizeGrowth = config.ringSizeGrowth,
 			ringGap = config.ringGap,
 			outwardTilt = config.outwardTilt,
+			tileMode = config.tileMode,
 			debrisSizeMin = config.debrisSizeMin,
 			debrisSizeMax = config.debrisSizeMax,
 			debrisHeightMin = config.debrisHeightMin,

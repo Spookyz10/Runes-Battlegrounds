@@ -1,30 +1,32 @@
 local GroundCrater = require(script.Parent["Ground Crater"])
 
-return function(Params)
-	local Position = Params.Position
-	if not Position then
+-- O impacto da queda usa a mesma família de crateras do Moon Awakening,
+-- porém mais compacto para combinar com o alcance do Shattered Punch.
+return function(params)
+	local position = params.Position
+	if not position then
 		return
 	end
 
-	local Radius = Params.Radius or 6
-	local RockSize: Vector3 = Params.RockSize or Vector3.new(1.5, 1.5, 1.5)
-	local ScaleFromRadius = Radius / 6
+	local rockSize: Vector3 = params.RockSize or Vector3.new(2, 2, 2)
+	local radius = params.Radius or 8
 
 	GroundCrater({
-		Seed = Params.Seed or math.random(1, 2147483647),
-		start = Position + Vector3.new(0, 4, 0),
-		["end"] = Vector3.new(0, -20, 0),
-		amount = Params.RockCount or 10,
-		size = ScaleFromRadius,
-		sizemult = RockSize.X / 1.5,
-		rings = Params.Rings or 2,
-		ringSpacing = Params.RingSpacing or (Radius / 2),
-		ringSizeGrowth = Params.RingSizeGrowth or 1.5,
-		ringGap = Params.RingGap or 0.2,
+		Seed = params.Seed or math.random(1, 2147483647),
+		start = position + Vector3.new(0, 5, 0),
+		["end"] = Vector3.new(0, -18, 0),
+		amount = math.clamp(params.RockCount or 9, 6, 14),
+		size = math.clamp(radius / 12, 0.55, 0.8),
+		sizemult = math.clamp(rockSize.X / 2.5, 0.7, 1),
+		rings = 1,
+		ringSpacing = math.clamp(radius * 0.42, 3, 4),
+		ringSizeGrowth = 1.2,
+		ringGap = 0.15,
 		outwardTilt = true,
-		debrisSizeMin = Params.DebrisSizeMin or (RockSize.X * 1.3),
-		debrisSizeMax = Params.DebrisSizeMax or (RockSize.X * 2.6),
-		debrisHeightMin = Params.DebrisHeightMin or (RockSize.Y * 1.3),
-		debrisHeightMax = Params.DebrisHeightMax or (RockSize.Y * 2.2),
+		tileMode = params.TileMode,
+		debrisSizeMin = rockSize.X * 0.85,
+		debrisSizeMax = rockSize.X * 1.35,
+		debrisHeightMin = rockSize.Y * 0.8,
+		debrisHeightMax = rockSize.Y * 1.25,
 	})
 end

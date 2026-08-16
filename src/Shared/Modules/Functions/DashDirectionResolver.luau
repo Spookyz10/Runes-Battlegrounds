@@ -17,7 +17,6 @@ local LastBackDash = {}
 local LastDashRequest = {}
 
 local DASH_INPUT_DEBOUNCE = 1
-local CLIENT_COOLDOWN_BUFFER = 0.2
 
 local AxisKey = {
 	Front = "Dash_Z",
@@ -56,7 +55,7 @@ local function isAxisOnCooldown(Character, Direction)
 	return onCooldown
 end
 
-local function markAxisUsed(Character, Direction, Duration: number?, IsGuess: boolean?)
+local function markAxisUsed(Character, Direction, Duration: number?)
 	local Axis = AxisKey[Direction]
 	if not Axis then
 		return
@@ -65,9 +64,6 @@ local function markAxisUsed(Character, Direction, Duration: number?, IsGuess: bo
 	AxisCooldownExpiry[Character] = AxisCooldownExpiry[Character] or {}
 
 	local BaseDuration = Duration or DirectionCooldown[Direction] or 2
-	if IsGuess then
-		BaseDuration += CLIENT_COOLDOWN_BUFFER
-	end
 
 	local NewExpiry = tick() + BaseDuration
 	local CurrentExpiry = AxisCooldownExpiry[Character][Axis]
@@ -354,10 +350,6 @@ function DashResolver.PerformDash(Character, Humanoid, HumRP, Camera, Animator)
 		return Direction, Trapped, Escaping, false
 	end
 
-	if not Escaping then
-		markAxisUsed(Character, Direction, nil, true)
-	end
-
 	RemoteManager.FireServer("Keypress", { Key = Enum.KeyCode.Q, Direction = Direction, ClientCFrame = HumRP.CFrame })
 
 	if Direction ~= "Front" then
@@ -379,7 +371,7 @@ function DashResolver.ConfirmAxisCooldown(SkillName: string, Cooldown: number)
 		return
 	end
 
-	markAxisUsed(Character, Direction, Cooldown, false)
+	markAxisUsed(Character, Direction, Cooldown)
 end
 
 function DashResolver.Cleanup(Character)

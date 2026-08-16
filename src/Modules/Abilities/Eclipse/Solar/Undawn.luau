@@ -24,7 +24,7 @@ local FIRE_ARMS_DURATION = 10
 
 local SELF_DAMAGE_COST = 5
 
-local INDICATOR_Y_OFFSET = 3.5
+local INDICATOR_Y_OFFSET = 2
 
 local function fireVFX(func, params)
 	params.func = func
@@ -73,7 +73,10 @@ return {
 		table.insert(
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("clap"):Once(function()
-				local beamPositions = {}
+				-- A lista é fechada no primeiro Sphere. O beam, dano e ragdoll
+				-- usam estes mesmos alvos; ninguém que entrar no raio depois recebe
+				-- o efeito sem ter sido pego pela hitbox.
+				local targets = {}
 
 				HitboxHandler:SimpleOnce(
 					HumRP,
@@ -90,39 +93,40 @@ return {
 						if not EnemyHumRP then
 							return
 						end
-						local pos = EnemyHumRP.Position
-						local beamPos = Vector3.new(pos.X, pos.Y - INDICATOR_Y_OFFSET, pos.Z)
-
 						fireVFX("Indicator", {
 							char = Character,
-							beamPos = beamPos,
+							targetRoot = EnemyHumRP,
+							yOffset = INDICATOR_Y_OFFSET,
 						})
-						table.insert(beamPositions, beamPos)
+						table.insert(targets, EnemyCharacter)
 					end
 				)
 
 				task.delay(2, function()
-					--fireVFX("IndicatorRemove", { char = Character })
+					fireVFX("IndicatorRemove", { char = Character })
 				end)
 
-				if #beamPositions == 0 then
+				if #targets == 0 then
 					return
 				end
 
 				task.delay(PILLAR_DELAY, function()
+					local beamPositions = {}
+					for _, EnemyCharacter in targets do
+						local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
+						if EnemyHumRP then
+							local pos = EnemyHumRP.Position
+							table.insert(beamPositions, Vector3.new(pos.X, pos.Y - INDICATOR_Y_OFFSET, pos.Z))
+						end
+					end
+
 					fireVFX("Beam", {
 						char = Character,
 						beamPositions = beamPositions,
 					})
 
-					HitboxHandler:SimpleOnce(
-						HumRP,
-						PILLAR_SEARCH_RADIUS,
-						CFrame.new(0, 0, 0),
-						{ Character },
-						"Sphere",
-						nil,
-						function(EnemyCharacter)
+					for _, EnemyCharacter in targets do
+						task.spawn(function()
 							if not StatusEffectHandler:Has(EnemyCharacter, "Inferno") then
 								return
 							end
@@ -183,8 +187,8 @@ return {
 									true
 								)
 							end)
-						end
-					)
+						end)
+					end
 				end)
 			end)
 		)

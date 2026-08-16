@@ -32,9 +32,10 @@ local LAUNCH_UP_FORCE = 40
 -- no chão. Reutiliza o ImpactDebrisService (genérico, outras skills podem
 -- chamar a mesma coisa com parâmetros diferentes).
 local LANDING_IMPACT_CONFIG = {
-	RockCount = 12,
-	Radius = 9,
-	RockSize = Vector3.new(2.2, 2.2, 2.2),
+	RockCount = 14,
+	Radius = 10,
+	RockSize = Vector3.new(2.5, 2.5, 2.5),
+	TileMode = "Square",
 	Timeout = 10,
 }
 
