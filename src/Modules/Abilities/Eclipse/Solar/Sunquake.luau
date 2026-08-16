@@ -155,7 +155,7 @@ return {
 							else
 								local lookCF = CFrame.lookAt(EnemyHumRP.Position, EnemyHumRP.Position + pushDir)
 
-								--StatusEffectHandler:Apply(EnemyCharacter, "Inferno", { Duration = INFERNO_DURATION })
+								StatusEffectHandler:Apply(EnemyCharacter, "Inferno", { Duration = INFERNO_DURATION })
 
 								PerfectKnockback:KnockBack(nil, EnemyCharacter, {
 									LookVector = pushDir,

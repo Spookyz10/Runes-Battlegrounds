@@ -230,4 +230,14 @@ function StatusEffectHandler:ClearAll(Character)
 	end
 end
 
+local EffectsFolder = script:FindFirstChild("Effects")
+if EffectsFolder then
+	for _, module in EffectsFolder:GetDescendants() do
+		if module:IsA("ModuleScript") then
+			local Effect = require(module)
+			StatusEffectHandler:RegisterEffect(Effect.Id, Effect.Definition)
+		end
+	end
+end
+
 return StatusEffectHandler

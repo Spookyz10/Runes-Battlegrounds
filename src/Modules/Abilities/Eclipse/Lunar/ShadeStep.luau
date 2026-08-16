@@ -30,18 +30,25 @@ local FIREBALL_HIT_SIZE = Vector3.new(10, 10, FIREBALL_RANGE)
 local FIREBALL_DAMAGE = 5
 local FIREBALL_STUN = 1.5
 
-local WallRayParams = RaycastParams.new()
-WallRayParams.FilterType = Enum.RaycastFilterType.Include
-WallRayParams.FilterDescendantsInstances = {
-	workspace.Map:WaitForChild("Arena"),
-	workspace.Map:WaitForChild("Miscellaneous"),
-	workspace.Map:WaitForChild("Borders"),
-}
+-- Caixa usada pra "sentir" o corpo do char durante o sweep. Precisa cobrir a
+-- largura/altura real do char (não só uma fatia fina), senão o cast passa
+-- raspando por quinas/objetos finos e o char acaba clipando dentro deles.
+local SAFE_RANGE_BLOCK_SIZE = Vector3.new(4, 5, 4)
 
-local function getSafeRange(originPos, lookFlat, range)
-	local blockSize = Vector3.new(3.5, 5, 1)
+local function getSafeRange(originPos, lookFlat, range, Character)
+	-- Monta o params na hora, excluindo só o próprio Character. Isso garante
+	-- que QUALQUER coisa no mapa com CanCollide = true (destroyables, props,
+	-- outros personagens, etc) é considerada, e não só as 3 pastas fixas de
+	-- antes (Arena/Miscellaneous/Borders), que deixavam objetos de fora e
+	-- causavam o clipping.
+	local WallRayParams = RaycastParams.new()
+	WallRayParams.FilterType = Enum.RaycastFilterType.Exclude
+	WallRayParams.FilterDescendantsInstances = { Character }
+	WallRayParams.RespectCanCollide = true
+	WallRayParams.IgnoreWater = true
+
 	local originCF = CFrame.new(originPos, originPos + lookFlat)
-	local result = workspace:Blockcast(originCF, blockSize, lookFlat * range, WallRayParams)
+	local result = workspace:Blockcast(originCF, SAFE_RANGE_BLOCK_SIZE, lookFlat * range, WallRayParams)
 	if result then
 		return math.max(0, result.Distance - DASH_WALL_OFFSET)
 	end
@@ -127,7 +134,10 @@ return {
 				local lookFlat = Vector3.new(lv.X, 0, lv.Z).Unit
 				local originPos = HumRP.Position
 
-				local safeRange = getSafeRange(originPos, lookFlat, DASH_RANGE)
+				-- calculado ANTES do teleporte, com a range máxima de sempre
+				-- (DASH_RANGE) — só clampa pra baixo se tiver algo colidível
+				-- no caminho.
+				local safeRange = getSafeRange(originPos, lookFlat, DASH_RANGE, Character)
 				local endPos = originPos + lookFlat * safeRange
 				local endCFrame = CFrame.new(endPos, endPos + lookFlat)
 
