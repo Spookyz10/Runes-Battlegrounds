@@ -194,6 +194,8 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 				return
 			end
 
+			print("sa")
+
 			Velocity.Parent = HumRP
 			Debris:AddItem(Velocity, 0.85)
 			startSlopeClamp()

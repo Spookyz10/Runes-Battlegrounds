@@ -47,7 +47,28 @@ local COLOR_READY = Color3.new(1, 1, 1)
 
 local processedTools = {}
 
+-- Estado de cooldown persistido por nome da skill (não por slot/Tool),
+-- assim quando a Tool é recriada ao trocar de modo (ex: modo A -> B -> A),
+-- a skill "reconecta" com o tempo restante do cooldown que ela já tinha.
+local SkillCooldowns = {} -- [SkillName] = EndTime (tick())
+local ActiveIconTweens = {} -- [slot] = Tween
+
 local Hotbar = {}
+
+local function getRemainingCooldown(SkillName)
+	local EndTime = SkillCooldowns[SkillName]
+	if not EndTime then
+		return 0
+	end
+
+	local Remaining = EndTime - tick()
+	if Remaining <= 0 then
+		SkillCooldowns[SkillName] = nil
+		return 0
+	end
+
+	return Remaining
+end
 
 function Hotbar.Show()
 	HotbarFrame:TweenPosition(POS_SHOWN, Enum.EasingDirection.InOut, Enum.EasingStyle.Quad, 1, true)
@@ -119,11 +140,23 @@ local function getDarkIcon(slot)
 	return main and main:FindFirstChild("DarkIcon")
 end
 
+local function cancelIconTween(slot)
+	local Tween = ActiveIconTweens[slot]
+	if Tween then
+		Tween:Cancel()
+		ActiveIconTweens[slot] = nil
+	end
+end
+
 function Hotbar.ResetCooldowns()
+	table.clear(SkillCooldowns)
+
 	for _, slot in HotbarFrame:GetChildren() do
 		if not slot:IsA("ImageLabel") then
 			continue
 		end
+
+		cancelIconTween(slot)
 
 		local icon = getIcon(slot)
 		if icon then
@@ -228,6 +261,8 @@ local function addCooldownToSlot(slot, Duration, SkillName)
 		return
 	end
 
+	cancelIconTween(slot)
+
 	icon.ImageColor3 = COLOR_COOLDOWN
 
 	UIFunctions.PlayCooldownFill(getDarkIcon(slot), Duration, function()
@@ -238,8 +273,17 @@ local function addCooldownToSlot(slot, Duration, SkillName)
 	end)
 
 	if Duration > 0 then
-		TweenService:Create(icon, TweenInfo.new(Duration, Enum.EasingStyle.Linear), { ImageColor3 = COLOR_READY })
-			:Play()
+		local Tween =
+			TweenService:Create(icon, TweenInfo.new(Duration, Enum.EasingStyle.Linear), { ImageColor3 = COLOR_READY })
+		ActiveIconTweens[slot] = Tween
+
+		Tween.Completed:Once(function()
+			if ActiveIconTweens[slot] == Tween then
+				ActiveIconTweens[slot] = nil
+			end
+		end)
+
+		Tween:Play()
 	else
 		icon.ImageColor3 = COLOR_READY
 	end
@@ -249,6 +293,8 @@ function Hotbar.StartCooldown(SkillName: string, Duration: number)
 	if not Duration or Duration <= 0 then
 		return
 	end
+
+	SkillCooldowns[SkillName] = tick() + Duration
 
 	for _, slot in HotbarFrame:GetChildren() do
 		if not slot:IsA("ImageLabel") then
@@ -310,10 +356,21 @@ local function addTool(Tool: Tool)
 		local icon = getIcon(slot)
 		if icon then
 			icon.Image = Tool:GetAttribute("Icon") or "rbxassetid://0"
-			icon.ImageColor3 = COLOR_READY
 		end
 
-		UIFunctions.ResetCooldownIcon(getDarkIcon(slot))
+		-- Se essa skill (pelo nome) já tinha um cooldown rolando de antes
+		-- de trocar de modo, reconecta a animação com o tempo restante em
+		-- vez de resetar o dark icon como se estivesse pronta.
+		local Remaining = getRemainingCooldown(Tool.Name)
+		if Remaining > 0 then
+			addCooldownToSlot(slot, Remaining, Tool.Name)
+		else
+			cancelIconTween(slot)
+			if icon then
+				icon.ImageColor3 = COLOR_READY
+			end
+			UIFunctions.ResetCooldownIcon(getDarkIcon(slot))
+		end
 
 		slot.Visible = true
 		UIFunctions.TweenSlide(main, POS_UP, TWEEN_SLIDE)
@@ -356,6 +413,7 @@ local function removeTool(Tool: Tool)
 			if base then
 				base.SkillName.Text = "N/A"
 			end
+			cancelIconTween(slot)
 			UIFunctions.ResetCooldownIcon(getDarkIcon(slot))
 		end)
 	end

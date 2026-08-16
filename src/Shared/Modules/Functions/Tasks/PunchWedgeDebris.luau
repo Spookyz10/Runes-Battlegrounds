@@ -1,23 +1,23 @@
+local GroundCrater = require(script.Parent["Ground Crater"])
 local Constants = require(script.Parent.Shared.Constants)
 local Helpers = require(script.Parent.Shared.Helpers)
 
-local Debris = Constants.Debris
-local TS = Constants.TS
-local MapRayParams = Constants.MapRayParams
 local RandomSeed = Helpers.RandomSeed
 
--- Ângulo total do "bico" do wedge (estilo sinal de maior que < com a boca
--- virada pra frente). Cada linha abre HALF_ANGLE graus pra cada lado do
--- vetor de frente do personagem.
-local HALF_ANGLE = 30
+local HALF_ANGLE = 26
 
-local ROCKS_PER_LINE = 5
-local LINE_LENGTH = 10
-local ROCK_BASE_SIZE = 0.9
+local ROCKS_PER_LINE = 9
+local LINE_LENGTH = 35
 
-local EMERGE_TIME = 0.18
-local KEEP_TIME = 0.45
-local SINK_TIME = 0.4
+local CRATER_RINGS = 1
+local CRATER_RING_SPACING = 2.5
+local CRATER_RING_GAP = 0.15
+local CRATER_AMOUNT_BASE = 6
+
+local CRATER_DEBRIS_SIZE_MIN = 1.4
+local CRATER_DEBRIS_SIZE_MAX = 3
+local CRATER_DEBRIS_HEIGHT_MIN = 1.4
+local CRATER_DEBRIS_HEIGHT_MAX = 2.6
 
 return function(Params)
 	local Character = Params.char or Params.Char
@@ -48,65 +48,28 @@ return function(Params)
 			local dist = LINE_LENGTH * t
 
 			local pointPos = origin + RotatedDir * dist
-
-			local _, RayPosition = Helpers.performRaycast({
-				orig = pointPos + Vector3.new(0, 5, 0),
-				dir = Vector3.new(0, -12, 0),
-				Whitelist = MapRayParams.FilterDescendantsInstances,
-			})
-
-			local groundPos = RayPosition or (pointPos - Vector3.new(0, 2, 0))
-
-			local sizeScale = 1 + t * 0.6
-			local Size = Vector3.new(ROCK_BASE_SIZE, ROCK_BASE_SIZE, ROCK_BASE_SIZE)
-				* sizeScale
-				* RandomSeed:NextNumber(0.85, 1.15)
-
-			local Rock = Instance.new("Part")
-			Rock.Name = "PunchWedgeRock"
-			Rock.Anchored = true
-			Rock.CanCollide = false
-			Rock.CanTouch = false
-			Rock.CanQuery = false
-			Rock.Material = Enum.Material.Rock
-			Rock.Color = Color3.fromRGB(80, 80, 85)
-			Rock.Size = Size
-			Rock.CFrame = CFrame.new(groundPos)
-				* CFrame.Angles(
-					math.rad(RandomSeed:NextNumber(-360, 360)),
-					math.rad(RandomSeed:NextNumber(-360, 360)),
-					math.rad(RandomSeed:NextNumber(-360, 360))
-				)
-			Rock.Parent = workspace.Debris
-
-			local restCFrame = Rock.CFrame
-			local buriedCFrame = restCFrame * CFrame.new(0, -Size.Y * 2, 0)
-			Rock.CFrame = buriedCFrame
-
-			local delay = t * 0.12
+			local delay = t * 0.18
 
 			task.delay(delay, function()
-				if not Rock or not Rock.Parent then
-					return
-				end
-				TS:Create(
-					Rock,
-					TweenInfo.new(EMERGE_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-					{ CFrame = restCFrame }
-				):Play()
+				GroundCrater({
+					Seed = RandomSeed:NextInteger(1, 2147483647),
+					start = pointPos + Vector3.new(0, 5, 0),
+					["end"] = Vector3.new(0, -14, 0),
+					amount = CRATER_AMOUNT_BASE,
+					size = 0.6 + t * 0.5,
+					sizemult = 0.85,
+					nodebris = true,
+					rings = CRATER_RINGS,
+					ringSpacing = CRATER_RING_SPACING,
+					ringSizeGrowth = 1,
+					ringGap = CRATER_RING_GAP,
+					outwardTilt = false,
+					debrisSizeMin = CRATER_DEBRIS_SIZE_MIN,
+					debrisSizeMax = CRATER_DEBRIS_SIZE_MAX,
+					debrisHeightMin = CRATER_DEBRIS_HEIGHT_MIN,
+					debrisHeightMax = CRATER_DEBRIS_HEIGHT_MAX,
+				})
 			end)
-
-			task.delay(delay + EMERGE_TIME + KEEP_TIME, function()
-				if not Rock or not Rock.Parent then
-					return
-				end
-				TS:Create(Rock, TweenInfo.new(SINK_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-					CFrame = buriedCFrame,
-					Transparency = 1,
-				}):Play()
-			end)
-
-			Debris:AddItem(Rock, delay + EMERGE_TIME + KEEP_TIME + SINK_TIME + 0.2)
 		end
 	end
 

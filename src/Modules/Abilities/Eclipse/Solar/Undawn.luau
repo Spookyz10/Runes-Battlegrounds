@@ -24,6 +24,8 @@ local FIRE_ARMS_DURATION = 10
 
 local SELF_DAMAGE_COST = 5
 
+local INDICATOR_Y_OFFSET = 3.5
+
 local function fireVFX(func, params)
 	params.func = func
 	RemoteManager.FireAllClients("ReplicateTask", "UndawnVFX", params)
@@ -49,8 +51,6 @@ return {
 			return
 		end
 
-		-- Undawn sempre custa vida do caster: tira 5, e se sobrar menos que
-		-- isso deixa em 1 (nunca mata o próprio caster usando a skill).
 		if Humanoid.Health > 0 then
 			if Humanoid.Health <= SELF_DAMAGE_COST then
 				Humanoid.Health = 1
@@ -62,9 +62,6 @@ return {
 		local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
 		iFramesService:AddBaseiFrames(Character)
 
-		-- Undawn sempre dá Fire Arms ao caster: +2 de dano flat nos M1s por
-		-- FIRE_ARMS_DURATION segundos, independente de acertar alguém com
-		-- Inferno ou não.
 		StatusEffectHandler:Apply(Character, "FireArms", { Stacks = FIRE_ARMS_STACKS, Duration = FIRE_ARMS_DURATION })
 
 		local UserAnimation = MoveAnims.Eclipse.Solar.Undawn
@@ -73,44 +70,10 @@ return {
 		AnimationService:stopAll(Character)
 		AnimationService:playAnimation(Character, UserAnimation)
 
-		task.spawn(function()
-			local beamPositions = {}
-
-			HitboxHandler:SimpleOnce(
-				HumRP,
-				PILLAR_SEARCH_RADIUS,
-				CFrame.new(0, 0, 0),
-				{ Character },
-				"Sphere",
-				nil,
-				function(EnemyCharacter)
-					if not StatusEffectHandler:Has(EnemyCharacter, "Inferno") then
-						return
-					end
-					local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
-					if not EnemyHumRP then
-						return
-					end
-					local pos = EnemyHumRP.Position
-					local beamPos = Vector3.new(pos.X, pos.Y - 3, pos.Z)
-
-					fireVFX("Indicator", {
-						char = Character,
-						beamPos = beamPos,
-					})
-					table.insert(beamPositions, beamPos)
-				end
-			)
-
-			if #beamPositions == 0 then
-				return
-			end
-
-			task.delay(PILLAR_DELAY, function()
-				fireVFX("Beam", {
-					char = Character,
-					beamPositions = beamPositions,
-				})
+		table.insert(
+			UserEvents,
+			UserTrack:GetMarkerReachedSignal("clap"):Once(function()
+				local beamPositions = {}
 
 				HitboxHandler:SimpleOnce(
 					HumRP,
@@ -123,77 +86,106 @@ return {
 						if not StatusEffectHandler:Has(EnemyCharacter, "Inferno") then
 							return
 						end
-
-						-- Se o alvo estiver bloqueando, o pillar não deve
-						-- causar dano nenhum, apenas remove o Inferno.
-						if EnemyCharacter:HasTag("Blocking") then
-							clearInferno(EnemyCharacter)
-							return
-						end
-
-						if iFramesService:HasiFrame(EnemyCharacter, 1) then
-							return
-						end
-
-						local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
 						local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
-						if not EnemyHumanoid or not EnemyHumRP then
+						if not EnemyHumRP then
 							return
 						end
+						local pos = EnemyHumRP.Position
+						local beamPos = Vector3.new(pos.X, pos.Y - INDICATOR_Y_OFFSET, pos.Z)
 
-						clearInferno(EnemyCharacter)
-
-						-- Blockable = true garante, no nível do DamageHandler
-						-- também, que bloqueio anula o dano do pillar (dupla
-						-- proteção com o check de tag acima).
-						local HitInfo = DamageHandler:TakeDamage(
-							Character,
-							EnemyHumanoid,
-							PILLAR_DAMAGE,
-							PILLAR_STUN,
-							nil,
-							true,
-							false,
-							true,
-							true,
-							false,
-							nil,
-							nil
-						)
-
-						if HitInfo.Countered or HitInfo.Blocked then
-							return
-						end
-
-						EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
-						EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
-
-						RagdollHandler.ragdoll(EnemyHumanoid, 6, nil, nil, nil, nil, true)
-
-						task.defer(function()
-							if not EnemyCharacter or not EnemyCharacter.Parent then
-								return
-							end
-							KnockbackService:Knockback(
-								EnemyCharacter,
-								Vector3.new(0, 90, 0),
-								nil,
-								nil,
-								nil,
-								nil,
-								nil,
-								true
-							)
-						end)
+						fireVFX("Indicator", {
+							char = Character,
+							beamPos = beamPos,
+						})
+						table.insert(beamPositions, beamPos)
 					end
 				)
-			end)
-		end)
 
-		table.insert(
-			UserEvents,
-			UserTrack:GetMarkerReachedSignal("clap"):Once(function()
-				fireVFX("IndicatorRemove", { char = Character })
+				task.delay(2, function()
+					--fireVFX("IndicatorRemove", { char = Character })
+				end)
+
+				if #beamPositions == 0 then
+					return
+				end
+
+				task.delay(PILLAR_DELAY, function()
+					fireVFX("Beam", {
+						char = Character,
+						beamPositions = beamPositions,
+					})
+
+					HitboxHandler:SimpleOnce(
+						HumRP,
+						PILLAR_SEARCH_RADIUS,
+						CFrame.new(0, 0, 0),
+						{ Character },
+						"Sphere",
+						nil,
+						function(EnemyCharacter)
+							if not StatusEffectHandler:Has(EnemyCharacter, "Inferno") then
+								return
+							end
+
+							if EnemyCharacter:HasTag("Blocking") then
+								clearInferno(EnemyCharacter)
+								return
+							end
+
+							if iFramesService:HasiFrame(EnemyCharacter, 1) then
+								return
+							end
+
+							local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
+							local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
+							if not EnemyHumanoid or not EnemyHumRP then
+								return
+							end
+
+							clearInferno(EnemyCharacter)
+
+							local HitInfo = DamageHandler:TakeDamage(
+								Character,
+								EnemyHumanoid,
+								PILLAR_DAMAGE,
+								PILLAR_STUN,
+								nil,
+								true,
+								false,
+								true,
+								true,
+								false,
+								nil,
+								nil
+							)
+
+							if HitInfo.Countered or HitInfo.Blocked then
+								return
+							end
+
+							EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
+							EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
+
+							RagdollHandler.ragdoll(EnemyHumanoid, 6, nil, nil, nil, nil, true)
+
+							task.defer(function()
+								if not EnemyCharacter or not EnemyCharacter.Parent then
+									return
+								end
+								KnockbackService:Knockback(
+									EnemyCharacter,
+									Vector3.new(0, 90, 0),
+									nil,
+									nil,
+									nil,
+									nil,
+									nil,
+									true
+								)
+							end)
+						end
+					)
+				end)
 			end)
 		)
 
