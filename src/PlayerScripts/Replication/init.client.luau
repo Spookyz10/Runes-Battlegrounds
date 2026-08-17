@@ -243,9 +243,6 @@ CollectionService:GetInstanceRemovedSignal("Ragdolled"):Connect(function(EnemyCh
 	enemyHumanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
 end)
 
-game.SoundService.Sounds.Volume = 1
-game.SoundService["Emote Music"].Volume = 1
-
 local function setupLiveCharacter(GoalCharacter: Model)
 	local goalHumanoid: Humanoid? = GoalCharacter:WaitForChild("Humanoid", 5)
 	local goalTorso: BasePart? = GoalCharacter:WaitForChild("Torso", 5)
