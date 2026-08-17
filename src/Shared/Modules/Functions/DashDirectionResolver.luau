@@ -231,7 +231,7 @@ function DashResolver.PerformLocalDash(Character, Humanoid, HumRP, Camera, Anima
 			if dashVelocity.Parent then
 				dashVelocity:Destroy()
 			end
-
+			dashTrack:Destroy()
 			HumRP.AssemblyLinearVelocity = Vector3.new(0, HumRP.AssemblyLinearVelocity.Y, 0)
 			gameSettings.RotationType = Enum.RotationType.MovementRelative
 		end)
@@ -308,6 +308,7 @@ function DashResolver.PerformLocalDash(Character, Humanoid, HumRP, Camera, Anima
 			if dashVelocity.Parent then
 				dashVelocity:Destroy()
 			end
+			dashTrack:Destroy()
 			gameSettings.RotationType = Enum.RotationType.MovementRelative
 		end)
 

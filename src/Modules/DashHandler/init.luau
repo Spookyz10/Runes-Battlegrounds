@@ -19,6 +19,7 @@ local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 
 local Configs = require(script.Configs)
+local SkillCollision = require(script.Parent.SkillCollision)
 
 local DashHandler = {}
 
@@ -55,6 +56,8 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 		StunHandler:Unstun(Character, Stun)
 		return
 	end
+
+	SkillCollision:Lock(Character)
 
 	local Velocity = Instance.new("BodyVelocity")
 	Velocity.Name = Config.Id .. "Velocity"
@@ -100,6 +103,7 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 		Character:SetAttribute("Dashing", false)
 		destroyDashHitbox()
 		stopSlopeClamp()
+		SkillCollision:Unlock(Character)
 		if Velocity and Velocity.Parent then
 			Velocity:Destroy()
 		end
