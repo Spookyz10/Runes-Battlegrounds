@@ -1,8 +1,10 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
 local Players = game:GetService("Players")
 local Debris = game:GetService("Debris")
 local TS = game:GetService("TweenService")
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
+local NetworkOwnershipLock = require(ServerStorage.Modules.NetworkOwnershipLock)
 
 export type KnockbackData = {
 	Velocity: Vector3?,
@@ -22,44 +24,22 @@ export type KnockbackData = {
 local BMS = {}
 
 local function TakeNetworkOwnership(RootPart: BasePart): Player?
-	local OriginalOwner: Player? = nil
-
-	local Ok, CurrentOwner = pcall(function()
-		return RootPart:GetNetworkOwner()
-	end)
-
-	if Ok then
-		OriginalOwner = CurrentOwner
-	end
-
-	pcall(function()
-		if RootPart:CanSetNetworkOwnership() then
-			RootPart:SetNetworkOwner(nil)
-		end
-	end)
-
-	return OriginalOwner
+	NetworkOwnershipLock:Take(RootPart)
+	return nil
 end
 
 local function RestoreNetworkOwnership(Character: Model, OriginalOwner: Player?)
-	if not Character or not Character.Parent then
-		return
-	end
-
-	if Character:HasTag("Ragdolled") or Character:FindFirstChild("Ragdoll") then
-		return
-	end
-
-	local RootPart = Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local RootPart = Character and Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if not RootPart or not RootPart.Parent then
 		return
 	end
 
-	pcall(function()
-		if RootPart:CanSetNetworkOwnership() then
-			RootPart:SetNetworkOwner(OriginalOwner)
-		end
-	end)
+	if Character:HasTag("Ragdolled") or Character:FindFirstChild("Ragdoll") then
+		NetworkOwnershipLock:Release(RootPart, nil)
+		return
+	end
+
+	NetworkOwnershipLock:Release(RootPart, OriginalOwner)
 end
 
 function BMS:Knockback(Character: Model, Data: KnockbackData): BodyMover?

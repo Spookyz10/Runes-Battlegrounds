@@ -16,6 +16,7 @@ local SkillCancelHandler = require(ServerModules.SkillCancelHandler)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local PerfectKnockback = require(ServerModules.PerfectKnockback)
 local SkillCollision = require(ServerModules.SkillCollision)
+local NetworkOwnershipLock = require(ServerModules.NetworkOwnershipLock)
 local WeldSystem = require(ReplicatedModules.WeldSystem)
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
@@ -110,7 +111,8 @@ local function doHitEffects(
 	EnemyPlayer,
 	CasterStun,
 	VictimStun,
-	Tool
+	Tool,
+	onDamageCancel
 )
 	StunHandler:Unstun(closestEnemy, VictimStun)
 	iFramesService:RemoveiFrames(closestEnemy, "Base")
@@ -208,6 +210,7 @@ return {
 		local rotateConn = nil
 
 		local casterCleaned = false
+		local casterOwnershipLocked = false
 
 		local function cleanupCaster()
 			if casterCleaned then
@@ -337,9 +340,8 @@ return {
 				closestEnemy:AddTag("Knockbacked")
 				SkillCollision:Lock(closestEnemy)
 
-				pcall(function()
-					HumRP:SetNetworkOwner(nil)
-				end)
+				NetworkOwnershipLock:Take(HumRP)
+				casterOwnershipLocked = true
 
 				startRotation()
 
@@ -470,7 +472,8 @@ return {
 								EnemyPlayer,
 								CasterStun,
 								VictimStun,
-								Tool
+								Tool,
+								onDamageCancel
 							)
 						else
 							iFramesService:RemoveAlliFrames(Character)
@@ -614,7 +617,8 @@ return {
 						EnemyPlayer,
 						CasterStun,
 						VictimStun,
-						Tool
+						Tool,
+						onDamageCancel
 					)
 				else
 					SkillCancelHandler:Unregister(Character, onDamageCancel)
@@ -637,9 +641,10 @@ return {
 				SkillCollision:Unlock(closestEnemy)
 			end
 
-			pcall(function()
-				HumRP:SetNetworkOwner(Player)
-			end)
+			if casterOwnershipLocked then
+				casterOwnershipLocked = false
+				NetworkOwnershipLock:Release(HumRP, Player)
+			end
 			if EnemyHumRP and EnemyHumRP.Parent then
 				pcall(function()
 					EnemyHumRP:SetNetworkOwner(EnemyPlayer)

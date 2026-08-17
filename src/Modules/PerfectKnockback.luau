@@ -15,6 +15,7 @@ local KnockbackService = require(SvModules.BodymoverService)
 local RagdollHandler = require(SvModules.RagdollHandler)
 local AirDetectionService = require(SvModules.AirDetectionService)
 local CombatEvents = require(SvModules.CombatEvents)
+local NetworkOwnershipLock = require(SvModules.NetworkOwnershipLock)
 
 local Assets = ServerStorage.Assets
 local Animations = Assets.Animations
@@ -124,11 +125,7 @@ local function restoreOwnership(EnemyCharacter: Model, ActiveData: ActiveData)
 		return
 	end
 
-	pcall(function()
-		if HumanoidRootPart:CanSetNetworkOwnership() then
-			HumanoidRootPart:SetNetworkOwner(ActiveData.OriginalOwner)
-		end
-	end)
+	NetworkOwnershipLock:Release(HumanoidRootPart, ActiveData.OriginalOwner)
 end
 
 local function finishKnockback(EnemyCharacter: Model, ActiveData: ActiveData)
@@ -283,11 +280,7 @@ function Perfect:KnockBack(_, EnemyCharacter: Model, Params: KnockbackParams, Ch
 		OriginalOwner = CurrentOwner
 	end
 
-	pcall(function()
-		if HumanoidRootPart:CanSetNetworkOwnership() then
-			HumanoidRootPart:SetNetworkOwner(nil)
-		end
-	end)
+	NetworkOwnershipLock:Take(HumanoidRootPart)
 
 	local Touched = false
 	local StartTime = os.clock()
@@ -307,11 +300,7 @@ function Perfect:KnockBack(_, EnemyCharacter: Model, Params: KnockbackParams, Ch
 	if not KnockbackTrack then
 		warn("[PerfectKB] KnockbackTrack is nil for", EnemyCharacter.Name, "— animation not loaded?")
 		StunHandler:Unstun(EnemyCharacter, EnemyStun)
-		pcall(function()
-			if HumanoidRootPart:CanSetNetworkOwnership() then
-				HumanoidRootPart:SetNetworkOwner(OriginalOwner)
-			end
-		end)
+		NetworkOwnershipLock:Release(HumanoidRootPart, OriginalOwner)
 		return
 	end
 
