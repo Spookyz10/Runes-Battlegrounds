@@ -2,6 +2,9 @@ local module = {}
 module.Cache = {}
 module.Active = {}
 
+-- Nenhuma combinação de efeitos pode manter um personagem travado para sempre.
+local MAX_CONTINUOUS_STUN_DURATION = 20
+
 local StunsTags = {
 	"CantPunch",
 	"CantDash",
@@ -28,6 +31,7 @@ local function getCharacterState(Character)
 	if not module.Active[Character] then
 		module.Active[Character] = {
 			Sources = {},
+			MaxDurationHandle = nil,
 		}
 	end
 
@@ -45,8 +49,13 @@ local function ensureContainerFolder(Character, State)
 		Container.Name = "Stunned"
 		Container.Parent = Character
 		Container.Destroying:Once(function()
-			if module.Active[Character] and module.Active[Character].Folder == Container then
-				module.Active[Character].Folder = nil
+			local ActiveState = module.Active[Character]
+			if ActiveState and ActiveState.Folder == Container then
+				if ActiveState.MaxDurationHandle then
+					pcall(task.cancel, ActiveState.MaxDurationHandle)
+				end
+				module.Active[Character] = nil
+				module.Cache[Character] = nil
 			end
 			if Character and Character.Parent then
 				Character:SetAttribute("Stunned", false)
@@ -147,6 +156,11 @@ local function removeSourceEntry(Character, SourceKey)
 	State.Sources[SourceKey] = nil
 
 	if next(State.Sources) == nil then
+		if State.MaxDurationHandle then
+			pcall(task.cancel, State.MaxDurationHandle)
+			State.MaxDurationHandle = nil
+		end
+
 		if State.Folder and State.Folder.Parent == Character then
 			State.Folder:Destroy()
 		else
@@ -201,6 +215,16 @@ function module:Stun(
 	local State = getCharacterState(Character)
 	local Container = ensureContainerFolder(Character, State)
 	local SourceKey = getSourceKey(Source)
+
+	-- O limite e contado a partir do primeiro stun da sequencia, sem ser
+	-- renovado por stuns adicionais.
+	if not State.MaxDurationHandle then
+		State.MaxDurationHandle = task.delay(MAX_CONTINUOUS_STUN_DURATION, function()
+			if module.Active[Character] == State then
+				module:Unstun(Character)
+			end
+		end)
+	end
 
 	Character:AddTag("Stunned")
 	Character:SetAttribute("Stunned", true)
@@ -261,12 +285,7 @@ function module:RemoveAllStuns(Character, IgnoreImmunity)
 end
 
 function module:Unstun(Character, StunObject)
-	if
-		not Character
-		or not Character:FindFirstChild("Humanoid")
-		or Character.Humanoid.Health <= 0
-		or Character.Humanoid:GetState() == Enum.HumanoidStateType.Dead
-	then
+	if not Character then
 		return
 	end
 

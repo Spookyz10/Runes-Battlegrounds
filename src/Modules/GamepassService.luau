@@ -7,6 +7,11 @@ local EarlyAccess = require(ReplicatedStorage.Shared.EarlyAccess)
 
 local GamepassService = {}
 
+
+local COMPLIMENTARY_EARLY_ACCESS_USERS = {
+	[2843265067] = true,
+}
+
 function GamepassService:SyncPlayer(Player)
 	local playerData = Data.Service:waitForData(Player)
 	if not playerData then
@@ -14,6 +19,14 @@ function GamepassService:SyncPlayer(Player)
 	end
 
 	local GamepassId = EarlyAccess.GamepassId
+
+	if COMPLIMENTARY_EARLY_ACCESS_USERS[Player.UserId] then
+		playerData.OwnedPasses(function(passes)
+			passes[GamepassId] = true
+			return passes
+		end)
+		return
+	end
 
 	if playerData.OwnedPasses()[GamepassId] then
 		return

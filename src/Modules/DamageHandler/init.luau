@@ -210,7 +210,7 @@ function module:TakeDamage(
 			end
 
 			if DamagerPlayer then
-				if not WasDead and returnValue.Finisher == true and doFinisher == true then
+				if not WasDead and Hum.Health <= 0 then
 					local MostDealt = nil
 					for Name, Value in Damaged:GetAttributes() do
 						if Name:find("_Dealt_Damage") then

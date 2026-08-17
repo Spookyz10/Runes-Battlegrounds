@@ -16,6 +16,7 @@ local AnimationService = require(SvModules.AnimationService)
 local NewKnockback = require(SvModules.BodymoverService)
 local HitboxHandler = require(SvModules.HitboxHandler)
 local DamageHandler = require(SvModules.DamageHandler)
+local iFramesService = require(SvModules.iFramesService)
 
 local Ragdoll = {}
 
@@ -204,6 +205,15 @@ function Ragdoll.cancelRagdoll(Humanoid, _, DoKnockback, MainPart, isCancel, ful
 	Character:AddTag("StunImmunity")
 	task.delay(0.5, function()
 		Character:RemoveTag("StunImmunity")
+	end)
+
+	-- A short hit grace period prevents a standing M1 from immediately
+	-- re-ragdolling the victim before they can regain control.
+	iFramesService:AddBaseiFrames(Character)
+	task.delay(0.2, function()
+		if Character and Character.Parent then
+			iFramesService:RemoveiFrames(Character, "Base")
+		end
 	end)
 
 	Humanoid.AutoRotate = true

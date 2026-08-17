@@ -140,6 +140,8 @@ function ActiveState.new(Character, Player)
 		PreviousiFrameLevel = 0,
 		GroundReturnPosition = nil,
 		IsAirborne = false,
+		GroundStun = nil,
+		SuppressGroundStunCleanup = false,
 	}
 	return data
 end
@@ -698,9 +700,11 @@ return {
 		data.GroundReturnPosition = HumRP.Position
 
 		local GroundStun = StunHandler:Stun(Character, 15, true)
+		data.GroundStun = GroundStun
 		if GroundStun then
 			GroundStun.Destroying:Once(function()
-				if data.Cancelled then
+				data.GroundStun = nil
+				if data.Cancelled or data.SuppressGroundStunCleanup then
 					return
 				end
 				cleanup(data)
@@ -863,6 +867,16 @@ return {
 					restoreGroundControl(Humanoid, HumRP)
 				end
 				data.IsAirborne = false
+			end
+
+			-- O stun de 15 s e somente um fallback caso a habilidade seja
+			-- interrompida. Ao terminar normalmente, o jogador deve recuperar
+			-- o controle imediatamente.
+			if data.GroundStun then
+				data.SuppressGroundStunCleanup = true
+				StunHandler:Unstun(Character, data.GroundStun)
+				data.GroundStun = nil
+				data.SuppressGroundStunCleanup = false
 			end
 
 			if not data.Cancelled then

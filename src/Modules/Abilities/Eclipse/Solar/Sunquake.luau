@@ -50,6 +50,11 @@ return {
 		local UserAnimation = MoveAnims.Eclipse.Solar.Sunquake
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
 
+		if not UserTrack then
+			StunHandler:Unstun(Character, Stun)
+			return
+		end
+
 		local cancelled = false
 		local onDamageCancel
 		onDamageCancel = function()

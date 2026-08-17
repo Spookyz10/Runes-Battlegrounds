@@ -19,14 +19,15 @@ local Assets = ServerStorage.Assets
 local Animations = Assets.Animations
 local SolarEclipseAnim = Animations.Awakenings["Solar Eclipse"]
 
-local EXPLOSION_DAMAGE = 30
-local EXPLOSION_KNOCKUP = 1000
+local EXPLOSION_DAMAGE = 5
+local EXPLOSION_KNOCKUP = 1200
+local EXPLOSION_KNOCKBACK = 450
 local RAGDOLL_DURATION = 10
 local CYLINDER_SIZE = Vector3.new(300, 200, 200)
 local LEVITATE_RADIUS = CYLINDER_SIZE.X
 
 local EXPLOSION_CHECK_INTERVAL = 0.1
-local EXPLOSION_HIT_COOLDOWN = 1
+local EXPLOSION_HIT_COOLDOWN = 5
 
 local module = {}
 
@@ -133,9 +134,16 @@ local function startExplosionField(Character, Position)
 				if not EnemyCharacter or not EnemyCharacter.Parent then
 					return
 				end
+				local offset = EnemyCharacter.HumanoidRootPart.Position - Character.HumanoidRootPart.Position
+				local outward = Vector3.new(offset.X, 0, offset.Z)
+				if outward.Magnitude < 0.001 then
+					outward = Character.HumanoidRootPart.CFrame.LookVector
+					outward = Vector3.new(outward.X, 0, outward.Z)
+				end
+
 				KnockbackService:Knockback(
 					EnemyCharacter,
-					Vector3.new(0, EXPLOSION_KNOCKUP, 0),
+					outward.Unit * EXPLOSION_KNOCKBACK + Vector3.new(0, EXPLOSION_KNOCKUP, 0),
 					nil,
 					nil,
 					nil,

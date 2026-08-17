@@ -299,3 +299,15 @@ end
 
 RemoteManager.ListenToAll(ServerRemoteListener)
 RemoteManager.ListenToAllFunctions(ServerRemoteListener)
+
+local EarlyAccess = require(ReplicatedStorage.Shared.EarlyAccess)
+
+Data.Service:addGlobalCallback("GiftEarlyAccess", function(player, data)
+	local GamepassId = EarlyAccess.GamepassId
+
+	if data.OwnedPasses[GamepassId] then
+		return
+	end
+
+	data.OwnedPasses[GamepassId] = true
+end)

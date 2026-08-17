@@ -100,6 +100,25 @@ function Handlers.Launch(params)
 	Debris:AddItem(Fireball, TRAVEL_TIME + 0.1)
 end
 
+function Handlers.Cancel(params)
+	local char = params.char
+	if not char then
+		return
+	end
+
+	local key = tostring(char)
+	local data = activeData[key]
+	if not data or not data.fireball then
+		return
+	end
+
+	activeData[key] = nil
+
+	if data.fireball.Parent then
+		data.fireball:Destroy()
+	end
+end
+
 return function(params)
 	local handler = Handlers[params.func]
 	if handler then

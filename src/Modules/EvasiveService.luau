@@ -12,7 +12,7 @@ local PerfectKnockback = require(ModulesFolder.PerfectKnockback)
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local CombatEvents = require(ModulesFolder.CombatEvents)
 
-local THRESHOLD = 20
+local THRESHOLD = 30
 local MAX_CHARGES = 1
 local ESCAPE_IFRAME_TIME = 1
 

@@ -43,6 +43,7 @@ type ActiveData = {
 	BodyGyro: BodyGyro?,
 	EnemyStun: any,
 	Escapable: boolean,
+	EscapableCooldown: number,
 	Collision: RBXScriptConnection?,
 	StoppedConnection: RBXScriptConnection?,
 	DamageConn: RBXScriptConnection?,
@@ -203,7 +204,7 @@ function Perfect:CanEscape(EnemyCharacter: Model): boolean
 		return false
 	end
 
-	return Data.Escapable ~= false
+	return Data.Escapable ~= false and (os.clock() - Data.StartTime) >= Data.EscapableCooldown
 end
 
 function Perfect:Escape(EnemyCharacter: Model): boolean
@@ -364,6 +365,7 @@ function Perfect:KnockBack(_, EnemyCharacter: Model, Params: KnockbackParams, Ch
 		BodyGyro = BodyGyro,
 		EnemyStun = EnemyStun,
 		Escapable = Params.Escapable,
+		EscapableCooldown = Params.EscapableCooldown,
 		Collision = nil,
 		StoppedConnection = nil,
 		DamageConn = nil,

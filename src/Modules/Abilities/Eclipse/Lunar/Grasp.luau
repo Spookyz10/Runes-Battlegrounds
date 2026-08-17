@@ -29,6 +29,16 @@ local POST_PULL_STUN_EXTRA = 2
 local HAND_DAMAGE = 5
 local PULL_DAMAGE = 5
 
+local function setCharacterNetworkOwner(Character, Owner)
+	for _, part in Character:GetDescendants() do
+		if part:IsA("BasePart") and part:CanSetNetworkOwnership() then
+			pcall(function()
+				part:SetNetworkOwner(Owner)
+			end)
+		end
+	end
+end
+
 return {
 	Cooldown = 20,
 	Start = function(Player, Tool)
@@ -102,9 +112,7 @@ return {
 			EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
 			EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
 
-			pcall(function()
-				EnemyHumRP:SetNetworkOwner(nil)
-			end)
+			setCharacterNetworkOwner(enemyChar, nil)
 
 			EnemyHum:ChangeState(Enum.HumanoidStateType.PlatformStanding)
 
@@ -148,17 +156,17 @@ return {
 					if EnemyHumRP and EnemyHumRP.Parent and Hum then
 						EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
 						EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
+					if data.freezeToken then
+						StunHandler:Unstun(enemyChar, data.freezeToken)
+					end
+					if EnemyHumRP and EnemyHumRP.Parent and Hum then
 						Hum.PlatformStand = false
+						Hum.AutoRotate = true
 						Hum:ChangeState(Enum.HumanoidStateType.GettingUp)
 
 						if data.player then
-							pcall(function()
-								EnemyHumRP:SetNetworkOwner(data.player)
-							end)
+							setCharacterNetworkOwner(enemyChar, data.player)
 						end
-					end
-					if data.freezeToken then
-						StunHandler:Unstun(enemyChar, data.freezeToken)
 					end
 					if enemyChar:GetAttribute("LunarMark") then
 						enemyChar:SetAttribute("LunarMark", nil)

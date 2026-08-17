@@ -1,5 +1,5 @@
-local REGEN_RATE = 0.35 / 100
-local REGEN_STEP = 1
+local REGEN_AMOUNT = 1
+local REGEN_STEP = 2
 
 local Character = script.Parent
 local Humanoid
@@ -20,9 +20,8 @@ end
 while true do
 	while Humanoid.Health < Humanoid.MaxHealth do
 		local dt = task.wait(REGEN_STEP)
-		local dh = dt * REGEN_RATE * Humanoid.MaxHealth
 		if CanHeal() then
-			Humanoid.Health = math.min(Humanoid.Health + dh, Humanoid.MaxHealth)
+			Humanoid.Health = math.min(Humanoid.Health + REGEN_AMOUNT, Humanoid.MaxHealth)
 		end
 	end
 	Humanoid.HealthChanged:Wait()

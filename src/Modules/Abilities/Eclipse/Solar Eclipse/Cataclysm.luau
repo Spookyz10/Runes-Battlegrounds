@@ -27,7 +27,7 @@ local GRAB_HITBOX_OFFSET = CFrame.new(0, 0, -15)
 
 local MISS_WAIT_TIME = 3
 
-local VICTIM_DAMAGE = 40
+local VICTIM_DAMAGE = 80
 local VICTIM_TWEEN_DISTANCE = 7
 local VICTIM_TWEEN_TIME = 0.45
 

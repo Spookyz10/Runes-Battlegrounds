@@ -93,6 +93,7 @@ return {
 			end
 
 			Character:RemoveTag("CantRotate")
+			RemoteManager.FireAllClients("ReplicateTask", "ShadestepFireball", { func = "Cancel", char = Character })
 			SkillCancelHandler:Unregister(Character, onDamageCancel)
 		end
 
@@ -100,6 +101,13 @@ return {
 		Character:AddTag("CantRotate")
 
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
+
+		if not UserTrack then
+			Character:RemoveTag("CantRotate")
+			StunHandler:Unstun(Character, activeStun)
+			Humanoid.WalkSpeed = 16
+			return
+		end
 
 		onDamageCancel = function()
 			if cancelled then
