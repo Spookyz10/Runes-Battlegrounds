@@ -272,63 +272,6 @@ local function setupLiveCharacter(GoalCharacter: Model)
 			end
 		end
 	end)
-
-	GoalCharacter:GetAttributeChangedSignal("AwakeningAura"):Connect(function()
-		if GoalCharacter:GetAttribute("AwakeningAura") ~= true then
-			return
-		end
-		if GoalCharacter:GetAttribute("Moveset") ~= "Monster Form" then
-			return
-		end
-
-		local auraContainer: Instance = RS.Resources.HeroHunter["Monster Form"].AuraHolder
-
-		for _, bodyPart in GoalCharacter:GetChildren() do
-			local goalAura: Instance? = auraContainer:FindFirstChild(tostring(bodyPart))
-			if not goalAura then
-				continue
-			end
-
-			local beamsAndTrails: { [Trail | Beam]: { Attachment0: CFrame, Attachment1: CFrame } } = {}
-			local goalPart: Instance = GoalCharacter[tostring(goalAura)]
-
-			for _, auraPart in goalAura:GetChildren() do
-				local auraClone: Instance = auraPart:Clone()
-				auraClone.Parent = goalPart
-				auraClone:SetAttribute("MonsterParticles", true)
-
-				for _, v in auraClone:GetDescendants() do
-					if v:IsA("Trail") or v:IsA("Beam") or v:IsA("ParticleEmitter") then
-						v.Enabled = true
-					end
-					if (v:IsA("Trail") or v:IsA("Beam")) and v.Attachment0 and v.Attachment1 then
-						beamsAndTrails[v] = { Attachment0 = v.Attachment0.CFrame, Attachment1 = v.Attachment1.CFrame }
-					end
-				end
-			end
-
-			for beamOrTrail, cframes in beamsAndTrails do
-				local targetParent: Instance = beamOrTrail.Parent.Parent
-
-				for _, object in GoalCharacter:GetDescendants() do
-					if not object:IsA("Attachment") then
-						continue
-					end
-
-					local objectParent: Instance? = object.Parent
-					if not objectParent or not objectParent:IsA("BasePart") or objectParent ~= targetParent then
-						continue
-					end
-
-					if object.CFrame == cframes.Attachment0 then
-						beamOrTrail.Attachment0 = object
-					elseif object.CFrame == cframes.Attachment1 then
-						beamOrTrail.Attachment1 = object
-					end
-				end
-			end
-		end
-	end)
 end
 
 workspace.Live.ChildAdded:Connect(setupLiveCharacter)

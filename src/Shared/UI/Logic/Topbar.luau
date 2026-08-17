@@ -7,6 +7,7 @@ local Topbar = {}
 
 local MainIcon = Icon.new()
 local StoreIcon = Icon.new()
+local LogIcon = Icon.new()
 
 function Topbar.Show()
 	if MainIcon then
@@ -14,6 +15,9 @@ function Topbar.Show()
 	end
 	if StoreIcon then
 		StoreIcon:setEnabled(true)
+	end
+	if LogIcon then
+		LogIcon:setEnabled(true)
 	end
 end
 
@@ -23,6 +27,9 @@ function Topbar.Hide()
 	end
 	if StoreIcon then
 		StoreIcon:setEnabled(false)
+	end
+	if LogIcon then
+		LogIcon:setEnabled(false)
 	end
 end
 
@@ -36,6 +43,10 @@ function Topbar.Init()
 	StoreIcon:setLabel("Store")
 	local store = playerGui:FindFirstChild("Store")
 	StoreIcon:bindToggleItem(store)
+
+	LogIcon:setLabel("Updates")
+	local log = playerGui:FindFirstChild("Log")
+	LogIcon:bindToggleItem(log)
 
 	local loadedTopBar = Instance.new("BoolValue")
 	loadedTopBar.Name = "loadedTopBar"
