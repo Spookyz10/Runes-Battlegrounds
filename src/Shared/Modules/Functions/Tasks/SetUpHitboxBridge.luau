@@ -52,13 +52,13 @@ return function(Params)
 	}
 
 	if Params.Mode == "Once" then
-		--drawDebug(HitboxParameters)
+		drawDebug(HitboxParameters)
 		Bridge:FireServer(HitboxQuery(HitboxParameters))
 		return
 	elseif Params.Mode == "Constant" then
 		local HitboxConnection
 		HitboxConnection = RunService.Heartbeat:Connect(function()
-			--drawDebug(HitboxParameters)
+			drawDebug(HitboxParameters)
 
 			local TouchedEnemies = HitboxQuery(HitboxParameters)
 			if TouchedEnemies ~= nil and #TouchedEnemies > 0 then

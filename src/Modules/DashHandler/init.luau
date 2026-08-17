@@ -186,9 +186,7 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 
 		resumeDash(true)
 
-		task.delay(0.05, function()
-			StunHandler:Unstun(Character, Stun)
-		end)
+		StunHandler:Unstun(Character, Stun)
 	end
 
 	table.insert(
@@ -269,7 +267,7 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 	AnimationService:playAnimation(Character, Animation)
 
 	Character:SetAttribute("Dashing", true)
-	RemoteManager.FireAllClients("ReplicateTask", "ActionHightlight", { char = Character, func = "Dash" })
+
 	RemoteManager.FireAllClients("ReplicateTask", "DashMiss", { PrimaryPart = HumRP })
 
 	task.delay(0.7, function()
@@ -329,8 +327,6 @@ local function runDisplacementDash(Player, Character, HumRP, Humanoid, Config)
 		end)
 	end
 
-	RemoteManager.FireAllClients("ReplicateTask", "ActionHightlight", { char = Character, func = "Dash" })
-
 	local Animation = Config.Animation and Config.Animation()
 	if Animation then
 		AnimationService:playAnimation(Character, Animation)
@@ -356,11 +352,6 @@ function DashHandler:Dash(Player: Player, Direction: string): boolean
 	if Character:GetAttribute("Dashing") == true then
 		return false
 	end
-
-	DashDebounce[Character] = true
-	task.delay(DASH_INPUT_DEBOUNCE, function()
-		DashDebounce[Character] = nil
-	end)
 
 	local Trapped = EvasiveService:IsTrapped(Character)
 
@@ -403,6 +394,12 @@ function DashHandler:Dash(Player: Player, Direction: string): boolean
 
 	CooldownSystem:Set(Character, CooldownId, Cooldown)
 	RemoteManager.FireClient(Player, "ExtraCds", Direction .. "Dash", Cooldown)
+	RemoteManager.FireAllClients("ReplicateTask", "ActionHightlight", { char = Character, func = "Dash" })
+
+	DashDebounce[Character] = true
+	task.delay(DASH_INPUT_DEBOUNCE, function()
+		DashDebounce[Character] = nil
+	end)
 
 	if Config.Type == "Attack" then
 		SFXModule:Play("DashStart", HumRP)

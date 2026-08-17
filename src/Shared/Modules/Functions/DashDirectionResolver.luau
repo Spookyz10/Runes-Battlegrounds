@@ -16,7 +16,7 @@ local LastSideDash = {}
 local LastBackDash = {}
 local LastDashRequest = {}
 
-local DASH_INPUT_DEBOUNCE = 1
+local DASH_INPUT_DEBOUNCE = 0.3
 
 local AxisKey = {
 	Front = "Dash_Z",
@@ -339,8 +339,6 @@ function DashResolver.PerformDash(Character, Humanoid, HumRP, Camera, Animator)
 		return
 	end
 
-	LastDashRequest[Character] = Now
-
 	local Direction, Trapped, Escaping, CanAct = DashResolver.Resolve(Character, Humanoid, HumRP)
 
 	if not CanAct then
@@ -350,6 +348,8 @@ function DashResolver.PerformDash(Character, Humanoid, HumRP, Camera, Animator)
 	if not Escaping and isAxisOnCooldown(Character, Direction) then
 		return Direction, Trapped, Escaping, false
 	end
+
+	LastDashRequest[Character] = Now
 
 	RemoteManager.FireServer("Keypress", { Key = Enum.KeyCode.Q, Direction = Direction, ClientCFrame = HumRP.CFrame })
 
