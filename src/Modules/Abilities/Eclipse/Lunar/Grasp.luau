@@ -156,6 +156,7 @@ return {
 					if EnemyHumRP and EnemyHumRP.Parent and Hum then
 						EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
 						EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
+					end
 					if data.freezeToken then
 						StunHandler:Unstun(enemyChar, data.freezeToken)
 					end

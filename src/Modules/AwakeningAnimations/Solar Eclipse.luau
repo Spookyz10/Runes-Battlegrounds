@@ -22,7 +22,7 @@ local SolarEclipseAnim = Animations.Awakenings["Solar Eclipse"]
 local EXPLOSION_DAMAGE = 5
 local EXPLOSION_KNOCKUP = 1200
 local EXPLOSION_KNOCKBACK = 450
-local RAGDOLL_DURATION = 10
+local RAGDOLL_DURATION = 3
 local CYLINDER_SIZE = Vector3.new(300, 200, 200)
 local LEVITATE_RADIUS = CYLINDER_SIZE.X
 

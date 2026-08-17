@@ -65,6 +65,8 @@ local function AddStarterPlayer(Player: Player)
 		return
 	end
 
+	Player:LoadCharacterAsync()
+
 	local PlayerData = Data.Service:waitForData(Player)
 	local template: Instance = ServerStorage.StarterPlayer
 

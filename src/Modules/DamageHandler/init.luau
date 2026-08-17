@@ -125,34 +125,32 @@ function module:TakeDamage(
 		else
 			returnValue.CouldHit = true
 
-			if returnValue.Finisher == true then
-				if doFinisher == true then
-					task.spawn(function()
-						for _, v in workspace:GetDescendants() do
-							if
-								(v:IsA("Weld") or v:IsA("WeldConstraint"))
-								and (
-									(v.Part1 == Damaged.HumanoidRootPart and v.Part0 == Damager.HumanoidRootPart)
-									or (v.Part1 == Damager.HumanoidRootPart and v.Part0 == Damaged.HumanoidRootPart)
-								)
-							then
-								v:Destroy()
-							end
+			if returnValue.Finisher == true and doFinisher == true then
+				task.spawn(function()
+					for _, v in workspace:GetDescendants() do
+						if
+							(v:IsA("Weld") or v:IsA("WeldConstraint"))
+							and (
+								(v.Part1 == Damaged.HumanoidRootPart and v.Part0 == Damager.HumanoidRootPart)
+								or (v.Part1 == Damager.HumanoidRootPart and v.Part0 == Damaged.HumanoidRootPart)
+							)
+						then
+							v:Destroy()
 						end
-					end)
-
-					local HealthScript = Damaged:FindFirstChild("Health")
-					if HealthScript then
-						HealthScript.Enabled = false
 					end
+				end)
 
-					Hum:TakeDamage(FinisherRequirement or Damage)
-					AddDealtDamage(Damaged, Damager, Damage)
-
-					CombatEvents.DamageDealt:Fire(Damager, Damaged, FinisherRequirement or Damage, Type)
-
-					RemoteManager.FireAllClients("ReplicateTask", "ActionHightlight", { char = Damaged, func = "Hit" })
+				local HealthScript = Damaged:FindFirstChild("Health")
+				if HealthScript then
+					HealthScript.Enabled = false
 				end
+
+				Hum:TakeDamage(FinisherRequirement or Damage)
+				AddDealtDamage(Damaged, Damager, Damage)
+
+				CombatEvents.DamageDealt:Fire(Damager, Damaged, FinisherRequirement or Damage, Type)
+
+				RemoteManager.FireAllClients("ReplicateTask", "ActionHightlight", { char = Damaged, func = "Hit" })
 			else
 				Hum:TakeDamage(Damage)
 				AddDealtDamage(Damaged, Damager, Damage)
