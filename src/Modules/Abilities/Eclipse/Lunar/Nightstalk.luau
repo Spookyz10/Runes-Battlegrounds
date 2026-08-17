@@ -28,7 +28,6 @@ local KNOCK_FINAL_FORCE = 25
 
 local CIRCLE_OFFSET_FORWARD = 3
 local CIRCLE_OFFSET_DOWN = 3
-local CIRCLE_VFX_DURATION = 1
 
 local SPIKE_STAGES = {
 	{ Distance = 7, HitboxSize = Vector3.new(6, 8, 6), Scale = 1 },
@@ -60,8 +59,9 @@ return {
 
 		local HitList = {}
 
-		local circleCounter = 0
 		local initialCircleId = tostring(Character) .. "_Nightstalk_Initial"
+
+		local activeCircles = {}
 
 		local function getLookFlat()
 			local lv = Character.HumanoidRootPart.CFrame.LookVector
@@ -72,19 +72,22 @@ return {
 			return Vector3.new(0, 0, -1)
 		end
 
-		local function spawnCircle(id, char, offset)
-			RemoteManager.FireAllClients(
-				"ReplicateTask",
-				"CircleVFX",
-				{ func = "Start", id = id, char = char, offset = offset }
-			)
+		local function spawnCircle(id, cframe)
+			activeCircles[id] = true
+			RemoteManager.FireAllClients("ReplicateTask", "CircleVFX", { func = "Start", id = id, cframe = cframe })
 		end
 
-		local function despawnCircle(id)
-			RemoteManager.FireAllClients("ReplicateTask", "CircleVFX", { func = "Stop", id = id })
+		local function despawnAllCircles()
+			for id in activeCircles do
+				activeCircles[id] = nil
+				RemoteManager.FireAllClients("ReplicateTask", "CircleVFX", { func = "Stop", id = id })
+			end
 		end
 
-		spawnCircle(initialCircleId, Character, CFrame.new(0, -CIRCLE_OFFSET_DOWN, -CIRCLE_OFFSET_FORWARD))
+		spawnCircle(
+			initialCircleId,
+			Character.HumanoidRootPart.CFrame * CFrame.new(0, -CIRCLE_OFFSET_DOWN, -CIRCLE_OFFSET_FORWARD)
+		)
 
 		local function isValidEnemy(EnemyCharacter)
 			local EnemyHumanoid = EnemyCharacter and EnemyCharacter:FindFirstChild("Humanoid")
@@ -178,14 +181,6 @@ return {
 
 			RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", { Intensity = 1.5, Last = 0.2 })
 
-			circleCounter += 1
-			local circleId = tostring(Character) .. "_Nightstalk_Spike_" .. circleCounter
-			spawnCircle(circleId, Character, CFrame.new(0, -3, -stage.Distance))
-
-			task.delay(CIRCLE_VFX_DURATION, function()
-				despawnCircle(circleId)
-			end)
-
 			HitboxHandler:SimpleOnce(
 				Character.HumanoidRootPart,
 				stage.HitboxSize,
@@ -210,7 +205,7 @@ return {
 			cleanedUp = true
 			cancelled = true
 
-			despawnCircle(initialCircleId)
+			despawnAllCircles()
 
 			SkillCollision:Unlock(Character)
 			SkillCancelHandler:Unregister(Character, onDamageCancel)

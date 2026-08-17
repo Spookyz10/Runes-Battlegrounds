@@ -233,17 +233,20 @@ function module:TakeDamage(
 								return
 							end
 
-							Data[Damager].Kills(function(k)
-								return k + 1
-							end)
+							local DamagerData = Data.Service:waitForData(DamagerPlayer)
+							if DamagerData then
+								DamagerData.Kills(function(k)
+									return k + 1
+								end)
 
-							local NewTotalKills = Data[Damager].TotalKills(function(k)
-								return k + 1
-							end)
+								local NewTotalKills = DamagerData.TotalKills(function(k)
+									return k + 1
+								end)
 
-							BadgeAwardService:CheckKills(DamagerPlayer, NewTotalKills)
+								BadgeAwardService:CheckKills(DamagerPlayer, NewTotalKills)
 
-							Damager:SetAttribute("Streak", (Damager:GetAttribute("Streak") or 0) + 1)
+								Damager:SetAttribute("Streak", (Damager:GetAttribute("Streak") or 0) + 1)
+							end
 						end
 					end
 				end
@@ -300,17 +303,20 @@ Players.PlayerRemoving:Connect(function(DamagedPlayer)
 		return
 	end
 
-	Data[Damager].Kills(function(k)
-		return k + 1
-	end)
+	local DamagerData = Data.Service:waitForData(DamagerPlayer)
+	if DamagerData then
+		DamagerData.Kills(function(k)
+			return k + 1
+		end)
 
-	local NewTotalKills = Data[Damager].TotalKills(function(k)
-		return k + 1
-	end)
+		local NewTotalKills = DamagerData.TotalKills(function(k)
+			return k + 1
+		end)
 
-	BadgeAwardService:CheckKills(DamagerPlayer, NewTotalKills)
+		BadgeAwardService:CheckKills(DamagerPlayer, NewTotalKills)
 
-	Damager:SetAttribute("Streak", (Damager:GetAttribute("Streak") or 0) + 1)
+		Damager:SetAttribute("Streak", (Damager:GetAttribute("Streak") or 0) + 1)
+	end
 end)
 
 return module

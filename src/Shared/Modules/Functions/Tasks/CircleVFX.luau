@@ -1,5 +1,4 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 
 local CharacterAssets = ReplicatedStorage.Resources.CharacterAssets
 local FadeOut = require(ReplicatedStorage.Shared.Modules.Utility.FadeOut)
@@ -18,31 +17,20 @@ local function stopEntry(id)
 
 	ACTIVE[id] = nil
 
-	if Data.Connection then
-		Data.Connection:Disconnect()
-		Data.Connection = nil
-	end
-
 	return Data
 end
 
 function Handlers.Start(params)
 	local id = params.id
-	local Char = params.char
-	local Offset = params.offset or CFrame.new()
+	local TargetCFrame = params.cframe
 
-	if not id or not Char then
+	if not id or not TargetCFrame then
 		return
 	end
 
 	local OldData = stopEntry(id)
 	if OldData and OldData.Clone and OldData.Clone.Parent then
 		OldData.Clone:Destroy()
-	end
-
-	local HumRP = Char:FindFirstChild("HumanoidRootPart")
-	if not HumRP then
-		return
 	end
 
 	local CircleAsset = CharacterAssets.Eclipse.Lunar:FindFirstChild("CircleVFX")
@@ -53,28 +41,10 @@ function Handlers.Start(params)
 	local Clone = CircleAsset:Clone()
 	local BaseRotation = Clone:GetPivot().Rotation
 
-	local function updatePosition()
-		local TargetCFrame = HumRP.CFrame * Offset
-		Clone:PivotTo(CFrame.new(TargetCFrame.Position) * BaseRotation)
-	end
-
-	updatePosition()
+	Clone:PivotTo(CFrame.new(TargetCFrame.Position) * BaseRotation)
 	Clone.Parent = workspace
 
-	local Data = { Clone = Clone, Connection = nil }
-	ACTIVE[id] = Data
-
-	Data.Connection = RunService.RenderStepped:Connect(function()
-		if not HumRP.Parent or not Char.Parent then
-			if Data.Connection then
-				Data.Connection:Disconnect()
-				Data.Connection = nil
-			end
-			return
-		end
-
-		updatePosition()
-	end)
+	ACTIVE[id] = { Clone = Clone }
 end
 
 function Handlers.Stop(params)
