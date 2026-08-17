@@ -230,7 +230,12 @@ CollectionService:GetInstanceAddedSignal("Ragdolled"):Connect(function(EnemyChar
 end)
 
 CollectionService:GetInstanceRemovedSignal("Ragdolled"):Connect(function(EnemyCharacter: Model)
-	local enemyHumanoid: Humanoid = EnemyCharacter:WaitForChild("Humanoid")
+	local enemyHumanoid: Humanoid? = EnemyCharacter:WaitForChild("Humanoid", 10)
+
+	if not enemyHumanoid then
+		return
+	end
+
 	enemyHumanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
 	enemyHumanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
 	enemyHumanoid:SetStateEnabled(Enum.HumanoidStateType.Physics, false)

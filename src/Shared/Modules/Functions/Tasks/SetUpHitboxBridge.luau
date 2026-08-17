@@ -39,7 +39,10 @@ local function drawDebug(HitboxParameters)
 end
 
 return function(Params)
-	local Bridge = LocalPlayer:WaitForChild(Params.BridgeId)
+	local Bridge = LocalPlayer:WaitForChild(Params.BridgeId, 5)
+	if not Bridge then
+		return
+	end
 
 	local HitboxParameters = {
 		Instance = Params.Instance,

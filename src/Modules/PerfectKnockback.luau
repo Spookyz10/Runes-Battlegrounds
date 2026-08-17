@@ -152,6 +152,28 @@ local function finishKnockback(EnemyCharacter: Model, ActiveData: ActiveData)
 	resetHumanoidState(EnemyCharacter)
 end
 
+-- Limpeza "leve" usada quando o alvo já está morto: só descarta o estado
+-- interno do módulo (BodyVelocity/BodyGyro/conexões de um knockback perfeito
+-- anterior), sem cancelar ragdoll nem forçar animação idle no cadáver.
+local function clearActiveDataForDeadTarget(EnemyCharacter: Model)
+	local ExistingData = Perfect.Active[EnemyCharacter]
+	if not ExistingData then
+		return
+	end
+
+	Perfect.Active[EnemyCharacter] = nil
+
+	disconnectActive(ExistingData)
+
+	if ExistingData.BodyVelocity and ExistingData.BodyVelocity.Parent then
+		ExistingData.BodyVelocity:Destroy()
+	end
+
+	if ExistingData.BodyGyro and ExistingData.BodyGyro.Parent then
+		ExistingData.BodyGyro:Destroy()
+	end
+end
+
 function Perfect:Cancel(EnemyCharacter: Model)
 	local Data = Perfect.Active[EnemyCharacter]
 	if not Data then
@@ -234,11 +256,20 @@ function Perfect:KnockBack(_, EnemyCharacter: Model, Params: KnockbackParams, Ch
 		return
 	end
 
-	if EnemyCharacter:HasTag("Ragdolled") then
-		RagdollHandler.cancelRagdoll(EnemyHumanoid, nil, false, nil, false, true, true)
-	end
+	local IsDead = EnemyHumanoid.Health <= 0
 
-	Perfect:Cancel(EnemyCharacter)
+	-- Personagem já morto: não mexe em ragdoll nem em animação/humanoid
+	-- state. Fazer isso antes causava um frame de pose rígida/idle no
+	-- cadáver antes da DeathVelocity ser aplicada.
+	if not IsDead then
+		if EnemyCharacter:HasTag("Ragdolled") then
+			RagdollHandler.cancelRagdoll(EnemyHumanoid, nil, false, nil, false, true, true)
+		end
+
+		Perfect:Cancel(EnemyCharacter)
+	else
+		clearActiveDataForDeadTarget(EnemyCharacter)
+	end
 
 	if Params.DontFreeze == nil then
 		Params.DontFreeze = false
@@ -277,7 +308,7 @@ function Perfect:KnockBack(_, EnemyCharacter: Model, Params: KnockbackParams, Ch
 		OriginalOwner = CurrentOwner
 	end
 
-	if EnemyHumanoid.Health <= 0 then
+	if IsDead then
 		NetworkOwnershipLock:Take(HumanoidRootPart)
 		local DeathVelocity = Instance.new("BodyVelocity")
 		DeathVelocity.Parent = HumanoidRootPart

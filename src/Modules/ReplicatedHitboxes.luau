@@ -1,5 +1,6 @@
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Debris = game:GetService("Debris")
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
 local module = {}
@@ -163,7 +164,7 @@ function module:Destroy()
 	local Bridge: RemoteEvent = self.Bridge
 
 	if Bridge then
-		Bridge:Destroy()
+		Debris:AddItem(Bridge, 0.5)
 	end
 
 	task.spawn(self.functionAfterDestroy)
