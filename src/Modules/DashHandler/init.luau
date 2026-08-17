@@ -23,7 +23,7 @@ local SkillCollision = require(script.Parent.SkillCollision)
 
 local DashHandler = {}
 
-local DASH_HIT_SANITY_TOLERANCE = 15
+local DASH_HIT_SANITY_TOLERANCE = 35
 local DASH_INPUT_DEBOUNCE = 0.5
 
 local DashDebounce = {}
@@ -120,7 +120,7 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 		end
 	end
 
-	local function resumeDash(WasHit: boolean)
+	local function resumeDash()
 		if Ended or DashResumed then
 			return
 		end
@@ -137,28 +137,33 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 	end
 
 	local function applyHit(EnemyCharacter: Model)
+		print("test hit")
 		if Ended or HitList[EnemyCharacter] then
+			print("Already hit this character or dash ended")
 			return
 		end
 
 		local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid") :: Humanoid?
 		local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart") :: BasePart?
 		if not EnemyHumanoid or not EnemyHumRP or EnemyHumanoid.Health <= 0 then
+			print("Enemy humanoid or root part not found or enemy is dead")
 			return
 		end
 
 		if not HumRP or not HumRP.Parent then
+			print("HumanoidRootPart not found or character is dead")
 			return
 		end
 
 		local Distance = (EnemyHumRP.Position - HumRP.Position).Magnitude
-		local MaxSanityDistance = Config.Hitbox.Size.Z + DASH_HIT_SANITY_TOLERANCE
 
-		if Distance > MaxSanityDistance then
+		if Distance > DASH_HIT_SANITY_TOLERANCE then
+			print("Distance too far for hit sanity check:", Distance)
 			return
 		end
 
 		if iFramesService:HasiFrame(EnemyCharacter, 1) then
+			print("Enemy character has iFrames, skipping hit")
 			return
 		end
 
@@ -178,15 +183,19 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 			true
 		)
 
+		print("done dash")
+
 		if HitInfo.Countered then
 			return
 		end
 
 		Hit = true
 
-		resumeDash(true)
+		resumeDash()
 
 		StunHandler:Unstun(Character, Stun)
+
+		print("unstin")
 	end
 
 	table.insert(
@@ -197,8 +206,19 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 			end
 
 			Velocity.Parent = HumRP
-			Debris:AddItem(Velocity, 0.85)
+
 			startSlopeClamp()
+
+			DashHitbox = ReplicatedHitboxes.new(Player)
+			DashHitbox.Instance = HumRP
+			DashHitbox.Size = Config.Hitbox.Size
+			DashHitbox.Offset = Config.Hitbox.Offset
+			DashHitbox.Ignore = { Character }
+			DashHitbox.onTouch = resumeDash
+			DashHitbox.onTimeout = function()
+				resumeDash()
+			end
+			DashHitbox:Start(1, false)
 		end)
 	)
 
@@ -210,17 +230,6 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 			end
 
 			AnimTrack:AdjustSpeed(0)
-
-			DashHitbox = ReplicatedHitboxes.new(Player)
-			DashHitbox.Instance = HumRP
-			DashHitbox.Size = Config.Hitbox.Size
-			DashHitbox.Offset = Config.Hitbox.Offset
-			DashHitbox.Ignore = { Character }
-			DashHitbox.onTouch = applyHit
-			DashHitbox.onTimeout = function()
-				resumeDash(false)
-			end
-			DashHitbox:Start(1, false)
 		end)
 	)
 
@@ -241,7 +250,7 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 			DashHitbox.onTouch = applyHit
 			DashHitbox:Once()
 
-			task.delay(0.15, function()
+			task.delay(0.3, function()
 				destroyDashHitbox()
 			end)
 		end)
@@ -270,7 +279,7 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 
 	RemoteManager.FireAllClients("ReplicateTask", "DashMiss", { PrimaryPart = HumRP })
 
-	task.delay(0.7, function()
+	task.delay(2, function()
 		HumRP.AssemblyLinearVelocity = Vector3.new()
 		endDash()
 	end)
