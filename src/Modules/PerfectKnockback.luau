@@ -268,16 +268,26 @@ function Perfect:KnockBack(_, EnemyCharacter: Model, Params: KnockbackParams, Ch
 	Params.FallingDetectDelay = Params.FallingDetectDelay or 0.715
 	Params.Escapable = Params.Escapable ~= false
 
-	if EnemyHumanoid.Health <= 0 then
-		return
-	end
-
 	local OriginalOwner: Player? = nil
+
 	local Ok, CurrentOwner = pcall(function()
 		return HumanoidRootPart:GetNetworkOwner()
 	end)
 	if Ok then
 		OriginalOwner = CurrentOwner
+	end
+
+	if EnemyHumanoid.Health <= 0 then
+		NetworkOwnershipLock:Take(HumanoidRootPart)
+		local DeathVelocity = Instance.new("BodyVelocity")
+		DeathVelocity.Parent = HumanoidRootPart
+		DeathVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+		DeathVelocity.Velocity = (Params.LookVector * Params.LookForce) + (Params.UpVelocity or Vector3.zero)
+		Debris:AddItem(DeathVelocity, 0.5)
+		task.delay(0.5, function()
+			NetworkOwnershipLock:Release(HumanoidRootPart, OriginalOwner)
+		end)
+		return
 	end
 
 	NetworkOwnershipLock:Take(HumanoidRootPart)

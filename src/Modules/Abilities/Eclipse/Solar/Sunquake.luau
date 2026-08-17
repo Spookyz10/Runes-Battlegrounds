@@ -21,7 +21,7 @@ local MoveAnims = ServerStorage.Assets.Animations.Moves
 
 local HITBOX_SIZE = Vector3.new(30, 30, 30)
 local HITBOX_OFFSET = CFrame.new(0, 0, 0)
-local DAMAGE = 15
+local DAMAGE = 150
 local STUN_TIME = 0.4
 
 local VFX_LINGER_TIME = 6

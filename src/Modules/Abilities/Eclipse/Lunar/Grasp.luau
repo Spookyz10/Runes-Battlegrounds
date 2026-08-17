@@ -173,15 +173,30 @@ return {
 			grabbed = {}
 		end
 
+		local cleanedUp = false
 		local function doFullCleanup()
+			if cleanedUp then
+				return
+			end
+			cleanedUp = true
+
 			StunHandler:Unstun(Character, casterStun)
 			SkillCancelHandler:Unregister(Character, onDamageCancel)
 			iFramesService:RemoveiFrames(Character, "Base")
-			Humanoid.WalkSpeed = 16
+			if Humanoid and Humanoid.Parent then
+				Humanoid.WalkSpeed = 16
+			end
 		end
 
 		local UserAnimation = MoveAnims.Eclipse.Lunar.Grasp
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
+
+		if not UserTrack then
+			stopHand()
+			releaseGrabbed(0)
+			doFullCleanup()
+			return
+		end
 
 		onDamageCancel = function()
 			if cancelled then
