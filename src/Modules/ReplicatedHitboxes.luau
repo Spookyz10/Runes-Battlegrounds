@@ -37,17 +37,7 @@ function module.new(Player: Player)
 	}, module)
 
 	Bridge.OnServerEvent:Connect(function(ReceivedPlayer, TouchedEnemies)
-		print(
-			"[HITBOX]",
-			Bridge.Name,
-			"Stopped:",
-			MetaTable._stopped,
-			"Callback:",
-			MetaTable.onTouch,
-			"Enemies:",
-			TouchedEnemies
-		)
-
+		
 		if ReceivedPlayer ~= Player or MetaTable._stopped then
 			return
 		end
@@ -175,6 +165,10 @@ function module:Destroy()
 	local Bridge: RemoteEvent = self.Bridge
 
 	if Bridge then
+		local StopConstant = Instance.new("BoolValue")
+		StopConstant.Name = "StopConstant"
+		StopConstant.Parent = Bridge
+
 		Debris:AddItem(Bridge, 0.5)
 	end
 
