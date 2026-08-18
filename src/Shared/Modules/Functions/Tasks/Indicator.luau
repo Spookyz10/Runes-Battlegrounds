@@ -1,5 +1,6 @@
 local Constants = require(script.Parent.Shared.Constants)
 local IndicatorService = require(script.Parent.Shared.IndicatorService)
+local AimDirections = require(script.Parent.Shared.AimDirections)
 local LocalPlayer = Constants.LocalPlayer
 
 return function(Params)
@@ -13,11 +14,11 @@ return function(Params)
 		return
 	end
 	if not asset then
-		warn("[Indicator] Params.asset não fornecido para id:", tostring(id))
+		warn("[Indicator] Params.asset ", tostring(id))
 		return
 	end
 	if not id then
-		warn("[Indicator] Params.id não fornecido")
+		warn("[Indicator] Params.id ")
 		return
 	end
 
@@ -40,6 +41,12 @@ return function(Params)
 			if isOwner then
 				return workspace.CurrentCamera.CFrame.LookVector
 			end
+
+			local AimDir = ownerId and AimDirections[ownerId]
+			if AimDir then
+				return AimDir
+			end
+
 			return Torso and Torso.Parent and Torso.CFrame.LookVector or Vector3.new(0, 0, -1)
 		end,
 	})

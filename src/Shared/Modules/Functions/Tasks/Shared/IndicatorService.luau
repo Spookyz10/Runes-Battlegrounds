@@ -5,6 +5,8 @@ local PULSE_SPEED = 2.5
 local Y_OFFSET = 0.15
 local MAX_RAYCAST_DIST = 1500
 
+local DIRECTION_LERP_SPEED = 10
+
 local ExcludeRayParams = RaycastParams.new()
 ExcludeRayParams.FilterType = Enum.RaycastFilterType.Exclude
 ExcludeRayParams.FilterDescendantsInstances = { workspace.Live, workspace.Debris }
@@ -45,20 +47,34 @@ function IndicatorService:Create(params)
 	local startTime = os.clock()
 	local lastPosition = HumRP.Position
 
-	local conn = RunService.Heartbeat:Connect(function()
+	-- direção suavizada, inicializada com a primeira leitura real pra não lerpar
+	-- a partir de um valor "zero"/errado no primeiro frame
+	local smoothedDirection = getDirection and getDirection() or workspace.CurrentCamera.CFrame.LookVector
+
+	local conn = RunService.Heartbeat:Connect(function(dt)
 		if not indicator or not indicator.Parent then
 			return
 		end
 
 		local origin = getRayOrigin and getRayOrigin()
 			or (HumRP and HumRP.Parent and HumRP.Position + Vector3.new(0, 70, 0))
-		local direction = getDirection and getDirection() or workspace.CurrentCamera.CFrame.LookVector
+
+		local rawDirection = getDirection and getDirection() or workspace.CurrentCamera.CFrame.LookVector
+		rawDirection = rawDirection.Unit
+
+		local alpha = math.clamp(DIRECTION_LERP_SPEED * dt, 0, 1)
+		smoothedDirection = smoothedDirection:Lerp(rawDirection, alpha)
+
+		local direction = smoothedDirection
+		if direction.Magnitude > 0.001 then
+			direction = direction.Unit
+		else
+			direction = rawDirection
+		end
 
 		if not origin then
 			return
 		end
-
-		direction = direction.Unit
 
 		local ray = workspace:Raycast(origin, direction * MAX_RAYCAST_DIST, ExcludeRayParams)
 		local landPos

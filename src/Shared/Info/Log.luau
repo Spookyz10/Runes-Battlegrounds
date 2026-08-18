@@ -3,6 +3,8 @@ return {
 
 	UpdateLog = {
 		"Fixed Dashes",
+		"Made indicators replicate to everyone",
+		"Made lunar awaken moon be throwable upwards",
 	},
 
 	Roadmap = {
@@ -17,7 +19,5 @@ return {
 		"Change grasp to be a use twice move, once to cast the hand twice to pull",
 		"Variant if tethers is used and no one is airborne",
 		"Kill badges",
-		"Make indicators replicate to everyone",
-		"Make lunar awaken moon be throwable upwards",
 	},
 }
