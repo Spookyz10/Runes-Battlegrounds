@@ -1,6 +1,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local UIConstants = require(ReplicatedStorage.Shared.UI.UIConstants)
+local Data = require(ReplicatedStorage.Shared.Data).client
+local KillSoundPass = require(ReplicatedStorage.Shared.KillSoundPass)
 
 local Icon = require(ReplicatedStorage.Packages.topbarplus)
 local Topbar = {}
@@ -8,6 +10,15 @@ local Topbar = {}
 local MainIcon = Icon.new()
 local StoreIcon = Icon.new()
 local LogIcon = Icon.new()
+local KillSoundIcon = Icon.new()
+
+local function ownsKillSound()
+	return Data.OwnedPasses()[KillSoundPass.GamepassId] == true
+end
+
+local function refreshKillSoundIcon()
+	KillSoundIcon:setEnabled(ownsKillSound())
+end
 
 function Topbar.Show()
 	if MainIcon then
@@ -19,6 +30,8 @@ function Topbar.Show()
 	if LogIcon then
 		LogIcon:setEnabled(true)
 	end
+
+	refreshKillSoundIcon()
 end
 
 function Topbar.Hide()
@@ -30,6 +43,9 @@ function Topbar.Hide()
 	end
 	if LogIcon then
 		LogIcon:setEnabled(false)
+	end
+	if KillSoundIcon then
+		KillSoundIcon:setEnabled(false)
 	end
 end
 
@@ -47,6 +63,15 @@ function Topbar.Init()
 	LogIcon:setLabel("Updates")
 	local log = playerGui:FindFirstChild("Log")
 	LogIcon:bindToggleItem(log)
+
+	KillSoundIcon:setLabel("Kill Sound")
+	local killSound = playerGui:FindFirstChild("KillSound")
+	KillSoundIcon:bindToggleItem(killSound)
+
+	refreshKillSoundIcon()
+	Data.OwnedPasses.Changed(function()
+		refreshKillSoundIcon()
+	end)
 
 	local loadedTopBar = Instance.new("BoolValue")
 	loadedTopBar.Name = "loadedTopBar"

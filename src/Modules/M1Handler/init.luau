@@ -197,35 +197,36 @@ function M1Handler:Punch(Player)
 					end
 
 					if StepId == "Uppercut" then
-						local FirstProps = { Size = Vector3.new(0.6, 0.6, 0.6), Transparency = 0 }
-						local FinalProps = { Size = Vector3.new(12, 0.6, 12), Transparency = 1 }
-						local TN_Info = { Time = 0.25, Style = "Quad", Direction = "Out" }
+						local FirstProps = { Size = Vector3.new(0.6, 1, 0.6), Transparency = 0 }
+						local FinalProps = { Size = Vector3.new(12, 1, 12), Transparency = 1 }
+						local TN_Info = { Time = 0.3, Style = "Quad", Direction = "Out" }
 						RemoteManager.FireAllClients("ReplicateTask", "Ring", {
 							FirstProps = FirstProps,
-							CF = EnemyHumRP.CFrame + Vector3.new(0, 4, 0),
+							CF = EnemyHumRP.CFrame + Vector3.new(0, 5, 0),
 							TN_Info = TN_Info,
 							FinalProps = FinalProps,
 						})
 					elseif StepId == "Downslam" then
 						RemoteManager.FireAllClients("ReplicateTask", "Ground Crater", {
 							Seed = math.random(1, 2147483647),
-							amount = 7,
 							start = EnemyHumRP.CFrame + Vector3.new(0, 6, 0),
 							["end"] = Vector3.new(0, -20, 0),
 							NoGroundAlign = true,
+							amount = 12,
 							rings = 1,
-							ringSpacing = 3,
-							ringSizeGrowth = 1.5,
-							ringGap = 0.24,
-							outwardTilt = true,
-							debrisSizeMin = 3,
-							debrisSizeMax = 5,
-							debrisHeightMin = 2.5,
-							debrisHeightMax = 4,
-							maxDebrisHeight = 5,
-							sizemult = 1.5,
+							ringSpacing = 2.5,
+							ringSizeGrowth = 1.25,
+							ringGap = 0.2,
+							outwardTilt = false,
+							debrisSizeMin = 2,
+							debrisSizeMax = 3.5,
+							debrisHeightMin = 1.4,
+							debrisHeightMax = 2.4,
+							maxDebrisHeight = 3,
+							sizemult = 1,
 						})
 						RemoteManager.FireAllClients("ReplicateTask", "Downslam", { EnemyChar = EnemyCharacter })
+						RemoteManager.FireAllClients("ReplicateTask", "ShakeCamera", { Intensity = 2.2, Last = 0.18 })
 					end
 
 					if Step.Knockback then

@@ -19,37 +19,6 @@ local template = {
 		["8"] = "Crush",
 	},
 
-	ButtonsInfo = {
-		Dash = {
-			ScaleX = 0,
-			OffsetX = 0,
-			ScaleY = 0,
-			OffsetY = 0,
-			SizeMultiplier = 1,
-		},
-		M1 = {
-			ScaleX = 0,
-			OffsetX = 0,
-			ScaleY = 0,
-			OffsetY = 0,
-			SizeMultiplier = 1,
-		},
-		Block = {
-			ScaleX = 0,
-			OffsetX = 0,
-			ScaleY = 0,
-			OffsetY = 0,
-			SizeMultiplier = 1,
-		},
-		Shiftlock = {
-			ScaleX = 0,
-			OffsetX = 0,
-			ScaleY = 0,
-			OffsetY = 0,
-			SizeMultiplier = 1,
-		},
-	},
-
 	Kills = 0,
 	TotalKills = 0,
 	Donated = 0,
@@ -59,10 +28,12 @@ local template = {
 		"Crush",
 	},
 
+	KillSoundId = nil :: number?,
+
 	Settings = {
 		AutoRun = true,
 		CameraShake = true,
-		AwakeningMuisc = true,
+		AwakeningMusic = true,
 	},
 }
 

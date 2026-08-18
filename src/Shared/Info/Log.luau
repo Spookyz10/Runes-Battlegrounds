@@ -11,7 +11,6 @@ return {
 		"Death Sound game pass",
 		"VIP game pass + aura + crown in ur rune",
 		"2 Shattered moves",
-		"Downslam and uppercut vfx",
 		"Ranked and rank titles",
 		"New solar awaken move",
 		"New lunar awaken move",

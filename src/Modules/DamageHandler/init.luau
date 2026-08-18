@@ -17,6 +17,7 @@ local AntiTeamingHandler = require(SvModules.AntiTeamingHandler)
 local AwakeningService = require(SvModules.AwakeningService)
 local CombatEvents = require(SvModules.CombatEvents)
 local BadgeAwardService = require(SvModules.BadgeAwardService)
+local KillSoundService = require(SvModules.KillSoundService)
 
 local CheckBehind = Utility("CheckBehind")
 
@@ -232,6 +233,8 @@ function module:TakeDamage(
 							if Damager == Damaged then
 								return
 							end
+
+							KillSoundService:PlaySound(Damager, Damaged)
 
 							local DamagerData = Data.Service:waitForData(DamagerPlayer)
 							if DamagerData then
