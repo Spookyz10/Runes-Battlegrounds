@@ -13,12 +13,16 @@ local UI = {}
 
 local buttonsById = {}
 
+local function ownsPass(id)
+	return table.find(Data.OwnedPasses(), id) ~= nil
+end
+
 local function refreshButton(id)
 	local button = buttonsById[id]
 	if not button then
 		return
 	end
-	if Data.OwnedPasses()[id] then
+	if ownsPass(id) then
 		button.Parent.Owned.Visible = true
 		button.Visible = false
 	end
@@ -30,7 +34,7 @@ function UI.Init()
 			local id = button:FindFirstChild("ID").Value
 			buttonsById[id] = button
 
-			if Data.OwnedPasses()[id] then
+			if ownsPass(id) then
 				button.Parent.Owned.Visible = true
 			else
 				button.MouseButton1Click:Connect(function()
@@ -44,10 +48,9 @@ function UI.Init()
 		if player ~= UIConstants.Player or not wasPurchased then
 			return
 		end
-		Data.OwnedPasses(function(passes)
-			passes[gamePassId] = true
-			return passes
-		end)
+		if not table.find(Data.OwnedPasses(), gamePassId) then
+			Data.OwnedPasses.Insert(gamePassId)
+		end
 		refreshButton(gamePassId)
 	end)
 end

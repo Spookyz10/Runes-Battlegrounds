@@ -4,9 +4,7 @@ local RunService = game:GetService("RunService")
 local RemoteManager = {}
 
 local RemoteEvents = {
-	ReplicateTask = "Client",
-	ExtraCds = "Client",
-	Evasive = "Client",
+
 	Combat = "Server",
 	Keypress = "Server",
 	ResetCharacter = "Server",
@@ -15,22 +13,21 @@ local RemoteEvents = {
 	ReplicationLoaded = "Server",
 	UseAbillity = "Server",
 	Awakening = "Server",
-
+	KillSound = "Server",
 	Specials = "Server",
-	SpecialsResult = "Client",
-
-	Cutscenes = "Client",
 	CutsceneEnded = "Server",
+	Comunicator = "Server",
 
+	SpecialsResult = "Client",
+	Cutscenes = "Client",
 	Ragdoll = "Client",
 	DetectAir = "Client",
-
-	Comunicator = "Server",
 	MovesetHandler = "Client",
-
 	StartCooldown = "Client",
-
 	LeaderboardsUpdate = "Client",
+	ReplicateTask = "Client",
+	ExtraCds = "Client",
+	Evasive = "Client",
 }
 
 local RemoteFunctions = {

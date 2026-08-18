@@ -17,6 +17,17 @@ local TRACKED_GAMEPASSES = {
 	KillSoundPass.GamepassId,
 }
 
+local function addOwnedPass(playerData, GamepassId)
+	if table.find(playerData.OwnedPasses(), GamepassId) then
+		return
+	end
+	playerData.OwnedPasses.Insert(GamepassId)
+end
+
+local function ownsPass(playerData, GamepassId)
+	return table.find(playerData.OwnedPasses(), GamepassId) ~= nil
+end
+
 function GamepassService:SyncPlayer(Player)
 	local playerData = Data.Service:waitForData(Player)
 	if not playerData then
@@ -24,16 +35,11 @@ function GamepassService:SyncPlayer(Player)
 	end
 
 	if COMPLIMENTARY_EARLY_ACCESS_USERS[Player.UserId] then
-		playerData.OwnedPasses(function(passes)
-			passes[EarlyAccess.GamepassId] = true
-			return passes
-		end)
+		addOwnedPass(playerData, EarlyAccess.GamepassId)
 	end
 
-	local OwnedPasses = playerData.OwnedPasses()
-	print(OwnedPasses)
 	for _, GamepassId in TRACKED_GAMEPASSES do
-		if OwnedPasses[GamepassId] then
+		if ownsPass(playerData, GamepassId) then
 			continue
 		end
 
@@ -42,10 +48,7 @@ function GamepassService:SyncPlayer(Player)
 		end)
 
 		if Ok and Owns then
-			playerData.OwnedPasses(function(passes)
-				passes[GamepassId] = true
-				return passes
-			end)
+			addOwnedPass(playerData, GamepassId)
 		end
 	end
 end
@@ -56,7 +59,7 @@ function GamepassService:PlayerOwnsEarlyAccess(Player)
 		return false
 	end
 
-	if playerData.OwnedPasses()[EarlyAccess.GamepassId] == true then
+	if ownsPass(playerData, EarlyAccess.GamepassId) then
 		return true
 	end
 
@@ -67,10 +70,7 @@ function GamepassService:PlayerOwnsEarlyAccess(Player)
 	end)
 
 	if Ok and Owns then
-		playerData.OwnedPasses(function(passes)
-			passes[GamepassId] = true
-			return passes
-		end)
+		addOwnedPass(playerData, GamepassId)
 		return true
 	end
 
@@ -83,7 +83,7 @@ function GamepassService:PlayerOwnsGamepass(Player, GamepassId)
 		return false
 	end
 
-	if playerData.OwnedPasses()[GamepassId] == true then
+	if ownsPass(playerData, GamepassId) then
 		return true
 	end
 
@@ -92,10 +92,7 @@ function GamepassService:PlayerOwnsGamepass(Player, GamepassId)
 	end)
 
 	if Ok and Owns then
-		playerData.OwnedPasses(function(passes)
-			passes[GamepassId] = true
-			return passes
-		end)
+		addOwnedPass(playerData, GamepassId)
 		return true
 	end
 
@@ -124,10 +121,7 @@ MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(Player, Gamep
 		return
 	end
 
-	playerData.OwnedPasses(function(passes)
-		passes[GamepassId] = true
-		return passes
-	end)
+	addOwnedPass(playerData, GamepassId)
 end)
 
 return GamepassService

@@ -13,12 +13,10 @@ local LogIcon = Icon.new()
 local KillSoundIcon = Icon.new()
 
 local function ownsKillSound()
-	print(Data.OwnedPasses())
-	return Data.OwnedPasses()[KillSoundPass.GamepassId]
+	return table.find(Data.OwnedPasses(), KillSoundPass.GamepassId) ~= nil
 end
 
 local function refreshKillSoundIcon()
-	print(ownsKillSound())
 	KillSoundIcon:setEnabled(ownsKillSound())
 end
 

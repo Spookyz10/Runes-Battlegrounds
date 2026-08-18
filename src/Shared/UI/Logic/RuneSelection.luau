@@ -171,10 +171,9 @@ function RuneSelection.Init()
 			return
 		end
 
-		Data.OwnedPasses(function(passes)
-			passes[gamepassId] = true
-			return passes
-		end)
+		if not table.find(Data.OwnedPasses(), gamepassId) then
+			Data.OwnedPasses.Insert(gamepassId)
+		end
 	end)
 end
 
