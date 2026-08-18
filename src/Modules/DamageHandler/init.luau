@@ -229,13 +229,13 @@ function module:TakeDamage(
 					end
 
 					if MostDealt and MostDealt.Player == DamagerPlayer then
+						if Damager == Damaged then
+							return
+						end
+
+						KillSoundService:PlaySound(Damager, Damaged)
+
 						if not Damaged:FindFirstChild("Dummy") and game.PrivateServerOwnerId == 0 then
-							if Damager == Damaged then
-								return
-							end
-
-							KillSoundService:PlaySound(Damager, Damaged)
-
 							local DamagerData = Data.Service:waitForData(DamagerPlayer)
 							if DamagerData then
 								DamagerData.Kills(function(k)

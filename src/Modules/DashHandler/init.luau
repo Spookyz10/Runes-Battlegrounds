@@ -161,6 +161,10 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 			return
 		end
 
+		if EnemyCharacter:HasTag("Ragdolled") then
+			return
+		end
+
 		HitList[EnemyCharacter] = true
 
 		local HitAnims = Config.HitAnimations and Config.HitAnimations()
