@@ -3,6 +3,8 @@ local Players = game:GetService("Players")
 
 local ClientState = require(game:GetService("ReplicatedStorage").Shared.Modules.ClientContext)
 
+local UPDATE_INTERVAL = 0.15
+
 return function(Params)
 	ClientState.LunarAimActive = true
 	ClientState.LunarAimDirection = workspace.CurrentCamera.CFrame.LookVector
@@ -16,8 +18,11 @@ return function(Params)
 		Camera.CameraSubject = Humanoid
 	end
 
+	local Bridge = Params.BridgeId and LocalPlayer:WaitForChild(Params.BridgeId, 5)
+
 	local duration = Params.Duration or 5
 	local startTime = tick()
+	local lastSent = 0
 
 	local function restoreCamera()
 		if Humanoid then
@@ -35,6 +40,15 @@ return function(Params)
 
 		local lookDir = workspace.CurrentCamera.CFrame.LookVector
 		ClientState.LunarAimDirection = lookDir
+
+		if Bridge then
+			local now = tick()
+			if now - lastSent >= UPDATE_INTERVAL then
+				lastSent = now
+				Bridge:FireServer(lookDir)
+			end
+		end
+
 		return lookDir
 	end)
 

@@ -7,7 +7,6 @@ local Players = game:GetService("Players")
 local SvModules = ServerStorage.Modules
 
 local BodymoverService = require(ServerStorage.Modules.BodymoverService)
-local IndicatorService = require(ReplicatedStorage.Shared.Modules.IndicatorService)
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 
@@ -18,6 +17,7 @@ local iFramesService = require(SvModules.iFramesService)
 local HitboxHandler = require(SvModules.HitboxHandler)
 local RagdollHandler = require(SvModules.RagdollHandler)
 local AnimationService = require(SvModules.AnimationService)
+local AimTracker = require(SvModules.AimTracker)
 
 local DestructionService = require(SvModules.DestructionSystem)
 
@@ -284,6 +284,7 @@ function module:Activate(Player)
 	RemoteManager.FireClient(Player, "ReplicateTask", "HideAwkBar")
 
 	local isAirborne = false
+	local aimBridge = nil
 
 	table.insert(
 		AnimEvents,
@@ -292,17 +293,17 @@ function module:Activate(Player)
 				return
 			end
 
-			RemoteManager.FireClient(
-				Player,
-				"ReplicateTask",
-				"StartLunarAimControl",
-				{ Duration = AIM_CONTROL_MAX_DURATION }
-			)
-			IndicatorService:Create({
+			aimBridge = AimTracker.new(Player, "LunarAwaken")
+
+			RemoteManager.FireClient(Player, "ReplicateTask", "StartLunarAimControl", {
+				Duration = AIM_CONTROL_MAX_DURATION,
+				BridgeId = aimBridge.Bridge.Name,
+			})
+			RemoteManager.FireAllClients("ReplicateTask", "Indicator", {
+				char = Character,
 				id = indicatorId,
-				character = Character,
-				ownerId = Player.UserId,
 				asset = LunarIndicatorAsset,
+				ownerId = Player.UserId,
 			})
 
 			SFXModule:Play("Lunar Awakening", HumRP)
@@ -351,15 +352,16 @@ function module:Activate(Player)
 
 			RemoteManager.FireClient(Player, "ReplicateTask", "StopLunarAimControl", { RestoreCamera = false })
 
-			local launchPosition = IndicatorService:GetPosition(Player, indicatorId)
-			IndicatorService:Destroy(indicatorId)
+			RemoteManager.FireAllClients("ReplicateTask", "IndicatorEnd", { id = indicatorId })
 
-			local LaunchDirection = HumRP.CFrame.LookVector
-			if launchPosition then
-				local toTarget = launchPosition - LaunchOrigin
-				if toTarget.Magnitude > 0.01 then
-					LaunchDirection = toTarget.Unit
-				end
+			local LaunchDirection = aimBridge and aimBridge:Get()
+			if not LaunchDirection or LaunchDirection.Magnitude < 0.01 then
+				LaunchDirection = HumRP.CFrame.LookVector
+			end
+
+			if aimBridge then
+				aimBridge:Destroy()
+				aimBridge = nil
 			end
 
 			task.delay(THROW_DELAY, function()
@@ -416,7 +418,11 @@ function module:Activate(Player)
 		end
 
 		RemoteManager.FireClient(Player, "ReplicateTask", "StopLunarAimControl", { RestoreCamera = false })
-		IndicatorService:Destroy(indicatorId)
+		RemoteManager.FireAllClients("ReplicateTask", "IndicatorEnd", { id = indicatorId })
+		if aimBridge then
+			aimBridge:Destroy()
+			aimBridge = nil
+		end
 		RemoteManager.FireClient(Player, "ReplicateTask", "LunarAimRestoreCamera", {})
 		RemoteManager.FireAllClients("ReplicateTask", "LunarAwakenEnd", { char = Character })
 		StunHandler:Unstun(Character, AwakeningStun)
