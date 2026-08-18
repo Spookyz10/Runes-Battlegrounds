@@ -114,6 +114,8 @@ local function debrisSpawner(config)
 		chunk:SetAttribute("CanGoThroughCamera", true)
 		chunk.Parent = workspace.Debris
 
+		Debris:AddItem(chunk, 8)
+
 		local bv = Instance.new("BodyVelocity")
 		bv.MaxForce = Vector3.new(2e9, 2e9, 2e9)
 		bv.Velocity = Vector3.new(rng:NextNumber(-25, 25), rng:NextNumber(5, 25), randomRange(-25, 25)) * 2
@@ -130,6 +132,9 @@ local function debrisSpawner(config)
 			}):Play()
 
 			task.delay(0.3, function()
+				if not chunk or not chunk.Parent then
+					return
+				end
 				chunk.Anchored = true
 				chunk.CanCollide = false
 				chunk.CFrame = CFrame.new(1e8, 1e8, 1e8)
@@ -163,6 +168,8 @@ local function debrisSpawner(config)
 		piece:SetAttribute("CanGoThroughCamera", true)
 		piece.Parent = workspace.Debris
 
+		Debris:AddItem(piece, 8)
+
 		local bv = Instance.new("BodyVelocity")
 		bv.MaxForce = Vector3.new(2e9, 2e9, 2e9)
 		bv.Velocity = Vector3.new(rng:NextNumber(-25, 25), rng:NextNumber(5, 25), randomRange(-25, 25)) * 2
@@ -185,6 +192,9 @@ local function debrisSpawner(config)
 			task.delay(0.3, function()
 				if bav and bav.Parent then
 					bav:Destroy()
+				end
+				if not piece or not piece.Parent then
+					return
 				end
 				piece.Anchored = true
 				piece.CanCollide = false
@@ -416,6 +426,13 @@ local function debrisSpawner(config)
 			local emergeDelay = rng:NextNumber(0, 0.12) + (ringIndex - 1) * 0.07
 			local emergeTime = rng:NextNumber(0.28, 0.45)
 
+			local keepDuration = addConfig.keep
+			if not keepDuration then
+				keepDuration = rng:NextNumber(5, 7)
+			end
+
+			Debris:AddItem(slab, emergeDelay + keepDuration + 6)
+
 			task.delay(emergeDelay, function()
 				if not slab or not slab.Parent then
 					return
@@ -426,11 +443,6 @@ local function debrisSpawner(config)
 					{ CFrame = restCFrame }
 				):Play()
 			end)
-
-			local keepDuration = addConfig.keep
-			if not keepDuration then
-				keepDuration = rng:NextNumber(5, 7)
-			end
 
 			local capturedRestCFrame = restCFrame
 			local capturedSize = slab.Size
