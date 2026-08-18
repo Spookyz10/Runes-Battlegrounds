@@ -1,4 +1,7 @@
 local Debris = game:GetService("Debris")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
 local module = {}
 module.__index = module
@@ -37,6 +40,11 @@ function module.new(Player: Player, Id: string)
 		end
 
 		MetaTable.Direction = Direction.Unit
+
+		RemoteManager.FireAllClients("ReplicateTask", "IndicatorAimUpdate", {
+			ownerId = Player.UserId,
+			direction = MetaTable.Direction,
+		})
 	end)
 
 	return MetaTable

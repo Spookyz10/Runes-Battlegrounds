@@ -352,7 +352,7 @@ function module:Activate(Player)
 
 			RemoteManager.FireClient(Player, "ReplicateTask", "StopLunarAimControl", { RestoreCamera = false })
 
-			RemoteManager.FireAllClients("ReplicateTask", "IndicatorEnd", { id = indicatorId })
+			RemoteManager.FireAllClients("ReplicateTask", "IndicatorEnd", { id = indicatorId, ownerId = Player.UserId })
 
 			local LaunchDirection = aimBridge and aimBridge:Get()
 			if not LaunchDirection or LaunchDirection.Magnitude < 0.01 then
@@ -418,7 +418,7 @@ function module:Activate(Player)
 		end
 
 		RemoteManager.FireClient(Player, "ReplicateTask", "StopLunarAimControl", { RestoreCamera = false })
-		RemoteManager.FireAllClients("ReplicateTask", "IndicatorEnd", { id = indicatorId })
+		RemoteManager.FireAllClients("ReplicateTask", "IndicatorEnd", { id = indicatorId, ownerId = Player.UserId })
 		if aimBridge then
 			aimBridge:Destroy()
 			aimBridge = nil
