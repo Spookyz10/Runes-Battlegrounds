@@ -28,15 +28,26 @@ local RAGDOLL_TIME = 3
 local LAUNCH_FORCE = 130
 local LAUNCH_UP_FORCE = 40
 
--- Configuração do impacto que acontece quando o inimigo lançado encosta
--- no chão. Reutiliza o ImpactDebrisService (genérico, outras skills podem
--- chamar a mesma coisa com parâmetros diferentes).
 local LANDING_IMPACT_CONFIG = {
 	RockCount = 14,
 	Radius = 10,
 	RockSize = Vector3.new(2.5, 2.5, 2.5),
 	TileMode = "Square",
 	Timeout = 10,
+}
+
+local PUNCH_DEBRIS_CONFIG = {
+	HalfAngle = 15,
+	StepsPerSide = 15,
+	FirstDistance = 3,
+	LastDistance = 90,
+
+	SpreadRadius = 1.6,
+	ChunksPerStepMin = 2,
+	ChunksPerStepMax = 5,
+
+	StartSize = Vector3.new(1, 0.9, 1),
+	EndSize = Vector3.new(12, 9, 12),
 }
 
 local SELF_HIT_SHAKE_INTENSITY = 6
@@ -149,13 +160,8 @@ return {
 						})
 					end)
 
-					-- Assiste o inimigo até ele encostar no chão pra gerar
-					-- o impacto de debris no local exato onde ele cair.
-					-- Sistema genérico/reutilizável: outras skills usam o
-					-- mesmo ImpactDebrisService com configs diferentes.
 					ImpactDebrisService:WatchLanding(EnemyCharacter, LANDING_IMPACT_CONFIG)
 
-					-- Screen shake pra quem bateu e pra quem apanhou.
 					RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", {
 						Intensity = SELF_HIT_SHAKE_INTENSITY,
 						Last = SELF_HIT_SHAKE_TIME,
@@ -170,9 +176,21 @@ return {
 					end
 				end)
 
-				-- Debris de impacto pra frente (formato "<") sempre nasce
-				-- quando o soco é dado, acerte ou não.
-				RemoteManager.FireAllClients("ReplicateTask", "PunchWedgeDebris", { char = Character })
+				local DebrisParams = table.clone(PUNCH_DEBRIS_CONFIG)
+				DebrisParams.char = Character
+
+				local FirstProps = { Size = Vector3.new(0.6, 1, 0.6), Transparency = 0 }
+				local FinalProps = { Size = Vector3.new(20, 1, 20), Transparency = 1 }
+				local TN_Info = { Time = 0.6, Style = "Quad", Direction = "Out" }
+
+				RemoteManager.FireAllClients("ReplicateTask", "Ring", {
+					FirstProps = FirstProps,
+					CF = HumRP.CFrame + Vector3.new(0, 0, -3),
+					TN_Info = TN_Info,
+					FinalProps = FinalProps,
+				})
+
+				RemoteManager.FireAllClients("ReplicateTask", "PunchWedgeDebris", DebrisParams)
 
 				RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", { Intensity = 4, Last = 0.3 })
 			end)

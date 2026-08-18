@@ -19,3 +19,5 @@ return {
 		"Variant if tethers is used and no one is airborne",
 	},
 }
+
+-- shatter counter: hulk loki

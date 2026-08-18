@@ -11,6 +11,7 @@ local CombatLogger = require(script.CombatLogger)
 
 local Utility = require(RPModules.Utility)
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
+local VIPPass = require(ReplicatedStorage.Shared.VIPPass)
 local Data = require(ReplicatedStorage.Shared.Data).server
 local AnimationService = require(SvModules.AnimationService)
 local AntiTeamingHandler = require(SvModules.AntiTeamingHandler)
@@ -247,6 +248,10 @@ function module:TakeDamage(
 								end)
 
 								BadgeAwardService:CheckKills(DamagerPlayer, NewTotalKills)
+
+								DamagerData.Gold(function(g)
+									return table.find(DamagerData.OwnedPasses(), VIPPass.GamepassId) and 15 or 10
+								end)
 
 								Damager:SetAttribute("Streak", (Damager:GetAttribute("Streak") or 0) + 1)
 							end
