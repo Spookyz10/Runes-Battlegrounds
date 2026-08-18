@@ -40,18 +40,29 @@ return {
 	Start = function(Player, Tool)
 		local Character = Player.Character
 		local Humanoid = Character and Character:FindFirstChild("Humanoid")
-		if not Character or not Humanoid or Humanoid.Health <= 0 then
+		local HumRP = Character and Character:FindFirstChild("HumanoidRootPart")
+		if not Character or not Humanoid or not HumRP or Humanoid.Health <= 0 then
 			return
 		end
 		SkillCollision:Lock(Character)
 		Humanoid.WalkSpeed = 0
 		Character:AddTag("CantRotate")
+
+		-- Sempre ancora, esteja o personagem no chão ou no ar. Sem isso,
+		-- castar a skill no ar deixava a gravidade agir enquanto o
+		-- CanCollide ficava desligado (SkillCollision:Lock), fazendo o
+		-- personagem afundar no chão durante a animação e depois ser
+		-- ejetado com força (fling) quando a colisão voltava.
+		HumRP.Anchored = true
+		HumRP.AssemblyLinearVelocity = Vector3.zero
+
 		local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
 		local onDamageCancel
 		local cancelled = false
 
 		if not Character.Parent then
 			Character:RemoveTag("CantRotate")
+			HumRP.Anchored = false
 			return
 		end
 
@@ -213,6 +224,14 @@ return {
 			StunHandler:Unstun(Character, Stun)
 
 			Character:RemoveTag("CantRotate")
+
+			-- Sempre desancora aqui, tanto no fim normal (UserTrack.Stopped)
+			-- quanto em qualquer cancelamento (onDamageCancel chama Stop na
+			-- track, que dispara Stopped -> cleanup). Isso garante que o
+			-- personagem nunca fica preso ancorado.
+			if HumRP and HumRP.Parent then
+				HumRP.Anchored = false
+			end
 		end
 
 		local UserAnimation = MoveAnims.Eclipse.Lunar:FindFirstChild("Nightstalk")

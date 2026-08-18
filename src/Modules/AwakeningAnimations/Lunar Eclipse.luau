@@ -19,8 +19,6 @@ local RagdollHandler = require(SvModules.RagdollHandler)
 local AnimationService = require(SvModules.AnimationService)
 local AimTracker = require(SvModules.AimTracker)
 
-local DestructionService = require(SvModules.DestructionSystem)
-
 local Assets = ServerStorage.Assets
 local Animations = Assets.Animations
 local LunarEclipseAnim = Animations.Awakenings["Lunar Eclipse"]
@@ -109,7 +107,6 @@ local function explode(Character, Position)
 		RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", { Intensity = 10, Last = 1 })
 	end
 
-	DestructionService:ApplyRadialImpact(Position, MOON_IMPACT_RADIUS, MOON_IMPACT_FORCE, Player, nil)
 	HitboxHandler:SimpleOnce(Position, MOON_IMPACT_RADIUS, nil, { Character }, "Radius", nil, function(EnemyCharacter)
 		local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
 		if not EnemyHumanoid or EnemyHumanoid.Health <= 0 then
@@ -165,11 +162,18 @@ local function fireProjectile(Character, Origin, Direction)
 		end
 
 		local Step = Direction * PROJECTILE_SPEED * dt
-		local RayResult = workspace:Raycast(Projectile.Position, Step, ProjectileRayParams)
 
-		if RayResult then
+		-- Usa o volume real da lua (Blockcast) em vez de um raio do centro
+		-- do projétil. Um raycast de um único ponto deixava a lua afundar
+		-- visualmente no terreno antes de registrar contato, principalmente
+		-- em rampas/terreno irregular onde o raio passa quase paralelo à
+		-- superfície.
+		local CastCFrame = CFrame.new(Projectile.Position, Projectile.Position + Direction)
+		local BlockResult = workspace:Blockcast(CastCFrame, PROJECTILE_SIZE, Step, ProjectileRayParams)
+
+		if BlockResult then
 			Exploded = true
-			local ImpactPosition = RayResult.Position
+			local ImpactPosition = BlockResult.Position
 			Connection:Disconnect()
 			Projectile:Destroy()
 			explode(Character, ImpactPosition)
