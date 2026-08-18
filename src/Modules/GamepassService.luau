@@ -4,12 +4,17 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Data = require(ReplicatedStorage.Shared.Data).server
 local EarlyAccess = require(ReplicatedStorage.Shared.EarlyAccess)
+local KillSoundPass = require(ReplicatedStorage.Shared.KillSoundPass)
 
 local GamepassService = {}
 
-
 local COMPLIMENTARY_EARLY_ACCESS_USERS = {
 	[2843265067] = true,
+}
+
+local TRACKED_GAMEPASSES = {
+	EarlyAccess.GamepassId,
+	KillSoundPass.GamepassId,
 }
 
 function GamepassService:SyncPlayer(Player)
@@ -18,29 +23,30 @@ function GamepassService:SyncPlayer(Player)
 		return
 	end
 
-	local GamepassId = EarlyAccess.GamepassId
-
 	if COMPLIMENTARY_EARLY_ACCESS_USERS[Player.UserId] then
 		playerData.OwnedPasses(function(passes)
-			passes[GamepassId] = true
+			passes[EarlyAccess.GamepassId] = true
 			return passes
 		end)
-		return
 	end
 
-	if playerData.OwnedPasses()[GamepassId] then
-		return
-	end
+	local OwnedPasses = playerData.OwnedPasses()
+	print(OwnedPasses)
+	for _, GamepassId in TRACKED_GAMEPASSES do
+		if OwnedPasses[GamepassId] then
+			continue
+		end
 
-	local Ok, Owns = pcall(function()
-		return MarketplaceService:UserOwnsGamePassAsync(Player.UserId, GamepassId)
-	end)
-
-	if Ok and Owns then
-		playerData.OwnedPasses(function(passes)
-			passes[GamepassId] = true
-			return passes
+		local Ok, Owns = pcall(function()
+			return MarketplaceService:UserOwnsGamePassAsync(Player.UserId, GamepassId)
 		end)
+
+		if Ok and Owns then
+			playerData.OwnedPasses(function(passes)
+				passes[GamepassId] = true
+				return passes
+			end)
+		end
 	end
 end
 
@@ -71,6 +77,31 @@ function GamepassService:PlayerOwnsEarlyAccess(Player)
 	return false
 end
 
+function GamepassService:PlayerOwnsGamepass(Player, GamepassId)
+	local playerData = Data.Service:waitForData(Player)
+	if not playerData then
+		return false
+	end
+
+	if playerData.OwnedPasses()[GamepassId] == true then
+		return true
+	end
+
+	local Ok, Owns = pcall(function()
+		return MarketplaceService:UserOwnsGamePassAsync(Player.UserId, GamepassId)
+	end)
+
+	if Ok and Owns then
+		playerData.OwnedPasses(function(passes)
+			passes[GamepassId] = true
+			return passes
+		end)
+		return true
+	end
+
+	return false
+end
+
 Players.PlayerAdded:Connect(function(Player)
 	task.spawn(function()
 		GamepassService:SyncPlayer(Player)
@@ -84,7 +115,7 @@ for _, Player in Players:GetPlayers() do
 end
 
 MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(Player, GamepassId, WasPurchased)
-	if not WasPurchased or GamepassId ~= EarlyAccess.GamepassId then
+	if not WasPurchased or not table.find(TRACKED_GAMEPASSES, GamepassId) then
 		return
 	end
 

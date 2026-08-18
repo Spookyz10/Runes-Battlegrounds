@@ -7,7 +7,12 @@ local EarlyAccess = require(ReplicatedStorage.Shared.EarlyAccess)
 local module = {}
 
 local BADGES = {
-	Kills50 = 3572742013654283,
+	{ Kills = 1, BadgeId = 2210491191060246 },
+	{ Kills = 15, BadgeId = 4169635045969282 },
+	{ Kills = 50, BadgeId = 3572742013654283 }, -- beta lol
+	{ Kills = 100, BadgeId = 10289439831 },
+	{ Kills = 1000, BadgeId = 1953485311265542 },
+	{ Kills = 10000, BadgeId = 1041322512332776 },
 }
 
 local function GrantEarlyAccess(Player)
@@ -33,25 +38,23 @@ function module:CheckKills(Player, TotalKills)
 		return
 	end
 
-	if TotalKills < 50 then
-		return
+	if TotalKills >= 50 then
+		GrantEarlyAccess(Player)
 	end
 
-	GrantEarlyAccess(Player)
+	for _, BadgeInfo in BADGES do
+		if TotalKills >= BadgeInfo.Kills then
+			local OwnsOk, Owns = pcall(function()
+				return BadgeService:UserHasBadgeAsync(Player.UserId, BadgeInfo.BadgeId)
+			end)
 
-	local BadgeId = BADGES.Kills50
-
-	local OwnsOk, Owns = pcall(function()
-		return BadgeService:UserHasBadgeAsync(Player.UserId, BadgeId)
-	end)
-
-	if not OwnsOk or Owns then
-		return
+			if OwnsOk and not Owns then
+				pcall(function()
+					BadgeService:AwardBadgeAsync(Player.UserId, BadgeInfo.BadgeId)
+				end)
+			end
+		end
 	end
-
-	pcall(function()
-		BadgeService:AwardBadgeAsync(Player.UserId, BadgeId)
-	end)
 end
 
 return module

@@ -6,9 +6,9 @@ local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
 local PlayerGui = UIConstants.PlayerGui
 
-local GUI = PlayerGui:WaitForChild("KillSound")
-local SoundBox = GUI:WaitForChild("SoundBox")
-local Submit = GUI:WaitForChild("Submit")
+local GUI = PlayerGui:WaitForChild("KillSound"):WaitForChild("Main")
+local SoundBox = GUI.BoxHolder.SoundBox
+local Submit = GUI.Submit
 
 local KillSound = {}
 
