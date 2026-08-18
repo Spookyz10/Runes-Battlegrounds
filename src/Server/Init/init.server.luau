@@ -12,6 +12,8 @@ local SvModules: Folder = ServerStorage.Modules
 local _LeaderboardManager = require(ServerStorage.Modules.LeaderboardManager)
 local AddAppereance = require(ReplicatedStorage.Shared.Modules.Functions.AddAppereance)
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
+local EarlyAccess = require(ReplicatedStorage.Shared.EarlyAccess)
+
 local ServerRemoteListener = require(ServerStorage.Modules.ServerRemoteListener)
 
 local StunHandler = require(SvModules.StunHandler)
@@ -301,8 +303,6 @@ end
 
 RemoteManager.ListenToAll(ServerRemoteListener)
 RemoteManager.ListenToAllFunctions(ServerRemoteListener)
-
-local EarlyAccess = require(ReplicatedStorage.Shared.EarlyAccess)
 
 Data.Service:addGlobalCallback("GiftEarlyAccess", function(player, data)
 	local GamepassId = EarlyAccess.GamepassId

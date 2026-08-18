@@ -4,7 +4,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Data = require(ReplicatedStorage.Shared.Data).server
 local KillSoundPass = require(ReplicatedStorage.Shared.KillSoundPass)
-local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
 local SOUND_DURATION = 10
 
@@ -16,7 +15,7 @@ local function playerOwnsKillSound(Player)
 		return false
 	end
 
-	return playerData.OwnedPasses()[KillSoundPass.GamepassId] == true
+	return table.find(playerData.OwnedPasses(), KillSoundPass.GamepassId)
 end
 
 function KillSoundService:PlaySound(Damager, Damaged)
@@ -56,33 +55,28 @@ function KillSoundService:PlaySound(Damager, Damaged)
 	Debris:AddItem(Sound, SOUND_DURATION)
 end
 
-local KillSoundRemote = RemoteManager.GetRemote("KillSound", "Server")
-if KillSoundRemote then
-	KillSoundRemote.OnServerEvent:Connect(function(Player, Action, Params)
-		if Action ~= "SetSoundId" then
-			return
-		end
+function KillSoundService:SetSoundId(Player: Player, Params)
+	if not playerOwnsKillSound(Player) then
+		return { Success = false, Message = "YOU DON'T OWN THE KILL SOUND GAMEPASS" }
+	end
 
-		if not playerOwnsKillSound(Player) then
-			return
-		end
+	if typeof(Params) ~= "table" then
+		return { Success = false, Message = "INVALID REQUEST" }
+	end
 
-		if typeof(Params) ~= "table" then
-			return
-		end
+	local SoundId = Params.SoundId
+	if typeof(SoundId) ~= "number" or SoundId <= 0 or SoundId % 1 ~= 0 then
+		return { Success = false, Message = "INVALID SOUND ID" }
+	end
 
-		local SoundId = Params.SoundId
-		if typeof(SoundId) ~= "number" or SoundId <= 0 or SoundId % 1 ~= 0 then
-			return
-		end
+	local playerData = Data.Service:waitForData(Player)
+	if not playerData then
+		return { Success = false, Message = "COULD NOT LOAD YOUR DATA, TRY AGAIN" }
+	end
 
-		local playerData = Data.Service:waitForData(Player)
-		if not playerData then
-			return
-		end
+	playerData.KillSoundId(SoundId)
 
-		playerData.KillSoundId(SoundId)
-	end)
+	return { Success = true, Message = "KILL SOUND UPDATED" }
 end
 
 return KillSoundService

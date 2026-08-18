@@ -13,7 +13,6 @@ local RemoteEvents = {
 	ReplicationLoaded = "Server",
 	UseAbillity = "Server",
 	Awakening = "Server",
-	KillSound = "Server",
 	Specials = "Server",
 	CutsceneEnded = "Server",
 	Comunicator = "Server",
@@ -33,6 +32,7 @@ local RemoteEvents = {
 local RemoteFunctions = {
 	Evasive = "Server",
 	AbilitiesHandler = "Server",
+	KillSound = "Server",
 }
 
 local ClientInvokeFunctions = {
