@@ -1,7 +1,5 @@
 local GroundCrater = require(script.Parent["Ground Crater"])
 
--- O impacto da queda usa a mesma família de crateras do Moon Awakening,
--- porém mais compacto para combinar com o alcance do Shattered Punch.
 return function(params)
 	local position = params.Position
 	if not position then

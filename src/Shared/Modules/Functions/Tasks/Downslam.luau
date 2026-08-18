@@ -3,17 +3,17 @@ local Debris = Constants.Debris
 local ParticlesModule = Constants.ParticlesModule
 
 return function(Params)
-	local Character = Params.char
-	if not Character or not Character.Parent then
+	local EnemyChar = Params.EnemyChar
+	if not EnemyChar or not EnemyChar.Parent then
 		return
 	end
 
-	local HumRP = Character:FindFirstChild("HumanoidRootPart")
+	local HumRP = EnemyChar:FindFirstChild("HumanoidRootPart")
 	if not HumRP then
 		return
 	end
 
-	local SlamExplosion = Constants.RS.Effects
+	local SlamExplosion = Constants.Resources.Effects:FindFirstChild("Downslam")
 
 	if not SlamExplosion then
 		return
@@ -21,7 +21,7 @@ return function(Params)
 
 	local Clone = SlamExplosion:Clone()
 	Clone.Parent = workspace
-	Clone.Position = HumRP.Position + Vector3.new(0, -3, 0)
+	Clone.Position = HumRP.Position
 
 	ParticlesModule.Emit(Clone)
 

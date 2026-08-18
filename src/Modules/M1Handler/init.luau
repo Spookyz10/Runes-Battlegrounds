@@ -196,6 +196,38 @@ function M1Handler:Punch(Player)
 						)
 					end
 
+					if StepId == "Uppercut" then
+						local FirstProps = { Size = Vector3.new(0.6, 0.6, 0.6), Transparency = 0 }
+						local FinalProps = { Size = Vector3.new(12, 0.6, 12), Transparency = 1 }
+						local TN_Info = { Time = 0.25, Style = "Quad", Direction = "Out" }
+						RemoteManager.FireAllClients("ReplicateTask", "Ring", {
+							FirstProps = FirstProps,
+							CF = EnemyHumRP.CFrame + Vector3.new(0, 4, 0),
+							TN_Info = TN_Info,
+							FinalProps = FinalProps,
+						})
+					elseif StepId == "Downslam" then
+						RemoteManager.FireAllClients("ReplicateTask", "Ground Crater", {
+							Seed = math.random(1, 2147483647),
+							amount = 7,
+							start = EnemyHumRP.CFrame + Vector3.new(0, 6, 0),
+							["end"] = Vector3.new(0, -20, 0),
+							NoGroundAlign = true,
+							rings = 1,
+							ringSpacing = 3,
+							ringSizeGrowth = 1.5,
+							ringGap = 0.24,
+							outwardTilt = true,
+							debrisSizeMin = 3,
+							debrisSizeMax = 5,
+							debrisHeightMin = 2.5,
+							debrisHeightMax = 4,
+							maxDebrisHeight = 5,
+							sizemult = 1.5,
+						})
+						RemoteManager.FireAllClients("ReplicateTask", "Downslam", { EnemyChar = EnemyCharacter })
+					end
+
 					if Step.Knockback then
 						local Preset = KnockbackPresets[Step.Knockback]
 						if Preset then
