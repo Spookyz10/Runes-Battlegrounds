@@ -1,14 +1,14 @@
 return {
-	Version = "v0.0.2",
+	Version = "v0.0.3",
 
 	UpdateLog = {
-		"Fixed Dashes",
-		"Made indicators replicate to everyone",
-		"Made lunar awaken moon be throwable upwards",
+		"Added kill badges",
+		"Made Dash not hit ragdolled enemies",
+		"Added kill sound gamepass",
+		"Added vfx for downslam and uppercut",
 	},
 
 	Roadmap = {
-		"Death Sound game pass",
 		"VIP game pass + aura + crown in ur rune",
 		"2 Shattered moves",
 		"Ranked and rank titles",
@@ -17,6 +17,5 @@ return {
 		"Settings",
 		"Change grasp to be a use twice move, once to cast the hand twice to pull",
 		"Variant if tethers is used and no one is airborne",
-		"Kill badges",
 	},
 }
