@@ -1,6 +1,5 @@
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Debris = game:GetService("Debris")
 local RunService = game:GetService("RunService")
 
 local SvModules = ServerStorage.Modules
@@ -96,6 +95,16 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 		end
 	end
 
+	local function killVelocity()
+		if Velocity and Velocity.Parent then
+			Velocity.Velocity = Vector3.new()
+			Velocity.MaxForce = Vector3.new()
+		end
+		if HumRP and HumRP.Parent then
+			HumRP.AssemblyLinearVelocity = Vector3.new()
+		end
+	end
+
 	local function endDash()
 		if Ended then
 			return
@@ -105,20 +114,11 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 		destroyDashHitbox()
 		stopSlopeClamp()
 		SkillCollision:Unlock(Character)
+		killVelocity()
 		if Velocity and Velocity.Parent then
 			Velocity:Destroy()
 		end
 		AnimTrack:AdjustSpeed(1)
-	end
-
-	local function killVelocity()
-		if Velocity and Velocity.Parent then
-			Velocity.Velocity = Vector3.new()
-			Velocity.MaxForce = Vector3.new()
-		end
-		if HumRP and HumRP.Parent then
-			HumRP.AssemblyLinearVelocity = Vector3.new(0, HumRP.AssemblyLinearVelocity.Y, 0)
-		end
 	end
 
 	local function resumeDash()
