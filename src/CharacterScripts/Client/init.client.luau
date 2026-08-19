@@ -5,7 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ClientContext = require(ReplicatedStorage.Shared.Modules.ClientContext)
 local CameraShakeController = require(ReplicatedStorage.Shared.Modules.Functions.CameraShakerController)
-local DashDirectionResolver = require(ReplicatedStorage.Shared.Modules.Functions.DashDirectionResolver)
+
 local Loop = require(ReplicatedStorage.Shared.Modules.Functions.Loop)
 local HandleVelocity = require(ReplicatedStorage.Shared.Modules.Functions.HandleVelocity)
 local Tasks = require(ReplicatedStorage.Shared.Modules.Functions.Tasks)
@@ -303,9 +303,7 @@ end)
 
 HumRP.ChildAdded:Connect(function(child: Instance)
 	if child:IsA("BodyVelocity") then
-		if child.Name == "FrontDashVelocity" then
-			DashDirectionResolver.HandleFrontDashVelocity(Character, HumRP, child)
-		elseif child.Name == "moveme" then
+		if child.Name == "moveme" then
 			if child:GetAttribute("RemoveOthers") == true then
 				Tasks["ClearVelocities"](HumRP, child)
 			end

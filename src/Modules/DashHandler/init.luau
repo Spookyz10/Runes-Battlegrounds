@@ -1,6 +1,5 @@
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 
 local SvModules = ServerStorage.Modules
 
@@ -41,6 +40,22 @@ local function getConfig(Player, Direction)
 	return MovesetConfigs[Direction]
 end
 
+-- NOTE (refactor): o server NAO cria mais BodyVelocity nem mexe em
+-- AssemblyLinearVelocity para o Front Dash. O movimento inteiro (translacao,
+-- decaimento de velocidade, etc) agora e responsabilidade do client, igual
+-- ja acontecia com Left/Right/Back (ver DashDirectionResolver.PerformLocalDash).
+--
+-- O servidor continua 100% dono de:
+--   * markers da animacao (jump/freeze/hit) -> so pra saber QUANDO criar/
+--     destruir a ReplicatedHitboxes e aplicar dano
+--   * validacao de distancia (DASH_HIT_SANITY_TOLERANCE) usando a posicao
+--     replicada do HumRP (que e o client quem move)
+--   * stun/cooldown/iframes/flags de gameplay
+--
+-- A animacao do Front Dash tambem so existe no server (AnimationService
+-- toca ela no Animator do server, que replica normalmente pra todo mundo,
+-- inclusive pro proprio client que esta dashando). Diferente de
+-- Left/Right/Back, o client NAO toca nenhuma animacao local pro Front.
 local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, Humanoid: Humanoid, Config)
 	local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
 	local Hit = false
@@ -48,7 +63,6 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 	local DashHitbox
 	local DashResumed = false
 	local HitList = {}
-	local SlopeClampConn
 
 	local Animation = Config.Animation()
 	local AnimTrack, AnimEvents = AnimationService:getAnimationTrack(Character, Animation)
@@ -59,49 +73,12 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 
 	SkillCollision:Lock(Character)
 
-	local Velocity = Instance.new("BodyVelocity")
-	Velocity.Name = Config.Id .. "Velocity"
-	Velocity.MaxForce = Vector3.new(Config.Speed, 0, Config.Speed)
-	Velocity.Velocity = Vector3.new()
-
-	local function stopSlopeClamp()
-		if SlopeClampConn then
-			SlopeClampConn:Disconnect()
-			SlopeClampConn = nil
-		end
-	end
-
-	local function startSlopeClamp()
-		stopSlopeClamp()
-		SlopeClampConn = RunService.Heartbeat:Connect(function()
-			if not HumRP or not HumRP.Parent then
-				stopSlopeClamp()
-				return
-			end
-
-			local Vel = HumRP.AssemblyLinearVelocity
-			if Vel.Y > 0 then
-				HumRP.AssemblyLinearVelocity = Vector3.new(Vel.X, 0, Vel.Z)
-			end
-		end)
-	end
-
 	local function destroyDashHitbox()
 		if DashHitbox then
 			pcall(function()
 				DashHitbox:Destroy()
 			end)
 			DashHitbox = nil
-		end
-	end
-
-	local function killVelocity()
-		if Velocity and Velocity.Parent then
-			Velocity.Velocity = Vector3.new()
-			Velocity.MaxForce = Vector3.new()
-		end
-		if HumRP and HumRP.Parent then
-			HumRP.AssemblyLinearVelocity = Vector3.new()
 		end
 	end
 
@@ -112,13 +89,7 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 		Ended = true
 		Character:SetAttribute("Dashing", false)
 		destroyDashHitbox()
-		stopSlopeClamp()
 		SkillCollision:Unlock(Character)
-		killVelocity()
-		if Velocity and Velocity.Parent then
-			Velocity:Destroy()
-		end
-		AnimTrack:AdjustSpeed(1)
 	end
 
 	local function resumeDash()
@@ -127,14 +98,11 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 		end
 
 		DashResumed = true
-		AnimTrack:AdjustSpeed(1)
 		destroyDashHitbox()
 
-		killVelocity()
-
-		if Velocity and Velocity.Parent then
-			Velocity:Destroy()
-		end
+		-- avisa o client (que e quem realmente esta segurando a velocidade)
+		-- que o dash acabou/foi interrompido, pra ele parar de aplicar forca
+		RemoteManager.FireClient(Player, "ReplicateTask", "DashResume", { Hit = Hit })
 	end
 
 	local function applyHit(EnemyCharacter: Model)
@@ -199,9 +167,10 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 				return
 			end
 
-			Velocity.Parent = HumRP
-
-			startSlopeClamp()
+			-- avisa o client que ele pode comecar a aplicar a velocidade
+			-- do dash agora (mesmo instante em que a hitbox de "empurrao"
+			-- comeca a existir no server)
+			RemoteManager.FireClient(Player, "ReplicateTask", "DashBegin", { Direction = Config.Id })
 
 			DashHitbox = ReplicatedHitboxes.new(Player)
 			DashHitbox.Instance = HumRP
@@ -226,6 +195,7 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 			end
 
 			AnimTrack:AdjustSpeed(0)
+			RemoteManager.FireClient(Player, "ReplicateTask", "DashFreeze")
 		end)
 	)
 
@@ -259,7 +229,6 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 			v:Disconnect()
 		end
 
-		stopSlopeClamp()
 		StunHandler:Unstun(Character, Stun)
 		if not Hit then
 			RemoteManager.FireAllClients(
@@ -278,9 +247,6 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 	RemoteManager.FireAllClients("ReplicateTask", "DashMiss", { PrimaryPart = HumRP })
 
 	task.delay(2, function()
-		if HumRP and HumRP.Parent then
-			HumRP.AssemblyLinearVelocity = Vector3.new()
-		end
 		endDash()
 	end)
 

@@ -14,6 +14,7 @@ local SkillCancelHandler = require(ServerModules.SkillCancelHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local PerfectKnockback = require(ServerModules.PerfectKnockback)
 local SkillCollision = require(ServerModules.SkillCollision)
+local AimTracker = require(ServerModules.AimTracker)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 
@@ -28,6 +29,10 @@ local KNOCK_FINAL_FORCE = 25
 
 local CIRCLE_OFFSET_FORWARD = 3
 local CIRCLE_OFFSET_DOWN = 3
+
+-- Duração do streaming da câmera: precisa cobrir a janela inteira entre
+-- "onGround" e o fim dos 3 estágios (3 * STAGE_DELAY + folga).
+local CAMERA_STREAM_DURATION = 3
 
 local SPIKE_STAGES = {
 	{ Distance = 7, HitboxSize = Vector3.new(6, 8, 6), Scale = 1 },
@@ -74,8 +79,18 @@ return {
 
 		local activeCircles = {}
 
+		-- Bridge genérica: pega a direção da câmera do jogador sem mexer no
+		-- RotationController (o char tá com CantRotate + anchored aqui, não
+		-- pode deixar o RotationController tentar girar ele).
+		local aimBridge = AimTracker.new(Player, "Nightstalk")
+		RemoteManager.FireClient(Player, "ReplicateTask", "StreamCameraDirection", {
+			Duration = CAMERA_STREAM_DURATION,
+			BridgeId = aimBridge.Bridge.Name,
+		})
+
 		local function getLookFlat()
-			local lv = Character.HumanoidRootPart.CFrame.LookVector
+			local CameraDir = aimBridge:Get()
+			local lv = CameraDir or Character.HumanoidRootPart.CFrame.LookVector
 			local flat = Vector3.new(lv.X, 0, lv.Z)
 			if flat.Magnitude > 0 then
 				return flat.Unit
@@ -217,6 +232,11 @@ return {
 			cancelled = true
 
 			despawnAllCircles()
+
+			if aimBridge then
+				aimBridge:Destroy()
+				aimBridge = nil
+			end
 
 			SkillCollision:Unlock(Character)
 			SkillCancelHandler:Unregister(Character, onDamageCancel)
