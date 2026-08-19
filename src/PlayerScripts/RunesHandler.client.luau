@@ -83,6 +83,7 @@ local function getFlatCFrame(Torso: BasePart, extraOffset: Vector3?): CFrame
 end
 
 local function destroyRuneCosmetic(data: RuneData)
+	print("lol??")
 	if data.cosmeticModel and data.cosmeticModel.Parent then
 		data.cosmeticModel:Destroy()
 	end
@@ -258,7 +259,7 @@ local function buildRune(Character: Model, key: string, Player: Player, spawnCFr
 	TargetAnchor.Transparency = 1
 	TargetAnchor.Size = Vector3.new(0.1, 0.1, 0.1)
 	TargetAnchor.CFrame = ResolvedCFrame
-	TargetAnchor.Parent = workspace.Debris
+	TargetAnchor.Parent = workspace
 
 	local TargetAttachment: Attachment = Instance.new("Attachment")
 	TargetAttachment.Parent = TargetAnchor

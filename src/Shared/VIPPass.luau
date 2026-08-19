@@ -1,5 +1,5 @@
-local KillSoundPass = {
+local Pass = {
 	GamepassId = 1951766560,
 }
 
-return KillSoundPass
+return Pass

@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Data = require(ReplicatedStorage.Shared.Data).server
 local EarlyAccess = require(ReplicatedStorage.Shared.EarlyAccess)
 local KillSoundPass = require(ReplicatedStorage.Shared.KillSoundPass)
+local VIPPass = require(ReplicatedStorage.Shared.VIPPass)
 
 local GamepassService = {}
 
@@ -15,6 +16,7 @@ local COMPLIMENTARY_EARLY_ACCESS_USERS = {
 local TRACKED_GAMEPASSES = {
 	EarlyAccess.GamepassId,
 	KillSoundPass.GamepassId,
+	VIPPass.GamepassId,
 }
 
 local function addOwnedPass(playerData, GamepassId)

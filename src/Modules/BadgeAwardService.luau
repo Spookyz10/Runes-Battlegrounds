@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Data = require(ReplicatedStorage.Shared.Data).server
 local EarlyAccess = require(ReplicatedStorage.Shared.EarlyAccess)
+local VIPPass = require(ReplicatedStorage.Shared.VIPPass)
 
 local module = {}
 
@@ -15,13 +16,11 @@ local BADGES = {
 	{ Kills = 10000, BadgeId = 1041322512332776 },
 }
 
-local function GrantEarlyAccess(Player)
+local function GrantPass(Player, GamepassId)
 	local playerData = Data.Service:waitForData(Player)
 	if not playerData then
 		return
 	end
-
-	local GamepassId = EarlyAccess.GamepassId
 
 	if playerData.OwnedPasses()[GamepassId] then
 		return
@@ -39,7 +38,8 @@ function module:CheckKills(Player, TotalKills)
 	end
 
 	if TotalKills >= 50 then
-		GrantEarlyAccess(Player)
+		GrantPass(Player, EarlyAccess.GamepassId)
+		GrantPass(Player, VIPPass.GamepassId)
 	end
 
 	for _, BadgeInfo in BADGES do
