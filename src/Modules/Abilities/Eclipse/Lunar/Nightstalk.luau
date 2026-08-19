@@ -30,8 +30,6 @@ local KNOCK_FINAL_FORCE = 25
 local CIRCLE_OFFSET_FORWARD = 3
 local CIRCLE_OFFSET_DOWN = 3
 
--- Duração do streaming da câmera: precisa cobrir a janela inteira entre
--- "onGround" e o fim dos 3 estágios (3 * STAGE_DELAY + folga).
 local CAMERA_STREAM_DURATION = 3
 
 local SPIKE_STAGES = {
@@ -53,11 +51,6 @@ return {
 		Humanoid.WalkSpeed = 0
 		Character:AddTag("CantRotate")
 
-		-- Sempre ancora, esteja o personagem no chão ou no ar. Sem isso,
-		-- castar a skill no ar deixava a gravidade agir enquanto o
-		-- CanCollide ficava desligado (SkillCollision:Lock), fazendo o
-		-- personagem afundar no chão durante a animação e depois ser
-		-- ejetado com força (fling) quando a colisão voltava.
 		HumRP.Anchored = true
 		HumRP.AssemblyLinearVelocity = Vector3.zero
 
@@ -207,10 +200,12 @@ return {
 
 			RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", { Intensity = 1.5, Last = 0.2 })
 
+			local hitboxOffset = Character.HumanoidRootPart.CFrame:ToObjectSpace(CFrame.new(spikePosition))
+
 			HitboxHandler:SimpleOnce(
 				Character.HumanoidRootPart,
 				stage.HitboxSize,
-				CFrame.new(0, 0, -stage.Distance),
+				hitboxOffset,
 				{ Character },
 				"Box",
 				nil,
@@ -245,10 +240,6 @@ return {
 
 			Character:RemoveTag("CantRotate")
 
-			-- Sempre desancora aqui, tanto no fim normal (UserTrack.Stopped)
-			-- quanto em qualquer cancelamento (onDamageCancel chama Stop na
-			-- track, que dispara Stopped -> cleanup). Isso garante que o
-			-- personagem nunca fica preso ancorado.
 			if HumRP and HumRP.Parent then
 				HumRP.Anchored = false
 			end

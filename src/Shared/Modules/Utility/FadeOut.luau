@@ -214,7 +214,6 @@ function FadeOut.In(target, duration, callback)
 end
 
 function FadeOut.OutAndDestroy(target, fadeDuration, destroyDelay)
-	print("[FadeOut] OutAndDestroy chamado para", target:GetFullName())
 	destroyDelay = destroyDelay or 0
 	FadeOut.Out(target, fadeDuration, function()
 		if destroyDelay > 0 then

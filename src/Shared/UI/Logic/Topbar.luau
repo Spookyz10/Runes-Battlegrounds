@@ -59,23 +59,23 @@ end
 function Topbar.Init()
 	local playerGui = UIConstants.PlayerGui
 
-	MainIcon:setImage(122632838025101)
+	MainIcon:setImage(74892251016594)
 	local runeSelection = playerGui:FindFirstChild("RuneSelection")
 	MainIcon:bindToggleItem(runeSelection)
 
-	StoreIcon:setImage(80569266368262)
+	StoreIcon:setImage(83529893577215)
 	local store = playerGui:FindFirstChild("Store")
 	StoreIcon:bindToggleItem(store)
 
-	LogIcon:setImage(138183057333957)
+	LogIcon:setImage(73951345498778)
 	local log = playerGui:FindFirstChild("Log")
 	LogIcon:bindToggleItem(log)
 
-	KillSoundIcon:setImage(127836770551816)
+	KillSoundIcon:setImage(107213877689577)
 	local killSound = playerGui:FindFirstChild("KillSound")
 	KillSoundIcon:bindToggleItem(killSound)
 
-	CosmeticsIcon:setImage(87583203080314)
+	CosmeticsIcon:setLabel("Cosmetics")
 	local cosmetics = playerGui:FindFirstChild("Cosmetics")
 	CosmeticsIcon:bindToggleItem(cosmetics)
 

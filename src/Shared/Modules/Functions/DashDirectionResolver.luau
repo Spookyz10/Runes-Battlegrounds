@@ -35,7 +35,7 @@ local DirectionCooldown = {
 local AxisCooldownExpiry = {}
 
 -- Estado do Front Dash em andamento (por Character). Guardamos aqui pra
--- poder reagir aos avisos que o server manda (DashBegin/DashFreeze/DashResume)
+-- poder reagir aos avisos que o server manda (DashBegin/DashResume)
 -- sem precisar de nenhuma animacao local -- a animacao do Front Dash e
 -- 100% server-side e replica normalmente pro proprio dono via Animator.
 local ActiveFrontDash = {}
@@ -176,12 +176,11 @@ function DashResolver.Resolve(Character, Humanoid, HumRP)
 	return Direction, Trapped, Escaping, CanAct
 end
 
--- Front Dash: movimento 100% local. A animacao (e os markers jump/hit/freeze
--- que controlam a hitbox e o dano) fica so no server e replica normalmente.
+-- Front Dash: movimento 100% local. A animacao (e os markers jump/hit que
+-- controlam a hitbox e o dano) fica so no server e replica normalmente.
 -- Aqui a gente so cuida de deslocar o HumRP pra frente com uma BodyVelocity
 -- local, decaindo com o tempo, e reagindo aos avisos do server:
 --   "DashBegin"  -> comeca a aplicar a velocidade (equivalente ao marker "jump")
---   "DashFreeze" -> pausa o movimento (equivalente ao marker "freeze")
 --   "DashResume" -> encerra o movimento (hit deu certo / hitbox estourou / timeout)
 local function performFrontDash(Character, HumRP)
 	if ActiveFrontDash[Character] then
@@ -189,8 +188,6 @@ local function performFrontDash(Character, HumRP)
 	end
 
 	local State = {
-		Speed = 90,
-		Frozen = false,
 		Ended = false,
 		Velocity = nil :: BodyVelocity?,
 		StopLoop = nil :: (() -> ())?,
@@ -231,9 +228,11 @@ local function performFrontDash(Character, HumRP)
 		local dashVelocity = Instance.new("BodyVelocity")
 		dashVelocity.MaxForce = Character:HasTag("Slowed") and Vector3.new(10000, 0, 10000)
 			or Vector3.new(50000, 0, 50000)
-		dashVelocity.Velocity = HumRP.CFrame.LookVector * State.Speed
+		dashVelocity.Velocity = HumRP.CFrame.LookVector * 165
 		dashVelocity.Parent = HumRP
 		State.Velocity = dashVelocity
+
+		local speed = 165
 
 		State.StopLoop = Loop.new(function(stop)
 			if State.Ended or not dashVelocity.Parent then
@@ -241,41 +240,23 @@ local function performFrontDash(Character, HumRP)
 				return
 			end
 
-			if State.Frozen then
-				dashVelocity.Velocity = Vector3.new()
-				return
-			end
-
-			State.Speed *= 0.93
-			dashVelocity.Velocity = HumRP.CFrame.LookVector * State.Speed
-
-			if State.Speed <= 8 then
+			if speed > 2 then
+				speed *= 0.98
+				dashVelocity.Velocity = HumRP.CFrame.LookVector * speed
+			else
 				stop()
 				cleanup()
 			end
 		end)
 	end
 
-	State.Freeze = function()
-		State.Frozen = true
-	end
-
-	-- failsafe: se por algum motivo o server nao mandar DashResume (perda de
-	-- pacote, etc), garante que o movimento nao fica preso pra sempre
-	task.delay(2, cleanup)
+	task.delay(4, cleanup)
 end
 
 function DashResolver.BeginFrontDash(Character)
 	local State = ActiveFrontDash[Character]
 	if State then
 		State.Begin()
-	end
-end
-
-function DashResolver.FreezeFrontDash(Character)
-	local State = ActiveFrontDash[Character]
-	if State then
-		State.Freeze()
 	end
 end
 
@@ -479,7 +460,6 @@ function DashResolver.PerformDash(Character, Humanoid, HumRP, Camera, Animator)
 
 	RemoteManager.FireServer("Keypress", { Key = Enum.KeyCode.Q, Direction = Direction, ClientCFrame = HumRP.CFrame })
 
-	-- Front agora tambem e previsto localmente, igual Left/Right/Back
 	DashResolver.PerformLocalDash(Character, Humanoid, HumRP, Camera, Animator, Direction, Escaping)
 
 	return Direction, Trapped, Escaping, CanAct

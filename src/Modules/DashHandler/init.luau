@@ -40,22 +40,6 @@ local function getConfig(Player, Direction)
 	return MovesetConfigs[Direction]
 end
 
--- NOTE (refactor): o server NAO cria mais BodyVelocity nem mexe em
--- AssemblyLinearVelocity para o Front Dash. O movimento inteiro (translacao,
--- decaimento de velocidade, etc) agora e responsabilidade do client, igual
--- ja acontecia com Left/Right/Back (ver DashDirectionResolver.PerformLocalDash).
---
--- O servidor continua 100% dono de:
---   * markers da animacao (jump/freeze/hit) -> so pra saber QUANDO criar/
---     destruir a ReplicatedHitboxes e aplicar dano
---   * validacao de distancia (DASH_HIT_SANITY_TOLERANCE) usando a posicao
---     replicada do HumRP (que e o client quem move)
---   * stun/cooldown/iframes/flags de gameplay
---
--- A animacao do Front Dash tambem so existe no server (AnimationService
--- toca ela no Animator do server, que replica normalmente pra todo mundo,
--- inclusive pro proprio client que esta dashando). Diferente de
--- Left/Right/Back, o client NAO toca nenhuma animacao local pro Front.
 local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, Humanoid: Humanoid, Config)
 	local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
 	local Hit = false
@@ -195,7 +179,6 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 			end
 
 			AnimTrack:AdjustSpeed(0)
-			RemoteManager.FireClient(Player, "ReplicateTask", "DashFreeze")
 		end)
 	)
 
