@@ -16,6 +16,7 @@ local RemoteEvents = {
 	Specials = "Server",
 	CutsceneEnded = "Server",
 	Comunicator = "Server",
+	Cosmetics = "Server",
 
 	SpecialsResult = "Client",
 	Cutscenes = "Client",

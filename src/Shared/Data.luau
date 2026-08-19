@@ -29,6 +29,11 @@ local template = {
 		"Crush",
 	},
 
+	OwnedAuras = {} :: { string },
+	OwnedRuneCosmetics = {} :: { string },
+	EquippedAura = nil :: string?,
+	EquippedRuneCosmetic = nil :: string?,
+
 	KillSoundId = nil :: number?,
 
 	Settings = {

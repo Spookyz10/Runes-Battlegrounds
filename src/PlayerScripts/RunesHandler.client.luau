@@ -4,8 +4,10 @@ local ReplicatedStorage: ReplicatedStorage = game:GetService("ReplicatedStorage"
 
 local FadeOut = require(ReplicatedStorage.Shared.Modules.Utility.FadeOut)
 local InfoModule = require(ReplicatedStorage.Shared.Info)
+local CosmeticsInfo = require(ReplicatedStorage.Shared.Info.Cosmetics)
 
 local RunesFolder: Folder = ReplicatedStorage.Resources.Runes
+local RuneCosmeticsFolder: Folder = ReplicatedStorage.Resources.RuneCosmetics
 
 local RUNE_OFFSET: Vector3 = Vector3.new(2.5, 1, 0)
 local BOB_HEIGHT: number = 0.35
@@ -22,6 +24,11 @@ type RuneData = {
 	targetAnchor: Part,
 	conn: RBXScriptConnection,
 	key: string,
+	cosmeticModel: Model?,
+	cosmeticMainPart: BasePart?,
+	cosmeticKey: string?,
+	cosmeticSpinAngle: number,
+	startTime: number,
 }
 
 local activeRunes: { [Model]: RuneData } = {}
@@ -75,6 +82,78 @@ local function getFlatCFrame(Torso: BasePart, extraOffset: Vector3?): CFrame
 	return flatCFrame
 end
 
+local function destroyRuneCosmetic(data: RuneData)
+	if data.cosmeticModel and data.cosmeticModel.Parent then
+		data.cosmeticModel:Destroy()
+	end
+
+	data.cosmeticModel = nil
+	data.cosmeticMainPart = nil
+	data.cosmeticKey = nil
+end
+
+local function buildRuneCosmetic(data: RuneData, cosmeticKey: string?)
+	destroyRuneCosmetic(data)
+
+	if not cosmeticKey or cosmeticKey == "" then
+		return
+	end
+
+	local CosmeticTemplate: Instance? = RuneCosmeticsFolder:FindFirstChild(cosmeticKey)
+	if not CosmeticTemplate then
+		return
+	end
+
+	local CosmeticModel: Model = (CosmeticTemplate :: Model):Clone()
+	CosmeticModel.Name = "EquippedRuneCosmetic"
+
+	local MainPart: BasePart? = CosmeticModel.PrimaryPart
+	if not MainPart then
+		CosmeticModel:Destroy()
+		return
+	end
+
+	for _, part: Instance in CosmeticModel:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.Anchored = false
+			part.CanCollide = false
+			part.CanTouch = false
+			part.CanQuery = false
+			part.Massless = true
+
+			if part ~= MainPart then
+				local Weld: WeldConstraint = Instance.new("WeldConstraint")
+				Weld.Part0 = MainPart
+				Weld.Part1 = part
+				Weld.Parent = part
+			end
+		end
+	end
+
+	CosmeticModel.Parent = data.model
+
+	data.cosmeticModel = CosmeticModel
+	data.cosmeticMainPart = MainPart
+	data.cosmeticKey = cosmeticKey
+	data.cosmeticSpinAngle = 0
+
+	FadeOut.In(CosmeticModel, FADE_DURATION)
+end
+
+local function refreshRuneCosmetic(Character: Model, Player: Player)
+	local data: RuneData? = activeRunes[Character]
+	if not data then
+		return
+	end
+
+	local cosmeticKey: string? = Player:GetAttribute("EquippedRuneCosmetic") :: string?
+	if data.cosmeticKey == cosmeticKey then
+		return
+	end
+
+	buildRuneCosmetic(data, cosmeticKey)
+end
+
 local function destroyRune(Character: Model)
 	local data: RuneData? = activeRunes[Character]
 	if not data then
@@ -84,6 +163,9 @@ local function destroyRune(Character: Model)
 	if data.conn then
 		data.conn:Disconnect()
 	end
+
+	destroyRuneCosmetic(data)
+
 	if data.targetAnchor and data.targetAnchor.Parent then
 		data.targetAnchor:Destroy()
 	end
@@ -97,6 +179,10 @@ end
 local function fadeOutRune(data: RuneData)
 	if data.conn then
 		data.conn:Disconnect()
+	end
+
+	if data.cosmeticModel and data.cosmeticModel.Parent then
+		FadeOut.OutAndDestroy(data.cosmeticModel, FADE_DURATION)
 	end
 
 	if data.model and data.model.Parent then
@@ -113,7 +199,7 @@ local function fadeOutRune(data: RuneData)
 	end
 end
 
-local function buildRune(Character: Model, key: string, spawnCFrame: CFrame?)
+local function buildRune(Character: Model, key: string, Player: Player, spawnCFrame: CFrame?)
 	local RuneTemplate: Instance? = RunesFolder:FindFirstChild(key)
 	if not RuneTemplate then
 		return
@@ -195,22 +281,61 @@ local function buildRune(Character: Model, key: string, spawnCFrame: CFrame?)
 
 	local startTime: number = os.clock()
 
+	local data: RuneData = {
+		model = RuneModel,
+		mainPart = MainPart,
+		targetAnchor = TargetAnchor,
+		conn = nil :: any,
+		key = key,
+		cosmeticModel = nil,
+		cosmeticMainPart = nil,
+		cosmeticKey = nil,
+		cosmeticSpinAngle = 0,
+		startTime = startTime,
+	}
+
+	activeRunes[Character] = data
+
+	buildRuneCosmetic(data, Player:GetAttribute("EquippedRuneCosmetic") :: string?)
+
+	local lastClock: number = os.clock()
+
 	local conn: RBXScriptConnection = RunService.Heartbeat:Connect(function()
+		local currentData: RuneData? = activeRunes[Character]
+		if not currentData then
+			return
+		end
+
+		local now: number = os.clock()
+		local dt: number = now - lastClock
+		lastClock = now
+
 		if not Character.Parent or not Torso.Parent or not TargetAnchor.Parent then
 			return
 		end
 
-		local bobY: number = math.sin((os.clock() - startTime) * BOB_SPEED) * BOB_HEIGHT
+		local bobY: number = math.sin((now - startTime) * BOB_SPEED) * BOB_HEIGHT
 		TargetAnchor.CFrame = getFlatCFrame(Torso, RUNE_OFFSET + Vector3.new(0, bobY, 0))
+
+		if currentData.cosmeticMainPart and currentData.cosmeticMainPart.Parent then
+			local cosmeticInfo = (currentData.cosmeticKey and CosmeticsInfo.RuneCosmetics[currentData.cosmeticKey])
+				or {}
+			local offset: Vector3 = cosmeticInfo.Offset or CosmeticsInfo.DefaultRuneCosmeticOffset
+			local spin: boolean = cosmeticInfo.Spin or CosmeticsInfo.DefaultRuneCosmeticSpin
+			local spinSpeed: number = cosmeticInfo.SpinSpeed or CosmeticsInfo.DefaultRuneCosmeticSpinSpeed
+
+			local offsetCFrame: CFrame = CFrame.new(offset)
+
+			if spin then
+				currentData.cosmeticSpinAngle += spinSpeed * dt
+				offsetCFrame = offsetCFrame * CFrame.Angles(0, currentData.cosmeticSpinAngle, 0)
+			end
+
+			currentData.cosmeticMainPart.CFrame = MainPart.CFrame * offsetCFrame
+		end
 	end)
 
-	activeRunes[Character] = {
-		model = RuneModel,
-		mainPart = MainPart,
-		targetAnchor = TargetAnchor,
-		conn = conn,
-		key = key,
-	}
+	data.conn = conn
 
 	FadeOut.In(RuneModel, FADE_DURATION)
 end
@@ -237,7 +362,7 @@ local function updateRune(Character: Model, Player: Player)
 		end
 
 		if spawnCFrame then
-			buildRune(Character, key, spawnCFrame)
+			buildRune(Character, key, Player, spawnCFrame)
 		end
 	end
 
@@ -290,6 +415,8 @@ local function setupCharacter(Character: Model)
 		(Player :: Player).AttributeChanged:Connect(function(attr: string)
 			if attr:match("^MovesetMode_") then
 				updateRune(Character, Player :: Player)
+			elseif attr == "EquippedRuneCosmetic" then
+				refreshRuneCosmetic(Character, Player :: Player)
 			end
 		end)
 	)
