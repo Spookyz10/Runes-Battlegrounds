@@ -1,65 +1,7 @@
 local Constants = require(script.Parent.Constants)
 local Helpers = require(script.Parent.Helpers)
 
-local Debris = Constants.Debris
 local TS = Constants.TS
-
-local dataTable = {}
-local startTime = tick()
-
-local function cleanupDebrisObjects()
-	if tick() - startTime > 300 then
-		startTime = tick()
-		local destroyedCount = 0
-
-		for _, object in pairs(workspace.Debris:GetChildren()) do
-			if
-				object:IsA("Part")
-				and object:GetAttribute("Spawn")
-				and not table.find(dataTable, object)
-				and not object:GetAttribute("DeletionImmunity")
-				and tick() - object:GetAttribute("Spawn") > 60
-			then
-				object:Destroy()
-				destroyedCount = destroyedCount + 1
-			end
-		end
-
-		return
-	else
-		local firstEntry = rawget(dataTable, 1)
-
-		if #dataTable > 100 then
-			for _ = 101, #dataTable do
-				local excessEntry = rawget(dataTable, 101)
-				table.remove(dataTable, 101)
-
-				if excessEntry then
-					excessEntry:Destroy()
-				end
-			end
-		end
-
-		if firstEntry and not firstEntry.Parent then
-			table.remove(dataTable, 1)
-		end
-
-		if firstEntry and firstEntry.Parent then
-			table.remove(dataTable, 1)
-
-			if firstEntry.Name == "starterdeb" then
-				firstEntry.Name = "aa"
-			end
-
-			firstEntry.CollisionGroup = "NonPColDebri"
-			firstEntry:SetAttribute("Spawn", tick())
-
-			return firstEntry
-		else
-			return
-		end
-	end
-end
 
 local function isHitboxPart(part)
 	return part.Name:find("Hitbox") ~= nil
@@ -95,7 +37,7 @@ local function debrisSpawner(config)
 		end
 
 		local chunkSize = rng:NextNumber(1, 3)
-		local chunk = cleanupDebrisObjects() or Instance.new("Part")
+		local chunk = Instance.new("Part")
 		chunk.CollisionGroup = "NonPColDebri"
 
 		chunk.CFrame = config.cframe
@@ -118,7 +60,7 @@ local function debrisSpawner(config)
 		bv.MaxForce = Vector3.new(2e9, 2e9, 2e9)
 		bv.Velocity = Vector3.new(rng:NextNumber(-25, 25), rng:NextNumber(5, 25), randomRange(-25, 25)) * 2
 		bv.Parent = chunk
-		Debris:AddItem(bv, 0.15)
+		game:GetService("Debris"):AddItem(bv, 0.15)
 
 		task.delay(3 + rng:NextNumber(0, 1), function()
 			if not chunk or not chunk.Parent then
@@ -130,10 +72,9 @@ local function debrisSpawner(config)
 			}):Play()
 
 			task.delay(0.3, function()
-				chunk.Anchored = true
-				chunk.CanCollide = false
-				chunk.CFrame = CFrame.new(1e8, 1e8, 1e8)
-				table.insert(dataTable, chunk)
+				if chunk and chunk.Parent then
+					chunk:Destroy()
+				end
 			end)
 		end)
 	end
@@ -145,7 +86,7 @@ local function debrisSpawner(config)
 
 	for _ = 1, smallDebrisCount do
 		local smallSize = rng:NextNumber(0.6, 0.8)
-		local piece = cleanupDebrisObjects() or Instance.new("Part")
+		local piece = Instance.new("Part")
 		piece.CFrame = config.cframe
 
 		local alignCFrame =
@@ -167,11 +108,11 @@ local function debrisSpawner(config)
 		bv.MaxForce = Vector3.new(2e9, 2e9, 2e9)
 		bv.Velocity = Vector3.new(rng:NextNumber(-25, 25), rng:NextNumber(5, 25), randomRange(-25, 25)) * 2
 		bv.Parent = piece
-		Debris:AddItem(bv, 0.15)
+		game:GetService("Debris"):AddItem(bv, 0.15)
 
 		local bav = Instance.new("BodyAngularVelocity")
 		bav.Parent = piece
-		Debris:AddItem(bav, 0.5)
+		game:GetService("Debris"):AddItem(bav, 0.5)
 
 		task.delay(3 + rng:NextNumber(0, 1), function()
 			if not piece or not piece.Parent then
@@ -186,10 +127,9 @@ local function debrisSpawner(config)
 				if bav and bav.Parent then
 					bav:Destroy()
 				end
-				piece.Anchored = true
-				piece.CanCollide = false
-				piece.CFrame = CFrame.new(1e8, 1e8, 1e8)
-				table.insert(dataTable, piece)
+				if piece and piece.Parent then
+					piece:Destroy()
+				end
 			end)
 		end)
 	end
@@ -259,7 +199,7 @@ local function debrisSpawner(config)
 			pieceCFrame = pieceCFrame * CFrame.Angles(0, angle, 0)
 			pieceCFrame = pieceCFrame + pieceCFrame.LookVector * rng:NextNumber(-0.4, 0.4) * ringRadiusScale
 
-			local slab = cleanupDebrisObjects() or Instance.new("Part")
+			local slab = Instance.new("Part")
 			slab.Anchored = true
 			slab.CanCollide = false
 			slab.CanTouch = true
@@ -462,20 +402,7 @@ local function debrisSpawner(config)
 
 				task.wait(2)
 
-				if not slab or not slab.Parent then
-					return
-				end
-
-				slab:SetAttribute("OGCframe", nil)
-				slab.Anchored = true
-				slab.CanCollide = false
-				slab.CanTouch = false
-				slab.CanQuery = false
-
-				if #dataTable < 100 then
-					slab.CFrame = CFrame.new(1e8, 1e8, 1e8)
-					table.insert(dataTable, slab)
-				else
+				if slab and slab.Parent then
 					slab:Destroy()
 				end
 			end)
@@ -486,7 +413,5 @@ local function debrisSpawner(config)
 end
 
 return {
-	dataTable = dataTable,
-	cleanupDebrisObjects = cleanupDebrisObjects,
 	debrisSpawner = debrisSpawner,
 }

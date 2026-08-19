@@ -421,7 +421,7 @@ local function setupCharacter(Character: Model)
 		end
 
 		destroyRune(Character)
-		print("Destroyed rune for character " .. Character.Name .. " due to character removal from workspace.")
+
 		for _, conn: RBXScriptConnection in connections do
 			conn:Disconnect()
 		end
