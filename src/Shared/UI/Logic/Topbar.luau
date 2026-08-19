@@ -11,6 +11,7 @@ local MainIcon = Icon.new()
 local StoreIcon = Icon.new()
 local LogIcon = Icon.new()
 local KillSoundIcon = Icon.new()
+local CosmeticsIcon = Icon.new()
 
 local function ownsKillSound()
 	return table.find(Data.OwnedPasses(), KillSoundPass.GamepassId) ~= nil
@@ -30,6 +31,9 @@ function Topbar.Show()
 	if LogIcon then
 		LogIcon:setEnabled(true)
 	end
+	if CosmeticsIcon then
+		CosmeticsIcon:setEnabled(true)
+	end
 
 	refreshKillSoundIcon()
 end
@@ -44,6 +48,9 @@ function Topbar.Hide()
 	if LogIcon then
 		LogIcon:setEnabled(false)
 	end
+	if CosmeticsIcon then
+		CosmeticsIcon:setEnabled(false)
+	end
 	if KillSoundIcon then
 		KillSoundIcon:setEnabled(false)
 	end
@@ -52,21 +59,25 @@ end
 function Topbar.Init()
 	local playerGui = UIConstants.PlayerGui
 
-	MainIcon:setLabel("Runes")
+	MainIcon:setImage(122632838025101)
 	local runeSelection = playerGui:FindFirstChild("RuneSelection")
 	MainIcon:bindToggleItem(runeSelection)
 
-	StoreIcon:setLabel("Store")
+	StoreIcon:setImage(80569266368262)
 	local store = playerGui:FindFirstChild("Store")
 	StoreIcon:bindToggleItem(store)
 
-	LogIcon:setLabel("Updates")
+	LogIcon:setImage(138183057333957)
 	local log = playerGui:FindFirstChild("Log")
 	LogIcon:bindToggleItem(log)
 
-	KillSoundIcon:setLabel("Kill Sound")
+	KillSoundIcon:setImage(127836770551816)
 	local killSound = playerGui:FindFirstChild("KillSound")
 	KillSoundIcon:bindToggleItem(killSound)
+
+	CosmeticsIcon:setImage(87583203080314)
+	local cosmetics = playerGui:FindFirstChild("Cosmetics")
+	CosmeticsIcon:bindToggleItem(cosmetics)
 
 	refreshKillSoundIcon()
 	Data.OwnedPasses.Changed(function()

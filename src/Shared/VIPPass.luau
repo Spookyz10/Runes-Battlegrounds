@@ -1,5 +1,5 @@
 local KillSoundPass = {
-	GamepassId = 1,
+	GamepassId = 1951766560,
 }
 
 return KillSoundPass
