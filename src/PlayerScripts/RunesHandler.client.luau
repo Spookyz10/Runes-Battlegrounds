@@ -83,7 +83,7 @@ local function getFlatCFrame(Torso: BasePart, extraOffset: Vector3?): CFrame
 end
 
 local function destroyRuneCosmetic(data: RuneData)
-	print("lol??")
+	print("[RuneCosmetic] destroy chamado. cosmeticKey atual:", data.cosmeticKey, debug.traceback())
 	if data.cosmeticModel and data.cosmeticModel.Parent then
 		data.cosmeticModel:Destroy()
 	end
@@ -148,6 +148,7 @@ local function refreshRuneCosmetic(Character: Model, Player: Player)
 	end
 
 	local cosmeticKey: string? = Player:GetAttribute("EquippedRuneCosmetic") :: string?
+	print("[RuneCosmetic] refresh disparado. attr =", cosmeticKey, "| data.cosmeticKey atual =", data.cosmeticKey)
 	if data.cosmeticKey == cosmeticKey then
 		return
 	end
@@ -417,6 +418,10 @@ local function setupCharacter(Character: Model)
 			if attr:match("^MovesetMode_") then
 				updateRune(Character, Player :: Player)
 			elseif attr == "EquippedRuneCosmetic" then
+				print(
+					"[RuneCosmetic] AttributeChanged EquippedRuneCosmetic ->",
+					Player:GetAttribute("EquippedRuneCosmetic")
+				)
 				refreshRuneCosmetic(Character, Player :: Player)
 			end
 		end)
