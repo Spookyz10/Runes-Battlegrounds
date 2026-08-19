@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local RS = game:GetService("ReplicatedStorage")
 
+local CameraShakerController = require(script.Parent.CameraShakerController)
 local Loop = require(RS.Shared.Modules.Functions.Loop)
 local Tasks = require(RS.Shared.Modules.Functions.Tasks)
 local RemoteManager = require(RS.Shared.Modules.RemoteManager)
@@ -97,6 +98,25 @@ function DashResolver.HasEvasiveCharge(Character)
 		return false
 	end
 	return (Character:GetAttribute("EvasivaCharges") or 0) > 0
+end
+
+function DashResolver.HandleFrontDashVelocity(Character, HumRP, child)
+	Tasks["ClearVelocities"](HumRP, child)
+
+	task.spawn(function()
+		CameraShakerController.AddShake(2.5)
+	end)
+
+	local speed = 165
+	local stopLoop
+	stopLoop = Loop.new(function()
+		if speed > 26 and child.Parent then
+			speed *= 0.95
+			child.Velocity = HumRP.CFrame.LookVector * speed
+		else
+			stopLoop()
+		end
+	end)
 end
 
 function DashResolver.Resolve(Character, Humanoid, HumRP)
