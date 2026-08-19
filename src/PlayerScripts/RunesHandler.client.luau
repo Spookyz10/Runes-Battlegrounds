@@ -83,7 +83,6 @@ local function getFlatCFrame(Torso: BasePart, extraOffset: Vector3?): CFrame
 end
 
 local function destroyRuneCosmetic(data: RuneData)
-	print("[RuneCosmetic] destroy chamado. cosmeticKey atual:", data.cosmeticKey, debug.traceback())
 	if data.cosmeticModel and data.cosmeticModel.Parent then
 		data.cosmeticModel:Destroy()
 	end
@@ -131,7 +130,7 @@ local function buildRuneCosmetic(data: RuneData, cosmeticKey: string?)
 		end
 	end
 
-	CosmeticModel.Parent = data.model
+	CosmeticModel.Parent = workspace.Cosmetics
 
 	data.cosmeticModel = CosmeticModel
 	data.cosmeticMainPart = MainPart
@@ -148,7 +147,6 @@ local function refreshRuneCosmetic(Character: Model, Player: Player)
 	end
 
 	local cosmeticKey: string? = Player:GetAttribute("EquippedRuneCosmetic") :: string?
-	print("[RuneCosmetic] refresh disparado. attr =", cosmeticKey, "| data.cosmeticKey atual =", data.cosmeticKey)
 	if data.cosmeticKey == cosmeticKey then
 		return
 	end
@@ -379,13 +377,7 @@ local function resolvePlayer(Character: Model): Player?
 		return Player
 	end
 
-	local startTime: number = os.clock()
-	repeat
-		task.wait()
-		Player = Players:GetPlayerFromCharacter(Character)
-	until Player or not Character.Parent or (os.clock() - startTime) > PLAYER_RESOLVE_TIMEOUT
-
-	return Player
+	return nil
 end
 
 local function setupCharacter(Character: Model)
@@ -418,10 +410,6 @@ local function setupCharacter(Character: Model)
 			if attr:match("^MovesetMode_") then
 				updateRune(Character, Player :: Player)
 			elseif attr == "EquippedRuneCosmetic" then
-				print(
-					"[RuneCosmetic] AttributeChanged EquippedRuneCosmetic ->",
-					Player:GetAttribute("EquippedRuneCosmetic")
-				)
 				refreshRuneCosmetic(Character, Player :: Player)
 			end
 		end)
@@ -433,6 +421,7 @@ local function setupCharacter(Character: Model)
 		end
 
 		destroyRune(Character)
+		print("Destroyed rune for character " .. Character.Name .. " due to character removal from workspace.")
 		for _, conn: RBXScriptConnection in connections do
 			conn:Disconnect()
 		end

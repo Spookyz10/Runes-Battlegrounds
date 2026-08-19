@@ -254,24 +254,6 @@ local function setupLiveCharacter(GoalCharacter: Model)
 	goalHumanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
 	goalHumanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming, false)
 	goalHumanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
-
-	local previousTransparencies: { [BasePart | Decal]: number } = {}
-	GoalCharacter:GetAttributeChangedSignal("Invisible"):Connect(function()
-		if GoalCharacter:GetAttribute("Invisible") == true then
-			for _, part in GoalCharacter:GetDescendants() do
-				if (part:IsA("BasePart") or part:IsA("Decal")) and part.Transparency < 1 then
-					if not previousTransparencies[part] then
-						previousTransparencies[part] = part.Transparency
-					end
-					part.Transparency = 1
-				end
-			end
-		else
-			for part, transparency in previousTransparencies do
-				part.Transparency = transparency
-			end
-		end
-	end)
 end
 
 workspace.Live.ChildAdded:Connect(setupLiveCharacter)
