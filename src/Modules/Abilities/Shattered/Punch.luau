@@ -28,6 +28,9 @@ local RAGDOLL_TIME = 3
 local LAUNCH_FORCE = 130
 local LAUNCH_UP_FORCE = 40
 
+local RING_FORWARD_OFFSET = 3
+local RING_TILT = CFrame.Angles(math.rad(90), 0, 0)
+
 local LANDING_IMPACT_CONFIG = {
 	RockCount = 14,
 	Radius = 10,
@@ -179,13 +182,16 @@ return {
 				local DebrisParams = table.clone(PUNCH_DEBRIS_CONFIG)
 				DebrisParams.char = Character
 
-				local FirstProps = { Size = Vector3.new(0.6, 1, 0.6), Transparency = 0 }
-				local FinalProps = { Size = Vector3.new(20, 1, 20), Transparency = 1 }
-				local TN_Info = { Time = 0.6, Style = "Quad", Direction = "Out" }
+				local FirstProps = { Size = Vector3.new(0.6, 4, 0.6), Transparency = 0 }
+				local FinalProps = { Size = Vector3.new(80, 10, 80), Transparency = 1 }
+				local TN_Info = { Time = 0.4, Style = "Quad", Direction = "Out" }
+
+				local RingPosition = (HumRP.CFrame * CFrame.new(0, 0, -RING_FORWARD_OFFSET)).Position
+				local RingCFrame = CFrame.new(RingPosition) * (HumRP.CFrame.Rotation * RING_TILT)
 
 				RemoteManager.FireAllClients("ReplicateTask", "Ring", {
 					FirstProps = FirstProps,
-					CF = HumRP.CFrame + Vector3.new(0, 0, -3),
+					CF = RingCFrame,
 					TN_Info = TN_Info,
 					FinalProps = FinalProps,
 				})
