@@ -57,7 +57,7 @@ local function applyAura(Character: Model, AuraName: string?)
 	local emitters = {}
 
 	for partName in R6_PARTS do
-		local part = Character:FindFirstChild(partName)
+		local part = Character:WaitForChild(partName, 10)
 		if part and part:IsA("BasePart") then
 			for _, template in Templates do
 				local clone = template:Clone()

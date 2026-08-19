@@ -4,7 +4,6 @@ local TS = game:GetService("TweenService")
 local Players = game:GetService("Players")
 
 local InfoModule = require(RS.Shared.Info)
-local Data = require(RS.Shared.Data).server
 local RemoteManager = require(RS.Shared.Modules.RemoteManager)
 local SFXModule = require(RS.Shared.Modules.SFXModule)
 
@@ -106,8 +105,7 @@ local function EndAwakening(
 
 	local moveset = Player:GetAttribute("Moveset")
 	if moveset == "Eclipse" then
-		local playerClass = Data[Player]
-		local mode = playerClass and playerClass.MovesetModes("Eclipse")
+		local mode = Player:GetAttribute("MovesetMode_Eclipse")
 		if mode == "Lunar" then
 			RemoteManager.FireAllClients("ReplicateTask", "LunarAwakenEnd", { char = Character })
 		elseif mode == "Solar" then
