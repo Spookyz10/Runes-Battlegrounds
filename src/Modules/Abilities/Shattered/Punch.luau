@@ -22,7 +22,7 @@ local MoveAnims = ServerStorage.Assets.Animations.Moves
 local HIT_SIZE = Vector3.new(8, 8, 8)
 local HIT_OFFSET = CFrame.new(0, 0, -4)
 
-local DAMAGE = 135
+local DAMAGE = 35
 local RAGDOLL_TIME = 3
 
 local LAUNCH_FORCE = 130
@@ -95,8 +95,28 @@ return {
 		table.insert(
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("hit"):Once(function()
+				local DebrisParams = table.clone(PUNCH_DEBRIS_CONFIG)
+				DebrisParams.char = Character
+
+				local FirstProps = { Size = Vector3.new(0.6, 4, 0.6), Transparency = 0 }
+				local FinalProps = { Size = Vector3.new(80, 10, 80), Transparency = 1 }
+				local TN_Info = { Time = 0.4, Style = "Quad", Direction = "Out" }
+
+				local RingPosition = (HumRP.CFrame * CFrame.new(0, 0, -RING_FORWARD_OFFSET)).Position
+				local RingCFrame = CFrame.new(RingPosition) * (HumRP.CFrame.Rotation * RING_TILT)
+
+				RemoteManager.FireAllClients("ReplicateTask", "Ring", {
+					FirstProps = FirstProps,
+					CF = RingCFrame,
+					TN_Info = TN_Info,
+					FinalProps = FinalProps,
+				})
+
+				RemoteManager.FireAllClients("ReplicateTask", "PunchWedgeDebris", DebrisParams)
+
+				RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", { Intensity = 4, Last = 0.3 })
+
 				local HitList = {}
-				local ConnectedAtLeastOnce = false
 
 				HitboxHandler:SimpleOnce(HumRP, HIT_SIZE, HIT_OFFSET, { Character }, nil, nil, function(EnemyCharacter)
 					if table.find(HitList, EnemyCharacter) then
@@ -139,66 +159,52 @@ return {
 						return
 					end
 
-					ConnectedAtLeastOnce = true
-
-					EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
-
-					local pushDir = HumRP.CFrame.LookVector
-					local pushFlat = Vector3.new(pushDir.X, 0, pushDir.Z)
-					pushFlat = pushFlat.Magnitude > 0 and pushFlat.Unit or Vector3.new(0, 0, -1)
-
-					SFXModule:Play("Smack", EnemyHumRP)
-
-					RagdollHandler.ragdoll(EnemyHumanoid, RAGDOLL_TIME, nil, nil, nil, nil, true)
-
-					task.defer(function()
+					task.spawn(function()
 						if not EnemyCharacter or not EnemyCharacter.Parent then
 							return
 						end
+						if not EnemyHumRP or not EnemyHumRP.Parent then
+							return
+						end
 
-						NewKnockback:Knockback(EnemyCharacter, {
-							KnockbackType = "Velocity",
-							MaxForce = Vector3.new(100000, 100000, 100000),
-							Velocity = pushFlat * LAUNCH_FORCE + Vector3.new(0, LAUNCH_UP_FORCE, 0),
+						EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
+
+						local pushDir = HumRP.CFrame.LookVector
+						local pushFlat = Vector3.new(pushDir.X, 0, pushDir.Z)
+						pushFlat = pushFlat.Magnitude > 0 and pushFlat.Unit or Vector3.new(0, 0, -1)
+
+						SFXModule:Play("Smack", EnemyHumRP)
+
+						RagdollHandler.ragdoll(EnemyHumanoid, RAGDOLL_TIME, nil, nil, nil, nil, true)
+
+						task.defer(function()
+							if not EnemyCharacter or not EnemyCharacter.Parent then
+								return
+							end
+
+							NewKnockback:Knockback(EnemyCharacter, {
+								KnockbackType = "Velocity",
+								MaxForce = Vector3.new(100000, 100000, 100000),
+								Velocity = pushFlat * LAUNCH_FORCE + Vector3.new(0, LAUNCH_UP_FORCE, 0),
+							})
+						end)
+
+						ImpactDebrisService:WatchLanding(EnemyCharacter, LANDING_IMPACT_CONFIG)
+
+						RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", {
+							Intensity = SELF_HIT_SHAKE_INTENSITY,
+							Last = SELF_HIT_SHAKE_TIME,
 						})
+
+						local EnemyPlayer = Players:GetPlayerFromCharacter(EnemyCharacter)
+						if EnemyPlayer then
+							RemoteManager.FireClient(EnemyPlayer, "ReplicateTask", "ShakeCamera", {
+								Intensity = ENEMY_HIT_SHAKE_INTENSITY,
+								Last = ENEMY_HIT_SHAKE_TIME,
+							})
+						end
 					end)
-
-					ImpactDebrisService:WatchLanding(EnemyCharacter, LANDING_IMPACT_CONFIG)
-
-					RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", {
-						Intensity = SELF_HIT_SHAKE_INTENSITY,
-						Last = SELF_HIT_SHAKE_TIME,
-					})
-
-					local EnemyPlayer = Players:GetPlayerFromCharacter(EnemyCharacter)
-					if EnemyPlayer then
-						RemoteManager.FireClient(EnemyPlayer, "ReplicateTask", "ShakeCamera", {
-							Intensity = ENEMY_HIT_SHAKE_INTENSITY,
-							Last = ENEMY_HIT_SHAKE_TIME,
-						})
-					end
 				end)
-
-				local DebrisParams = table.clone(PUNCH_DEBRIS_CONFIG)
-				DebrisParams.char = Character
-
-				local FirstProps = { Size = Vector3.new(0.6, 4, 0.6), Transparency = 0 }
-				local FinalProps = { Size = Vector3.new(80, 10, 80), Transparency = 1 }
-				local TN_Info = { Time = 0.4, Style = "Quad", Direction = "Out" }
-
-				local RingPosition = (HumRP.CFrame * CFrame.new(0, 0, -RING_FORWARD_OFFSET)).Position
-				local RingCFrame = CFrame.new(RingPosition) * (HumRP.CFrame.Rotation * RING_TILT)
-
-				RemoteManager.FireAllClients("ReplicateTask", "Ring", {
-					FirstProps = FirstProps,
-					CF = RingCFrame,
-					TN_Info = TN_Info,
-					FinalProps = FinalProps,
-				})
-
-				RemoteManager.FireAllClients("ReplicateTask", "PunchWedgeDebris", DebrisParams)
-
-				RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", { Intensity = 4, Last = 0.3 })
 			end)
 		)
 

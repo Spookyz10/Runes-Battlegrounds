@@ -1,6 +1,5 @@
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
@@ -18,19 +17,117 @@ local AnimationService = require(ServerModules.AnimationService)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 
+local COOLDOWN = 20
+
 local HAND_TRAVEL_TIME = 0.5
 local HAND_START_DIST = 3
 local HAND_END_DIST = 20
 local HITBOX_SIZE = Vector3.new(10, 10, 20)
-local PULL_DISTANCE = 3
-local PULL_TIME = 0.35
-local POST_PULL_STUN_EXTRA = 2
 
 local HAND_DAMAGE = 5
 local PULL_DAMAGE = 5
 
+local PULL_DISTANCE = 3
+local PULL_TIME = 0.35
+local PULL_STUN_TIME = 2
+
+local Marks = {}
+local PullAvailable = {}
+
+local function clearMark(EnemyCharacter, Silent)
+	local Entry = Marks[EnemyCharacter]
+	if not Entry then
+		return
+	end
+	Marks[EnemyCharacter] = nil
+
+	if Entry.ExpireThread then
+		pcall(task.cancel, Entry.ExpireThread)
+	end
+
+	if not Silent and EnemyCharacter and EnemyCharacter.Parent then
+		EnemyCharacter:SetAttribute("ShadowMark", nil)
+		RemoteManager.FireAllClients(
+			"ReplicateTask",
+			"AuraFX",
+			{ func = "End", char = EnemyCharacter, aura = "ShadowMark" }
+		)
+	end
+end
+
+local function setMark(EnemyCharacter, CasterCharacter, CasterPlayer)
+	clearMark(EnemyCharacter)
+
+	EnemyCharacter:SetAttribute("ShadowMark", true)
+	RemoteManager.FireAllClients(
+		"ReplicateTask",
+		"AuraFX",
+		{ func = "Start", char = EnemyCharacter, aura = "ShadowMark" }
+	)
+
+	local Entry = {
+		OwnerCharacter = CasterCharacter,
+		OwnerPlayer = CasterPlayer,
+	}
+
+	Entry.ExpireThread = task.delay(COOLDOWN, function()
+		if Marks[EnemyCharacter] == Entry then
+			clearMark(EnemyCharacter)
+		end
+	end)
+
+	Marks[EnemyCharacter] = Entry
+
+	EnemyCharacter.AncestryChanged:Once(function(_, Parent)
+		if not Parent and Marks[EnemyCharacter] == Entry then
+			clearMark(EnemyCharacter, true)
+		end
+	end)
+end
+
+local function releasePulled(EnemyCharacter, CasterCharacter, FreezeToken)
+	local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
+	local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
+
+	if FreezeToken then
+		StunHandler:Unstun(EnemyCharacter, FreezeToken)
+	end
+
+	if not EnemyCharacter.Parent or not EnemyHumanoid or not EnemyHumRP then
+		return
+	end
+
+	EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
+	EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
+
+	if EnemyHumanoid.Health > 0 then
+		DamageHandler:TakeDamage(
+			CasterCharacter,
+			EnemyHumanoid,
+			PULL_DAMAGE,
+			nil,
+			nil,
+			false,
+			false,
+			true,
+			true,
+			false,
+			nil,
+			nil
+		)
+	end
+
+	EnemyHumanoid.PlatformStand = false
+	EnemyHumanoid.AutoRotate = true
+	if EnemyHumanoid.Health > 0 then
+		EnemyHumanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+		StunHandler:Stun(EnemyCharacter, PULL_STUN_TIME, true, 0, 0, true)
+	end
+end
+
 return {
-	Cooldown = 20,
+	Cooldown = COOLDOWN,
+
 	Start = function(Player, Tool)
 		local Character = Player.Character
 		if not Character then
@@ -43,26 +140,29 @@ return {
 			return
 		end
 
+		PullAvailable[Character] = true
+		Character.Destroying:Once(function()
+			PullAvailable[Character] = nil
+		end)
+
 		Humanoid.WalkSpeed = 0
 
 		local casterStun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
 		local cancelled = false
-		local pullHappened = false
 		local onDamageCancel
 
-		local grabbed = {}
+		local hitList = {}
 		local hitbox = nil
 		local HitboxPart = nil
 		local travelConn = nil
 
-		local function tryCapture(enemyChar)
-			if grabbed[enemyChar] then
+		local function tryMark(enemyChar)
+			if table.find(hitList, enemyChar) then
 				return
 			end
 
 			local EnemyHum = enemyChar:FindFirstChild("Humanoid")
 			local EnemyHumRP = enemyChar:FindFirstChild("HumanoidRootPart")
-			local EnemyPlayer = Players:GetPlayerFromCharacter(enemyChar)
 
 			if not EnemyHum or not EnemyHumRP then
 				return
@@ -93,31 +193,11 @@ return {
 				return
 			end
 
+			table.insert(hitList, enemyChar)
+
 			SFXModule:Play("graspHit", EnemyHumRP)
 
-			if enemyChar:HasTag("Ragdolled") then
-				RagdollHandler.cancelRagdoll(EnemyHum, nil, false, nil, true, true, false)
-			end
-
-			EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
-			EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
-
-			EnemyHum:ChangeState(Enum.HumanoidStateType.PlatformStanding)
-
-			local freezeToken = StunHandler:Stun(enemyChar, nil, true, 0, 0, true)
-
-			enemyChar:SetAttribute("LunarMark", true)
-			RemoteManager.FireAllClients(
-				"ReplicateTask",
-				"AuraFX",
-				{ func = "Start", char = enemyChar, aura = "LunarMark" }
-			)
-
-			grabbed[enemyChar] = {
-				humanoid = EnemyHum,
-				freezeToken = freezeToken,
-				player = EnemyPlayer,
-			}
+			setMark(enemyChar, Character, Player)
 		end
 
 		local function stopHand()
@@ -133,44 +213,6 @@ return {
 				HitboxPart:Destroy()
 			end
 			HitboxPart = nil
-		end
-
-		local function releaseGrabbed(extraStunTime)
-			for enemyChar, data in grabbed do
-				local EnemyHumRP = enemyChar:FindFirstChild("HumanoidRootPart")
-				local Hum = data.humanoid
-
-				local function finalize()
-					if EnemyHumRP and EnemyHumRP.Parent and Hum then
-						EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
-						EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
-					end
-					if data.freezeToken then
-						StunHandler:Unstun(enemyChar, data.freezeToken)
-					end
-					if EnemyHumRP and EnemyHumRP.Parent and Hum then
-						Hum.PlatformStand = false
-						Hum.AutoRotate = true
-						Hum:ChangeState(Enum.HumanoidStateType.GettingUp)
-					end
-					if enemyChar:GetAttribute("LunarMark") then
-						enemyChar:SetAttribute("LunarMark", nil)
-						RemoteManager.FireAllClients(
-							"ReplicateTask",
-							"AuraFX",
-							{ func = "End", char = enemyChar, aura = "LunarMark" }
-						)
-					end
-				end
-
-				if extraStunTime and extraStunTime > 0 then
-					task.delay(extraStunTime, finalize)
-				else
-					finalize()
-				end
-			end
-
-			grabbed = {}
 		end
 
 		local cleanedUp = false
@@ -193,7 +235,6 @@ return {
 
 		if not UserTrack then
 			stopHand()
-			releaseGrabbed(0)
 			doFullCleanup()
 			return
 		end
@@ -215,8 +256,6 @@ return {
 			UserTrack:GetMarkerReachedSignal("summon"):Once(function()
 				SkillCancelHandler:Unregister(Character, onDamageCancel)
 				iFramesService:AddBaseiFrames(Character)
-
-				UserTrack:AdjustSpeed(0)
 
 				SFXModule:Play("graspTravel", HumRP)
 
@@ -251,7 +290,7 @@ return {
 				hitbox.Size = HITBOX_SIZE
 				hitbox.Ignore = { Character }
 				hitbox.ResetCharactersList = true
-				hitbox.onTouch = tryCapture
+				hitbox.onTouch = tryMark
 
 				local startTime = os.clock()
 				travelConn = RunService.Heartbeat:Connect(function()
@@ -265,80 +304,13 @@ return {
 
 					if t >= 1 then
 						stopHand()
-
-						if UserTrack.IsPlaying then
-							UserTrack:AdjustSpeed(1)
-						end
 					end
 				end)
 
 				hitbox:Start()
-			end)
-		)
 
-		table.insert(
-			UserEvents,
-			UserTrack:GetMarkerReachedSignal("pull"):Once(function()
-				pullHappened = true
-				stopHand()
-
-				local lv = HumRP.CFrame.LookVector
-				local lookFlat = Vector3.new(lv.X, 0, lv.Z).Unit
-				local targetPos = HumRP.Position + lookFlat * PULL_DISTANCE
-				local targetCFrame = CFrame.new(targetPos, HumRP.Position)
-
-				local pullList = {}
-				for enemyChar in grabbed do
-					table.insert(pullList, enemyChar)
-				end
-
-				for _, enemyChar in pullList do
-					local EnemyHumRP = enemyChar:FindFirstChild("HumanoidRootPart")
-					if EnemyHumRP and EnemyHumRP.Parent then
-						SFXModule:Play("graspPull", EnemyHumRP)
-						TweenService:Create(
-							EnemyHumRP,
-							TweenInfo.new(PULL_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-							{ CFrame = targetCFrame }
-						):Play()
-					end
-				end
-
-				task.wait(PULL_TIME)
-
-				for _, enemyChar in pullList do
-					local EnemyHumRP = enemyChar:FindFirstChild("HumanoidRootPart")
-					if EnemyHumRP and EnemyHumRP.Parent then
-						EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
-						EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
-
-						local EnemyHum = enemyChar:FindFirstChild("Humanoid")
-						if EnemyHum and EnemyHum.Health > 0 then
-							DamageHandler:TakeDamage(
-								Character,
-								EnemyHum,
-								PULL_DAMAGE,
-								nil,
-								nil,
-								false,
-								false,
-								true,
-								true,
-								false,
-								nil,
-								nil
-							)
-						end
-					end
-
-					if enemyChar:GetAttribute("LunarMark") then
-						enemyChar:SetAttribute("LunarMark", nil)
-						RemoteManager.FireAllClients(
-							"ReplicateTask",
-							"AuraFX",
-							{ func = "End", char = enemyChar, aura = "LunarMark" }
-						)
-					end
+				if UserTrack and UserTrack.IsPlaying then
+					UserTrack:Stop()
 				end
 			end)
 		)
@@ -348,12 +320,80 @@ return {
 				v:Disconnect()
 			end
 
-			stopHand()
-			releaseGrabbed(pullHappened and POST_PULL_STUN_EXTRA or 0)
 			doFullCleanup()
 		end)
 
 		AnimationService:stopAll(Character)
 		AnimationService:playAnimation(Character, UserAnimation)
+	end,
+
+	TryPull = function(Player, Tool)
+		local Character = Player.Character
+		if not Character then
+			return
+		end
+
+		local HumRP = Character:FindFirstChild("HumanoidRootPart")
+		local Humanoid = Character:FindFirstChild("Humanoid")
+		if not HumRP or not Humanoid or Humanoid.Health <= 0 then
+			return
+		end
+
+		if not PullAvailable[Character] then
+			return
+		end
+
+		local targets = {}
+		for EnemyCharacter, Entry in Marks do
+			if Entry.OwnerCharacter == Character and EnemyCharacter and EnemyCharacter.Parent then
+				table.insert(targets, EnemyCharacter)
+			end
+		end
+
+		if #targets == 0 then
+			return
+		end
+
+		PullAvailable[Character] = false
+
+		local lookFlat = HumRP.CFrame.LookVector
+		lookFlat = Vector3.new(lookFlat.X, 0, lookFlat.Z)
+		lookFlat = lookFlat.Magnitude > 0 and lookFlat.Unit or Vector3.new(0, 0, -1)
+
+		local targetPos = HumRP.Position + lookFlat * PULL_DISTANCE
+		local targetCFrame = CFrame.new(targetPos, HumRP.Position)
+
+		SFXModule:Play("graspPull", HumRP)
+
+		for _, EnemyCharacter in targets do
+			local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
+			local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
+
+			clearMark(EnemyCharacter)
+
+			if EnemyHumRP and EnemyHumanoid and EnemyHumanoid.Health > 0 then
+				if EnemyCharacter:HasTag("Ragdolled") then
+					RagdollHandler.cancelRagdoll(EnemyHumanoid, nil, false, nil, true, true, false)
+				end
+
+				EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
+				EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
+				EnemyHumanoid:ChangeState(Enum.HumanoidStateType.PlatformStanding)
+
+				local freezeToken = StunHandler:Stun(EnemyCharacter, nil, true, 0, 0, true)
+
+				SFXModule:Play("graspPull", EnemyHumRP)
+
+				TweenService:Create(
+					EnemyHumRP,
+					TweenInfo.new(PULL_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+					{ CFrame = targetCFrame }
+				):Play()
+
+				task.delay(PULL_TIME, function()
+					releasePulled(EnemyCharacter, Character, freezeToken)
+				end)
+			end
+		end
 	end,
 }
