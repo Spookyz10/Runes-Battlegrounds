@@ -29,12 +29,17 @@ function Remote:Activate(Player: Player, Ability: string)
 		return
 	end
 
-	if CooldownSystem:IsOnCooldown(Character, Ability) then
+	local AbilityModule = Abilities[Ability]
+	if not AbilityModule or not AbilityModule.Start then
 		return
 	end
 
-	local AbilityModule = Abilities[Ability]
-	if not AbilityModule or not AbilityModule.Start then
+	if CooldownSystem:IsOnCooldown(Character, Ability) then
+		if AbilityModule.TryPull then
+			task.spawn(function()
+				AbilityModule.TryPull(Player, Tool)
+			end)
+		end
 		return
 	end
 
