@@ -108,14 +108,10 @@ local function buildRuneCosmetic(data: RuneData, cosmeticKey: string?)
 	CosmeticModel.Name = "EquippedRuneCosmetic"
 
 	local MainPart: BasePart? = CosmeticModel.PrimaryPart
-	if not MainPart then
-		CosmeticModel:Destroy()
-		return
-	end
 
 	for _, part: Instance in CosmeticModel:GetDescendants() do
 		if part:IsA("BasePart") then
-			part.Anchored = false
+			part.Anchored = true
 			part.CanCollide = false
 			part.CanTouch = false
 			part.CanQuery = false
@@ -317,7 +313,7 @@ local function buildRune(Character: Model, key: string, Player: Player, spawnCFr
 		local bobY: number = math.sin((now - startTime) * BOB_SPEED) * BOB_HEIGHT
 		TargetAnchor.CFrame = getFlatCFrame(Torso, RUNE_OFFSET + Vector3.new(0, bobY, 0))
 
-		if currentData.cosmeticMainPart and currentData.cosmeticMainPart.Parent then
+		if currentData.cosmeticMainPart and currentData.cosmeticMainPart.Parent and currentData.cosmeticModel then
 			local cosmeticInfo = (currentData.cosmeticKey and CosmeticsInfo.RuneCosmetics[currentData.cosmeticKey])
 				or {}
 			local offset: Vector3 = cosmeticInfo.Offset or CosmeticsInfo.DefaultRuneCosmeticOffset
@@ -331,7 +327,7 @@ local function buildRune(Character: Model, key: string, Player: Player, spawnCFr
 				offsetCFrame = offsetCFrame * CFrame.Angles(0, currentData.cosmeticSpinAngle, 0)
 			end
 
-			currentData.cosmeticMainPart.CFrame = MainPart.CFrame * offsetCFrame
+			currentData.cosmeticModel:PivotTo(MainPart.CFrame * offsetCFrame)
 		end
 	end)
 

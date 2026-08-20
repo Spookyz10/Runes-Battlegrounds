@@ -19,7 +19,7 @@ local ImpactDebrisService = require(ServerModules.ImpactDebrisService)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 
-local HIT_SIZE = Vector3.new(8, 8, 8)
+local HIT_SIZE = Vector3.new(8, 5, 8)
 local HIT_OFFSET = CFrame.new(0, 0, -4)
 
 local DAMAGE = 35
@@ -129,9 +129,6 @@ return {
 						return
 					end
 					if EnemyHumanoid.Health <= 0 or EnemyHumanoid:GetState() == Enum.HumanoidStateType.Dead then
-						return
-					end
-					if EnemyCharacter:HasTag("Ragdolled") then
 						return
 					end
 					if iFramesService:HasiFrame(EnemyCharacter, 1) then

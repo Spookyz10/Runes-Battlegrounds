@@ -22,14 +22,11 @@ local function GrantPass(Player, GamepassId)
 		return
 	end
 
-	if playerData.OwnedPasses()[GamepassId] then
+	if table.find(playerData.OwnedPasses(), GamepassId) then
 		return
 	end
 
-	playerData.OwnedPasses(function(passes)
-		passes[GamepassId] = true
-		return passes
-	end)
+	playerData.OwnedPasses.Insert(GamepassId)
 end
 
 function module:CheckKills(Player, TotalKills)

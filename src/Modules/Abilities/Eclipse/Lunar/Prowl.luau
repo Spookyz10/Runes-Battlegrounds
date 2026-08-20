@@ -19,10 +19,10 @@ local MoveAnims = ServerStorage.Assets.Animations.Moves
 local HIT_DAMAGE = { 3, 3 }
 local PUNCH_DAMAGE = 5
 
-local HIT_SIZE = Vector3.new(8, 8, 9)
+local HIT_SIZE = Vector3.new(8, 5, 9)
 local HIT_OFFSET = CFrame.new(0, 0, -4.5)
 
-local PUNCH_SIZE = Vector3.new(9, 9, 9)
+local PUNCH_SIZE = Vector3.new(9, 6, 9)
 local PUNCH_OFFSET = CFrame.new(0, 0, -4)
 
 local BLOCK_SLOW_SPEED = 0.5
@@ -103,9 +103,6 @@ return {
 								return
 							end
 							if EnemyHumanoid.Health <= 0 or EnemyHumanoid:GetState() == Enum.HumanoidStateType.Dead then
-								return
-							end
-							if EnemyCharacter:HasTag("Ragdolled") then
 								return
 							end
 
@@ -201,9 +198,6 @@ return {
 						local EnemyPlayer = Players:GetPlayerFromCharacter(EnemyCharacter)
 
 						if EnemyHumanoid.Health <= 0 or EnemyHumanoid:GetState() == Enum.HumanoidStateType.Dead then
-							return
-						end
-						if EnemyCharacter:HasTag("Ragdolled") then
 							return
 						end
 						if iFramesService:HasiFrame(EnemyCharacter, 1) then
