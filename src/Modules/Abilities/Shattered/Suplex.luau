@@ -131,6 +131,9 @@ return {
 					if iFramesService:HasiFrame(EnemyCharacter, 1) then
 						return
 					end
+					if EnemyCharacter:HasTag("Ragdolled") then
+						return
+					end
 					if table.find(Candidates, EnemyCharacter) then
 						return
 					end

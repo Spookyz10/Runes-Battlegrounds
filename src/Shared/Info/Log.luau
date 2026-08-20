@@ -1,5 +1,5 @@
 return {
-	Version = "v0.0.4",
+	Version = "v0.0.45",
 
 	UpdateLog = {
 		"Added new topbar icons",
@@ -16,10 +16,11 @@ return {
 		"New map lighting",
 		"Changed solar rune model",
 		"Made it so if you hold m1 it m1s as soon as possible (fixes holding m1 after grasp and prowl)",
+		"New Shatter Move",
 	},
 
 	Roadmap = {
-		"2 Shattered moves",
+		"1 Shattered move",
 		"Ranked and rank titles",
 		"New solar awaken move",
 		"New lunar awaken move",

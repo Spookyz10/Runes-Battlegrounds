@@ -266,7 +266,13 @@ end)
 pcall(function()
 	PhysicsService:RegisterCollisionGroup("Players")
 end)
+pcall(function()
+	PhysicsService:RegisterCollisionGroup("NoCol")
+end)
 PhysicsService:CollisionGroupSetCollidable("NonPColDebri", "Players", false)
+PhysicsService:CollisionGroupSetCollidable("NoCol", "Players", false)
+PhysicsService:CollisionGroupSetCollidable("NoCol", "NoCol", false)
+PhysicsService:CollisionGroupSetCollidable("NoCol", "NonPColDebri", false)
 
 for _, v: Player in Players:GetPlayers() do
 	if not v:GetAttribute("Added") then

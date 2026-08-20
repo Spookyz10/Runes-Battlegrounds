@@ -31,11 +31,16 @@ local RING_FORWARD_OFFSET = 3
 local RING_TILT = CFrame.Angles(math.rad(90), 0, 0)
 
 local LANDING_IMPACT_CONFIG = {
-	Debris = {
-		RockCount = 14,
-		Radius = 10,
-		RockSize = Vector3.new(2.5, 2.5, 2.5),
-		TileMode = "Square",
+	Damage = 6,
+	Size = Vector3.new(12, 12, 12),
+	Offset = CFrame.new(0, 0, 0),
+	GroundCrater = {
+		{
+			["end"] = Vector3.new(0, -25, 0),
+			amount = 6,
+			nosound = true,
+			size = 0.3,
+		},
 	},
 }
 

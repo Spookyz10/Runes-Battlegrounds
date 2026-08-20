@@ -84,8 +84,10 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 		DashResumed = true
 		destroyDashHitbox()
 
-		-- avisa o client (que e quem realmente esta segurando a velocidade)
-		-- que o dash acabou/foi interrompido, pra ele parar de aplicar forca
+		if AnimTrack and AnimTrack.Speed == 0 then
+			AnimTrack:AdjustSpeed(1)
+		end
+
 		RemoteManager.FireClient(Player, "ReplicateTask", "DashResume", { Hit = Hit })
 	end
 
@@ -151,9 +153,6 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 				return
 			end
 
-			-- avisa o client que ele pode comecar a aplicar a velocidade
-			-- do dash agora (mesmo instante em que a hitbox de "empurrao"
-			-- comeca a existir no server)
 			RemoteManager.FireClient(Player, "ReplicateTask", "DashBegin", { Direction = Config.Id })
 
 			DashHitbox = ReplicatedHitboxes.new(Player)
@@ -235,7 +234,9 @@ local function runAttackDash(Player: Player, Character: Model, HumRP: BasePart, 
 
 	task.delay(1.25, function()
 		if Character and Character.Parent then
-			AnimTrack:AdjustSpeed(1)
+			if AnimTrack and AnimTrack.Speed == 0 then
+				AnimTrack:AdjustSpeed(1)
+			end
 			StunHandler:Unstun(Character, Stun)
 		end
 	end)

@@ -3,6 +3,9 @@ local Helpers = require(script.Parent.Helpers)
 
 local TS = Constants.TS
 
+local GROUND_EMBED_BUFFER = 1.5
+local MAX_SLAB_SPAN_DEG = 40
+
 local function isHitboxPart(part)
 	return part.Name:find("Hitbox") ~= nil
 end
@@ -26,31 +29,7 @@ local function debrisSpawner(config)
 
 	local lessDivisor = addConfig.less and 2.5 or 1
 
-	local largeCountMin = config.largeDebrisCountMin or 3
-	local largeCountMax = config.largeDebrisCountMax or 5
-	local largeSizeMin = config.largeDebrisSizeMin or 1
-	local largeSizeMax = config.largeDebrisSizeMax or 3
-	local largeSpeedMin = config.largeDebrisSpeedMin or -25
-	local largeSpeedMax = config.largeDebrisSpeedMax or 25
-	local largeUpMin = config.largeDebrisUpMin or 5
-	local largeUpMax = config.largeDebrisUpMax or 25
-	local largeSpeedMult = config.largeDebrisSpeedMult or 2
-	local largeLifetime = config.largeDebrisLifetime or 3
-	local largeLifetimeRandom = config.largeDebrisLifetimeRandom or 1
-
-	local smallCountMin = config.smallDebrisCountMin or 4
-	local smallCountMax = config.smallDebrisCountMax or 7
-	local smallSizeMin = config.smallDebrisSizeMin or 0.6
-	local smallSizeMax = config.smallDebrisSizeMax or 0.8
-	local smallSpeedMin = config.smallDebrisSpeedMin or -25
-	local smallSpeedMax = config.smallDebrisSpeedMax or 25
-	local smallUpMin = config.smallDebrisUpMin or 5
-	local smallUpMax = config.smallDebrisUpMax or 25
-	local smallSpeedMult = config.smallDebrisSpeedMult or 2
-	local smallLifetime = config.smallDebrisLifetime or 3
-	local smallLifetimeRandom = config.smallDebrisLifetimeRandom or 1
-
-	local largeDebrisCount = rng:NextNumber(largeCountMin, largeCountMax)
+	local largeDebrisCount = rng:NextNumber(3, 5)
 	if config.nodebris then
 		largeDebrisCount = 0
 	end
@@ -60,7 +39,7 @@ local function debrisSpawner(config)
 			break
 		end
 
-		local chunkSize = rng:NextNumber(largeSizeMin, largeSizeMax)
+		local chunkSize = rng:NextNumber(1, 3)
 		local chunk = Instance.new("Part")
 		chunk.CollisionGroup = "NonPColDebri"
 
@@ -82,15 +61,11 @@ local function debrisSpawner(config)
 
 		local bv = Instance.new("BodyVelocity")
 		bv.MaxForce = Vector3.new(2e9, 2e9, 2e9)
-		bv.Velocity = Vector3.new(
-			rng:NextNumber(largeSpeedMin, largeSpeedMax),
-			rng:NextNumber(largeUpMin, largeUpMax),
-			randomRange(largeSpeedMin, largeSpeedMax)
-		) * largeSpeedMult
+		bv.Velocity = Vector3.new(rng:NextNumber(-25, 25), rng:NextNumber(5, 25), randomRange(-25, 25)) * 2
 		bv.Parent = chunk
 		game:GetService("Debris"):AddItem(bv, 0.15)
 
-		task.delay(largeLifetime + rng:NextNumber(0, largeLifetimeRandom), function()
+		task.delay(3 + rng:NextNumber(0, 1), function()
 			if not chunk or not chunk.Parent then
 				return
 			end
@@ -107,13 +82,13 @@ local function debrisSpawner(config)
 		end)
 	end
 
-	local smallDebrisCount = rng:NextNumber(smallCountMin, smallCountMax) / lessDivisor
+	local smallDebrisCount = rng:NextNumber(4, 7) / lessDivisor
 	if config.nodebris then
 		smallDebrisCount = 0
 	end
 
 	for _ = 1, smallDebrisCount do
-		local smallSize = rng:NextNumber(smallSizeMin, smallSizeMax)
+		local smallSize = rng:NextNumber(0.6, 0.8)
 		local piece = Instance.new("Part")
 		piece.CFrame = config.cframe
 
@@ -134,11 +109,7 @@ local function debrisSpawner(config)
 
 		local bv = Instance.new("BodyVelocity")
 		bv.MaxForce = Vector3.new(2e9, 2e9, 2e9)
-		bv.Velocity = Vector3.new(
-			rng:NextNumber(smallSpeedMin, smallSpeedMax),
-			rng:NextNumber(smallUpMin, smallUpMax),
-			randomRange(smallSpeedMin, smallSpeedMax)
-		) * smallSpeedMult
+		bv.Velocity = Vector3.new(rng:NextNumber(-25, 25), rng:NextNumber(5, 25), randomRange(-25, 25)) * 2
 		bv.Parent = piece
 		game:GetService("Debris"):AddItem(bv, 0.15)
 
@@ -146,7 +117,7 @@ local function debrisSpawner(config)
 		bav.Parent = piece
 		game:GetService("Debris"):AddItem(bav, 0.5)
 
-		task.delay(smallLifetime + rng:NextNumber(0, smallLifetimeRandom), function()
+		task.delay(3 + rng:NextNumber(0, 1), function()
 			if not piece or not piece.Parent then
 				return
 			end
@@ -187,7 +158,7 @@ local function debrisSpawner(config)
 
 	local debrisSizeMin = config.debrisSizeMin or 2
 	local debrisSizeMax = config.debrisSizeMax or 5
-	local debrisHeightMin = config.debrisHeightMin or 1.9
+	local debrisHeightMin = config.debrisHeightMin or 2.6
 	local debrisHeightMax = config.debrisHeightMax or 3.2
 	local maxDebrisHeight = config.maxDebrisHeight or math.huge
 
@@ -213,12 +184,16 @@ local function debrisSpawner(config)
 
 		local slotIndex = 1
 		while slotIndex <= pieceCount do
+			local anglePerSlot = (math.pi * 2) / pieceCount
+
 			local mergeCount = 1
 			if not squareTiles and rng:NextNumber() < 0.35 and slotIndex + 1 <= pieceCount then
-				mergeCount = rng:NextInteger(2, math.min(3, pieceCount - slotIndex + 1))
+				-- nunca deixa o span de uma peça passar de MAX_SLAB_SPAN_DEG, senão
+				-- ela deixa de parecer uma fatia de anel e vira um bloco/caixa
+				local maxMergeBySpan = math.max(1, math.floor(math.rad(MAX_SLAB_SPAN_DEG) / anglePerSlot))
+				mergeCount = rng:NextInteger(2, math.min(3, maxMergeBySpan, pieceCount - slotIndex + 1))
 			end
 
-			local anglePerSlot = (math.pi * 2) / pieceCount
 			local startAngle = ((slotIndex - 1) / pieceCount) * (math.pi * 2)
 			local spanAngle = anglePerSlot * mergeCount
 			local angle = startAngle + spanAngle / 2 + rng:NextNumber(-0.05, 0.05)
@@ -254,16 +229,13 @@ local function debrisSpawner(config)
 
 			slab.CFrame = pieceCFrame
 
+			-- Rotação: sempre entre 30-70 graus pra fora do centro do impacto.
+			-- Nunca reto (mínimo 30), nunca vertical/caixote (máximo 70), e o
+			-- ruído de pitch é pequeno o bastante pra nunca cancelar o outward
+			-- e apontar pra dentro ou pra cima.
 			local randomYaw = math.rad(rng:NextNumber(-12, 12))
-			local outwardPitch = 0
-			if outwardTilt then
-				local minTilt, maxTilt = 8, 34
-				if rng:NextNumber() < 0.3 then
-					minTilt, maxTilt = 42, 68
-				end
-				outwardPitch = math.rad(rng:NextNumber(minTilt, maxTilt) * (0.6 + 0.4 * ringRadiusScale))
-			end
-			local randomPitch = math.rad(rng:NextNumber(-10, 10))
+			local outwardPitch = math.rad(rng:NextNumber(30, 70))
+			local randomPitch = math.rad(rng:NextNumber(-4, 4))
 			local rollRange = mergeCount > 1 and 8 or 20
 			local randomRoll = math.rad(rng:NextNumber(-rollRange, rollRange))
 
@@ -357,6 +329,10 @@ local function debrisSpawner(config)
 					* CFrame.Angles(math.rad(-rng:NextNumber(config.tiltMin, config.tiltMax)), 0, 0)
 			end
 
+			-- Embed no chão: sempre afunda um pouco ALÉM do necessário (buffer),
+			-- pra nunca sobrar aquele vão entre a base da laje e o chão real,
+			-- mesmo quando a inclinação (agora sempre 30-70°) empurra o canto
+			-- baixo bem acima do nível do solo.
 			local groundLevel = config.cframe.p.Y
 			local halfSize = slab.Size / 2
 			local corners = {
@@ -372,7 +348,7 @@ local function debrisSpawner(config)
 				lowestY = math.min(lowestY, worldCorner.Y)
 			end
 
-			local missingDepth = (lowestY - groundLevel)
+			local missingDepth = (lowestY - groundLevel) + GROUND_EMBED_BUFFER
 			if missingDepth > 0 then
 				local stretchedSize = slab.Size + Vector3.new(0, missingDepth, 0)
 				slab.Size = stretchedSize
@@ -381,12 +357,16 @@ local function debrisSpawner(config)
 
 			slab:SetAttribute("OGCframe", restCFrame)
 
+			-- Emerge: a peça nasce enterrada BEM mais fundo (usa a própria altura
+			-- final + folga) e sobe até o restCFrame já com a rotação final desde
+			-- o início — assim ela "nasce de dentro do chão" ao invés de aparecer
+			-- flutuando e só depois se inclinar/afundar.
 			local buriedDepth = slab.Size.Y + slab.Size.Z * 0.5 + 2
 			local buriedCFrame = CFrame.new(restCFrame.Position + Vector3.new(0, -buriedDepth, 0)) * restCFrame.Rotation
 			slab.CFrame = buriedCFrame
 
 			local emergeDelay = rng:NextNumber(0, 0.12) + (ringIndex - 1) * 0.07
-			local emergeTime = rng:NextNumber(0.28, 0.45)
+			local emergeTime = rng:NextNumber(0.32, 0.5)
 
 			task.delay(emergeDelay, function()
 				if not slab or not slab.Parent then
