@@ -7,6 +7,7 @@ local TweenService = game:GetService("TweenService")
 local ServerModules = ServerStorage.Modules
 
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
+local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 
 local StunHandler = require(ServerModules.StunHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
@@ -226,9 +227,8 @@ local function startField(data, position)
 	RemoteManager.FireAllClients("ReplicateTask", "Gravity", { func = "start", char = data.Character, pos = position })
 
 	local function scan(center)
-		for _, plr in Players:GetPlayers() do
-			local otherChar = plr.Character
-			if not otherChar or otherChar == data.Character then
+		for _, otherChar in workspace.Live:GetChildren() do
+			if not otherChar:IsA("Model") or otherChar == data.Character then
 				continue
 			end
 			local otherHumRP = otherChar:FindFirstChild("HumanoidRootPart")
@@ -469,10 +469,11 @@ return {
 		table.insert(
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("start"):Once(function()
-				print("lol")
 				if data.Cancelled or not Character.Parent or Humanoid.Health <= 0 then
 					return
 				end
+
+				SFXModule:Play("Moonfall1", HumRP.Position)
 
 				local lv = HumRP.CFrame.LookVector
 				local lookFlat = Vector3.new(lv.X, 0, lv.Z)
@@ -487,7 +488,6 @@ return {
 		table.insert(
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("throw"):Once(function()
-				print("lol")
 				if data.Cancelled or not Character.Parent then
 					return
 				end
@@ -592,7 +592,6 @@ return {
 		table.insert(
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("slam"):Once(function()
-				print("lol")
 				if not data.Locked or data.Slammed then
 					return
 				end

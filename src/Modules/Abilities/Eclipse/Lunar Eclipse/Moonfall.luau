@@ -316,9 +316,8 @@ local function startGravityField(data, position)
 	RemoteManager.FireAllClients("ReplicateTask", "Gravity", { func = "start", char = data.Character, pos = position })
 
 	local function scanForVictims(center)
-		for _, plr in Players:GetPlayers() do
-			local otherChar = plr.Character
-			if not otherChar or otherChar == data.Character then
+		for _, otherChar in workspace.Live:GetChildren() do
+			if not otherChar:IsA("Model") or otherChar == data.Character then
 				continue
 			end
 			local otherHumRP = otherChar:FindFirstChild("HumanoidRootPart")
