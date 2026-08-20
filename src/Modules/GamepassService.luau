@@ -11,6 +11,11 @@ local GamepassService = {}
 
 local COMPLIMENTARY_EARLY_ACCESS_USERS = {
 	[2843265067] = true,
+	[856738442] = true,
+}
+
+local COMPLIMENTARY_VIP_USERS = {
+	[856738442] = true,
 }
 
 local TRACKED_GAMEPASSES = {
@@ -38,6 +43,10 @@ function GamepassService:SyncPlayer(Player)
 
 	if COMPLIMENTARY_EARLY_ACCESS_USERS[Player.UserId] then
 		addOwnedPass(playerData, EarlyAccess.GamepassId)
+	end
+
+	if COMPLIMENTARY_VIP_USERS[Player.UserId] then
+		addOwnedPass(playerData, VIPPass.GamepassId)
 	end
 
 	for _, GamepassId in TRACKED_GAMEPASSES do

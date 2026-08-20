@@ -72,6 +72,30 @@ MapRayParams.FilterDescendantsInstances = {
 	workspace.Map:WaitForChild("Miscellaneous"),
 }
 
+local DEFAULT_HARD_RAGDOLL_DAMAGE = 12
+local DEFAULT_HARD_RAGDOLL_SIZE = Vector3.new(20, 20, 20)
+local DEFAULT_HARD_RAGDOLL_OFFSET = CFrame.new(0, 0, 0)
+
+local DEFAULT_GROUND_CRATERS = {
+	{
+		["end"] = Vector3.new(0, -24, 0),
+		amount = 6,
+		size = 0.3,
+	},
+	{
+		["end"] = Vector3.new(0, -14, 0),
+		amount = 6,
+		sizemult = 1.35,
+		size = 2,
+	},
+	{
+		["end"] = Vector3.new(0, -14, 0),
+		amount = 9,
+		sizemult = 1.75,
+		size = 3,
+	},
+}
+
 local function setOwnershipAll(Character, Owner)
 	for _, v in Character:GetDescendants() do
 		if v:IsA("BasePart") then
@@ -81,6 +105,17 @@ local function setOwnershipAll(Character, Owner)
 				end
 			end)
 		end
+	end
+end
+
+local function fireGroundCraters(HumRP, CraterConfigs)
+	local Configs = CraterConfigs or DEFAULT_GROUND_CRATERS
+
+	for _, CraterConfig in Configs do
+		local Params = table.clone(CraterConfig)
+		Params.Seed = Params.Seed or math.random(1, 2000000000)
+		Params.start = Params.start or (HumRP.Position + Vector3.new(0, 0.10000000149011612, 0))
+		RemoteManager.FireAllClients("ReplicateTask", "Ground Crater", Params)
 	end
 end
 
@@ -269,7 +304,7 @@ function Ragdoll.cancelRagdoll(Humanoid, _, DoKnockback, MainPart, isCancel, ful
 	end
 end
 
-function Ragdoll.ragdoll(Humanoid, Duration, HardRagdoll, Ragdoller, _, _, checkAir)
+function Ragdoll.ragdoll(Humanoid, Duration, HardRagdoll, Ragdoller, HardRagdollConfig, _, checkAir)
 	if not Humanoid.Parent or not Humanoid.Parent:FindFirstChild("HumanoidRootPart") or Humanoid.BreakJointsOnDeath then
 		return
 	end
@@ -361,6 +396,12 @@ function Ragdoll.ragdoll(Humanoid, Duration, HardRagdoll, Ragdoller, _, _, check
 	end
 
 	if HardRagdoll == true then
+		local Config = HardRagdollConfig or {}
+		local ImpactDamage = Config.Damage or DEFAULT_HARD_RAGDOLL_DAMAGE
+		local ImpactSize = Config.Size or DEFAULT_HARD_RAGDOLL_SIZE
+		local ImpactOffset = Config.Offset or DEFAULT_HARD_RAGDOLL_OFFSET
+		local GroundCraterConfigs = Config.GroundCrater
+
 		local LoopTask = nil
 		LoopTask = task.spawn(function()
 			local PastTime = 0
@@ -382,43 +423,19 @@ function Ragdoll.ragdoll(Humanoid, Duration, HardRagdoll, Ragdoller, _, _, check
 						MapRayParams
 					)
 					if HitRay then
-						RemoteManager.FireAllClients("ReplicateTask", "Ground Crater", {
-							Seed = math.random(1, 2000000000),
-							start = HumRP.Position + Vector3.new(0, 0.10000000149011612, 0),
-							["end"] = Vector3.new(0, -24, 0),
-							amount = 6,
-							size = 0.3,
-						})
-						RemoteManager.FireAllClients("ReplicateTask", "Ground Crater", {
-							Seed = math.random(1, 2000000000),
-							start = HumRP.Position + Vector3.new(0, 0.10000000149011612, 0),
-							["end"] = Vector3.new(0, -14, 0),
-							amount = 6,
-							sizemult = 1.35,
-							size = 2,
-						})
-						RemoteManager.FireAllClients("ReplicateTask", "Ground Crater", {
-							Seed = math.random(1, 2000000000),
-							start = HumRP.Position + Vector3.new(0, 0.10000000149011612, 0),
-							["end"] = Vector3.new(0, -14, 0),
-							amount = 9,
-							sizemult = 1.75,
-							size = 3,
-						})
+						fireGroundCraters(HumRP, GroundCraterConfigs)
 
-						local Size = Vector3.new(20, 20, 20)
-						local Offset = CFrame.new(0, 0, 0)
 						local VoxelParameters = {
 							Velocity = HumRP.CFrame.UpVector,
 							Multiplier = { 15, 50 },
-							Size = Size,
-							CFrame = HumRP.CFrame * Offset,
+							Size = ImpactSize,
+							CFrame = HumRP.CFrame * ImpactOffset,
 						}
 
 						HitboxHandler:SimpleOnce(
 							HumRP,
-							Size,
-							Offset,
+							ImpactSize,
+							ImpactOffset,
 							{ Character, Ragdoller },
 							nil,
 							nil,
@@ -428,7 +445,7 @@ function Ragdoll.ragdoll(Humanoid, Duration, HardRagdoll, Ragdoller, _, _, check
 								DamageHandler:TakeDamage(
 									Character,
 									EnemyHumanoid,
-									12,
+									ImpactDamage,
 									nil,
 									nil,
 									false,
