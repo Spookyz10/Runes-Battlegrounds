@@ -17,6 +17,7 @@ return {
 		"Changed solar rune model",
 		"Made it so if you hold m1 it m1s as soon as possible (fixes holding m1 after grasp and prowl)",
 		"New Shatter Move",
+		"Dummy now auto updates appareance.",
 	},
 
 	Roadmap = {

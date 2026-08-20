@@ -3,7 +3,8 @@ local Helpers = require(script.Parent.Helpers)
 
 local TS = Constants.TS
 
-local GROUND_EMBED_BUFFER = 1.5
+local GROUND_EMBED_BUFFER = 3
+local MAX_EMBED_STRETCH = 15
 local MAX_SLAB_SPAN_DEG = 40
 
 local function isHitboxPart(part)
@@ -172,6 +173,9 @@ local function debrisSpawner(config)
 
 	local keepTilt = config.tiltMin ~= nil and config.tiltMax ~= nil
 
+	local surfaceNormal = config.normal
+	local surfaceLevel = config.cframe.p:Dot(surfaceNormal)
+
 	for ringIndex = 1, ringCount do
 		local ringRadius = baseRingRadius + ringSpacing * ringIndex
 		local ringRadiusScale = ringRadius / baseRingRadius
@@ -188,8 +192,6 @@ local function debrisSpawner(config)
 
 			local mergeCount = 1
 			if not squareTiles and rng:NextNumber() < 0.35 and slotIndex + 1 <= pieceCount then
-				-- nunca deixa o span de uma peça passar de MAX_SLAB_SPAN_DEG, senão
-				-- ela deixa de parecer uma fatia de anel e vira um bloco/caixa
 				local maxMergeBySpan = math.max(1, math.floor(math.rad(MAX_SLAB_SPAN_DEG) / anglePerSlot))
 				mergeCount = rng:NextInteger(2, math.min(3, maxMergeBySpan, pieceCount - slotIndex + 1))
 			end
@@ -229,10 +231,6 @@ local function debrisSpawner(config)
 
 			slab.CFrame = pieceCFrame
 
-			-- Rotação: sempre entre 30-70 graus pra fora do centro do impacto.
-			-- Nunca reto (mínimo 30), nunca vertical/caixote (máximo 70), e o
-			-- ruído de pitch é pequeno o bastante pra nunca cancelar o outward
-			-- e apontar pra dentro ou pra cima.
 			local randomYaw = math.rad(rng:NextNumber(-12, 12))
 			local outwardPitch = math.rad(rng:NextNumber(30, 70))
 			local randomPitch = math.rad(rng:NextNumber(-4, 4))
@@ -329,11 +327,6 @@ local function debrisSpawner(config)
 					* CFrame.Angles(math.rad(-rng:NextNumber(config.tiltMin, config.tiltMax)), 0, 0)
 			end
 
-			-- Embed no chão: sempre afunda um pouco ALÉM do necessário (buffer),
-			-- pra nunca sobrar aquele vão entre a base da laje e o chão real,
-			-- mesmo quando a inclinação (agora sempre 30-70°) empurra o canto
-			-- baixo bem acima do nível do solo.
-			local groundLevel = config.cframe.p.Y
 			local halfSize = slab.Size / 2
 			local corners = {
 				Vector3.new(-halfSize.X, -halfSize.Y, -halfSize.Z),
@@ -342,13 +335,14 @@ local function debrisSpawner(config)
 				Vector3.new(halfSize.X, -halfSize.Y, halfSize.Z),
 			}
 
-			local lowestY = math.huge
+			local lowestAlongNormal = math.huge
 			for _, corner in corners do
 				local worldCorner = (restCFrame * CFrame.new(corner)).Position
-				lowestY = math.min(lowestY, worldCorner.Y)
+				lowestAlongNormal = math.min(lowestAlongNormal, worldCorner:Dot(surfaceNormal))
 			end
 
-			local missingDepth = (lowestY - groundLevel) + GROUND_EMBED_BUFFER
+			local missingDepth = (lowestAlongNormal - surfaceLevel) + GROUND_EMBED_BUFFER
+			missingDepth = math.min(missingDepth, MAX_EMBED_STRETCH)
 			if missingDepth > 0 then
 				local stretchedSize = slab.Size + Vector3.new(0, missingDepth, 0)
 				slab.Size = stretchedSize
@@ -357,10 +351,6 @@ local function debrisSpawner(config)
 
 			slab:SetAttribute("OGCframe", restCFrame)
 
-			-- Emerge: a peça nasce enterrada BEM mais fundo (usa a própria altura
-			-- final + folga) e sobe até o restCFrame já com a rotação final desde
-			-- o início — assim ela "nasce de dentro do chão" ao invés de aparecer
-			-- flutuando e só depois se inclinar/afundar.
 			local buriedDepth = slab.Size.Y + slab.Size.Z * 0.5 + 2
 			local buriedCFrame = CFrame.new(restCFrame.Position + Vector3.new(0, -buriedDepth, 0)) * restCFrame.Rotation
 			slab.CFrame = buriedCFrame

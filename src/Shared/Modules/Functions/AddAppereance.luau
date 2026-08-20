@@ -4,6 +4,22 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Function = {}
 
+function Function.AddToDummy(Character)
+	if not Character or not Character.Parent then
+		return
+	end
+
+	local Humanoid = Character:FindFirstChild("Humanoid") or Character:WaitForChild("Humanoid", 5)
+	if not Humanoid then
+		return
+	end
+
+	local HumanoidDescription = Players:GetHumanoidDescriptionFromUserIdAsync(27393413)
+	if HumanoidDescription then
+		Humanoid:ApplyDescription(HumanoidDescription)
+	end
+end
+
 function Function.Add(Player, Character, HumanoidDescription)
 	if not Player or not Character or not Character.Parent then
 		return

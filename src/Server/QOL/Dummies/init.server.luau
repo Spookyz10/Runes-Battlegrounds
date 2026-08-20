@@ -4,6 +4,7 @@ local SvSt = game:GetService("ServerStorage")
 local W = game:GetService("Workspace")
 local RNS = game:GetService("RunService")
 local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 --Bindables
@@ -14,6 +15,7 @@ local SpnDmy = Bindables.SpawnDummy
 --Server Modules
 local SvModules = SvSt.Modules
 
+local AddAppereance = require(ReplicatedStorage.Shared.Modules.Functions.AddAppereance)
 local AnimationService = require(SvModules.AnimationService)
 
 --Variables
@@ -111,6 +113,8 @@ function spawnDummy(CF, InitialHp, ScriptName)
 	Dummy.Name = dummyName
 	Dummy.Parent = LiveFolder
 	CollectionService:AddTag(Dummy, "Character")
+
+	AddAppereance.AddToDummy(Dummy)
 
 	Dummy.PrimaryPart:SetNetworkOwner(nil)
 
