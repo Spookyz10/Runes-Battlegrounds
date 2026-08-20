@@ -26,7 +26,31 @@ local function debrisSpawner(config)
 
 	local lessDivisor = addConfig.less and 2.5 or 1
 
-	local largeDebrisCount = rng:NextNumber(3, 5)
+	local largeCountMin = config.largeDebrisCountMin or 3
+	local largeCountMax = config.largeDebrisCountMax or 5
+	local largeSizeMin = config.largeDebrisSizeMin or 1
+	local largeSizeMax = config.largeDebrisSizeMax or 3
+	local largeSpeedMin = config.largeDebrisSpeedMin or -25
+	local largeSpeedMax = config.largeDebrisSpeedMax or 25
+	local largeUpMin = config.largeDebrisUpMin or 5
+	local largeUpMax = config.largeDebrisUpMax or 25
+	local largeSpeedMult = config.largeDebrisSpeedMult or 2
+	local largeLifetime = config.largeDebrisLifetime or 3
+	local largeLifetimeRandom = config.largeDebrisLifetimeRandom or 1
+
+	local smallCountMin = config.smallDebrisCountMin or 4
+	local smallCountMax = config.smallDebrisCountMax or 7
+	local smallSizeMin = config.smallDebrisSizeMin or 0.6
+	local smallSizeMax = config.smallDebrisSizeMax or 0.8
+	local smallSpeedMin = config.smallDebrisSpeedMin or -25
+	local smallSpeedMax = config.smallDebrisSpeedMax or 25
+	local smallUpMin = config.smallDebrisUpMin or 5
+	local smallUpMax = config.smallDebrisUpMax or 25
+	local smallSpeedMult = config.smallDebrisSpeedMult or 2
+	local smallLifetime = config.smallDebrisLifetime or 3
+	local smallLifetimeRandom = config.smallDebrisLifetimeRandom or 1
+
+	local largeDebrisCount = rng:NextNumber(largeCountMin, largeCountMax)
 	if config.nodebris then
 		largeDebrisCount = 0
 	end
@@ -36,7 +60,7 @@ local function debrisSpawner(config)
 			break
 		end
 
-		local chunkSize = rng:NextNumber(1, 3)
+		local chunkSize = rng:NextNumber(largeSizeMin, largeSizeMax)
 		local chunk = Instance.new("Part")
 		chunk.CollisionGroup = "NonPColDebri"
 
@@ -58,11 +82,15 @@ local function debrisSpawner(config)
 
 		local bv = Instance.new("BodyVelocity")
 		bv.MaxForce = Vector3.new(2e9, 2e9, 2e9)
-		bv.Velocity = Vector3.new(rng:NextNumber(-25, 25), rng:NextNumber(5, 25), randomRange(-25, 25)) * 2
+		bv.Velocity = Vector3.new(
+			rng:NextNumber(largeSpeedMin, largeSpeedMax),
+			rng:NextNumber(largeUpMin, largeUpMax),
+			randomRange(largeSpeedMin, largeSpeedMax)
+		) * largeSpeedMult
 		bv.Parent = chunk
 		game:GetService("Debris"):AddItem(bv, 0.15)
 
-		task.delay(3 + rng:NextNumber(0, 1), function()
+		task.delay(largeLifetime + rng:NextNumber(0, largeLifetimeRandom), function()
 			if not chunk or not chunk.Parent then
 				return
 			end
@@ -79,13 +107,13 @@ local function debrisSpawner(config)
 		end)
 	end
 
-	local smallDebrisCount = rng:NextNumber(4, 7) / lessDivisor
+	local smallDebrisCount = rng:NextNumber(smallCountMin, smallCountMax) / lessDivisor
 	if config.nodebris then
 		smallDebrisCount = 0
 	end
 
 	for _ = 1, smallDebrisCount do
-		local smallSize = rng:NextNumber(0.6, 0.8)
+		local smallSize = rng:NextNumber(smallSizeMin, smallSizeMax)
 		local piece = Instance.new("Part")
 		piece.CFrame = config.cframe
 
@@ -106,7 +134,11 @@ local function debrisSpawner(config)
 
 		local bv = Instance.new("BodyVelocity")
 		bv.MaxForce = Vector3.new(2e9, 2e9, 2e9)
-		bv.Velocity = Vector3.new(rng:NextNumber(-25, 25), rng:NextNumber(5, 25), randomRange(-25, 25)) * 2
+		bv.Velocity = Vector3.new(
+			rng:NextNumber(smallSpeedMin, smallSpeedMax),
+			rng:NextNumber(smallUpMin, smallUpMax),
+			randomRange(smallSpeedMin, smallSpeedMax)
+		) * smallSpeedMult
 		bv.Parent = piece
 		game:GetService("Debris"):AddItem(bv, 0.15)
 
@@ -114,7 +146,7 @@ local function debrisSpawner(config)
 		bav.Parent = piece
 		game:GetService("Debris"):AddItem(bav, 0.5)
 
-		task.delay(3 + rng:NextNumber(0, 1), function()
+		task.delay(smallLifetime + rng:NextNumber(0, smallLifetimeRandom), function()
 			if not piece or not piece.Parent then
 				return
 			end
