@@ -232,7 +232,12 @@ local function performFrontDash(Character, HumRP)
 		dashVelocity.Parent = HumRP
 		State.Velocity = dashVelocity
 
-		local speed = 165
+		local StartTime = os.clock()
+		local INITIAL_SPEED = 100
+
+		local TARGET_ZERO_TIME = 2
+
+		local DECAY_K = -math.log(2 / INITIAL_SPEED) / TARGET_ZERO_TIME
 
 		State.StopLoop = Loop.new(function(stop)
 			if State.Ended or not dashVelocity.Parent then
@@ -240,12 +245,14 @@ local function performFrontDash(Character, HumRP)
 				return
 			end
 
-			if speed > 2 then
-				speed *= 0.98
-				dashVelocity.Velocity = HumRP.CFrame.LookVector * speed
+			local Elapsed = os.clock() - StartTime
+			local Speed = INITIAL_SPEED * math.exp(-DECAY_K * Elapsed)
+
+			if Speed > 2 then
+				dashVelocity.Velocity = HumRP.CFrame.LookVector * Speed
 			else
+				dashVelocity.Velocity = Vector3.zero
 				stop()
-				cleanup()
 			end
 		end)
 	end

@@ -22,7 +22,7 @@ local MoveAnims = ServerStorage.Assets.Animations.Moves
 local HIT_SIZE = Vector3.new(8, 8, 8)
 local HIT_OFFSET = CFrame.new(0, 0, -4)
 
-local DAMAGE = 35
+local DAMAGE = 135
 local RAGDOLL_TIME = 3
 
 local LAUNCH_FORCE = 130

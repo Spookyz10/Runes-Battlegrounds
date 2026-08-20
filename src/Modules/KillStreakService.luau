@@ -1,8 +1,9 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TextChatService = game:GetService("TextChatService")
 
 local KillStreakFolder = ReplicatedStorage.Resources.Misc.KillStreak
+
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
 local REQUIRED_STREAK = 10
 local GOLD_HEX = "#FFD700"
@@ -36,7 +37,7 @@ local function announceKillStreak(Player, Streak)
 	local Message = string.format("%s is unstoppable with %d kills!", Player.Name, Streak)
 	local Colored = string.format('<font color="%s">%s</font>', GOLD_HEX, Message)
 
-	TextChatService:DisplaySystemMessage(Colored)
+	RemoteManager.FireAllClients("ReplicateTask", "SystemMessage", Colored)
 end
 
 local function applyKillStreak(Player, Character, Streak)

@@ -236,7 +236,7 @@ function module:TakeDamage(
 
 						KillSoundService:PlaySound(Damager, Damaged)
 
-						if not Damaged:FindFirstChild("Dummy") and game.PrivateServerOwnerId == 0 then
+						if game.PrivateServerOwnerId == 0 then
 							local DamagerData = Data.Service:waitForData(DamagerPlayer)
 							if DamagerData then
 								DamagerData.Kills(function(k)
@@ -277,6 +277,7 @@ Players.PlayerRemoving:Connect(function(DamagedPlayer)
 	if not Damaged then
 		return
 	end
+
 	if Damaged:FindFirstChild("Dummy") then
 		return
 	end

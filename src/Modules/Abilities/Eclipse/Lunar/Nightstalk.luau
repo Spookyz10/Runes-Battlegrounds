@@ -187,9 +187,7 @@ return {
 
 		local function fireStage(stage)
 			local stageLookFlat = getLookFlat()
-			local spikePosition = Character.HumanoidRootPart.Position
-				+ Vector3.new(0, -3, 0)
-				+ stageLookFlat * stage.Distance
+			local spikePosition = Character.HumanoidRootPart.Position + stageLookFlat * stage.Distance
 
 			RemoteManager.FireAllClients("ReplicateTask", "createSpike", {
 				Scale = stage.Scale,

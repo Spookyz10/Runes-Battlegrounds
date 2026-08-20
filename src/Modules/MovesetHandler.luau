@@ -15,6 +15,20 @@ local function getCurrentMode(Player, Moveset, movesetInfo)
 	return movesetInfo.DefaultMode
 end
 
+local function ensureModeAttribute(Player, Moveset)
+	local movesetInfo = InfoModule.Movesets[Moveset]
+	if not movesetInfo or not movesetInfo.Modes then
+		return
+	end
+
+	local mode = Player:GetAttribute("MovesetMode_" .. Moveset)
+	if typeof(mode) == "string" and table.find(movesetInfo.Modes, mode) then
+		return
+	end
+
+	Player:SetAttribute("MovesetMode_" .. Moveset, movesetInfo.DefaultMode)
+end
+
 local function resolveFolder(Player, Moveset)
 	local movesetInfo = InfoModule.Movesets[Moveset]
 
@@ -56,6 +70,8 @@ end
 function module:AddBaseMoveset(Player, Moveset)
 	Moveset = Moveset or Player:GetAttribute("Moveset")
 
+	ensureModeAttribute(Player, Moveset)
+
 	for _, v in Player.Moveset:GetChildren() do
 		v:Destroy()
 	end
@@ -65,6 +81,8 @@ end
 
 function module:AddAwakeningMoveset(Player, Moveset)
 	Moveset = Moveset or Player:GetAttribute("Moveset")
+
+	ensureModeAttribute(Player, Moveset)
 
 	for _, v in Player.Moveset:GetChildren() do
 		if v:IsA("Tool") then
@@ -100,6 +118,7 @@ function module:SetMoveset(Player, MovesetName)
 
 	Data.Service:waitForData(Player).Moveset(MovesetName)
 	Player:SetAttribute("Moveset", MovesetName)
+	ensureModeAttribute(Player, MovesetName)
 	Player:LoadCharacter()
 
 	return true

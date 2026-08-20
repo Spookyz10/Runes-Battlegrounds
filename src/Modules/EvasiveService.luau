@@ -175,13 +175,37 @@ function module:HandleGetRequest(Player)
 	return Progress, THRESHOLD, Charges
 end
 
-Players.PlayerAdded:Connect(function(Player)
+local function setupFreeCharge(Character)
+	Character:SetAttribute("EvasivaProgress", 0)
+	Character:SetAttribute("EvasivaCharges", 0)
+
+	local Humanoid = Character:FindFirstChild("Humanoid") or Character:WaitForChild("Humanoid", 5)
+	if not Humanoid then
+		return
+	end
+
+	if Humanoid.Health <= 0 then
+		return
+	end
+
+	module:AddProgress(Character, THRESHOLD)
+end
+
+local function onPlayerAdded(Player)
 	Player.CharacterAdded:Connect(function(Character)
-		Character:SetAttribute("EvasivaProgress", 0)
-		Character:SetAttribute("EvasivaCharges", 0)
-		module:AddProgress(Character, THRESHOLD)
+		task.spawn(setupFreeCharge, Character)
 	end)
-end)
+
+	if Player.Character then
+		task.spawn(setupFreeCharge, Player.Character)
+	end
+end
+
+Players.PlayerAdded:Connect(onPlayerAdded)
+
+for _, Player in Players:GetPlayers() do
+	onPlayerAdded(Player)
+end
 
 CombatEvents.DamageDealt:Connect(function(Damager, Damaged, Damage)
 	module:AddProgress(Damaged, Damage)

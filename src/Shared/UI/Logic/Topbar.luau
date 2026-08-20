@@ -79,6 +79,12 @@ function Topbar.Init()
 	local cosmetics = playerGui:FindFirstChild("Cosmetics")
 	CosmeticsIcon:bindToggleItem(cosmetics)
 
+	MainIcon:setImageScale(1)
+	StoreIcon:setImageScale(1)
+	LogIcon:setImageScale(1)
+	KillSoundIcon:setImageScale(1)
+	CosmeticsIcon:setImageScale(1)
+
 	refreshKillSoundIcon()
 	Data.OwnedPasses.Changed(function()
 		refreshKillSoundIcon()
