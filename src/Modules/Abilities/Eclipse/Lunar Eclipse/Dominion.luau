@@ -322,6 +322,11 @@ local function slamVictim(Character, Player, otherChar, victimData)
 		end
 
 		RemoteManager.FireAllClients("ReplicateTask", "LunarImpact", { position = landPos })
+		RemoteManager.FireAllClients(
+			"ReplicateTask",
+			"DominionSpikes",
+			{ func = "Slam", char = Character, position = landPos }
+		)
 
 		if Player then
 			RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", { Intensity = 12, Last = 0.8 })
@@ -498,6 +503,14 @@ return {
 
 				data.Locked = true
 				stopField(data)
+
+				if data.FieldPos then
+					RemoteManager.FireAllClients(
+						"ReplicateTask",
+						"DominionSpikes",
+						{ func = "Start", char = Character, position = data.FieldPos }
+					)
+				end
 
 				local victims = data.Victims or {}
 				data.Victims = nil

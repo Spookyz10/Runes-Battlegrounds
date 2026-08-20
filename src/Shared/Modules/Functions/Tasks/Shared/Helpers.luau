@@ -28,7 +28,7 @@ local function getTouchingPartsExceptIgnored(object)
 
 		local validParts = {}
 		for _, part in pairs(touchingParts) do
-			if part.Name ~= "InvisibleBorder" and part.Name ~= "InfBall" then
+			if part.Name ~= "InvisibleBorder" and part.Name ~= "InfBall" and not part:GetAttribute("NoDebris") then
 				table.insert(validParts, part)
 			end
 		end
@@ -42,27 +42,38 @@ local function performRaycast(rayData)
 	local dir = rayData.dir
 	local raycastParams = RaycastParams.new()
 
-	raycastParams.FilterDescendantsInstances = rayData.Whitelist or rayData.Ignore or DefaultFilter
+	local baseFilter = rayData.Whitelist or rayData.Ignore or DefaultFilter
+	local filter = table.clone(baseFilter)
+
+	raycastParams.FilterDescendantsInstances = filter
 	if rayData.Whitelist then
 		raycastParams.FilterType = Enum.RaycastFilterType.Include
 	else
 		raycastParams.FilterType = Enum.RaycastFilterType.Exclude
 	end
+	raycastParams.IgnoreWater = rayData.IgnoreWater or false
 
-	if rayData.Blockcast then
-		local result = workspace:Blockcast(orig, rayData.Blockcast, dir, raycastParams)
-		if result then
-			return result.Instance, result.Position, result.Material, result.Normal
+	local skipNoDebris = rayData.SkipNoDebris ~= false and not rayData.Whitelist
+
+	for _ = 1, 8 do
+		local result
+		if rayData.Blockcast then
+			result = workspace:Blockcast(orig, rayData.Blockcast, dir, raycastParams)
 		else
+			result = workspace:Raycast(orig, dir, raycastParams)
+		end
+
+		if not result then
 			return
 		end
-	else
-		local result = workspace:Raycast(orig, dir, raycastParams)
-		if result then
-			return result.Instance, result.Position, result.Material, result.Normal
-		else
-			return
+
+		if skipNoDebris and result.Instance:GetAttribute("NoDebris") then
+			table.insert(filter, result.Instance)
+			raycastParams.FilterDescendantsInstances = filter
+			continue
 		end
+
+		return result.Instance, result.Position, result.Material, result.Normal
 	end
 end
 

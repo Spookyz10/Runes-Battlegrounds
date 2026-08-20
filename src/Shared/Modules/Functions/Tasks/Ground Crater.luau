@@ -32,18 +32,17 @@ return function(config)
 	-- Passe config.NoGroundAlign = true pra pular essa etapa quando o impacto
 	-- pode acontecer em qualquer superfície (ex: ilha caindo numa montanha).
 	if not config.NoGroundAlign then
-		local TopDownParams = RaycastParams.new()
-		TopDownParams.FilterType = Enum.RaycastFilterType.Exclude
-		TopDownParams.FilterDescendantsInstances = { workspace.Live, workspace.Debris }
-		TopDownParams.IgnoreWater = true
+		local TopHitPart, TopHitPosition, _, TopHitNormal = Helpers.performRaycast({
+			orig = hitPosition + Vector3.new(0, 6, 0),
+			dir = Vector3.new(0, -12, 0),
+			Ignore = { workspace.Live, workspace.Debris },
+			IgnoreWater = true,
+		})
 
-		local TopDownResult =
-			workspace:Raycast(hitPosition + Vector3.new(0, 6, 0), Vector3.new(0, -12, 0), TopDownParams)
-
-		if TopDownResult and TopDownResult.Position.Y >= hitPosition.Y - 0.05 then
-			hitPart = TopDownResult.Instance
-			hitPosition = TopDownResult.Position
-			hitNormal = TopDownResult.Normal
+		if TopHitPosition and TopHitPosition.Y >= hitPosition.Y - 0.05 then
+			hitPart = TopHitPart
+			hitPosition = TopHitPosition
+			hitNormal = TopHitNormal
 		end
 	end
 
