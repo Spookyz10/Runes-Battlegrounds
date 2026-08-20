@@ -476,7 +476,7 @@ return {
 								onDamageCancel
 							)
 						else
-							iFramesService:RemoveAlliFrames(Character)
+							iFramesService:RemoveiFrames(Character, "All")
 							StunHandler:Unstun(Character, CasterStun)
 						end
 					end

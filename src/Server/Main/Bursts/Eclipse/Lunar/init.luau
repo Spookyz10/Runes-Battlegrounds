@@ -20,7 +20,7 @@ return {
 			return
 		end
 
-		iFramesService:AddBaseiFrames(Character)
+		iFramesService:AddiFrames(Character, "Base")
 
 		local hitList = {}
 

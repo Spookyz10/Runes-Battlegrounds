@@ -263,7 +263,7 @@ local function runDisplacementDash(Player, Character, HumRP, Humanoid, Config)
 	end
 
 	if Config.IFrames then
-		iFramesService:AddBaseiFrames(Character)
+		iFramesService:AddiFrames(Character, "Base")
 		task.delay(Duration, function()
 			iFramesService:RemoveiFrames(Character, "Base")
 		end)

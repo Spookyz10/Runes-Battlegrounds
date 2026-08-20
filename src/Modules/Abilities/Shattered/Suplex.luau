@@ -10,6 +10,7 @@ local AnimationService = require(ServerModules.AnimationService)
 local SkillCancelHandler = require(ServerModules.SkillCancelHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local RagdollHandler = require(ServerModules.RagdollHandler)
+local SkillCollision = require(ServerModules.SkillCollision)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 
@@ -22,10 +23,6 @@ local CASTER_TWEEN_TIME = 0.7
 
 local SLAM_DAMAGE = 20
 local SLAM_RAGDOLL_TIME = 5
-
-local VICTIM_SINK_DELAY = 0.6
-local VICTIM_SINK_DISTANCE = 3
-local VICTIM_SINK_TIME = 0.5
 
 return {
 	Cooldown = 15,
@@ -77,12 +74,16 @@ return {
 			if VictimTrack and VictimTrack.IsPlaying then
 				VictimTrack:Stop()
 			end
+
+			SkillCollision:Unlock(VictimCharacter)
+			iFramesService:RemoveiFrames(VictimCharacter, "Base")
 		end
 
 		local function cleanupCaster()
 			Character:RemoveTag("CantRotate")
 			iFramesService:RemoveiFrames(Character, "Base")
 			StunHandler:Unstun(Character, Stun)
+			SkillCollision:Unlock(Character)
 		end
 
 		onDamageCancel = function()
@@ -156,7 +157,11 @@ return {
 				SkillCancelHandler:Unregister(Character, onDamageCancel)
 				SkillCancelHandler:Register(Character, onDamageCancel)
 
-				iFramesService:AddBaseiFrames(Character)
+				iFramesService:AddiFrames(Character, "Base")
+				iFramesService:AddiFrames(VictimCharacter, "Base")
+
+				SkillCollision:Lock(Character)
+				SkillCollision:Lock(VictimCharacter)
 
 				local VictimAnimation = MoveAnims.Shattered.suplexHit
 				VictimTrack = AnimationService:playAnimation(VictimCharacter, VictimAnimation)
@@ -182,7 +187,7 @@ return {
 				local HitVictim = VictimCharacter
 				local HitVictimHumRP = VictimHumRP
 
-				task.delay(VICTIM_SINK_DELAY, function()
+				task.delay(1, function()
 					if Cancelled then
 						return
 					end
@@ -196,14 +201,40 @@ return {
 						return
 					end
 
-					local VictimTargetCFrame = HitVictimHumRP.CFrame
-						* CFrame.new(0, -VICTIM_SINK_DISTANCE, VICTIM_SINK_DISTANCE)
-					local VictimSinkTween = TweenService:Create(
+					local BackTargetCFrame = HitVictimHumRP.CFrame * CFrame.new(0, 0, 3)
+					local BackTween = TweenService:Create(
 						HitVictimHumRP,
-						TweenInfo.new(VICTIM_SINK_TIME, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
-						{ CFrame = VictimTargetCFrame }
+						TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+						{ CFrame = BackTargetCFrame }
 					)
-					VictimSinkTween:Play()
+
+					BackTween.Completed:Once(function(state)
+						if state ~= Enum.PlaybackState.Completed then
+							return
+						end
+						if Cancelled then
+							return
+						end
+						if not HitVictim or not HitVictim.Parent then
+							return
+						end
+						if VictimCharacter ~= HitVictim then
+							return
+						end
+						if not HitVictimHumRP or not HitVictimHumRP.Parent then
+							return
+						end
+
+						local DownTargetCFrame = HitVictimHumRP.CFrame - Vector3.new(0, 3, 0)
+						local DownTween = TweenService:Create(
+							HitVictimHumRP,
+							TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+							{ CFrame = DownTargetCFrame }
+						)
+						DownTween:Play()
+					end)
+
+					BackTween:Play()
 				end)
 			end)
 		)
@@ -241,6 +272,8 @@ return {
 				end
 
 				VictimCharacter:RemoveTag("CantRotate")
+				SkillCollision:Unlock(VictimCharacter)
+				iFramesService:RemoveiFrames(VictimCharacter, "Base")
 
 				RagdollHandler.ragdoll(VictimHumanoid, SLAM_RAGDOLL_TIME, false)
 			end)

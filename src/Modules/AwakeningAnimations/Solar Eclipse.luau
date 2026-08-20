@@ -38,13 +38,13 @@ local function startExplosionField(Character, Position)
 	end
 
 	local PreviousiFrameLevel = iFramesService:GetLevel(Character)
-	iFramesService:AddAlliFrames(Character)
+	iFramesService:AddiFrames(Character, "All")
 	task.delay(0.5, function()
 		if Character and Character.Parent then
 			if PreviousiFrameLevel > 0 then
 				Character:SetAttribute("iFrames", PreviousiFrameLevel)
 			else
-				iFramesService:RemoveAlliFrames(Character)
+				iFramesService:RemoveiFrames(Character, "All")
 			end
 		end
 	end)

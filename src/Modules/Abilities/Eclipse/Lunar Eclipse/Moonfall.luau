@@ -715,7 +715,7 @@ return {
 		end
 
 		Humanoid.WalkSpeed = 0
-		iFramesService:RemoveAlliFrames(Character)
+		iFramesService:RemoveiFrames(Character, "All")
 
 		local cancelled = false
 		local function onDamageCancel()
@@ -773,7 +773,7 @@ return {
 					return
 				end
 				SkillCancelHandler:Unregister(Character, data.CancelFn)
-				iFramesService:AddBaseiFrames(Character)
+				iFramesService:AddiFrames(Character, "Base")
 
 				local gravPos = ActiveState[Character] and ActiveState[Character].GravityPos
 				if gravPos then

@@ -242,7 +242,7 @@ function Ragdoll.cancelRagdoll(Humanoid, _, DoKnockback, MainPart, isCancel, ful
 		Character:RemoveTag("StunImmunity")
 	end)
 
-	iFramesService:AddBaseiFrames(Character)
+	iFramesService:AddiFrames(Character, "Base")
 	task.delay(0.2, function()
 		if Character and Character.Parent then
 			iFramesService:RemoveiFrames(Character, "Base")

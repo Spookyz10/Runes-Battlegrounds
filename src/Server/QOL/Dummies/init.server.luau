@@ -53,7 +53,7 @@ function HumanoidDied(Character, InitialHp)
 		end
 	end
 
-	require(SvModules.iFramesService):RemoveAlliFrames(Character)
+	require(SvModules.iFramesService):RemoveiFrames(Character, "All")
 	workspace:SetAttribute("DummyDiedOnce", true)
 
 	local respawnConnection

@@ -37,7 +37,7 @@ local function activateBuff(Character)
 	data.buffActive = true
 	data.accumulated = 0
 
-	iFramesService:AddStrongiFrames(Character)
+	iFramesService:AddiFrames(Character, "Strong")
 
 	Character:SetAttribute("AntiTeamingBuff", true)
 	Character:SetAttribute("AntiTeamingDamageMult", DAMAGE_MULT)

@@ -255,7 +255,7 @@ return {
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("summon"):Once(function()
 				SkillCancelHandler:Unregister(Character, onDamageCancel)
-				iFramesService:AddBaseiFrames(Character)
+				iFramesService:AddiFrames(Character, "Base")
 
 				SFXModule:Play("graspTravel", HumRP)
 

@@ -56,7 +56,7 @@ local function HumanoidDied(Player: Player)
 		RagdollHandler.ragdoll(Humanoid)
 	end
 
-	iFramesService:RemoveAlliFrames(Character)
+	iFramesService:RemoveiFrames(Character, "All")
 
 	task.delay(5, function()
 		Player:LoadCharacterAsync()
@@ -176,7 +176,7 @@ local function CharacterAdded(Character: Model)
 	end
 	Player:SetAttribute("Awakened", false)
 
-	iFramesService:AddAlliFrames(Character)
+	iFramesService:AddiFrames(Character, "All")
 
 	task.spawn(function()
 		AnimationService:loadAnimations(Character)
@@ -184,7 +184,7 @@ local function CharacterAdded(Character: Model)
 
 	task.delay(4, function()
 		Character:SetAttribute("JustSpawned", nil)
-		iFramesService:RemoveAlliFrames(Character)
+		iFramesService:RemoveiFrames(Character, "All")
 	end)
 
 	if Humanoid.MoveDirection.Magnitude == 0 then

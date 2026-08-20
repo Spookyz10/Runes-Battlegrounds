@@ -171,7 +171,7 @@ local function doActivate(Player: Player, Bypass: boolean?)
 	Character:SetAttribute("Awakened", true)
 	Player:SetAttribute("Awakened", true)
 
-	iFramesHandler:AddAlliFrames(Character)
+	iFramesHandler:AddiFrames(Character, "All")
 
 	local UltimateName = InfoModule.Movesets[CurrentMoveset].UltimateName
 	local Handler = UltimateHandlers[UltimateName]
@@ -182,7 +182,7 @@ local function doActivate(Player: Player, Bypass: boolean?)
 
 	MovesetHandler:AddAwakeningMoveset(Player, Player:GetAttribute("Moveset"))
 
-	iFramesHandler:RemoveAlliFrames(Character)
+	iFramesHandler:RemoveiFrames(Character, "All")
 
 	local State = { Ended = false }
 

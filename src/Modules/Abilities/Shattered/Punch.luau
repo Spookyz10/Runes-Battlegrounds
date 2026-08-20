@@ -15,7 +15,6 @@ local SkillCancelHandler = require(ServerModules.SkillCancelHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local NewKnockback = require(ServerModules.BodymoverService)
-local ImpactDebrisService = require(ServerModules.ImpactDebrisService)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 
@@ -32,11 +31,12 @@ local RING_FORWARD_OFFSET = 3
 local RING_TILT = CFrame.Angles(math.rad(90), 0, 0)
 
 local LANDING_IMPACT_CONFIG = {
-	RockCount = 14,
-	Radius = 10,
-	RockSize = Vector3.new(2.5, 2.5, 2.5),
-	TileMode = "Square",
-	Timeout = 10,
+	Debris = {
+		RockCount = 14,
+		Radius = 10,
+		RockSize = Vector3.new(2.5, 2.5, 2.5),
+		TileMode = "Square",
+	},
 }
 
 local PUNCH_DEBRIS_CONFIG = {
@@ -172,7 +172,15 @@ return {
 
 						SFXModule:Play("Smack", EnemyHumRP)
 
-						RagdollHandler.ragdoll(EnemyHumanoid, RAGDOLL_TIME, nil, nil, nil, nil, true)
+						RagdollHandler.ragdoll(
+							EnemyHumanoid,
+							RAGDOLL_TIME,
+							true,
+							Character,
+							LANDING_IMPACT_CONFIG,
+							nil,
+							true
+						)
 
 						task.defer(function()
 							if not EnemyCharacter or not EnemyCharacter.Parent then
@@ -185,8 +193,6 @@ return {
 								Velocity = pushFlat * LAUNCH_FORCE + Vector3.new(0, LAUNCH_UP_FORCE, 0),
 							})
 						end)
-
-						ImpactDebrisService:WatchLanding(EnemyCharacter, LANDING_IMPACT_CONFIG)
 
 						RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", {
 							Intensity = SELF_HIT_SHAKE_INTENSITY,

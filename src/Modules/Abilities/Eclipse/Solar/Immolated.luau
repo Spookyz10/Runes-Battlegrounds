@@ -54,7 +54,7 @@ local function cleanUp(
 
 	Character:SetAttribute("Immolated", nil)
 	Character:SetAttribute("DamageTakenMult", nil)
-	iFramesService:RemoveiFrames(Character, "Strong")
+
 	RemoteManager.FireAllClients("ReplicateTask", "Immolate", { Char = Character, Enabled = false })
 
 	local Humanoid = Character:FindFirstChild("Humanoid")
@@ -126,7 +126,7 @@ return {
 
 				Character:SetAttribute("Immolated", true)
 				Character:SetAttribute("DamageTakenMult", DAMAGE_TAKEN_MULT)
-				iFramesService:AddStrongiFrames(Character)
+
 				Humanoid.WalkSpeed = IMMOLATED_WALKSPEED
 				RemoteManager.FireAllClients(
 					"ReplicateTask",

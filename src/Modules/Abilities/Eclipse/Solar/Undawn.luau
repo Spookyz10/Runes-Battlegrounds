@@ -60,7 +60,7 @@ return {
 		end
 
 		local Stun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
-		iFramesService:AddBaseiFrames(Character)
+		iFramesService:AddiFrames(Character, "Base")
 
 		StatusEffectHandler:Apply(Character, "FireArms", { Stacks = FIRE_ARMS_STACKS, Duration = FIRE_ARMS_DURATION })
 
@@ -197,7 +197,7 @@ return {
 			for _, v in UserEvents do
 				v:Disconnect()
 			end
-			iFramesService:RemoveAlliFrames(Character)
+			iFramesService:RemoveiFrames(Character, "All")
 			StunHandler:Unstun(Character, Stun)
 		end)
 	end,

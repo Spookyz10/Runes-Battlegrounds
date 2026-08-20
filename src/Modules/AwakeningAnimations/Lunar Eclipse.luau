@@ -68,14 +68,14 @@ local function explode(Character, Position)
 	local Player = Players:GetPlayerFromCharacter(Character)
 
 	local PreviousiFrameLevel = iFramesService:GetLevel(Character)
-	iFramesService:AddAlliFrames(Character)
+	iFramesService:AddiFrames(Character, "All")
 	SFXModule:Play("Moon Explosion", Position)
 	task.delay(0.5, function()
 		if Character and Character.Parent then
 			if PreviousiFrameLevel > 0 then
 				Character:SetAttribute("iFrames", PreviousiFrameLevel)
 			else
-				iFramesService:RemoveAlliFrames(Character)
+				iFramesService:RemoveiFrames(Character, "All")
 			end
 		end
 	end)

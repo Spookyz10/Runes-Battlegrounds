@@ -358,9 +358,11 @@ local function addTool(Tool: Tool)
 			icon.Image = Tool:GetAttribute("Icon") or "rbxassetid://0"
 		end
 
-		-- Se essa skill (pelo nome) já tinha um cooldown rolando de antes
-		-- de trocar de modo, reconecta a animação com o tempo restante em
-		-- vez de resetar o dark icon como se estivesse pronta.
+		local darkIcon = getDarkIcon(slot)
+		if darkIcon then
+			darkIcon.Image = Tool:GetAttribute("Icon") or "rbxassetid://0"
+		end
+
 		local Remaining = getRemainingCooldown(Tool.Name)
 		if Remaining > 0 then
 			addCooldownToSlot(slot, Remaining, Tool.Name)

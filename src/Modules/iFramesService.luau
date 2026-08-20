@@ -4,6 +4,12 @@ local Players = game:GetService("Players")
 
 local SPAWN_IFRAME_DURATION = 5
 
+local LevelValue = {
+	Base = 1,
+	Strong = 2,
+	All = 3,
+}
+
 function module:HasiFrame(Character, pierceLevel)
 	local current = Character:GetAttribute("iFrames") or 0
 	if current <= 0 then
@@ -21,43 +27,40 @@ function module:HasiFrame(Character, pierceLevel)
 	return current > level
 end
 
-function module:AddBaseiFrames(Character)
-	local current = Character:GetAttribute("iFrames") or 0
-	if current >= 1 then
+function module:AddiFrames(Character, Level)
+	local value = LevelValue[Level]
+	if not value then
+		warn("[iFramesService] Invalid level '" .. tostring(Level) .. "'")
 		return
 	end
-	Character:SetAttribute("iFrames", 1)
-end
 
-function module:AddStrongiFrames(Character)
 	local current = Character:GetAttribute("iFrames") or 0
-	if current >= 2 then
+	if current >= value then
 		return
 	end
-	Character:SetAttribute("iFrames", 2)
+
+	Character:SetAttribute("iFrames", value)
 end
 
-function module:AddAlliFrames(Character)
-	Character:SetAttribute("iFrames", 3)
-end
-
-function module:RemoveAlliFrames(Character)
-	Character:SetAttribute("iFrames", 0)
-end
-
-function module:RemoveiFrames(Character, iFrameHandle)
+function module:RemoveiFrames(Character, Level)
 	local current = Character:GetAttribute("iFrames") or 0
 	if current <= 0 then
 		return
 	end
 
-	if iFrameHandle == "All" then
+	local value = LevelValue[Level]
+	if not value then
+		warn("[iFramesService] Invalid level '" .. tostring(Level) .. "'")
+		return
+	end
+
+	if value >= 3 then
 		Character:SetAttribute("iFrames", 0)
-	elseif iFrameHandle == "Strong" then
+	elseif value == 2 then
 		if current >= 2 then
 			Character:SetAttribute("iFrames", 1)
 		end
-	elseif iFrameHandle == "Base" then
+	elseif value == 1 then
 		if current <= 1 then
 			Character:SetAttribute("iFrames", 0)
 		end
@@ -69,11 +72,10 @@ function module:GetLevel(Character)
 end
 
 local function grantSpawnProtection(Character)
-	local Token = {}
 	Character:SetAttribute("SpawnProtectionToken", tick())
 	local ThisToken = Character:GetAttribute("SpawnProtectionToken")
 
-	module:AddAlliFrames(Character)
+	module:AddiFrames(Character, "All")
 
 	task.delay(SPAWN_IFRAME_DURATION, function()
 		if not Character or not Character.Parent then
@@ -82,7 +84,7 @@ local function grantSpawnProtection(Character)
 		if Character:GetAttribute("SpawnProtectionToken") ~= ThisToken then
 			return
 		end
-		module:RemoveAlliFrames(Character)
+		module:RemoveiFrames(Character, "All")
 	end)
 end
 

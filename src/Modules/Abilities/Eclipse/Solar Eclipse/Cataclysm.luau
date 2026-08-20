@@ -57,7 +57,7 @@ return {
 		local OriginalWalkSpeed = Humanoid.WalkSpeed
 
 		local CasterStun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
-		iFramesService:AddStrongiFrames(Character)
+		iFramesService:AddiFrames(Character, "Strong")
 
 		Humanoid.WalkSpeed = 0
 

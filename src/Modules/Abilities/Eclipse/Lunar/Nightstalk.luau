@@ -263,7 +263,7 @@ return {
 		table.insert(
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("onGround"):Once(function()
-				iFramesService:AddBaseiFrames(Character)
+				iFramesService:AddiFrames(Character, "Base")
 
 				task.spawn(function()
 					UserTrack:AdjustSpeed(0)
