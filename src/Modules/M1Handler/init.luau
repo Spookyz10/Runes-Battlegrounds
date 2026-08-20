@@ -267,7 +267,7 @@ function M1Handler:Punch(Player)
 							maxDebrisHeight = 3,
 							sizemult = 1,
 						})
-						RemoteManager.FireAllClients("ReplicateTask", "Downslam", { EnemyChar = EnemyCharacter })
+						RemoteManager.FireAllClients("ReplicateTask", "Downslam", { Char = Character })
 						RemoteManager.FireAllClients("ReplicateTask", "ShakeCamera", { Intensity = 2.2, Last = 0.18 })
 					end
 

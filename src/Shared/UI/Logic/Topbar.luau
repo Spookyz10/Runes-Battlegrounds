@@ -75,7 +75,7 @@ function Topbar.Init()
 	local killSound = playerGui:FindFirstChild("KillSound")
 	KillSoundIcon:bindToggleItem(killSound)
 
-	CosmeticsIcon:setLabel("Cosmetics")
+	CosmeticsIcon:setImage(95816009699835)
 	local cosmetics = playerGui:FindFirstChild("Cosmetics")
 	CosmeticsIcon:bindToggleItem(cosmetics)
 

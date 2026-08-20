@@ -1,8 +1,10 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local TweenService = game:GetService("TweenService")
 
 local ServerModules = ServerStorage.Modules
 
+local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local StunHandler = require(ServerModules.StunHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
 local HitboxHandler = require(ServerModules.HitboxHandler)
@@ -111,6 +113,13 @@ return {
 				if Cancelled then
 					return
 				end
+
+				RemoteManager.FireAllClients("ReplicateTask", "Ring", {
+					FirstProps = { Size = Vector3.new(0.6, 4, 0.6), Transparency = 0 },
+					CF = HumRP.CFrame * CFrame.new(0, -1, -2) * CFrame.Angles(math.rad(30), 0, 0),
+					TN_Info = { Time = 0.4, Style = "Quad", Direction = "Out" },
+					FinalProps = { Size = Vector3.new(3, 3, 3), Transparency = 1 },
+				})
 
 				local Candidates = {}
 
@@ -225,7 +234,7 @@ return {
 							return
 						end
 
-						local DownTargetCFrame = HitVictimHumRP.CFrame - Vector3.new(0, 3, 0)
+						local DownTargetCFrame = HitVictimHumRP.CFrame - Vector3.new(0, 5, 0)
 						local DownTween = TweenService:Create(
 							HitVictimHumRP,
 							TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
@@ -267,7 +276,13 @@ return {
 					nil
 				)
 
+				RemoteManager.FireAllClients("ReplicateTask", "SuplexHit", { char = Character })
+
+				RemoteManager.FireAllClients("ReplicateTask", "SuplexSmoke", { EnemyChar = VictimCharacter })
+				RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", { Intensity = 6, Last = 0.4 })
+
 				if VictimHumRP and VictimHumRP.Parent then
+					VictimHumRP.CFrame = VictimHumRP.CFrame * CFrame.Angles(math.rad(180), 0, 0)
 					VictimHumRP.Anchored = false
 				end
 

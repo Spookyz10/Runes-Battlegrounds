@@ -1,9 +1,10 @@
 local Constants = require(script.Parent.Shared.Constants)
 local Debris = Constants.Debris
 local ParticlesModule = Constants.ParticlesModule
+local CharacterAssets = Constants.CharacterAssets
 
 return function(Params)
-	local EnemyChar = Params.Char
+	local EnemyChar = Params.EnemyChar
 	if not EnemyChar or not EnemyChar.Parent then
 		return
 	end
@@ -13,15 +14,15 @@ return function(Params)
 		return
 	end
 
-	local SlamExplosion = Constants.Resources.Effects:FindFirstChild("Downslam")
+	local SmokeAsset = CharacterAssets.Shattered.Suplex.Smoke
 
-	if not SlamExplosion then
+	if not SmokeAsset then
 		return
 	end
 
-	local Clone = SlamExplosion:Clone()
+	local Clone = SmokeAsset:Clone()
 	Clone.Parent = workspace
-	Clone.CFrame = HumRP.CFrame + Vector3.new(0, -3, -2)
+	Clone.Position = HumRP.Position
 
 	ParticlesModule.Emit(Clone)
 
