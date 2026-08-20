@@ -14,6 +14,8 @@ return {
 		"You now get a free evasive on respawn",
 		"Kill Streak is added",
 		"New map lighting",
+		"Changed solar rune model",
+		"Made it so if you hold m1 it m1s as soon as possible (fixes holding m1 after grasp and prowl)",
 	},
 
 	Roadmap = {

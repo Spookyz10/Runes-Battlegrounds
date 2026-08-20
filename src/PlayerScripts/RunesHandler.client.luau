@@ -16,7 +16,6 @@ local ALIGN_RESPONSIVENESS: number = 8
 local ALIGN_MAX_FORCE: number = 15000
 local ALIGN_MAX_TORQUE: number = 15000
 local FADE_DURATION: number = 0.4
-local PLAYER_RESOLVE_TIMEOUT: number = 5
 
 type RuneData = {
 	model: Model,
@@ -29,6 +28,7 @@ type RuneData = {
 	cosmeticKey: string?,
 	cosmeticSpinAngle: number,
 	startTime: number,
+	cosmeticPivotOffset: CFrame,
 }
 
 local activeRunes: { [Model]: RuneData } = {}
@@ -109,6 +109,8 @@ local function buildRuneCosmetic(data: RuneData, cosmeticKey: string?)
 
 	local MainPart: BasePart? = CosmeticModel.PrimaryPart
 
+	local MainPartPivotOffset: CFrame = CosmeticModel:GetPivot():ToObjectSpace(MainPart.CFrame)
+
 	for _, part: Instance in CosmeticModel:GetDescendants() do
 		if part:IsA("BasePart") then
 			part.Anchored = true
@@ -132,6 +134,7 @@ local function buildRuneCosmetic(data: RuneData, cosmeticKey: string?)
 	data.cosmeticMainPart = MainPart
 	data.cosmeticKey = cosmeticKey
 	data.cosmeticSpinAngle = 0
+	data.cosmeticPivotOffset = MainPartPivotOffset
 
 	FadeOut.In(CosmeticModel, FADE_DURATION)
 end
@@ -327,7 +330,9 @@ local function buildRune(Character: Model, key: string, Player: Player, spawnCFr
 				offsetCFrame = offsetCFrame * CFrame.Angles(0, currentData.cosmeticSpinAngle, 0)
 			end
 
-			currentData.cosmeticModel:PivotTo(MainPart.CFrame * offsetCFrame)
+			currentData.cosmeticModel:PivotTo(
+				MainPart.CFrame * offsetCFrame * currentData.cosmeticPivotOffset:Inverse()
+			)
 		end
 	end)
 

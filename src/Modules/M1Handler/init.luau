@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SvSt = game:GetService("ServerStorage")
+local CollectionService = game:GetService("CollectionService")
 
 local SvModules = SvSt.Modules
 
@@ -24,6 +25,8 @@ local M1Handler = {}
 local LastPunch = {}
 local MaxCombo = 4
 
+local PunchRetryConn = {}
+
 local function getConfig(Player)
 	local Moveset = Player:GetAttribute("Moveset") or "Default"
 	local Mode = Player:GetAttribute("MovesetMode_" .. Moveset)
@@ -33,6 +36,42 @@ local function getConfig(Player)
 	end
 
 	return Configs[Moveset] or Configs.Default
+end
+
+local function clearPunchRetry(Character)
+	local Conn = PunchRetryConn[Character]
+	if Conn then
+		Conn:Disconnect()
+		PunchRetryConn[Character] = nil
+	end
+end
+
+local function schedulePunchRetry(Player, Character)
+	if PunchRetryConn[Character] then
+		return
+	end
+
+	local Conn
+	Conn = CollectionService:GetInstanceRemovedSignal("Stunned"):Connect(function(Instance)
+		if Instance ~= Character then
+			return
+		end
+		if Character:HasTag("Stunned") or Character:HasTag("CantPunch") then
+			return
+		end
+
+		clearPunchRetry(Character)
+
+		if Character:GetAttribute("doPunch") == true then
+			M1Handler:Punch(Player)
+		end
+	end)
+
+	PunchRetryConn[Character] = Conn
+
+	Character.Destroying:Once(function()
+		clearPunchRetry(Character)
+	end)
 end
 
 local function ChangeCombo(Char)
@@ -92,10 +131,13 @@ function M1Handler:Punch(Player)
 	end
 
 	if Character:HasTag("CantPunch") or Character:HasTag("Stunned") then
+		schedulePunchRetry(Player, Character)
 		return
 	elseif Character:HasTag("PunchCDS") then
 		return
 	end
+
+	clearPunchRetry(Character)
 
 	local Config = getConfig(Player)
 	local Combo = ChangeCombo(Character)
