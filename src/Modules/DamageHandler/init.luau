@@ -19,6 +19,7 @@ local AwakeningService = require(SvModules.AwakeningService)
 local CombatEvents = require(SvModules.CombatEvents)
 local BadgeAwardService = require(SvModules.BadgeAwardService)
 local KillSoundService = require(SvModules.KillSoundService)
+local CounterHandler = require(SvModules.CounterHandler)
 
 local CheckBehind = Utility("CheckBehind")
 
@@ -114,6 +115,13 @@ function module:TakeDamage(
 		Damaged:SetAttribute("doBlock", false)
 	end
 
+	local AttackTier = nil
+	if Counterable == true then
+		AttackTier = 1
+	elseif typeof(Counterable) == "number" then
+		AttackTier = Counterable
+	end
+
 	if
 		Blockable == true
 		and Damaged:HasTag("Blocking")
@@ -122,8 +130,9 @@ function module:TakeDamage(
 		returnValue.Blocked = true
 		playRandomBlockAnim(Damaged)
 	else
-		if Damaged:HasTag("Countering") and Counterable == true then
+		if CounterHandler:TryCounter(Damaged, AttackTier) then
 			returnValue.Countered = true
+			CombatEvents.Countered:Fire(Damager, Damaged, AttackTier, Type)
 		else
 			returnValue.CouldHit = true
 

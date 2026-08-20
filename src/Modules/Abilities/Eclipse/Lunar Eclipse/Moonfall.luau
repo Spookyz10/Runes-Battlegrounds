@@ -31,7 +31,7 @@ MapRayParams.IgnoreWater = true
 
 local IslandsFolder = workspace.Map.Islands
 
-local GRAVITY_HALF_SIZE = Vector3.new(15, 15, 15)
+local GRAVITY_HALF_SIZE = Vector3.new(70, 70, 70)
 local GRAVITY_FREEZE_AUTO_RELEASE = 15
 local JUMP_HEIGHT = 400
 local JUMP_X_OFFSET = 50
@@ -316,24 +316,26 @@ local function startGravityField(data, position)
 	RemoteManager.FireAllClients("ReplicateTask", "Gravity", { func = "start", char = data.Character, pos = position })
 
 	local function scanForVictims(center)
-		for _, otherChar in workspace.Live:GetChildren() do
-			if not otherChar:IsA("Model") or otherChar == data.Character then
-				continue
-			end
-			local otherHumRP = otherChar:FindFirstChild("HumanoidRootPart")
-			local otherHum = otherChar:FindFirstChild("Humanoid")
-			if not otherHumRP or not otherHum or otherHum.Health <= 0 then
-				continue
-			end
-			local delta = otherHumRP.Position - center
-			if
-				math.abs(delta.X) <= GRAVITY_HALF_SIZE.X
-				and math.abs(delta.Y) <= GRAVITY_HALF_SIZE.Y
-				and math.abs(delta.Z) <= GRAVITY_HALF_SIZE.Z
-			then
+		HitboxHandler:SimpleOnce(
+			CFrame.new(center),
+			GRAVITY_HALF_SIZE,
+			CFrame.new(),
+			{ data.Character },
+			"Box",
+			nil,
+			function(otherChar)
+				if otherChar == data.Character then
+					return
+				end
+
+				local otherHum = otherChar:FindFirstChild("Humanoid")
+				if not otherHum or otherHum.Health <= 0 then
+					return
+				end
+
 				captureGravityVictim(data, otherChar, otherHum)
 			end
-		end
+		)
 	end
 
 	scanForVictims(position)

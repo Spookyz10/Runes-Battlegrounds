@@ -28,5 +28,6 @@ end
 local CombatEvents = {}
 
 CombatEvents.DamageDealt = Signal.new()
+CombatEvents.Countered = Signal.new()
 
 return CombatEvents

@@ -29,7 +29,7 @@ MapRayParams.RespectCanCollide = true
 MapRayParams.IgnoreWater = true
 
 local FIELD_FORWARD_OFFSET = 3
-local FIELD_HALF_SIZE = Vector3.new(25, 25, 25)
+local FIELD_HALF_SIZE = Vector3.new(70, 70, 70)
 local GRAVITY_FREEZE_AUTO_RELEASE = 15
 
 local LAUNCH_HEIGHT = 150
@@ -42,6 +42,9 @@ local SLAM_SPLASH_DAMAGE = 22
 local SLAM_RAGDOLL_TIME = 5
 local SLAM_SPLASH_RAGDOLL_TIME = 2.5
 local SLAM_IMPACT_SIZE = Vector3.new(40, 40, 40)
+
+local WINDUP_SPEED = 0.25
+local FIELD_SPEED = 0.5
 
 local ActiveState = {}
 
@@ -227,24 +230,26 @@ local function startField(data, position)
 	RemoteManager.FireAllClients("ReplicateTask", "Gravity", { func = "start", char = data.Character, pos = position })
 
 	local function scan(center)
-		for _, otherChar in workspace.Live:GetChildren() do
-			if not otherChar:IsA("Model") or otherChar == data.Character then
-				continue
-			end
-			local otherHumRP = otherChar:FindFirstChild("HumanoidRootPart")
-			local otherHum = otherChar:FindFirstChild("Humanoid")
-			if not otherHumRP or not otherHum or otherHum.Health <= 0 then
-				continue
-			end
-			local delta = otherHumRP.Position - center
-			if
-				math.abs(delta.X) <= FIELD_HALF_SIZE.X
-				and math.abs(delta.Y) <= FIELD_HALF_SIZE.Y
-				and math.abs(delta.Z) <= FIELD_HALF_SIZE.Z
-			then
+		HitboxHandler:SimpleOnce(
+			CFrame.new(center),
+			FIELD_HALF_SIZE,
+			CFrame.new(),
+			{ data.Character },
+			"Box",
+			nil,
+			function(otherChar)
+				if otherChar == data.Character then
+					return
+				end
+
+				local otherHum = otherChar:FindFirstChild("Humanoid")
+				if not otherHum or otherHum.Health <= 0 then
+					return
+				end
+
 				captureVictim(data, otherChar, otherHum)
 			end
-		end
+		)
 	end
 
 	scan(position)
@@ -487,6 +492,10 @@ return {
 				local fieldPos = HumRP.Position + lookFlat * FIELD_FORWARD_OFFSET
 
 				startField(data, fieldPos)
+
+				if UserTrack then
+					UserTrack:AdjustSpeed(FIELD_SPEED)
+				end
 			end)
 		)
 
@@ -495,6 +504,10 @@ return {
 			UserTrack:GetMarkerReachedSignal("throw"):Once(function()
 				if data.Cancelled or not Character.Parent then
 					return
+				end
+
+				if UserTrack then
+					UserTrack:AdjustSpeed(1)
 				end
 
 				SkillCancelHandler:Unregister(Character, onDamageCancel)
@@ -625,5 +638,6 @@ return {
 
 		AnimationService:stopAll(Character)
 		AnimationService:playAnimation(Character, UserAnimation)
+		UserTrack:AdjustSpeed(WINDUP_SPEED)
 	end,
 }
