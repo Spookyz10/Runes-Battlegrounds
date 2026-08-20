@@ -37,7 +37,6 @@ local template = {
 	KillSoundId = nil :: number?,
 
 	Settings = {
-		AutoRun = true,
 		CameraShake = true,
 		AwakeningMusic = true,
 	},

@@ -2,7 +2,6 @@ local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local RS = game:GetService("ReplicatedStorage")
 
-local CameraShakerController = require(script.Parent.CameraShakerController)
 local Loop = require(RS.Shared.Modules.Functions.Loop)
 local Tasks = require(RS.Shared.Modules.Functions.Tasks)
 local RemoteManager = require(RS.Shared.Modules.RemoteManager)
@@ -176,12 +175,6 @@ function DashResolver.Resolve(Character, Humanoid, HumRP)
 	return Direction, Trapped, Escaping, CanAct
 end
 
--- Front Dash: movimento 100% local. A animacao (e os markers jump/hit que
--- controlam a hitbox e o dano) fica so no server e replica normalmente.
--- Aqui a gente so cuida de deslocar o HumRP pra frente com uma BodyVelocity
--- local, decaindo com o tempo, e reagindo aos avisos do server:
---   "DashBegin"  -> comeca a aplicar a velocidade (equivalente ao marker "jump")
---   "DashResume" -> encerra o movimento (hit deu certo / hitbox estourou / timeout)
 local function performFrontDash(Character, HumRP)
 	if ActiveFrontDash[Character] then
 		return
@@ -406,42 +399,45 @@ function DashResolver.PerformLocalDash(Character, Humanoid, HumRP, Camera, Anima
 		end)
 
 		local dashAnim = RS.Resources.Animations.Dashes.DashBack
-		local dashTrack = Animator:LoadAnimation(dashAnim)
 
-		gameSettings.RotationType = Enum.RotationType.CameraRelative
+		for _ = 1, 2 do
+			local dashTrack = Animator:LoadAnimation(dashAnim)
 
-		local speed = 260
+			gameSettings.RotationType = Enum.RotationType.CameraRelative
 
-		local dashVelocity = Instance.new("BodyVelocity")
-		dashVelocity.MaxForce = Character:HasTag("Slowed") and Vector3.new(10000, 0, 10000)
-			or Vector3.new(50000, 0, 50000)
-		dashVelocity.Parent = HumRP
+			local speed = 260
 
-		dashTrack.Stopped:Once(function()
-			Character:SetAttribute("Dashing", false)
-			if dashVelocity.Parent then
-				dashVelocity:Destroy()
-			end
-			dashTrack:Destroy()
-			gameSettings.RotationType = Enum.RotationType.MovementRelative
-		end)
+			local dashVelocity = Instance.new("BodyVelocity")
+			dashVelocity.MaxForce = Character:HasTag("Slowed") and Vector3.new(10000, 0, 10000)
+				or Vector3.new(50000, 0, 50000)
+			dashVelocity.Parent = HumRP
 
-		dashTrack:Play()
-
-		local stopLoop = nil
-		stopLoop = Loop.new(function(stop)
-			if dashVelocity.Parent then
-				speed *= 0.91
-				if speed <= 10 then
+			dashTrack.Stopped:Once(function()
+				Character:SetAttribute("Dashing", false)
+				if dashVelocity.Parent then
 					dashVelocity:Destroy()
 				end
-				HumRP.CFrame = CFrame.lookAlong(HumRP.Position, Camera.CFrame.LookVector * Vector3.new(1, 0, 1))
-				dashVelocity.Velocity = -HumRP.CFrame.LookVector * speed
-			else
-				stop()
+				dashTrack:Destroy()
 				gameSettings.RotationType = Enum.RotationType.MovementRelative
-			end
-		end)
+			end)
+
+			dashTrack:Play()
+
+			local stopLoop = nil
+			stopLoop = Loop.new(function(stop)
+				if dashVelocity.Parent then
+					speed *= 0.91
+					if speed <= 10 then
+						dashVelocity:Destroy()
+					end
+					HumRP.CFrame = CFrame.lookAlong(HumRP.Position, Camera.CFrame.LookVector * Vector3.new(1, 0, 1))
+					dashVelocity.Velocity = -HumRP.CFrame.LookVector * speed
+				else
+					stop()
+					gameSettings.RotationType = Enum.RotationType.MovementRelative
+				end
+			end)
+		end
 	end
 end
 
