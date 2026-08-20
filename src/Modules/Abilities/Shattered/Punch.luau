@@ -19,7 +19,7 @@ local NewKnockback = require(ServerModules.BodymoverService)
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 
 local HIT_SIZE = Vector3.new(8, 5, 8)
-local HIT_OFFSET = CFrame.new(0, 0, -4)
+local HIT_OFFSET = CFrame.new(0, 3, -4)
 
 local DAMAGE = 35
 local RAGDOLL_TIME = 3
@@ -64,7 +64,7 @@ local ENEMY_HIT_SHAKE_INTENSITY = 6
 local ENEMY_HIT_SHAKE_TIME = 0.5
 
 return {
-	Cooldown = 15,
+	Cooldown = 1,
 	Start = function(Player, Tool)
 		local Character = Player.Character
 		if not Character then

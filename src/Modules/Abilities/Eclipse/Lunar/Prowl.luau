@@ -19,8 +19,8 @@ local MoveAnims = ServerStorage.Assets.Animations.Moves
 local HIT_DAMAGE = { 3, 3 }
 local PUNCH_DAMAGE = 5
 
-local HIT_SIZE = Vector3.new(8, 5, 9)
-local HIT_OFFSET = CFrame.new(0, 0, -4.5)
+local HIT_SIZE = Vector3.new(8, 4, 9)
+local HIT_OFFSET = CFrame.new(0, 3, -4.5)
 
 local PUNCH_SIZE = Vector3.new(9, 6, 9)
 local PUNCH_OFFSET = CFrame.new(0, 0, -4)
