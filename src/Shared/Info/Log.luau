@@ -1,16 +1,18 @@
 return {
-	Version = "v0.0.5",
+	Version = "v0.0.55",
 
 	UpdateLog = {
-		"Added Shattered Counter move",
+		"Added 2 Shattered moves",
 		"New solar and lunar awakening moves",
 		"Improved gravity hitbox",
+		"Variant of tethers",
 	},
 
 	Roadmap = {
-		"1 Shattered move",
 		"Ranked and rank titles",
 		"Settings",
-		"Variant if tethers is used and no one is airborne",
+		"Clans",
+		"Shattered Awakening",
+		"1 Shatter Ult move",
 	},
 }
