@@ -17,14 +17,14 @@ local BodymoverService = require(ServerModules.BodymoverService)
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 local UserAnimation = MoveAnims.Eclipse.Solar.Awakening.Helioclysm
 
-local GRAB_HITBOX_SIZE = Vector3.new(10, 30, 10)
+local GRAB_HITBOX_SIZE = Vector3.new(15, 30, 15)
 local GRAB_HITBOX_OFFSET = CFrame.new(0, 0, -3)
 
 local RISE_HEIGHT = 100
 local HOVER_HEIGHT = 30
 local RISE_TIME = 0.6
 local HOVER_WAIT_TIME = 2
-local DESCEND_TIME = 1.5
+local DESCEND_TIME = 0.7
 local RAGDOLL_TIME = 14
 
 local PUNCH_DAMAGE = 3
@@ -59,7 +59,7 @@ local RagdollConfig = {
 local VICTIM_HARD_RAGDOLL_DURATION = 3
 
 return {
-	Cooldown = 1,
+	Cooldown = 30,
 
 	Start = function(Player, Tool)
 		local Character = Player.Character
