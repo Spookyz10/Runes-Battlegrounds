@@ -64,7 +64,7 @@ local ENEMY_HIT_SHAKE_INTENSITY = 6
 local ENEMY_HIT_SHAKE_TIME = 0.5
 
 return {
-	Cooldown = 1,
+	Cooldown = 15,
 	Start = function(Player, Tool)
 		local Character = Player.Character
 		if not Character then

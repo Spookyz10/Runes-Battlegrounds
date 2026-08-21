@@ -228,13 +228,9 @@ return {
 						size = 0.3,
 					})
 
-					if AttackerPlayer then
-						RemoteManager.FireClient(
-							AttackerPlayer,
-							"ReplicateTask",
-							"ShakeCamera",
-							{ Intensity = 6, Last = 0.4 }
-						)
+					if Player then
+						print("ShakeCamera for AttackerPlayer")
+						RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", { Intensity = 4, Last = 0.3 })
 					end
 
 					slamActive = true
