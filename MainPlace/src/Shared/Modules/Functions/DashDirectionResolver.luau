@@ -1,0 +1,503 @@
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local RS = game:GetService("ReplicatedStorage")
+
+local Loop = require(RS.Shared.Modules.Functions.Loop)
+local Tasks = require(RS.Shared.Modules.Functions.Tasks)
+local RemoteManager = require(RS.Shared.Modules.RemoteManager)
+
+local DashResolver = {}
+
+local __moduleId = tostring(math.random(1, 999999))
+
+local LastSideDash = {}
+local LastBackDash = {}
+local LastFrontDash = {}
+local LastDashRequest = {}
+
+local DASH_INPUT_DEBOUNCE = 0.3
+
+local AxisKey = {
+	Front = "Dash_Z",
+	Back = "Dash_Z",
+	Left = "Dash_X",
+	Right = "Dash_X",
+}
+
+local DirectionCooldown = {
+	Front = 5,
+	Back = 5,
+	Left = 2,
+	Right = 2,
+}
+
+local AxisCooldownExpiry = {}
+
+-- Estado do Front Dash em andamento (por Character). Guardamos aqui pra
+-- poder reagir aos avisos que o server manda (DashBegin/DashResume)
+-- sem precisar de nenhuma animacao local -- a animacao do Front Dash e
+-- 100% server-side e replica normalmente pro proprio dono via Animator.
+local ActiveFrontDash = {}
+
+local function isAxisOnCooldown(Character, Direction)
+	local Axis = AxisKey[Direction]
+	if not Axis then
+		return false
+	end
+
+	local CharacterAxes = AxisCooldownExpiry[Character]
+	if not CharacterAxes then
+		return false
+	end
+
+	local Expiry = CharacterAxes[Axis]
+	if not Expiry then
+		return false
+	end
+
+	local onCooldown = tick() < Expiry
+
+	return onCooldown
+end
+
+local function markAxisUsed(Character, Direction, Duration: number?)
+	local Axis = AxisKey[Direction]
+	if not Axis then
+		return
+	end
+
+	AxisCooldownExpiry[Character] = AxisCooldownExpiry[Character] or {}
+
+	local BaseDuration = Duration or DirectionCooldown[Direction] or 2
+
+	local NewExpiry = tick() + BaseDuration
+	local CurrentExpiry = AxisCooldownExpiry[Character][Axis]
+
+	if CurrentExpiry and CurrentExpiry > NewExpiry then
+		return
+	end
+
+	AxisCooldownExpiry[Character][Axis] = NewExpiry
+end
+
+function DashResolver.IsTrapped(Character)
+	if not Character then
+		return false
+	end
+
+	if Character:HasTag("Ragdolled") then
+		return true
+	end
+
+	local StunnedFolder = Character:FindFirstChild("Stunned")
+	if not StunnedFolder then
+		return false
+	end
+
+	return StunnedFolder:GetAttribute("Escapable") ~= false
+end
+
+function DashResolver.HasEvasiveCharge(Character)
+	if not Character then
+		return false
+	end
+	return (Character:GetAttribute("EvasivaCharges") or 0) > 0
+end
+
+function DashResolver.Resolve(Character, Humanoid, HumRP)
+	local rotation
+
+	if UIS.KeyboardEnabled and not UIS.TouchEnabled then
+		if UIS:IsKeyDown(Enum.KeyCode.W) then
+			rotation = 0
+		elseif UIS:IsKeyDown(Enum.KeyCode.S) then
+			rotation = 180
+		elseif UIS:IsKeyDown(Enum.KeyCode.D) then
+			rotation = -90
+		elseif UIS:IsKeyDown(Enum.KeyCode.A) then
+			rotation = 90
+		end
+	else
+		local baseCFrame = HumRP.CFrame
+		local reference = HumRP.CFrame + Humanoid.MoveDirection * 15
+		local referencePosition = reference.Position
+		local lookVector = (
+			Vector3.new(referencePosition.X, baseCFrame.Position.Y, referencePosition.Z) - baseCFrame.Position
+		).Unit
+		local lookVectorRotation = math.deg(math.acos(baseCFrame.LookVector:Dot(lookVector)))
+
+		rotation = 0
+		if lookVectorRotation > -45 and lookVectorRotation < 45 then
+			rotation = 0
+		elseif lookVectorRotation > 135 and lookVectorRotation < 215 then
+			rotation = 180
+		elseif lookVectorRotation >= 45 and lookVectorRotation <= 135 then
+			local rightRef = HumRP.CFrame * CFrame.new(15, 0, 0)
+			local leftRef = HumRP.CFrame * CFrame.new(-15, 0, 0)
+			rotation = (reference.Position - rightRef.Position).Magnitude
+						> (reference.Position - leftRef.Position).Magnitude
+					and 90
+				or -90
+		end
+	end
+
+	local Direction
+	if rotation == 0 then
+		Direction = "Front"
+	elseif rotation == 180 then
+		Direction = "Back"
+	elseif rotation == 90 then
+		Direction = "Left"
+	elseif rotation == -90 then
+		Direction = "Right"
+	else
+		Direction = "Front"
+	end
+
+	local Trapped = DashResolver.IsTrapped(Character)
+	local Escaping = false
+	local CanAct = true
+
+	if Trapped then
+		if not DashResolver.HasEvasiveCharge(Character) then
+			CanAct = false
+
+			return Direction, Trapped, Escaping, CanAct
+		end
+
+		Escaping = true
+		if Direction == "Front" then
+			local Side = HumRP.CFrame.RightVector:Dot(Humanoid.MoveDirection)
+			Direction = Side < 0 and "Left" or "Right"
+		end
+	end
+
+	return Direction, Trapped, Escaping, CanAct
+end
+
+local function performFrontDash(Character, HumRP)
+	if ActiveFrontDash[Character] then
+		return
+	end
+
+	local State = {
+		Ended = false,
+		Velocity = nil :: BodyVelocity?,
+		StopLoop = nil :: (() -> ())?,
+	}
+
+	ActiveFrontDash[Character] = State
+
+	local function cleanup()
+		if State.Ended then
+			return
+		end
+		State.Ended = true
+
+		if State.StopLoop then
+			State.StopLoop()
+			State.StopLoop = nil
+		end
+
+		if State.Velocity and State.Velocity.Parent then
+			State.Velocity:Destroy()
+		end
+		State.Velocity = nil
+
+		if HumRP and HumRP.Parent then
+			HumRP.AssemblyLinearVelocity = Vector3.new(0, HumRP.AssemblyLinearVelocity.Y, 0)
+		end
+
+		ActiveFrontDash[Character] = nil
+	end
+
+	State.Cleanup = cleanup
+
+	State.Begin = function()
+		if State.Ended or State.Velocity then
+			return
+		end
+
+		local dashVelocity = Instance.new("BodyVelocity")
+		dashVelocity.MaxForce = Character:HasTag("Slowed") and Vector3.new(10000, 0, 10000)
+			or Vector3.new(50000, 0, 50000)
+		dashVelocity.Velocity = HumRP.CFrame.LookVector * 165
+		dashVelocity.Parent = HumRP
+		State.Velocity = dashVelocity
+
+		local StartTime = os.clock()
+		local INITIAL_SPEED = 100
+
+		local TARGET_ZERO_TIME = 2
+
+		local DECAY_K = -math.log(2 / INITIAL_SPEED) / TARGET_ZERO_TIME
+
+		State.StopLoop = Loop.new(function(stop)
+			if State.Ended or not dashVelocity.Parent then
+				stop()
+				return
+			end
+
+			local Elapsed = os.clock() - StartTime
+			local Speed = INITIAL_SPEED * math.exp(-DECAY_K * Elapsed)
+
+			if Speed > 2 then
+				dashVelocity.Velocity = HumRP.CFrame.LookVector * Speed
+			else
+				dashVelocity.Velocity = Vector3.zero
+				stop()
+			end
+		end)
+	end
+
+	task.delay(4, cleanup)
+end
+
+function DashResolver.BeginFrontDash(Character)
+	local State = ActiveFrontDash[Character]
+	if State then
+		State.Begin()
+	end
+end
+
+function DashResolver.ResumeFrontDash(Character)
+	local State = ActiveFrontDash[Character]
+	if State then
+		State.Cleanup()
+	end
+end
+
+function DashResolver.PerformLocalDash(Character, Humanoid, HumRP, Camera, Animator, Direction, Escaping)
+	local gameSettings = UserSettings().GameSettings
+
+	if Direction == "Front" then
+		LastFrontDash[Character] = LastFrontDash[Character] or 0
+		if tick() - LastFrontDash[Character] < 2 then
+			return
+		end
+		LastFrontDash[Character] = tick()
+
+		Tasks["ClearVelocities"](HumRP)
+		performFrontDash(Character, HumRP)
+	elseif Direction == "Left" or Direction == "Right" then
+		LastSideDash[Character] = LastSideDash[Character] or 0
+		if tick() - LastSideDash[Character] < 2 then
+			return
+		end
+
+		if not Escaping then
+			if not Character:HasTag("Ragdolled") and not Character:HasTag("Knockbacked") then
+				if
+					Character:HasTag("SideDashCD")
+					or Character:HasTag("CantSideDash")
+					or Character:HasTag("Stunned")
+				then
+					return
+				end
+			elseif Character:HasTag("CantRagdollCancel") or Character:GetAttribute("RagdollCancel") ~= true then
+				return
+			end
+		end
+
+		LastSideDash[Character] = tick()
+		Tasks["ClearVelocities"](HumRP)
+		Character:SetAttribute("SideDashing", true)
+
+		if Humanoid:GetState() == Enum.HumanoidStateType.Physics then
+			Humanoid:ChangeState(Enum.HumanoidStateType.Running)
+		end
+		if Humanoid.PlatformStand then
+			Humanoid.PlatformStand = false
+		end
+
+		Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+		task.delay(0.6, function()
+			Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
+		end)
+
+		local dashAnim = Direction == "Left" and RS.Resources.Animations.Dashes.DashLeft
+			or RS.Resources.Animations.Dashes.DashRight
+		local dashTrack = Animator:LoadAnimation(dashAnim)
+
+		local speed = 200
+		local sideMultiplier = Direction == "Right" and 1 or -1
+
+		gameSettings.RotationType = Enum.RotationType.CameraRelative
+
+		local stopLoop = nil
+
+		local dashVelocity = Instance.new("BodyVelocity")
+		dashVelocity.MaxForce = Character:HasTag("Slowed") and Vector3.new(10000, 0, 10000)
+			or Vector3.new(50000, 0, 50000)
+		dashVelocity.Parent = HumRP
+
+		dashTrack.Stopped:Once(function()
+			if stopLoop then
+				stopLoop()
+			end
+			if dashVelocity.Parent then
+				dashVelocity:Destroy()
+			end
+			dashTrack:Destroy()
+			HumRP.AssemblyLinearVelocity = Vector3.new(0, HumRP.AssemblyLinearVelocity.Y, 0)
+			gameSettings.RotationType = Enum.RotationType.MovementRelative
+		end)
+
+		task.delay(0.325, function()
+			Character:SetAttribute("SideDashing", false)
+		end)
+
+		dashTrack:Play()
+
+		stopLoop = Loop.new(function(stop)
+			if speed > 5 and dashVelocity.Parent then
+				speed *= 0.91
+				HumRP.CFrame = CFrame.lookAlong(HumRP.Position, Camera.CFrame.LookVector * Vector3.new(1, 0, 1))
+				dashVelocity.Velocity = (HumRP.CFrame.RightVector * sideMultiplier) * speed
+			else
+				stop()
+				if dashVelocity.Parent then
+					dashVelocity:Destroy()
+				end
+
+				HumRP.AssemblyLinearVelocity = Vector3.new(0, HumRP.AssemblyLinearVelocity.Y, 0)
+				gameSettings.RotationType = Enum.RotationType.MovementRelative
+			end
+		end)
+	elseif Direction == "Back" then
+		LastBackDash[Character] = LastBackDash[Character] or 0
+		if tick() - LastBackDash[Character] < 5 then
+			return
+		end
+
+		if not Escaping then
+			if not Character:HasTag("Ragdolled") and not Character:HasTag("Knockbacked") then
+				if Character:HasTag("DashCD") or Character:HasTag("CantDash") or Character:HasTag("Stunned") then
+					return
+				end
+			elseif Character:HasTag("CantRagdollCancel") or Character:GetAttribute("RagdollCancel") ~= true then
+				return
+			end
+		end
+
+		LastBackDash[Character] = tick()
+		Tasks["ClearVelocities"](HumRP)
+		Character:SetAttribute("Dashing", true)
+
+		if Humanoid:GetState() == Enum.HumanoidStateType.Physics then
+			Humanoid:ChangeState(Enum.HumanoidStateType.Running)
+		end
+		if Humanoid.PlatformStand then
+			Humanoid.PlatformStand = false
+		end
+
+		Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+		Character:AddTag("CantSideDash")
+		task.delay(1.051, function()
+			Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
+			Character:RemoveTag("CantSideDash")
+		end)
+
+		local dashAnim = RS.Resources.Animations.Dashes.DashBack
+
+		for _ = 1, 2 do
+			local dashTrack = Animator:LoadAnimation(dashAnim)
+
+			gameSettings.RotationType = Enum.RotationType.CameraRelative
+
+			local speed = 260
+
+			local dashVelocity = Instance.new("BodyVelocity")
+			dashVelocity.MaxForce = Character:HasTag("Slowed") and Vector3.new(10000, 0, 10000)
+				or Vector3.new(50000, 0, 50000)
+			dashVelocity.Parent = HumRP
+
+			dashTrack.Stopped:Once(function()
+				Character:SetAttribute("Dashing", false)
+				if dashVelocity.Parent then
+					dashVelocity:Destroy()
+				end
+				dashTrack:Destroy()
+				gameSettings.RotationType = Enum.RotationType.MovementRelative
+			end)
+
+			dashTrack:Play()
+
+			local stopLoop = nil
+			stopLoop = Loop.new(function(stop)
+				if dashVelocity.Parent then
+					speed *= 0.91
+					if speed <= 10 then
+						dashVelocity:Destroy()
+					end
+					HumRP.CFrame = CFrame.lookAlong(HumRP.Position, Camera.CFrame.LookVector * Vector3.new(1, 0, 1))
+					dashVelocity.Velocity = -HumRP.CFrame.LookVector * speed
+				else
+					stop()
+					gameSettings.RotationType = Enum.RotationType.MovementRelative
+				end
+			end)
+		end
+	end
+end
+
+function DashResolver.PerformDash(Character, Humanoid, HumRP, Camera, Animator)
+	local Now = tick()
+	local LastRequest = LastDashRequest[Character]
+
+	if LastRequest and (Now - LastRequest) < DASH_INPUT_DEBOUNCE then
+		return
+	end
+
+	local Direction, Trapped, Escaping, CanAct = DashResolver.Resolve(Character, Humanoid, HumRP)
+
+	if not CanAct then
+		return Direction, Trapped, Escaping, CanAct
+	end
+
+	if not Escaping and isAxisOnCooldown(Character, Direction) then
+		return Direction, Trapped, Escaping, false
+	end
+
+	LastDashRequest[Character] = Now
+
+	RemoteManager.FireServer("Keypress", { Key = Enum.KeyCode.Q, Direction = Direction, ClientCFrame = HumRP.CFrame })
+
+	DashResolver.PerformLocalDash(Character, Humanoid, HumRP, Camera, Animator, Direction, Escaping)
+
+	return Direction, Trapped, Escaping, CanAct
+end
+
+function DashResolver.ConfirmAxisCooldown(SkillName: string, Cooldown: number)
+	local Direction = (SkillName:gsub("Dash$", ""))
+	local Axis = AxisKey[Direction]
+	if not Axis then
+		return
+	end
+
+	local Character = Players.LocalPlayer.Character
+	if not Character then
+		return
+	end
+
+	markAxisUsed(Character, Direction, Cooldown)
+end
+
+function DashResolver.Cleanup(Character)
+	if not Character then
+		return
+	end
+
+	LastSideDash[Character] = nil
+	LastBackDash[Character] = nil
+	LastFrontDash[Character] = nil
+	LastDashRequest[Character] = nil
+	AxisCooldownExpiry[Character] = nil
+
+	local State = ActiveFrontDash[Character]
+	if State then
+		State.Cleanup()
+	end
+end
+
+return DashResolver

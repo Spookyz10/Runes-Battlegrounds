@@ -1,0 +1,30 @@
+local Constants = require(script.Parent.Shared.Constants)
+local Debris = Constants.Debris
+local ParticlesModule = Constants.ParticlesModule
+local CharacterAssets = Constants.CharacterAssets
+
+return function(Params)
+	local EnemyChar = Params.EnemyChar
+	if not EnemyChar or not EnemyChar.Parent then
+		return
+	end
+
+	local HumRP = EnemyChar:FindFirstChild("HumanoidRootPart")
+	if not HumRP then
+		return
+	end
+
+	local SmokeAsset = CharacterAssets.Shattered.Suplex.Smoke
+
+	if not SmokeAsset then
+		return
+	end
+
+	local Clone = SmokeAsset:Clone()
+	Clone.Parent = workspace
+	Clone.Position = HumRP.Position
+
+	ParticlesModule.Emit(Clone)
+
+	Debris:AddItem(Clone, 6)
+end

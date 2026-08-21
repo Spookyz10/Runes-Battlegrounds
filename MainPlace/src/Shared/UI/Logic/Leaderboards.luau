@@ -1,0 +1,154 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+
+local BoardFolders = {
+	Kills = "Kills",
+	Donated = "Donations",
+}
+
+local BoardLabels = {
+	Kills = "Kills",
+	Donated = "Donated",
+}
+
+local BoardColors = {
+	Kills = Color3.fromRGB(255, 0, 0),
+	Donated = Color3.fromRGB(15, 218, 0),
+}
+
+local RankStyles = { "Top1", "Top2", "Top3" }
+
+local ActiveEntries = {
+	Kills = {},
+	Donated = {},
+}
+
+local RenderVersions = {
+	Kills = 0,
+	Donated = 0,
+}
+
+local LatestData = nil
+
+local Leaderboard = {}
+
+local function FormatValue(value)
+	if value >= 1000000 then
+		return string.format("%.1fM", value / 1000000)
+	elseif value >= 1000 then
+		return string.format("%.1fK", value / 1000)
+	end
+	return tostring(value)
+end
+
+local function ApplyRank(Entry, rank)
+	Entry.Basic.Enabled = rank > 3
+	for index, styleName in RankStyles do
+		Entry[styleName].Enabled = rank == index
+	end
+end
+
+local function ApplyStat(Entry, board, value)
+	local Stat = Entry.Stat
+	Stat.RichText = true
+	Stat.TextColor3 = BoardColors[board]
+	Stat.Text = BoardLabels[board] .. ':<br/><font color="rgb(255,255,255)">' .. FormatValue(value) .. "</font>"
+end
+
+local function CreateEntry(board, rank, data, Container, renderVersion)
+	local Template = ReplicatedStorage.Resources.UI.Templates.Leaderboard
+	local Entry = Template:Clone()
+
+	ApplyRank(Entry, rank)
+
+	Entry.PlayerName.Text = data.Name
+	ApplyStat(Entry, board, data.Value)
+
+	Entry.LayoutOrder = rank
+	Entry.Parent = Container
+
+	table.insert(ActiveEntries[board], Entry)
+
+	-- Buscar thumbnail pode yieldar. Deixar isso fora do render evita que duas
+	-- atualizações iniciais se intercalem e criem entradas duplicadas.
+	task.spawn(function()
+		local success, thumbnail = pcall(
+			Players.GetUserThumbnailAsync,
+			Players,
+			data.UserId,
+			Enum.ThumbnailType.HeadShot,
+			Enum.ThumbnailSize.Size100x100
+		)
+
+		if success and Entry.Parent and RenderVersions[board] == renderVersion then
+			Entry.Player.Image = thumbnail
+		end
+	end)
+end
+
+local function RenderBoard(board, entries)
+	local FolderName = BoardFolders[board]
+	if not FolderName then
+		return
+	end
+
+	local Leaderboards = PlayerGui:WaitForChild("Leaderboards")
+	local BoardFrame = Leaderboards:FindFirstChild(FolderName)
+	if not BoardFrame then
+		return
+	end
+
+	local Container = BoardFrame:FindFirstChild("Container")
+	if not Container then
+		return
+	end
+
+	RenderVersions[board] += 1
+	local renderVersion = RenderVersions[board]
+
+	for _, Entry in ActiveEntries[board] do
+		Entry:Destroy()
+	end
+	table.clear(ActiveEntries[board])
+
+	if not entries then
+		return
+	end
+
+	for rank, data in entries do
+		CreateEntry(board, rank, data, Container, renderVersion)
+	end
+end
+
+function Leaderboard.UpdateFromServer(Data)
+	if not Data then
+		return
+	end
+
+	LatestData = Data
+
+	for board in BoardFolders do
+		RenderBoard(board, Data[board])
+	end
+end
+
+function Leaderboard.Refresh()
+	if not LatestData then
+		return
+	end
+
+	for board in BoardFolders do
+		RenderBoard(board, LatestData[board])
+	end
+end
+
+function Leaderboard.Init()
+	if LatestData then
+		Leaderboard.Refresh()
+	end
+end
+
+return Leaderboard

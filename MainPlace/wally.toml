@@ -1,0 +1,10 @@
+[package]
+name = "azvar/runes-battlegrounds"
+version = "0.1.0"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+
+[dependencies]
+topbarplus = "legitatx/topbarplus@3.0.5"
+dataservicetyped = "leifstout/dataservicetyped@1.0.3"
+

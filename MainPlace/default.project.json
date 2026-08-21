@@ -1,0 +1,44 @@
+{
+  "name": "Runes Battlegrounds",
+  "tree": {
+    "$className": "DataModel",
+
+    "ReplicatedFirst": {
+      "$path": "src/First"
+    },
+
+    "ReplicatedStorage": {
+      "Shared": {
+        "$path": "src/Shared"
+      },
+      "Packages": {
+        "$path": "Packages"
+      }
+    },
+
+    "ServerScriptService": {
+      "Server": {
+        "$path": "src/Server"
+      }
+    },
+
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "Player": {
+          "$path": "src/PlayerScripts"
+        }
+      },
+      "StarterCharacterScripts": {
+        "Character": {
+          "$path": "src/CharacterScripts"
+        }
+      }
+    },
+
+    "ServerStorage": {
+      "Modules": {
+        "$path": "src/Modules"
+      }
+    }
+  }
+}
