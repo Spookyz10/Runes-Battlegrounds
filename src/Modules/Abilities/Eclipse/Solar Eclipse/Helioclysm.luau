@@ -31,11 +31,11 @@ local PUNCH_DAMAGE = 3
 local PUNCH_HITBOX_SIZE = Vector3.new(22.415, 111.924, 27.247)
 local PUNCH_HITBOX_OFFSET = CFrame.new(0, 70, 0)
 
-local CASTER_HARD_RAGDOLL_DURATION = 3
-local CASTER_HARD_RAGDOLL_CONFIG = {
+local RagdollConfig = {
 	Damage = 20,
 	Size = Vector3.new(30, 30, 30),
 	Offset = CFrame.new(0, 0, 0),
+	KnockupForce = 225,
 	GroundCrater = {
 		{
 			Seed = math.random(1, 2147483647),
@@ -56,7 +56,7 @@ local CASTER_HARD_RAGDOLL_CONFIG = {
 	},
 }
 
-local VICTIM_LAUNCH_FORCE = 300
+local VICTIM_HARD_RAGDOLL_DURATION = 3
 
 return {
 	Cooldown = 1,
@@ -249,18 +249,6 @@ return {
 				HumRP.Anchored = false
 			end
 
-			if not cancelled and Victim and Character and Character.Parent and Humanoid and Humanoid.Health > 0 then
-				RagdollHandler.ragdoll(
-					Humanoid,
-					CASTER_HARD_RAGDOLL_DURATION,
-					true,
-					nil,
-					CASTER_HARD_RAGDOLL_CONFIG,
-					nil,
-					true
-				)
-			end
-
 			if
 				not cancelled
 				and Victim
@@ -282,14 +270,26 @@ return {
 					)
 				end
 
+				if VictimAnchored and VictimHumRP and VictimHumRP.Parent then
+					VictimHumRP.Anchored = false
+				end
+
+				RagdollHandler.ragdoll(
+					VictimHumanoid,
+					VICTIM_HARD_RAGDOLL_DURATION,
+					true,
+					Character,
+					RagdollConfig,
+					nil,
+					true
+				)
+
 				BodymoverService:Knockback(Victim, {
 					KnockbackType = "Velocity",
 					MaxForce = Vector3.new(1, 100000, 1),
-					Velocity = Vector3.new(0, VICTIM_LAUNCH_FORCE, 0),
+					Velocity = Vector3.new(0, 300, 0),
 				})
-			end
-
-			if VictimAnchored and VictimHumRP and VictimHumRP.Parent then
+			elseif VictimAnchored and VictimHumRP and VictimHumRP.Parent then
 				VictimHumRP.Anchored = false
 			end
 		end)
