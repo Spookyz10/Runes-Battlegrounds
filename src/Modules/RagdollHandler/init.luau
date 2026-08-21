@@ -464,6 +464,10 @@ function Ragdoll.ragdoll(Humanoid, Duration, HardRagdoll, Ragdoller, HardRagdoll
 									Velocity = HumRP.CFrame.UpVector * KnockupForce,
 								})
 								Ragdoll.ragdoll(EnemyHumanoid, 2)
+								local EnemyPlayer = Players:GetPlayerFromCharacter(Character)
+								if EnemyPlayer then
+									RemoteManager.FireCLient(EnemyPlayer, "ShakeCamera", { Intensity = 2, Last = 0.3 })
+								end
 							end,
 							nil,
 							VoxelParameters

@@ -39,6 +39,7 @@ local template = {
 	Settings = {
 		CameraShake = true,
 		AwakeningMusic = true,
+		FastMode = false,
 	},
 }
 

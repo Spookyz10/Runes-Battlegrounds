@@ -50,6 +50,7 @@ local function playAwakeningMusic(Player, Character, MusicName)
 	stopAwakeningMusic(Player)
 
 	local Sound = SFXModule:PlayInstance(MusicAsset, HumRP)
+	Sound:SetAttribute("AwakeningMusic", true)
 	ActiveAwakeningMusic[Player] = Sound
 end
 

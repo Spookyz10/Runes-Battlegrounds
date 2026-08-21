@@ -1,10 +1,15 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Data = require(ReplicatedStorage.Shared.Data).client
 local CameraShakerController = require(ReplicatedStorage.Shared.Modules.Functions.CameraShakerController)
 local Constants = require(script.Parent.Shared.Constants)
 local CamShakePresets = Constants.CamShakePresets
 
 return function(params)
 	task.spawn(function()
+		if Data.Settings.CameraShake() then
+			return
+		end
+
 		if params["Intensity"] ~= nil then
 			if params.Last then
 				local Intensity = params.Intensity

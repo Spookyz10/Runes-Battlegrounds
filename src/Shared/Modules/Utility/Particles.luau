@@ -1,5 +1,7 @@
 local TS = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Data = require(ReplicatedStorage.Shared.Data).client
 
 local LocalPlayer = game.Players.LocalPlayer
 
@@ -70,11 +72,8 @@ return {
 					if typeof(EmitDelay) ~= "number" or EmitDelay <= 0 then
 						local EmitCount = Particle:GetAttribute("EmitCount") or tonumber(Particle.Name) or 1
 
-						if not LocalPlayer:GetAttribute("Fast_Mode") then
-							Particle:Emit(EmitCount)
-						else
-							Particle:Emit(math.ceil(EmitCount / 2))
-						end
+						local FastMode = Data.Settings.FastMode()
+						Particle:Emit(FastMode and math.ceil(EmitCount / 2) or EmitCount)
 
 						local EmitDuration = tonumber(Particle:GetAttribute("EmitDuration"))
 						if typeof(EmitDuration) == "number" and EmitDuration > 0 then

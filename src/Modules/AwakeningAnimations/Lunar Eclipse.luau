@@ -44,7 +44,6 @@ local AIM_CONTROL_MAX_DURATION = 30
 local THROW_DELAY = 1
 local TP_LIFT_HEIGHT = 200
 
-local MOON_IMPACT_FORCE = 400
 local MOON_IMPACT_RADIUS = 100
 local module = {}
 
