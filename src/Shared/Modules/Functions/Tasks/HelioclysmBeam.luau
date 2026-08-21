@@ -7,8 +7,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local FadeOut = require(ReplicatedStorage.Shared.Modules.Utility.FadeOut)
 
 local RANDOM_RANGE = 20
-local WAIT_TIME = 0.5
-local FADE_TIME = 0.4
+local WAIT_TIME = 0.2
+local FADE_IN_TIME = 0.1
+local FADE_OUT_TIME = 0.3
 
 return function(Params)
 	local Character = Params.char
@@ -33,11 +34,13 @@ return function(Params)
 	Clone.Parent = workspace
 	Clone.CFrame = (HumRP.CFrame + Vector3.new(RandomX, 70, RandomZ)) * CFrame.Angles(math.rad(90), 0, 0)
 
-	ParticlesModule.Emit(Clone)
+	FadeOut.In(Clone, FADE_IN_TIME, function()
+		ParticlesModule.Emit(Clone)
+	end)
 
 	task.delay(WAIT_TIME, function()
 		if Clone and Clone.Parent then
-			FadeOut.OutAndDestroy(Clone, FADE_TIME)
+			FadeOut.OutAndDestroy(Clone, FADE_OUT_TIME)
 		end
 	end)
 end

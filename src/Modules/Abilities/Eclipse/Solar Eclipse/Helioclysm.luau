@@ -16,22 +16,22 @@ local SkillCancelHandler = require(ServerModules.SkillCancelHandler)
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 local UserAnimation = MoveAnims.Eclipse.Solar.Awakening.Helioclysm
 
-local GRAB_HITBOX_SIZE = Vector3.new(7, 30, 7)
+local GRAB_HITBOX_SIZE = Vector3.new(10, 30, 10)
 local GRAB_HITBOX_OFFSET = CFrame.new(0, 0, -3)
 
 local RISE_HEIGHT = 100
-local HOVER_HEIGHT = 60
+local HOVER_HEIGHT = 30
 local RISE_TIME = 0.6
 local HOVER_WAIT_TIME = 2
 local DESCEND_TIME = 1.5
 local RAGDOLL_TIME = 14
 
-local PUNCH_DAMAGE = 2
+local PUNCH_DAMAGE = 3
 local PUNCH_HITBOX_SIZE = Vector3.new(22.415, 111.924, 27.247)
-local PUNCH_HITBOX_OFFSET = CFrame.new(0, 4, 0)
+local PUNCH_HITBOX_OFFSET = CFrame.new(0, 70, 0)
 
 return {
-	Cooldown = 1,
+	Cooldown = 30,
 
 	Start = function(Player, Tool)
 		local Character = Player.Character
@@ -109,6 +109,9 @@ return {
 				)
 
 				if not FoundVictim then
+					if UserTrack and UserTrack.IsPlaying then
+						UserTrack:Stop()
+					end
 					return
 				end
 
@@ -118,6 +121,9 @@ return {
 
 				if not VictimHumanoid or not VictimHumRP then
 					Victim = nil
+					if UserTrack and UserTrack.IsPlaying then
+						UserTrack:Stop()
+					end
 					return
 				end
 
@@ -162,6 +168,7 @@ return {
 				end
 
 				RemoteManager.FireAllClients("ReplicateTask", "HelioclysmBeam", { char = Character })
+				RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", { Intensity = 4, Last = 0.3 })
 
 				HitboxHandler:SimpleOnce(
 					HumRP,
