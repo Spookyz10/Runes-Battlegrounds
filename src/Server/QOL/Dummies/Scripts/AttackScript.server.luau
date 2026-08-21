@@ -3,10 +3,8 @@ local HumRP = Character.HumanoidRootPart
 local Humanoid = Character.Humanoid
 
 local RNS = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
-local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 local AnimationService = require(ServerStorage.Modules.AnimationService)
 local HitboxHandler = require(ServerStorage.Modules.HitboxHandler)
 local iFramesService = require(ServerStorage.Modules.iFramesService)
@@ -31,7 +29,6 @@ RNS.Heartbeat:Connect(function()
 				Hitbox.Offset = CFrame.new(0, 0, -Hitbox.Size.Z / 2)
 				Hitbox.onTouch = function(EnemyCharacter)
 					local EnemyHumanoid = EnemyCharacter.Humanoid
-					local EnemyHumRP = EnemyCharacter.HumanoidRootPart
 
 					if
 						EnemyCharacter == Character
@@ -58,20 +55,6 @@ RNS.Heartbeat:Connect(function()
 					if HitInfo.Countered == true then
 						return
 					end
-
-					if HitInfo.Blocked == true then
-						local SFX: Sound
-
-						if EnemyCharacter:HasTag("PerfectBlock") then
-							SFX = ServerStorage.Assets.Sounds.Combat.Hits.PerfectBlocked
-						else
-							SFX = ServerStorage.Assets.Sounds.Combat.Hits.Blocked
-						end
-
-						SFXModule:PlaySound(SFX, EnemyHumRP)
-					else
-						SFXModule:PlaySound(ServerStorage.Assets.Sounds.Combat.Hits.Default["1"], EnemyHumRP)
-					end
 				end
 
 				Hitbox:Once()
@@ -90,7 +73,5 @@ RNS.Heartbeat:Connect(function()
 		end)
 
 		AnimationService:playAnimation(Character, PunchAnim)
-
-		SFXModule:PlaySound(ServerStorage.Assets.Sounds.Combat.Swings.Default["1"], HumRP)
 	end
 end)

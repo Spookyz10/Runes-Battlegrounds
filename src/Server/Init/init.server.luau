@@ -320,3 +320,6 @@ Data.Service:addGlobalCallback("GiftEarlyAccess", function(player, data)
 
 	data.OwnedPasses[GamepassId] = true
 end)
+
+local SvSt = game:GetService("ServerStorage")
+SvSt.Bindables.SpawnDummy:Fire(nil, nil, "AttackScript")
