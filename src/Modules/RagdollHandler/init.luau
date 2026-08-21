@@ -75,6 +75,7 @@ MapRayParams.FilterDescendantsInstances = {
 local DEFAULT_HARD_RAGDOLL_DAMAGE = 12
 local DEFAULT_HARD_RAGDOLL_SIZE = Vector3.new(20, 20, 20)
 local DEFAULT_HARD_RAGDOLL_OFFSET = CFrame.new(0, 0, 0)
+local DEFAULT_HARD_RAGDOLL_KNOCKUP_FORCE = 75
 
 local DEFAULT_GROUND_CRATERS = {
 	{
@@ -401,6 +402,7 @@ function Ragdoll.ragdoll(Humanoid, Duration, HardRagdoll, Ragdoller, HardRagdoll
 		local ImpactSize = Config.Size or DEFAULT_HARD_RAGDOLL_SIZE
 		local ImpactOffset = Config.Offset or DEFAULT_HARD_RAGDOLL_OFFSET
 		local GroundCraterConfigs = Config.GroundCrater
+		local KnockupForce = Config.KnockupForce or DEFAULT_HARD_RAGDOLL_KNOCKUP_FORCE
 
 		local LoopTask = nil
 		LoopTask = task.spawn(function()
@@ -459,7 +461,7 @@ function Ragdoll.ragdoll(Humanoid, Duration, HardRagdoll, Ragdoller, HardRagdoll
 								NewKnockback:Knockback(EnemyCharacter, {
 									KnockbackType = "Velocity",
 									MaxForce = Vector3.new(1, 100000, 1),
-									Velocity = HumRP.CFrame.UpVector * 75,
+									Velocity = HumRP.CFrame.UpVector * KnockupForce,
 								})
 								Ragdoll.ragdoll(EnemyHumanoid, 2)
 							end,

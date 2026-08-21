@@ -12,6 +12,7 @@ local AnimationService = require(ServerModules.AnimationService)
 local iFramesService = require(ServerModules.iFramesService)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local SkillCancelHandler = require(ServerModules.SkillCancelHandler)
+local BodymoverService = require(ServerModules.BodymoverService)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 local UserAnimation = MoveAnims.Eclipse.Solar.Awakening.Helioclysm
@@ -30,8 +31,35 @@ local PUNCH_DAMAGE = 3
 local PUNCH_HITBOX_SIZE = Vector3.new(22.415, 111.924, 27.247)
 local PUNCH_HITBOX_OFFSET = CFrame.new(0, 70, 0)
 
+local CASTER_HARD_RAGDOLL_DURATION = 3
+local CASTER_HARD_RAGDOLL_CONFIG = {
+	Damage = 20,
+	Size = Vector3.new(30, 30, 30),
+	Offset = CFrame.new(0, 0, 0),
+	GroundCrater = {
+		{
+			Seed = math.random(1, 2147483647),
+			amount = 60,
+			["end"] = Vector3.new(0, -20, 0),
+			size = 2.8,
+			rings = 3,
+			ringSpacing = 18,
+			ringSizeGrowth = 1.8,
+			ringGap = 0.22,
+			outwardTilt = true,
+			debrisSizeMin = 7,
+			debrisSizeMax = 18,
+			debrisHeightMin = 4,
+			debrisHeightMax = 9,
+			sizemult = 1.6,
+		},
+	},
+}
+
+local VICTIM_LAUNCH_FORCE = 300
+
 return {
-	Cooldown = 30,
+	Cooldown = 1,
 
 	Start = function(Player, Tool)
 		local Character = Player.Character
@@ -47,6 +75,7 @@ return {
 
 		local CasterStun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
 		iFramesService:AddiFrames(Character, "Strong")
+		Humanoid.WalkSpeed = 0
 
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
 
@@ -214,8 +243,50 @@ return {
 			iFramesService:RemoveiFrames(Character, "Strong")
 			StunHandler:Unstun(Character, CasterStun)
 
+			Humanoid.WalkSpeed = 16
+
 			if CasterAnchored and HumRP and HumRP.Parent then
 				HumRP.Anchored = false
+			end
+
+			if not cancelled and Victim and Character and Character.Parent and Humanoid and Humanoid.Health > 0 then
+				RagdollHandler.ragdoll(
+					Humanoid,
+					CASTER_HARD_RAGDOLL_DURATION,
+					true,
+					nil,
+					CASTER_HARD_RAGDOLL_CONFIG,
+					nil,
+					true
+				)
+			end
+
+			if
+				not cancelled
+				and Victim
+				and Victim.Parent
+				and VictimHumanoid
+				and VictimHumanoid.Health > 0
+				and VictimHumRP
+				and VictimHumRP.Parent
+			then
+				VictimHumRP.AssemblyLinearVelocity = Vector3.zero
+
+				local VictimPlayer = game:GetService("Players"):GetPlayerFromCharacter(Victim)
+				if VictimPlayer then
+					RemoteManager.FireClient(
+						VictimPlayer,
+						"ReplicateTask",
+						"ShakeCamera",
+						{ Intensity = 12, Last = 0.8 }
+					)
+				end
+
+				BodymoverService:Knockback(Victim, {
+					KnockbackType = "Velocity",
+					MaxForce = Vector3.new(1, 100000, 1),
+					Velocity = Vector3.new(0, VICTIM_LAUNCH_FORCE, 0),
+				})
 			end
 
 			if VictimAnchored and VictimHumRP and VictimHumRP.Parent then
@@ -225,8 +296,5 @@ return {
 
 		AnimationService:stopAll(Character)
 		AnimationService:playAnimation(Character, UserAnimation)
-
-		HumRP.Anchored = true
-		CasterAnchored = true
 	end,
 }
