@@ -27,6 +27,7 @@ local SEARCH_RADIUS = 300
 local DAMAGE = 15
 local KICK_VELOCITY = Vector3.new(0, 30, 0)
 local KICK_HORIZONTAL_FORCE = 20
+
 local WELD_OFFSET = CFrame.new(0, 0, -3) * CFrame.Angles(0, math.pi, 0)
 local PULL_OFFSET = Vector3.new(0, 0, -4)
 local PULL_TIME = 0.5
@@ -267,7 +268,7 @@ local function unlockCasterAirborne(Humanoid, HumRP, Character)
 	end
 end
 
-local function runAirVariant(Player, Tool, Character, HumRP, Humanoid)
+local function runAirVariant(Player, Tool, Character, HumRP, Humanoid, InitialTarget)
 	local CasterStun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
 	local cancelled = false
 	local onDamageCancel
@@ -357,9 +358,14 @@ local function runAirVariant(Player, Tool, Character, HumRP, Humanoid)
 
 			task.wait(0.2)
 
-			closestEnemy = findAirborneTarget(Character, HumRP)
+			-- Usa o alvo já capturado no Start() (momento em que o player
+			-- apertou a skill), em vez de buscar de novo aqui. Buscar de novo
+			-- fazia a skill falhar quando o alvo, lançado por outra habilidade
+			-- (ex: Sunquake), já tinha caído abaixo de MIN_AIR_HEIGHT no tempo
+			-- que a windup animation levou pra chegar nesse marker.
+			closestEnemy = InitialTarget
 
-			if not closestEnemy then
+			if not closestEnemy or not closestEnemy.Parent then
 				SkillCancelHandler:Unregister(Character, onDamageCancel)
 				iFramesService:RemoveiFrames(Character, "Base")
 				StunHandler:Unstun(Character, CasterStun)
@@ -371,7 +377,12 @@ local function runAirVariant(Player, Tool, Character, HumRP, Humanoid)
 			EnemyHumRP = closestEnemy:FindFirstChild("HumanoidRootPart")
 			EnemyPlayer = Players:GetPlayerFromCharacter(closestEnemy)
 
-			if not EnemyHumanoid or not EnemyHumRP then
+			if
+				not EnemyHumanoid
+				or not EnemyHumRP
+				or EnemyHumanoid.Health <= 0
+				or EnemyHumanoid:GetState() == Enum.HumanoidStateType.Dead
+			then
 				closestEnemy = nil
 				SkillCancelHandler:Unregister(Character, onDamageCancel)
 				iFramesService:RemoveiFrames(Character, "Base")
@@ -1131,7 +1142,7 @@ return {
 		local AirTarget = findAirborneTarget(Character, HumRP)
 
 		if AirTarget then
-			runAirVariant(Player, Tool, Character, HumRP, Humanoid)
+			runAirVariant(Player, Tool, Character, HumRP, Humanoid, AirTarget)
 		else
 			runGroundVariant(Player, Tool, Character, HumRP, Humanoid)
 		end

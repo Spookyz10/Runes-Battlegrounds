@@ -93,12 +93,15 @@ return {
 						if not EnemyHumRP then
 							return
 						end
+
+						local MarkedPosition = EnemyHumRP.Position
+
 						fireVFX("Indicator", {
 							char = Character,
-							targetRoot = EnemyHumRP,
+							position = MarkedPosition,
 							yOffset = INDICATOR_Y_OFFSET,
 						})
-						table.insert(targets, EnemyCharacter)
+						table.insert(targets, { Character = EnemyCharacter, Position = MarkedPosition })
 					end
 				)
 
@@ -112,12 +115,9 @@ return {
 
 				task.delay(PILLAR_DELAY, function()
 					local beamPositions = {}
-					for _, EnemyCharacter in targets do
-						local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
-						if EnemyHumRP then
-							local pos = EnemyHumRP.Position
-							table.insert(beamPositions, Vector3.new(pos.X, pos.Y - INDICATOR_Y_OFFSET, pos.Z))
-						end
+					for _, Target in targets do
+						local pos = Target.Position
+						table.insert(beamPositions, Vector3.new(pos.X, pos.Y - INDICATOR_Y_OFFSET, pos.Z))
 					end
 
 					fireVFX("Beam", {
@@ -125,9 +125,10 @@ return {
 						beamPositions = beamPositions,
 					})
 
-					for _, EnemyCharacter in targets do
+					for _, Target in targets do
+						local EnemyCharacter = Target.Character
 						task.spawn(function()
-							if not StatusEffectHandler:Has(EnemyCharacter, "Inferno") then
+							if not EnemyCharacter or not StatusEffectHandler:Has(EnemyCharacter, "Inferno") then
 								return
 							end
 

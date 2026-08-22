@@ -1,6 +1,7 @@
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 local ServerModules = ServerStorage.Modules
 
@@ -23,8 +24,11 @@ local RAGDOLL_TIME = 6
 
 local LAUNCH_HEIGHT = 45
 local LAUNCH_FORWARD = 30
-local LAUNCH_UP_TIME = 0.25
-local LAUNCH_FORWARD_TIME = 0.25
+local LAUNCH_TIME = 0.5
+
+local VICTIM_LAUNCH_P = 12000
+local VICTIM_LAUNCH_D = 800
+local VICTIM_LAUNCH_MAXFORCE = Vector3.new(1, 1, 1) * 1000000
 
 local PUNCH_DAMAGE = 18
 local PUNCH_DOWN_FORCE = -30
@@ -35,7 +39,7 @@ local PUNCH_UP_VELOCITY_TIME = 0.18
 local PUNCH_FALLING_DELAY = 0.3
 
 return {
-	Cooldown = 1,
+	Cooldown = 12,
 	Start = function(Player, Tool)
 		local Character = Player.Character
 		if not Character then
@@ -84,7 +88,24 @@ return {
 			Character:RemoveTag("CantRotate")
 		end
 
+		local function stopVictimLaunch(Entry)
+			if Entry.LaunchConn then
+				Entry.LaunchConn:Disconnect()
+				Entry.LaunchConn = nil
+			end
+		end
+
+		local function destroyVictimLaunch(Entry)
+			stopVictimLaunch(Entry)
+			if Entry.BodyPosition and Entry.BodyPosition.Parent then
+				Entry.BodyPosition:Destroy()
+			end
+			Entry.BodyPosition = nil
+		end
+
 		local function releaseVictim(Entry, Unanchor)
+			destroyVictimLaunch(Entry)
+
 			local EnemyCharacter = Entry.Character
 			if not EnemyCharacter or not EnemyCharacter.Parent then
 				return
@@ -124,6 +145,52 @@ return {
 		end
 
 		SkillCancelHandler:Register(Character, onDamageCancel)
+
+		local function launchVictim(Entry, LookFlat)
+			local EnemyHumRP = Entry.HumRP
+			if not EnemyHumRP or not EnemyHumRP.Parent then
+				return
+			end
+
+			stopVictimLaunch(Entry)
+
+			EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
+			EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
+
+			local StartPos = EnemyHumRP.Position
+			local TargetPos = StartPos + Vector3.new(0, LAUNCH_HEIGHT, 0) + LookFlat * LAUNCH_FORWARD
+
+			local BodyPos = Entry.BodyPosition
+			if not BodyPos or not BodyPos.Parent then
+				BodyPos = Instance.new("BodyPosition")
+				BodyPos.Name = "ComboLaunch"
+				BodyPos.MaxForce = VICTIM_LAUNCH_MAXFORCE
+				BodyPos.P = VICTIM_LAUNCH_P
+				BodyPos.D = VICTIM_LAUNCH_D
+				BodyPos.Position = StartPos
+				BodyPos.Parent = EnemyHumRP
+				Entry.BodyPosition = BodyPos
+			end
+
+			local StartTime = os.clock()
+
+			Entry.LaunchConn = RunService.Heartbeat:Connect(function()
+				if Cancelled or not EnemyHumRP or not EnemyHumRP.Parent or not BodyPos.Parent then
+					stopVictimLaunch(Entry)
+					return
+				end
+
+				local t = math.clamp((os.clock() - StartTime) / LAUNCH_TIME, 0, 1)
+				local eased = 1 - (1 - t) ^ 2
+				BodyPos.Position = StartPos:Lerp(TargetPos, eased)
+
+				if t >= 1 then
+					-- Chegou no topo: mantém o BodyPosition segurando o alvo
+					-- (não destrói) até o "punch" ou cancelamento soltarem.
+					stopVictimLaunch(Entry)
+				end
+			end)
+		end
 
 		table.insert(
 			UserEvents,
@@ -213,7 +280,6 @@ return {
 
 						EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
 						EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
-						EnemyHumRP.Anchored = true
 
 						EnemyCharacter:AddTag("CantRotate")
 
@@ -241,62 +307,23 @@ return {
 				LookFlat = Vector3.new(LookFlat.X, 0, LookFlat.Z)
 				LookFlat = LookFlat.Magnitude > 0.001 and LookFlat.Unit or Vector3.new(0, 0, -1)
 
-				local CasterUpTarget = HumRP.CFrame + Vector3.new(0, LAUNCH_HEIGHT, 0)
+				local CasterTarget = HumRP.CFrame + Vector3.new(0, LAUNCH_HEIGHT, 0) + LookFlat * LAUNCH_FORWARD
 
-				local CasterUpTween = TweenService:Create(
+				local CasterLaunchTween = TweenService:Create(
 					HumRP,
-					TweenInfo.new(LAUNCH_UP_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-					{ CFrame = CasterUpTarget }
+					TweenInfo.new(LAUNCH_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+					{ CFrame = CasterTarget }
 				)
 
-				CasterUpTween.Completed:Once(function()
-					if Cancelled or not HumRP.Parent then
-						return
-					end
-
-					local CasterForwardTarget = HumRP.CFrame + LookFlat * LAUNCH_FORWARD
-
-					TweenService:Create(
-						HumRP,
-						TweenInfo.new(LAUNCH_FORWARD_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-						{ CFrame = CasterForwardTarget }
-					):Play()
-				end)
-
 				for _, Entry in Victims do
-					if Entry.HumRP and Entry.HumRP.Parent then
-						local VictimHumRP = Entry.HumRP
-						local VictimUpTarget = VictimHumRP.CFrame + Vector3.new(0, LAUNCH_HEIGHT, 0)
-
-						local VictimUpTween = TweenService:Create(
-							VictimHumRP,
-							TweenInfo.new(LAUNCH_UP_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-							{ CFrame = VictimUpTarget }
-						)
-
-						VictimUpTween.Completed:Once(function()
-							if Cancelled or not VictimHumRP.Parent then
-								return
-							end
-
-							local VictimForwardTarget = VictimHumRP.CFrame + LookFlat * LAUNCH_FORWARD
-
-							TweenService:Create(
-								VictimHumRP,
-								TweenInfo.new(LAUNCH_FORWARD_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-								{ CFrame = VictimForwardTarget }
-							):Play()
-						end)
-
-						VictimUpTween:Play()
-					end
+					launchVictim(Entry, LookFlat)
 				end
 
 				task.delay(0.5, function()
 					if Cancelled then
 						return
 					end
-					CasterUpTween:Play()
+					CasterLaunchTween:Play()
 				end)
 			end)
 		)
