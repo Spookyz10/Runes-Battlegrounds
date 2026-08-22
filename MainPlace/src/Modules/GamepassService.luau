@@ -24,15 +24,24 @@ local TRACKED_GAMEPASSES = {
 	VIPPass.GamepassId,
 }
 
+local KILLS_FOR_FREE_PASSES = 50
+
+local function ownsPass(playerData, GamepassId)
+	return table.find(playerData.OwnedPasses(), GamepassId) ~= nil
+end
+
 local function addOwnedPass(playerData, GamepassId)
-	if table.find(playerData.OwnedPasses(), GamepassId) then
+	if ownsPass(playerData, GamepassId) then
 		return
 	end
 	playerData.OwnedPasses.Insert(GamepassId)
 end
 
-local function ownsPass(playerData, GamepassId)
-	return table.find(playerData.OwnedPasses(), GamepassId) ~= nil
+local function GrantFreePassesFromKills(playerData)
+	if playerData.TotalKills() >= KILLS_FOR_FREE_PASSES then
+		addOwnedPass(playerData, EarlyAccess.GamepassId)
+		addOwnedPass(playerData, VIPPass.GamepassId)
+	end
 end
 
 function GamepassService:SyncPlayer(Player)
@@ -48,6 +57,8 @@ function GamepassService:SyncPlayer(Player)
 	if COMPLIMENTARY_VIP_USERS[Player.UserId] then
 		addOwnedPass(playerData, VIPPass.GamepassId)
 	end
+
+	GrantFreePassesFromKills(playerData)
 
 	for _, GamepassId in TRACKED_GAMEPASSES do
 		if ownsPass(playerData, GamepassId) then

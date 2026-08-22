@@ -464,13 +464,45 @@ function Ragdoll.ragdoll(Humanoid, Duration, HardRagdoll, Ragdoller, HardRagdoll
 									Velocity = HumRP.CFrame.UpVector * KnockupForce,
 								})
 								Ragdoll.ragdoll(EnemyHumanoid, 2)
-								local EnemyPlayer = Players:GetPlayerFromCharacter(Character)
-								if EnemyPlayer then
-									RemoteManager.FireCLient(EnemyPlayer, "ShakeCamera", { Intensity = 2, Last = 0.3 })
-								end
 							end,
 							nil,
 							VoxelParameters
+						)
+
+						local ShakeHitboxSize = ImpactSize * 3
+						local ShakeMaxDistance = ShakeHitboxSize.Magnitude / 2
+
+						HitboxHandler:SimpleOnce(
+							HumRP,
+							ShakeHitboxSize,
+							ImpactOffset + Vector3.nwe(0, 5, 0),
+							{},
+							nil,
+							nil,
+							function(ShakeCharacter)
+								local ShakeHumanoid = ShakeCharacter:FindFirstChildOfClass("Humanoid")
+								local ShakeRootPart = ShakeCharacter:FindFirstChild("HumanoidRootPart")
+								if not ShakeHumanoid or not ShakeRootPart then
+									return
+								end
+
+								local ShakePlayer = Players:GetPlayerFromCharacter(ShakeCharacter)
+								if not ShakePlayer then
+									return
+								end
+
+								local Distance = (ShakeRootPart.Position - HumRP.Position).Magnitude
+								local Falloff = 1 - math.clamp(Distance / ShakeMaxDistance, 0, 1)
+								local Intensity = 1 + (Falloff * 4)
+
+								RemoteManager.FireClient(
+									ShakePlayer,
+									"ShakeCamera",
+									{ Intensity = Intensity, Last = 0.3 }
+								)
+							end,
+							nil,
+							nil
 						)
 
 						break

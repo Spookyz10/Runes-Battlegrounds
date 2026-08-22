@@ -168,76 +168,74 @@ local function doHitEffects(
 end
 
 local function findAirborneTarget(Character, HumRP)
-	local overlapParams = OverlapParams.new()
-	overlapParams.FilterType = Enum.RaycastFilterType.Include
-	overlapParams.FilterDescendantsInstances = { workspace.Live }
-
-	local parts = workspace:GetPartBoundsInRadius(HumRP.Position, SEARCH_RADIUS, overlapParams)
 	local closestDist = math.huge
 	local closestEnemy = nil
 
-	for _, part in parts do
-		local char = part.Parent
-		if not char or char == Character then
-			continue
-		end
-		local hum = char:FindFirstChild("Humanoid")
-		local hrp = char:FindFirstChild("HumanoidRootPart")
-		if not hum or not hrp then
-			continue
-		end
-		if hum.Health <= 0 or hum:GetState() == Enum.HumanoidStateType.Dead then
-			continue
-		end
-		if iFramesService:HasiFrame(char, 1) then
-			continue
-		end
-		if not isInAir(char) then
-			continue
-		end
+	HitboxHandler:SimpleOnce(
+		HumRP,
+		Vector3.new(SEARCH_RADIUS * 2, SEARCH_RADIUS * 2, SEARCH_RADIUS * 2),
+		CFrame.new(),
+		{ Character },
+		"Box",
+		nil,
+		function(char)
+			local hum = char:FindFirstChild("Humanoid")
+			local hrp = char:FindFirstChild("HumanoidRootPart")
+			if not hum or not hrp then
+				return
+			end
+			if hum.Health <= 0 or hum:GetState() == Enum.HumanoidStateType.Dead then
+				return
+			end
+			if iFramesService:HasiFrame(char, 1) then
+				return
+			end
+			if not isInAir(char) then
+				return
+			end
 
-		local dist = (hrp.Position - HumRP.Position).Magnitude
-		if dist < closestDist then
-			closestDist = dist
-			closestEnemy = char
+			local dist = (hrp.Position - HumRP.Position).Magnitude
+			if dist < closestDist then
+				closestDist = dist
+				closestEnemy = char
+			end
 		end
-	end
+	)
 
 	return closestEnemy
 end
 
 local function findGroundTarget(Character, HumRP)
-	local overlapParams = OverlapParams.new()
-	overlapParams.FilterType = Enum.RaycastFilterType.Include
-	overlapParams.FilterDescendantsInstances = { workspace.Live }
-
-	local parts = workspace:GetPartBoundsInRadius(HumRP.Position, GROUND_SEARCH_RADIUS, overlapParams)
 	local closestDist = math.huge
 	local closestEnemy = nil
 
-	for _, part in parts do
-		local char = part.Parent
-		if not char or char == Character then
-			continue
-		end
-		local hum = char:FindFirstChild("Humanoid")
-		local hrp = char:FindFirstChild("HumanoidRootPart")
-		if not hum or not hrp then
-			continue
-		end
-		if hum.Health <= 0 or hum:GetState() == Enum.HumanoidStateType.Dead then
-			continue
-		end
-		if iFramesService:HasiFrame(char, 1) then
-			continue
-		end
+	HitboxHandler:SimpleOnce(
+		HumRP,
+		Vector3.new(GROUND_SEARCH_RADIUS * 2, GROUND_SEARCH_RADIUS * 2, GROUND_SEARCH_RADIUS * 2),
+		CFrame.new(),
+		{ Character },
+		"Box",
+		nil,
+		function(char)
+			local hum = char:FindFirstChild("Humanoid")
+			local hrp = char:FindFirstChild("HumanoidRootPart")
+			if not hum or not hrp then
+				return
+			end
+			if hum.Health <= 0 or hum:GetState() == Enum.HumanoidStateType.Dead then
+				return
+			end
+			if iFramesService:HasiFrame(char, 1) then
+				return
+			end
 
-		local dist = (hrp.Position - HumRP.Position).Magnitude
-		if dist < closestDist then
-			closestDist = dist
-			closestEnemy = char
+			local dist = (hrp.Position - HumRP.Position).Magnitude
+			if dist < closestDist then
+				closestDist = dist
+				closestEnemy = char
+			end
 		end
-	end
+	)
 
 	return closestEnemy
 end

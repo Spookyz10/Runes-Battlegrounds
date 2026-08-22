@@ -23,7 +23,8 @@ local RAGDOLL_TIME = 6
 
 local LAUNCH_HEIGHT = 45
 local LAUNCH_FORWARD = 30
-local LAUNCH_TIME = 0.5
+local LAUNCH_UP_TIME = 0.25
+local LAUNCH_FORWARD_TIME = 0.25
 
 local PUNCH_DAMAGE = 18
 local PUNCH_DOWN_FORCE = -30
@@ -240,27 +241,63 @@ return {
 				LookFlat = Vector3.new(LookFlat.X, 0, LookFlat.Z)
 				LookFlat = LookFlat.Magnitude > 0.001 and LookFlat.Unit or Vector3.new(0, 0, -1)
 
-				local CasterTarget = HumRP.CFrame + Vector3.new(0, LAUNCH_HEIGHT, 0) + LookFlat * LAUNCH_FORWARD
+				local CasterUpTarget = HumRP.CFrame + Vector3.new(0, LAUNCH_HEIGHT, 0)
 
-				TweenService:Create(
+				local CasterUpTween = TweenService:Create(
 					HumRP,
-					TweenInfo.new(LAUNCH_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-					{ CFrame = CasterTarget }
-				):Play()
+					TweenInfo.new(LAUNCH_UP_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+					{ CFrame = CasterUpTarget }
+				)
+
+				CasterUpTween.Completed:Once(function()
+					if Cancelled or not HumRP.Parent then
+						return
+					end
+
+					local CasterForwardTarget = HumRP.CFrame + LookFlat * LAUNCH_FORWARD
+
+					TweenService:Create(
+						HumRP,
+						TweenInfo.new(LAUNCH_FORWARD_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+						{ CFrame = CasterForwardTarget }
+					):Play()
+				end)
 
 				for _, Entry in Victims do
 					if Entry.HumRP and Entry.HumRP.Parent then
-						local VictimTarget = Entry.HumRP.CFrame
-							+ Vector3.new(0, LAUNCH_HEIGHT, 0)
-							+ LookFlat * LAUNCH_FORWARD
+						local VictimHumRP = Entry.HumRP
+						local VictimUpTarget = VictimHumRP.CFrame + Vector3.new(0, LAUNCH_HEIGHT, 0)
 
-						TweenService:Create(
-							Entry.HumRP,
-							TweenInfo.new(LAUNCH_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-							{ CFrame = VictimTarget }
-						):Play()
+						local VictimUpTween = TweenService:Create(
+							VictimHumRP,
+							TweenInfo.new(LAUNCH_UP_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+							{ CFrame = VictimUpTarget }
+						)
+
+						VictimUpTween.Completed:Once(function()
+							if Cancelled or not VictimHumRP.Parent then
+								return
+							end
+
+							local VictimForwardTarget = VictimHumRP.CFrame + LookFlat * LAUNCH_FORWARD
+
+							TweenService:Create(
+								VictimHumRP,
+								TweenInfo.new(LAUNCH_FORWARD_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+								{ CFrame = VictimForwardTarget }
+							):Play()
+						end)
+
+						VictimUpTween:Play()
 					end
 				end
+
+				task.delay(0.5, function()
+					if Cancelled then
+						return
+					end
+					CasterUpTween:Play()
+				end)
 			end)
 		)
 
