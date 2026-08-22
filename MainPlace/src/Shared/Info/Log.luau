@@ -1,11 +1,12 @@
 return {
-	Version = "v0.0.55",
+	Version = "v0.0.6",
 
 	UpdateLog = {
 		"Added 2 Shattered moves",
 		"New solar and lunar awakening moves",
 		"Improved gravity hitbox",
 		"Variant of tethers",
+		"Balance changes",
 	},
 
 	Roadmap = {

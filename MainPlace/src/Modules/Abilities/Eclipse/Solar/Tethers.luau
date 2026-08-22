@@ -25,8 +25,14 @@ local MoveAnims = ServerStorage.Assets.Animations.Moves
 
 local SEARCH_RADIUS = 300
 local DAMAGE = 15
+
+-- Ground (variante quando o alvo tá no chão)
 local KICK_VELOCITY = Vector3.new(0, 30, 0)
 local KICK_HORIZONTAL_FORCE = 20
+
+-- Air (variante quando o alvo tá no ar) — mais forte que o ground
+local AIR_KICK_VELOCITY = Vector3.new(0, 45, 0)
+local AIR_KICK_HORIZONTAL_FORCE = 30
 
 local WELD_OFFSET = CFrame.new(0, 0, -3) * CFrame.Angles(0, math.pi, 0)
 local PULL_OFFSET = Vector3.new(0, 0, -4)
@@ -120,8 +126,13 @@ local function doHitEffects(
 	CasterStun,
 	VictimStun,
 	Tool,
-	onDamageCancel
+	onDamageCancel,
+	HorizontalForce,
+	UpVel
 )
+	HorizontalForce = HorizontalForce or KICK_HORIZONTAL_FORCE
+	UpVel = UpVel or KICK_VELOCITY
+
 	StunHandler:Unstun(closestEnemy, VictimStun)
 	iFramesService:RemoveiFrames(closestEnemy, "Base")
 	closestEnemy:RemoveTag("CantRotate")
@@ -148,10 +159,10 @@ local function doHitEffects(
 
 	PerfectKnockback:KnockBack(nil, closestEnemy, {
 		LookVector = kickFlat,
-		LookForce = KICK_HORIZONTAL_FORCE,
-		LookFinalForce = KICK_HORIZONTAL_FORCE,
+		LookForce = HorizontalForce,
+		LookFinalForce = HorizontalForce,
 		LookAt = lookCF,
-		UpVelocity = KICK_VELOCITY,
+		UpVelocity = UpVel,
 		UpVelocityTime = 0.15,
 		GroundStunTime = 1.0,
 		FallingDetectDelay = 0.4,
@@ -545,7 +556,9 @@ local function runAirVariant(Player, Tool, Character, HumRP, Humanoid, InitialTa
 							CasterStun,
 							VictimStun,
 							Tool,
-							onDamageCancel
+							onDamageCancel,
+							AIR_KICK_HORIZONTAL_FORCE,
+							AIR_KICK_VELOCITY
 						)
 					else
 						iFramesService:RemoveiFrames(Character, "All")
@@ -666,10 +679,10 @@ local function runAirVariant(Player, Tool, Character, HumRP, Humanoid, InitialTa
 
 					PerfectKnockback:KnockBack(nil, EnemyCharacter, {
 						LookVector = pushDir,
-						LookForce = KICK_HORIZONTAL_FORCE,
-						LookFinalForce = KICK_HORIZONTAL_FORCE,
+						LookForce = AIR_KICK_HORIZONTAL_FORCE,
+						LookFinalForce = AIR_KICK_HORIZONTAL_FORCE,
 						LookAt = lookCF,
-						UpVelocity = KICK_VELOCITY,
+						UpVelocity = AIR_KICK_VELOCITY,
 						UpVelocityTime = 0.15,
 						GroundStunTime = 1.0,
 						FallingDetectDelay = 0.4,
@@ -690,7 +703,9 @@ local function runAirVariant(Player, Tool, Character, HumRP, Humanoid, InitialTa
 					CasterStun,
 					VictimStun,
 					Tool,
-					onDamageCancel
+					onDamageCancel,
+					AIR_KICK_HORIZONTAL_FORCE,
+					AIR_KICK_VELOCITY
 				)
 			else
 				SkillCancelHandler:Unregister(Character, onDamageCancel)
