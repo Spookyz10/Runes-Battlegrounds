@@ -18,6 +18,7 @@ local PILLAR_SEARCH_RADIUS = 60
 local PILLAR_DAMAGE = 10
 local PILLAR_STUN = 1.5
 local PILLAR_DELAY = 0.7
+local PILLAR_HITBOX_SIZE = Vector3.new(20, 50, 20)
 
 local FIRE_ARMS_STACKS = 2
 local FIRE_ARMS_DURATION = 10
@@ -93,12 +94,15 @@ return {
 						if not EnemyHumRP then
 							return
 						end
+
+						local MarkedPosition = EnemyHumRP.Position
+
 						fireVFX("Indicator", {
 							char = Character,
-							targetRoot = EnemyHumRP,
+							position = MarkedPosition,
 							yOffset = INDICATOR_Y_OFFSET,
 						})
-						table.insert(targets, EnemyCharacter)
+						table.insert(targets, { Character = EnemyCharacter, Position = MarkedPosition })
 					end
 				)
 
@@ -112,12 +116,9 @@ return {
 
 				task.delay(PILLAR_DELAY, function()
 					local beamPositions = {}
-					for _, EnemyCharacter in targets do
-						local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
-						if EnemyHumRP then
-							local pos = EnemyHumRP.Position
-							table.insert(beamPositions, Vector3.new(pos.X, pos.Y - INDICATOR_Y_OFFSET, pos.Z))
-						end
+					for _, Target in targets do
+						local pos = Target.Position
+						table.insert(beamPositions, Vector3.new(pos.X, pos.Y - INDICATOR_Y_OFFSET, pos.Z))
 					end
 
 					fireVFX("Beam", {
@@ -125,9 +126,36 @@ return {
 						beamPositions = beamPositions,
 					})
 
-					for _, EnemyCharacter in targets do
+					for _, Target in targets do
+						local EnemyCharacter = Target.Character
+						local PillarPosition = Target.Position
+
 						task.spawn(function()
-							if not StatusEffectHandler:Has(EnemyCharacter, "Inferno") then
+							if not EnemyCharacter or not StatusEffectHandler:Has(EnemyCharacter, "Inferno") then
+								return
+							end
+
+							-- Hitbox real na MESMA posição marcada pelo indicator (não
+							-- na posição atual do inimigo), pra dar chance de desviar
+							-- saindo dali antes do pilar cair.
+							local hitConfirmed = false
+
+							HitboxHandler:SimpleOnce(
+								PillarPosition,
+								PILLAR_HITBOX_SIZE,
+								nil,
+								{ Character },
+								"Box",
+								nil,
+								function(HitCharacter)
+									if HitCharacter == EnemyCharacter then
+										hitConfirmed = true
+									end
+								end
+							)
+
+							if not hitConfirmed then
+								clearInferno(EnemyCharacter)
 								return
 							end
 

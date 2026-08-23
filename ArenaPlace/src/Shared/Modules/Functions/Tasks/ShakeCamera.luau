@@ -6,7 +6,7 @@ local CamShakePresets = Constants.CamShakePresets
 
 return function(params)
 	task.spawn(function()
-		if Data.Settings.CameraShake() then
+		if not Data.Settings.CameraShake() then
 			return
 		end
 

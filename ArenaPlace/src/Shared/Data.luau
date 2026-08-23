@@ -1,4 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local playerClass = {}
 playerClass.__index = playerClass
@@ -43,4 +44,44 @@ local template = {
 	},
 }
 
-return DataServiceTyped({ template = template, profileStoreIndex = "PlayerData" })
+local Data = DataServiceTyped({ template = template, profileStoreIndex = "PlayerData" })
+
+if RunService:IsServer() then
+	function Data.server.Service:onPlayerInit(player, data)
+		local OwnedPasses = data.OwnedPasses
+
+		if typeof(OwnedPasses) ~= "table" then
+			return
+		end
+
+		if OwnedPasses[1] ~= nil or next(OwnedPasses) == nil then
+			return
+		end
+
+		local IsLegacyFormat = false
+		for key in OwnedPasses do
+			if typeof(key) == "string" then
+				IsLegacyFormat = true
+				break
+			end
+		end
+
+		if not IsLegacyFormat then
+			return
+		end
+
+		local Converted = {}
+		for key, value in OwnedPasses do
+			if value == true then
+				local GamepassId = tonumber(key)
+				if GamepassId then
+					table.insert(Converted, GamepassId)
+				end
+			end
+		end
+
+		data.OwnedPasses = Converted
+	end
+end
+
+return Data

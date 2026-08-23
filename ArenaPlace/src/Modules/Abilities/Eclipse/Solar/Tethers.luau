@@ -25,8 +25,15 @@ local MoveAnims = ServerStorage.Assets.Animations.Moves
 
 local SEARCH_RADIUS = 300
 local DAMAGE = 15
+
+-- Ground (variante quando o alvo tá no chão)
 local KICK_VELOCITY = Vector3.new(0, 30, 0)
 local KICK_HORIZONTAL_FORCE = 20
+
+-- Air (variante quando o alvo tá no ar) — mais forte que o ground
+local AIR_KICK_VELOCITY = Vector3.new(0, 45, 0)
+local AIR_KICK_HORIZONTAL_FORCE = 30
+
 local WELD_OFFSET = CFrame.new(0, 0, -3) * CFrame.Angles(0, math.pi, 0)
 local PULL_OFFSET = Vector3.new(0, 0, -4)
 local PULL_TIME = 0.5
@@ -119,8 +126,13 @@ local function doHitEffects(
 	CasterStun,
 	VictimStun,
 	Tool,
-	onDamageCancel
+	onDamageCancel,
+	HorizontalForce,
+	UpVel
 )
+	HorizontalForce = HorizontalForce or KICK_HORIZONTAL_FORCE
+	UpVel = UpVel or KICK_VELOCITY
+
 	StunHandler:Unstun(closestEnemy, VictimStun)
 	iFramesService:RemoveiFrames(closestEnemy, "Base")
 	closestEnemy:RemoveTag("CantRotate")
@@ -147,10 +159,10 @@ local function doHitEffects(
 
 	PerfectKnockback:KnockBack(nil, closestEnemy, {
 		LookVector = kickFlat,
-		LookForce = KICK_HORIZONTAL_FORCE,
-		LookFinalForce = KICK_HORIZONTAL_FORCE,
+		LookForce = HorizontalForce,
+		LookFinalForce = HorizontalForce,
 		LookAt = lookCF,
-		UpVelocity = KICK_VELOCITY,
+		UpVelocity = UpVel,
 		UpVelocityTime = 0.15,
 		GroundStunTime = 1.0,
 		FallingDetectDelay = 0.4,
@@ -168,76 +180,74 @@ local function doHitEffects(
 end
 
 local function findAirborneTarget(Character, HumRP)
-	local overlapParams = OverlapParams.new()
-	overlapParams.FilterType = Enum.RaycastFilterType.Include
-	overlapParams.FilterDescendantsInstances = { workspace.Live }
-
-	local parts = workspace:GetPartBoundsInRadius(HumRP.Position, SEARCH_RADIUS, overlapParams)
 	local closestDist = math.huge
 	local closestEnemy = nil
 
-	for _, part in parts do
-		local char = part.Parent
-		if not char or char == Character then
-			continue
-		end
-		local hum = char:FindFirstChild("Humanoid")
-		local hrp = char:FindFirstChild("HumanoidRootPart")
-		if not hum or not hrp then
-			continue
-		end
-		if hum.Health <= 0 or hum:GetState() == Enum.HumanoidStateType.Dead then
-			continue
-		end
-		if iFramesService:HasiFrame(char, 1) then
-			continue
-		end
-		if not isInAir(char) then
-			continue
-		end
+	HitboxHandler:SimpleOnce(
+		HumRP,
+		Vector3.new(SEARCH_RADIUS * 2, SEARCH_RADIUS * 2, SEARCH_RADIUS * 2),
+		CFrame.new(),
+		{ Character },
+		"Box",
+		nil,
+		function(char)
+			local hum = char:FindFirstChild("Humanoid")
+			local hrp = char:FindFirstChild("HumanoidRootPart")
+			if not hum or not hrp then
+				return
+			end
+			if hum.Health <= 0 or hum:GetState() == Enum.HumanoidStateType.Dead then
+				return
+			end
+			if iFramesService:HasiFrame(char, 1) then
+				return
+			end
+			if not isInAir(char) then
+				return
+			end
 
-		local dist = (hrp.Position - HumRP.Position).Magnitude
-		if dist < closestDist then
-			closestDist = dist
-			closestEnemy = char
+			local dist = (hrp.Position - HumRP.Position).Magnitude
+			if dist < closestDist then
+				closestDist = dist
+				closestEnemy = char
+			end
 		end
-	end
+	)
 
 	return closestEnemy
 end
 
 local function findGroundTarget(Character, HumRP)
-	local overlapParams = OverlapParams.new()
-	overlapParams.FilterType = Enum.RaycastFilterType.Include
-	overlapParams.FilterDescendantsInstances = { workspace.Live }
-
-	local parts = workspace:GetPartBoundsInRadius(HumRP.Position, GROUND_SEARCH_RADIUS, overlapParams)
 	local closestDist = math.huge
 	local closestEnemy = nil
 
-	for _, part in parts do
-		local char = part.Parent
-		if not char or char == Character then
-			continue
-		end
-		local hum = char:FindFirstChild("Humanoid")
-		local hrp = char:FindFirstChild("HumanoidRootPart")
-		if not hum or not hrp then
-			continue
-		end
-		if hum.Health <= 0 or hum:GetState() == Enum.HumanoidStateType.Dead then
-			continue
-		end
-		if iFramesService:HasiFrame(char, 1) then
-			continue
-		end
+	HitboxHandler:SimpleOnce(
+		HumRP,
+		Vector3.new(GROUND_SEARCH_RADIUS * 2, GROUND_SEARCH_RADIUS * 2, GROUND_SEARCH_RADIUS * 2),
+		CFrame.new(),
+		{ Character },
+		"Box",
+		nil,
+		function(char)
+			local hum = char:FindFirstChild("Humanoid")
+			local hrp = char:FindFirstChild("HumanoidRootPart")
+			if not hum or not hrp then
+				return
+			end
+			if hum.Health <= 0 or hum:GetState() == Enum.HumanoidStateType.Dead then
+				return
+			end
+			if iFramesService:HasiFrame(char, 1) then
+				return
+			end
 
-		local dist = (hrp.Position - HumRP.Position).Magnitude
-		if dist < closestDist then
-			closestDist = dist
-			closestEnemy = char
+			local dist = (hrp.Position - HumRP.Position).Magnitude
+			if dist < closestDist then
+				closestDist = dist
+				closestEnemy = char
+			end
 		end
-	end
+	)
 
 	return closestEnemy
 end
@@ -269,7 +279,7 @@ local function unlockCasterAirborne(Humanoid, HumRP, Character)
 	end
 end
 
-local function runAirVariant(Player, Tool, Character, HumRP, Humanoid)
+local function runAirVariant(Player, Tool, Character, HumRP, Humanoid, InitialTarget)
 	local CasterStun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
 	local cancelled = false
 	local onDamageCancel
@@ -359,9 +369,14 @@ local function runAirVariant(Player, Tool, Character, HumRP, Humanoid)
 
 			task.wait(0.2)
 
-			closestEnemy = findAirborneTarget(Character, HumRP)
+			-- Usa o alvo já capturado no Start() (momento em que o player
+			-- apertou a skill), em vez de buscar de novo aqui. Buscar de novo
+			-- fazia a skill falhar quando o alvo, lançado por outra habilidade
+			-- (ex: Sunquake), já tinha caído abaixo de MIN_AIR_HEIGHT no tempo
+			-- que a windup animation levou pra chegar nesse marker.
+			closestEnemy = InitialTarget
 
-			if not closestEnemy then
+			if not closestEnemy or not closestEnemy.Parent then
 				SkillCancelHandler:Unregister(Character, onDamageCancel)
 				iFramesService:RemoveiFrames(Character, "Base")
 				StunHandler:Unstun(Character, CasterStun)
@@ -373,7 +388,12 @@ local function runAirVariant(Player, Tool, Character, HumRP, Humanoid)
 			EnemyHumRP = closestEnemy:FindFirstChild("HumanoidRootPart")
 			EnemyPlayer = Players:GetPlayerFromCharacter(closestEnemy)
 
-			if not EnemyHumanoid or not EnemyHumRP then
+			if
+				not EnemyHumanoid
+				or not EnemyHumRP
+				or EnemyHumanoid.Health <= 0
+				or EnemyHumanoid:GetState() == Enum.HumanoidStateType.Dead
+			then
 				closestEnemy = nil
 				SkillCancelHandler:Unregister(Character, onDamageCancel)
 				iFramesService:RemoveiFrames(Character, "Base")
@@ -536,7 +556,9 @@ local function runAirVariant(Player, Tool, Character, HumRP, Humanoid)
 							CasterStun,
 							VictimStun,
 							Tool,
-							onDamageCancel
+							onDamageCancel,
+							AIR_KICK_HORIZONTAL_FORCE,
+							AIR_KICK_VELOCITY
 						)
 					else
 						iFramesService:RemoveiFrames(Character, "All")
@@ -657,10 +679,10 @@ local function runAirVariant(Player, Tool, Character, HumRP, Humanoid)
 
 					PerfectKnockback:KnockBack(nil, EnemyCharacter, {
 						LookVector = pushDir,
-						LookForce = KICK_HORIZONTAL_FORCE,
-						LookFinalForce = KICK_HORIZONTAL_FORCE,
+						LookForce = AIR_KICK_HORIZONTAL_FORCE,
+						LookFinalForce = AIR_KICK_HORIZONTAL_FORCE,
 						LookAt = lookCF,
-						UpVelocity = KICK_VELOCITY,
+						UpVelocity = AIR_KICK_VELOCITY,
 						UpVelocityTime = 0.15,
 						GroundStunTime = 1.0,
 						FallingDetectDelay = 0.4,
@@ -681,7 +703,9 @@ local function runAirVariant(Player, Tool, Character, HumRP, Humanoid)
 					CasterStun,
 					VictimStun,
 					Tool,
-					onDamageCancel
+					onDamageCancel,
+					AIR_KICK_HORIZONTAL_FORCE,
+					AIR_KICK_VELOCITY
 				)
 			else
 				SkillCancelHandler:Unregister(Character, onDamageCancel)
@@ -1133,7 +1157,7 @@ return {
 		local AirTarget = findAirborneTarget(Character, HumRP)
 
 		if AirTarget then
-			runAirVariant(Player, Tool, Character, HumRP, Humanoid)
+			runAirVariant(Player, Tool, Character, HumRP, Humanoid, AirTarget)
 		else
 			runGroundVariant(Player, Tool, Character, HumRP, Humanoid)
 		end

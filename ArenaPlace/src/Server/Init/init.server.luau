@@ -314,9 +314,15 @@ RemoteManager.ListenToAllFunctions(ServerRemoteListener)
 Data.Service:addGlobalCallback("GiftEarlyAccess", function(player, data)
 	local GamepassId = EarlyAccess.GamepassId
 
-	if data.OwnedPasses[GamepassId] then
+	local playerData = Data.Service:waitForData(player)
+	if not playerData then
+		return false
+	end
+
+	if table.find(playerData.OwnedPasses(), GamepassId) then
 		return
 	end
 
-	data.OwnedPasses[GamepassId] = true
+	playerData.OwnedPasses.Insert(GamepassId)
+	return
 end)
