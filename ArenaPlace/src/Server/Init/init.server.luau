@@ -157,6 +157,11 @@ local function CharacterAdded(Character: Model)
 		return
 	end
 
+	local ArenaSpawnCFrame = Player:GetAttribute("ArenaSpawnCFrame")
+	if ArenaSpawnCFrame then
+		Character:PivotTo(ArenaSpawnCFrame)
+	end
+
 	Character:SetAttribute("DefaultWalkSpeed", DEFAULT_WALK_SPEED)
 	Character:SetAttribute("DefaultRunSpeed", DEFAULT_RUN_SPEED)
 	Character:SetAttribute("DefaultJumpPower", DEFAULT_JUMP_POWER)

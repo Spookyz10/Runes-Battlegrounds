@@ -119,7 +119,10 @@ function ArenaController:PositionPlayers()
 		end
 
 		local targetPosition = getRandomPositionInPart(SpawnPart)
-		Character:PivotTo(CFrame.new(targetPosition))
+		local targetCFrame = CFrame.new(targetPosition)
+
+		Character:PivotTo(targetCFrame)
+		player:SetAttribute("ArenaSpawnCFrame", targetCFrame)
 
 		Character:SetAttribute("MatchTeam", playerState.Team)
 		Character:SetAttribute("MatchFriendlyFire", self.MatchInstance.Config.FriendlyFire)
@@ -168,7 +171,6 @@ function ArenaController:RunCharacterSelection()
 	for _, playerState in self.MatchInstance:GetAllPlayers() do
 		local Character = playerState.Player.Character
 		if Character then
-			-- TODO: ligar UI de seleção de personagem (etapa futura) usando esta flag
 			Character:SetAttribute("AllowMovesetSwap", true)
 		end
 	end
@@ -480,12 +482,16 @@ function ArenaController:Cleanup()
 	end
 
 	for _, playerState in self.MatchInstance:GetAllPlayers() do
-		local Character = playerState.Player.Character
+		local player = playerState.Player
+		local Character = player.Character
 		if Character then
 			Character:SetAttribute("MatchTeam", nil)
 			Character:SetAttribute("MatchFriendlyFire", nil)
 			Character:SetAttribute("MatchId", nil)
+			Character:SetAttribute("AllowMovesetSwap", nil)
+			Character:SetAttribute("InRankedMatch", nil)
 		end
+		player:SetAttribute("ArenaSpawnCFrame", nil)
 	end
 
 	if self.Map and self.Map.Parent then

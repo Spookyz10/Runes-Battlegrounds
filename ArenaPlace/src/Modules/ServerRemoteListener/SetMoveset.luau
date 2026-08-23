@@ -27,6 +27,11 @@ function Remote:Activate(Player: Player, MovesetName: string)
 		return
 	end
 
+	if Character:GetAttribute("InRankedMatch") == true and Character:GetAttribute("AllowMovesetSwap") ~= true then
+		notify(Player, "YOU CAN'T CHANGE MOVESETS RIGHT NOW.")
+		return
+	end
+
 	if EarlyAccess:IsEarlyAccess(MovesetName) and not GamepassService:PlayerOwnsEarlyAccess(Player) then
 		MarketplaceService:PromptGamePassPurchase(Player, EarlyAccess.GamepassId)
 		return
