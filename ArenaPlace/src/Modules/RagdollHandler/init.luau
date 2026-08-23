@@ -68,8 +68,7 @@ local JointMotor6D = {
 local MapRayParams = RaycastParams.new()
 MapRayParams.FilterType = Enum.RaycastFilterType.Include
 MapRayParams.FilterDescendantsInstances = {
-	workspace.Map:WaitForChild("Arena"),
-	workspace.Map:WaitForChild("Miscellaneous"),
+	workspace:WaitForChild("Map"),
 }
 
 local DEFAULT_HARD_RAGDOLL_DAMAGE = 12

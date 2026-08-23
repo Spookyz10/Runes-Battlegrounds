@@ -16,7 +16,6 @@ local RagdollHandler = require(SvModules.RagdollHandler)
 local AnimationService = require(SvModules.AnimationService)
 local StunHandler = require(SvModules.StunHandler)
 local CombatEvents = require(SvModules.CombatEvents)
-local DestructionSystem = require(SvModules.DestructionSystem)
 local SceneObjectReservation = require(SvModules.SceneObjectReservation)
 
 local Animations = ServerStorage.Assets.Animations.Moves
@@ -25,11 +24,11 @@ local GravityAffectedAnim = ServerStorage.Assets.Animations.Other.GravityAffecte
 
 local MapRayParams = RaycastParams.new()
 MapRayParams.FilterType = Enum.RaycastFilterType.Include
-MapRayParams.FilterDescendantsInstances = { workspace.Map }
+MapRayParams.FilterDescendantsInstances = { workspace:WaitForChild("Map") }
 MapRayParams.RespectCanCollide = true
 MapRayParams.IgnoreWater = true
 
-local IslandsFolder = workspace.Map.Islands
+local IslandsFolder = workspace:WaitForChild("Map").Islands
 
 local GRAVITY_HALF_SIZE = Vector3.new(70, 70, 70)
 local GRAVITY_FREEZE_AUTO_RELEASE = 15
@@ -401,8 +400,6 @@ local function applyGravityFieldCompensationDamage(data)
 		RagdollHandler.ragdoll(EnemyHumanoid, 3)
 	end)
 
-	DestructionSystem:ApplyBoxImpact(position, IMPACT_SIZE, ISLAND_DESTROY_FORCE, Player, Vector3.new(0, -1, 0))
-
 	stopGravityField(data)
 end
 
@@ -471,8 +468,6 @@ local function impactIsland(data, impactPosition)
 		RagdollHandler.ragdoll(EnemyHumanoid, 3)
 	end)
 
-	DestructionSystem:ApplyBoxImpact(impactPosition, IMPACT_SIZE, ISLAND_DESTROY_FORCE, Player, Vector3.new(0, -1, 0))
-
 	destroyIsland(data)
 	stopGravityField(data)
 end
@@ -496,7 +491,6 @@ local function travelIslandToPlayer(data, Character, HumRP)
 	local lastImpactTick = 0
 	local overlapParams = OverlapParams.new()
 	overlapParams.FilterType = Enum.RaycastFilterType.Include
-	overlapParams.FilterDescendantsInstances = { workspace.Map.Destroyables }
 
 	local islandSize = getModelSize(Island) + Vector3.new(6, 6, 6)
 
@@ -511,7 +505,6 @@ local function travelIslandToPlayer(data, Character, HumRP)
 		for _, part in touching do
 			if not hitSet[part] and isDestroyablePart(part) then
 				hitSet[part] = true
-				DestructionSystem:ApplyImpact(pos, ISLAND_DESTROY_FORCE, data.Player, part, direction)
 			end
 		end
 	end

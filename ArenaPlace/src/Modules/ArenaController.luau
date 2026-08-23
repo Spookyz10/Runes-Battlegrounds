@@ -64,7 +64,7 @@ function ArenaController:SelectMap()
 
 	local chosen = candidates[math.random(1, #candidates)]
 	local clone = chosen:Clone()
-	clone.Name = "map"
+	clone.Name = "Map"
 	clone.Parent = workspace
 
 	self.Map = clone

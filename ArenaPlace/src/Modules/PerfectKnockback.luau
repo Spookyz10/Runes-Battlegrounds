@@ -537,7 +537,7 @@ function Perfect:KnockBack(_, EnemyCharacter: Model, Params: KnockbackParams, Ch
 
 		local RayParams = RaycastParams.new()
 		RayParams.FilterType = Enum.RaycastFilterType.Include
-		RayParams.FilterDescendantsInstances = { workspace.Map }
+		RayParams.FilterDescendantsInstances = { workspace:WaitForChild("Map") }
 
 		local Raycast =
 			workspace:Raycast(HumanoidRootPart.Position, Vector3.new(0, -MAX_GROUND_CHECK_DIST, 0), RayParams)

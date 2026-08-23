@@ -57,7 +57,7 @@ local GROUND_CHAIN_TRAVEL_TIME = 0.3
 
 local GroundRayParams = RaycastParams.new()
 GroundRayParams.FilterType = Enum.RaycastFilterType.Include
-GroundRayParams.FilterDescendantsInstances = { workspace.Map }
+GroundRayParams.FilterDescendantsInstances = { workspace:WaitForChild("Map") }
 GroundRayParams.IgnoreWater = true
 
 local function isInAir(EnemyCharacter)

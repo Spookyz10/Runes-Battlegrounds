@@ -34,23 +34,8 @@ local function detectAir(Params)
 			local rayPosition = ray.Position
 			local rayMaterial = ray.Material
 			local rayNormal = ray.Normal
-			if
-				Params.destroyables == true
-				and (rayInstance.Parent.Name == "Tree" or rayInstance.Parent.Parent.Name == "Tree")
-			then
-				if rayInstance:IsDescendantOf(workspace.Map.Destroyables) and not rayInstance:HasTag("Destroyed") then
-					Tasks["destroyAmbient"]({
-						Parts = { rayInstance },
-						CFrame = CFrame.lookAt(HumRP2.Position, Velocity.Unit),
-						Size = Vector3.new(18, 18, 18),
-						Burn = false,
-						Velocity = Velocity.Unit * Velocity.Magnitude,
-					})
-				end
-			else
-				return true,
-					{ Instance = rayInstance, Position = rayPosition, Material = rayMaterial, Normal = rayNormal }
-			end
+
+			return true, { Instance = rayInstance, Position = rayPosition, Material = rayMaterial, Normal = rayNormal }
 		end
 	end
 

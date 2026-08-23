@@ -16,21 +16,18 @@ local ParticlesModule = Utility("Particles")
 
 local CamShakePresets = require(RS_Modules.CamShakePresets)
 
-local VoxBreaker = require(RS_Modules.VoxBreaker)
-
 local CharacterAssets = Resources:WaitForChild("CharacterAssets")
 
 local MapRayParams = RaycastParams.new()
 MapRayParams.FilterType = Enum.RaycastFilterType.Include
 MapRayParams.FilterDescendantsInstances = {
-	workspace.Map:WaitForChild("Arena"),
-	workspace.Map:WaitForChild("Miscellaneous"),
+	workspace:WaitForChild("Map"),
 }
 
 local GroundRayParams = RaycastParams.new()
 GroundRayParams.FilterType = Enum.RaycastFilterType.Include
 GroundRayParams.FilterDescendantsInstances = {
-	workspace.Map.Arena,
+	workspace:WaitForChild("Map"),
 }
 
 local ExcludeRayParams = RaycastParams.new()
@@ -41,7 +38,7 @@ ExcludeRayParams.FilterType = Enum.RaycastFilterType.Exclude
 local MapOverlapParams = OverlapParams.new()
 MapOverlapParams.RespectCanCollide = true
 MapOverlapParams.FilterType = MapRayParams.FilterType
-MapOverlapParams.FilterDescendantsInstances = { workspace.Map }
+MapOverlapParams.FilterDescendantsInstances = { workspace:WaitForChild("Map") }
 
 local DefaultFilter = { workspace.Live, workspace.Debris }
 
@@ -70,7 +67,6 @@ return {
 	Utility = Utility,
 	ParticlesModule = ParticlesModule,
 	CamShakePresets = CamShakePresets,
-	VoxBreaker = VoxBreaker,
 
 	CharacterAssets = CharacterAssets,
 

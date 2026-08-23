@@ -12,7 +12,7 @@ return function(Params)
 			while time() - start < Params.time do
 				local params = RaycastParams.new()
 				params.FilterType = Enum.RaycastFilterType.Include
-				params.FilterDescendantsInstances = { workspace.Map }
+				params.FilterDescendantsInstances = { workspace:WaitForChild("Map") }
 
 				local BodySmokez = Resources.Effects.DashSmoke:Clone()
 				BodySmokez.Parent = workspace.Debris

@@ -30,17 +30,9 @@ local FIREBALL_HIT_SIZE = Vector3.new(10, 10, FIREBALL_RANGE)
 local FIREBALL_DAMAGE = 5
 local FIREBALL_STUN = 1.5
 
--- Caixa usada pra "sentir" o corpo do char durante o sweep. Precisa cobrir a
--- largura/altura real do char (não só uma fatia fina), senão o cast passa
--- raspando por quinas/objetos finos e o char acaba clipando dentro deles.
 local SAFE_RANGE_BLOCK_SIZE = Vector3.new(4, 5, 4)
 
 local function getSafeRange(originPos, lookFlat, range, Character)
-	-- Monta o params na hora, excluindo só o próprio Character. Isso garante
-	-- que QUALQUER coisa no mapa com CanCollide = true (destroyables, props,
-	-- outros personagens, etc) é considerada, e não só as 3 pastas fixas de
-	-- antes (Arena/Miscellaneous/Borders), que deixavam objetos de fora e
-	-- causavam o clipping.
 	local WallRayParams = RaycastParams.new()
 	WallRayParams.FilterType = Enum.RaycastFilterType.Exclude
 	WallRayParams.FilterDescendantsInstances = { Character, workspace.Live }

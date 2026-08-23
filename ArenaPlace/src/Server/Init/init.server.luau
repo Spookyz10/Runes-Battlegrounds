@@ -307,12 +307,6 @@ CollectionService:GetInstanceRemovedSignal("CantRotate"):Connect(function(Charac
 	end
 end)
 
-for _, part: Instance in workspace.Map.Destroyables:GetDescendants() do
-	if part:IsA("BasePart") then
-		part:SetAttribute("Destroyable", true)
-	end
-end
-
 RemoteManager.ListenToAll(ServerRemoteListener)
 RemoteManager.ListenToAllFunctions(ServerRemoteListener)
 

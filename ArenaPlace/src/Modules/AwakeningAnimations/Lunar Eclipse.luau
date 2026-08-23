@@ -28,7 +28,7 @@ local LunarIndicatorAsset = CharacterAssets.Eclipse.Lunar.Awaken.LunarIndicator
 
 local MapRayParams = RaycastParams.new()
 MapRayParams.FilterType = Enum.RaycastFilterType.Include
-MapRayParams.FilterDescendantsInstances = { workspace.Map }
+MapRayParams.FilterDescendantsInstances = { workspace:WaitForChild("Map") }
 MapRayParams.RespectCanCollide = true
 MapRayParams.IgnoreWater = true
 

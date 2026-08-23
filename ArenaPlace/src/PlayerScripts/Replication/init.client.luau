@@ -80,9 +80,7 @@ local selectedFrame: GuiObject? = nil
 local MapRaycastParams = RaycastParams.new()
 MapRaycastParams.FilterType = Enum.RaycastFilterType.Include
 MapRaycastParams.FilterDescendantsInstances = {
-	workspace.Map.Arena,
-	workspace.Map.Miscellaneous,
-	workspace.Map.Borders,
+	workspace:WaitForChild("Map"),
 }
 MapRaycastParams.RespectCanCollide = true
 

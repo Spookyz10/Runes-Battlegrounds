@@ -13,7 +13,6 @@ local KnockbackService = require(SvModules.KnockbackModule)
 local iFramesService = require(SvModules.iFramesService)
 local RagdollHandler = require(SvModules.RagdollHandler)
 local AnimationService = require(SvModules.AnimationService)
-local DestructionService = require(SvModules.DestructionSystem)
 
 local Assets = ServerStorage.Assets
 local Animations = Assets.Animations
@@ -224,17 +223,6 @@ function module:Activate(Player)
 			RemoteManager.FireAllClients("ReplicateTask", "SolarAwakenStart", { char = Character })
 			RemoteManager.FireAllClients("ReplicateTask", "SolarImpact", { char = Character })
 			SFXModule:Play("EclipseImpact", HumRP.Position)
-
-			levitationId = DestructionService:LevitateArea(HumRP.Position, LEVITATE_RADIUS, Player)
-			fakeDebrisId = DestructionService:SpawnFakeDebris(Character, {
-				MinRadius = 100,
-				MaxRadius = 200,
-				Interval = 0.2,
-				PerTick = 1,
-				OwnerPlayer = Player,
-				RiseAcceleration = 4,
-				MaxRiseSpeed = 40,
-			})
 		end)
 	)
 
@@ -262,14 +250,6 @@ function module:Activate(Player)
 				explosionField.Stop()
 				explosionField = nil
 			end
-			if levitationId then
-				DestructionService:DropArea(levitationId)
-				levitationId = nil
-			end
-			if fakeDebrisId then
-				DestructionService:DropFakeDebris(fakeDebrisId)
-				fakeDebrisId = nil
-			end
 		end)
 	)
 
@@ -288,14 +268,7 @@ function module:Activate(Player)
 			explosionField.Stop()
 			explosionField = nil
 		end
-		if levitationId then
-			DestructionService:CancelLevitation(levitationId)
-			levitationId = nil
-		end
-		if fakeDebrisId then
-			DestructionService:CancelFakeDebris(fakeDebrisId)
-			fakeDebrisId = nil
-		end
+
 		RemoteManager.FireClient(Player, "Cutscenes", "SolarAwaken", "End", {})
 		RemoteManager.FireAllClients("ReplicateTask", "SolarAwakenEnd", { char = Character })
 		StunHandler:Unstun(Character, AwakeningStun)
