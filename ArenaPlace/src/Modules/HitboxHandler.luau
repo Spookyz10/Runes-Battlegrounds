@@ -30,6 +30,31 @@ local getCframe = {
 	end,
 }
 
+local function getCasterFromIgnore(Ignore)
+	local first = Ignore and Ignore[1]
+	if typeof(first) == "Instance" and first:IsA("Model") then
+		return first
+	end
+	return nil
+end
+
+local function isFriendlyFire(CasterCharacter, EnemyCharacter)
+	if not CasterCharacter or not EnemyCharacter or CasterCharacter == EnemyCharacter then
+		return false
+	end
+
+	local CasterTeam = CasterCharacter:GetAttribute("MatchTeam")
+	if not CasterTeam then
+		return false
+	end
+
+	if CasterCharacter:GetAttribute("MatchFriendlyFire") == true then
+		return false
+	end
+
+	return EnemyCharacter:GetAttribute("MatchTeam") == CasterTeam
+end
+
 local HB = {}
 HB.__index = HB
 
@@ -103,6 +128,8 @@ function HB:_Cast(dt)
 	local touchedCharacters = {}
 	local touchingParts = detectFunction(params)
 
+	local CasterCharacter = getCasterFromIgnore(self.Ignore)
+
 	for _, v in touchingParts do
 		if not v or not v.Parent then
 			continue
@@ -110,6 +137,10 @@ function HB:_Cast(dt)
 
 		local Character = v.Parent
 		if not Character then
+			continue
+		end
+
+		if isFriendlyFire(CasterCharacter, Character) then
 			continue
 		end
 
@@ -251,6 +282,8 @@ function HB:SimpleOnce(Object, Size, Offset, Ignore, Method, HitType, onTouch, D
 	local touchedCharacters = {}
 	local touchingParts = detectFunction(params)
 
+	local CasterCharacter = getCasterFromIgnore(Ignore)
+
 	for _, v in touchingParts do
 		if not v or not v.Parent then
 			continue
@@ -258,6 +291,10 @@ function HB:SimpleOnce(Object, Size, Offset, Ignore, Method, HitType, onTouch, D
 
 		local Character = v.Parent
 		if not Character then
+			continue
+		end
+
+		if isFriendlyFire(CasterCharacter, Character) then
 			continue
 		end
 

@@ -24,6 +24,7 @@ local template = {
 	TotalKills = 0,
 	Donated = 0,
 	Gold = 0,
+	Elo = 0,
 
 	OwnedPasses = {} :: { number },
 	OwnedEmotes = {

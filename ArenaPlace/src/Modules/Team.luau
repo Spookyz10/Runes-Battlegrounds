@@ -48,6 +48,18 @@ function Team:RemoveLife(userId: number, amount: number?)
 	self:RefreshEliminationStatus()
 end
 
+function Team:EliminatePlayer(userId: number)
+	local state = self.Players[userId]
+	if not state or state.Eliminated then
+		return
+	end
+
+	state.Lives = 0
+	state.Eliminated = true
+
+	self:RefreshEliminationStatus()
+end
+
 function Team:RefreshEliminationStatus()
 	for _, state in self.Players do
 		if not state.Eliminated then
