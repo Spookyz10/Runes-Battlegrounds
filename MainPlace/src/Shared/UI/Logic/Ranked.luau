@@ -17,7 +17,6 @@ local queued = false
 
 local function setQueued(isQueued: boolean)
 	queued = isQueued
-	EnterButton.Text = isQueued and "SAIR DA FILA" or "ENTRAR NA FILA"
 end
 
 local function onJoin()
@@ -58,6 +57,16 @@ local function onEnterPressed()
 	end
 end
 
+function RankedClient.HandleUpdate(Kind: string, Params)
+	if Kind == "MatchFound" then
+		print("[Ranked] Partida encontrada, teleportando...")
+		setQueued(false)
+	elseif Kind == "QueueLeftForcefully" then
+		print("[Ranked] Removido da fila:", Params and Params.Message or "")
+		setQueued(false)
+	end
+end
+
 function RankedClient.Show()
 	GUI.Enabled = true
 end
@@ -70,19 +79,6 @@ function RankedClient.Init()
 	setQueued(false)
 
 	EnterButton.Activated:Connect(onEnterPressed)
-
-	local RankedQueueUpdateRemote = RemoteManager.GetRemote("RankedQueueUpdate", "Client")
-	if RankedQueueUpdateRemote then
-		RankedQueueUpdateRemote.OnClientEvent:Connect(function(kind, params)
-			if kind == "MatchFound" then
-				print("[Ranked] Partida encontrada, teleportando...")
-				setQueued(false)
-			elseif kind == "QueueLeftForcefully" then
-				print("[Ranked] Removido da fila:", params and params.Message or "")
-				setQueued(false)
-			end
-		end)
-	end
 end
 
 return RankedClient

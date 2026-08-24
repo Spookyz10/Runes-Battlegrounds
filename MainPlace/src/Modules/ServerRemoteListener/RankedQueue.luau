@@ -1,6 +1,6 @@
 local ServerStorage = game:GetService("ServerStorage")
 
-local GlobalMatchmaking = require(ServerStorage.Modules.Ranked.GlobalMatchmaking)
+local GlobalMatchmaking = require(ServerStorage.Modules.GlobalMatchmaking)
 
 local Remote = {}
 

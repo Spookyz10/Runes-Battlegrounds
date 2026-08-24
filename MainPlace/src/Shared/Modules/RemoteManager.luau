@@ -28,12 +28,14 @@ local RemoteEvents = {
 	ReplicateTask = "Client",
 	ExtraCds = "Client",
 	Evasive = "Client",
+	RankedQueueUpdate = "Client",
 }
 
 local RemoteFunctions = {
 	Evasive = "Server",
 	AbilitiesHandler = "Server",
 	KillSound = "Server",
+	RankedQueue = "Server",
 }
 
 local ClientInvokeFunctions = {
