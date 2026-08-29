@@ -19,7 +19,7 @@ local ModeConfigs = {
 
 local GlobalMatchmaking = {}
 
-local LocalQueued = {} -- [Player] = { Mode = string, Key = string }
+local LocalQueued = {} -- [Player] = { Mode = string, Key = string, JoinTime = number }
 
 local function getMap(mode: string)
 	return MemoryStoreService:GetSortedMap("RankedQueue_" .. mode)
@@ -30,7 +30,12 @@ local function fireClient(player: Player, kind: string, params: {}?)
 		RemoteManager.FireClient(player, "RankedQueueUpdate", kind, params)
 	end)
 	if not ok then
-		warn("[GlobalMatchmaking] Falha ao notificar cliente via RankedQueueUpdate")
+		warn(
+			"[GlobalMatchmaking] Falha ao notificar cliente via RankedQueueUpdate | Player:",
+			player.Name,
+			"| Kind:",
+			kind
+		)
 	end
 end
 
@@ -41,69 +46,105 @@ local function removeFromQueue(player: Player)
 	end
 
 	local Map = getMap(entry.Mode)
-	pcall(function()
+	local removeOk, removeErr = pcall(function()
 		Map:RemoveAsync(entry.Key)
 	end)
+
+	if not removeOk then
+		warn("[GlobalMatchmaking] Falha ao remover", player.Name, "da MemoryStore (" .. entry.Mode .. "):", removeErr)
+	else
+		print(
+			"[GlobalMatchmaking] Removido da fila:",
+			player.Name,
+			"| Modo:",
+			entry.Mode,
+			"| Tempo na fila:",
+			os.time() - (entry.JoinTime or os.time()),
+			"s"
+		)
+	end
 
 	LocalQueued[player] = nil
 end
 
 function GlobalMatchmaking.Join(player: Player, mode: string)
 	if not player or not player.Parent then
+		warn("[GlobalMatchmaking] Join chamado com jogador inválido")
 		return { Success = false, Message = "JOGADOR INVÁLIDO" }
 	end
 
 	if not ModeConfigs[mode] then
+		warn("[GlobalMatchmaking] Join chamado com modo inválido:", tostring(mode), "| Player:", player.Name)
 		return { Success = false, Message = "MODO INVÁLIDO" }
 	end
 
 	if LocalQueued[player] then
+		print(
+			"[GlobalMatchmaking]",
+			player.Name,
+			"tentou entrar na fila mas já está na fila (" .. LocalQueued[player].Mode .. ")"
+		)
 		return { Success = false, Message = "VOCÊ JÁ ESTÁ NA FILA" }
 	end
 
 	local Map = getMap(mode)
 	local Key = tostring(player.UserId)
+	local JoinTime = os.time()
 
 	local Value = {
 		UserId = player.UserId,
 		JobId = game.JobId,
-		JoinTime = os.time(),
+		JoinTime = JoinTime,
 	}
 
-	local ok = pcall(function()
+	local ok, err = pcall(function()
 		Map:SetAsync(Key, Value, QUEUE_TTL)
 	end)
 
 	if not ok then
+		warn("[GlobalMatchmaking] Falha ao inserir", player.Name, "na MemoryStore (" .. mode .. "):", err)
 		return { Success = false, Message = "FALHA AO ENTRAR NA FILA, TENTE NOVAMENTE" }
 	end
 
-	LocalQueued[player] = { Mode = mode, Key = Key }
+	LocalQueued[player] = { Mode = mode, Key = Key, JoinTime = JoinTime }
 
-	print("[GlobalMatchmaking]", player.Name, "entrou na fila (" .. mode .. ")")
+	print(
+		"[GlobalMatchmaking]",
+		player.Name,
+		"entrou na fila (" .. mode .. ") | UserId:",
+		player.UserId,
+		"| JobId:",
+		game.JobId
+	)
 
 	return { Success = true }
 end
 
 function GlobalMatchmaking.Leave(player: Player)
 	if not LocalQueued[player] then
+		print("[GlobalMatchmaking]", player.Name, "tentou sair da fila mas não estava em nenhuma")
 		return { Success = false, Message = "VOCÊ NÃO ESTÁ NA FILA" }
 	end
 
 	removeFromQueue(player)
 
-	print("[GlobalMatchmaking]", player.Name, "saiu da fila")
+	print("[GlobalMatchmaking]", player.Name, "saiu da fila manualmente")
 
 	return { Success = true }
 end
 
 local function requeueClaimed(mode: string, claimed)
 	local Map = getMap(mode)
+	local requeuedCount = 0
 	for _, item in claimed do
-		pcall(function()
+		local ok = pcall(function()
 			Map:SetAsync(item.key, item.value, QUEUE_TTL)
 		end)
+		if ok then
+			requeuedCount += 1
+		end
 	end
+	print("[GlobalMatchmaking] Devolvendo", requeuedCount .. "/" .. #claimed, "jogadores para a fila (" .. mode .. ")")
 end
 
 local function assignTeams(mode: string, entries)
@@ -134,7 +175,13 @@ local function tryFormMatch(mode: string)
 		return Map:GetRangeAsync(Enum.SortDirection.Ascending, Needed)
 	end)
 
-	if not ok or not items or #items < Needed then
+	if not ok then
+		warn("[GlobalMatchmaking] Falha ao consultar MemoryStore (" .. mode .. "):", items)
+		return
+	end
+
+	if not items or #items < Needed then
+		print("[GlobalMatchmaking] Fila (" .. mode .. ") insuficiente:", (items and #items or 0) .. "/" .. Needed)
 		return
 	end
 
@@ -155,6 +202,7 @@ local function tryFormMatch(mode: string)
 			table.insert(Claimed, item)
 		else
 			AllClaimed = false
+			warn("[GlobalMatchmaking] Falha ao reivindicar candidato", item.key, "na fila (" .. mode .. ")")
 		end
 	end
 
@@ -165,15 +213,19 @@ local function tryFormMatch(mode: string)
 
 	local UserIds = assignTeams(mode, Claimed)
 
+	print("[GlobalMatchmaking] Reservando servidor da Arena para", #UserIds, "jogadores (" .. mode .. ")")
+
 	local reserveOk, Code = pcall(function()
 		return TeleportService:ReserveServer(ARENA_PLACE_ID)
 	end)
 
 	if not reserveOk then
-		warn("[GlobalMatchmaking] Falha ao reservar servidor da Arena, devolvendo jogadores para a fila")
+		warn("[GlobalMatchmaking] Falha ao reservar servidor da Arena, devolvendo jogadores para a fila:", Code)
 		requeueClaimed(mode, Claimed)
 		return
 	end
+
+	print("[GlobalMatchmaking] Servidor reservado com sucesso | Code:", Code)
 
 	local Payload = {
 		UserIds = UserIds,
@@ -182,12 +234,12 @@ local function tryFormMatch(mode: string)
 		MatchConfig = Config,
 	}
 
-	local publishOk = pcall(function()
+	local publishOk, publishErr = pcall(function()
 		MessagingService:PublishAsync(MATCH_FOUND_TOPIC, Payload)
 	end)
 
 	if not publishOk then
-		warn("[GlobalMatchmaking] Falha ao publicar match encontrado")
+		warn("[GlobalMatchmaking] Falha ao publicar match encontrado:", publishErr)
 	end
 
 	local IdsPrint = {}
@@ -199,6 +251,14 @@ local function tryFormMatch(mode: string)
 end
 
 local function matchmakingLoop()
+	print(
+		"[GlobalMatchmaking] Loop de matchmaking iniciado | Intervalo:",
+		TICK_INTERVAL,
+		"s (+jitter até",
+		TICK_JITTER,
+		"s)"
+	)
+
 	while true do
 		task.wait(TICK_INTERVAL + math.random() * TICK_JITTER)
 
@@ -214,8 +274,11 @@ end
 local function onMatchFound(message)
 	local Payload = message.Data
 	if typeof(Payload) ~= "table" or typeof(Payload.UserIds) ~= "table" then
+		warn("[GlobalMatchmaking] Payload de match inválido recebido via MessagingService")
 		return
 	end
+
+	print("[GlobalMatchmaking] Mensagem de match recebida | Jogadores no payload:", #Payload.UserIds)
 
 	local LocalPlayersToTeleport = {}
 
@@ -228,12 +291,13 @@ local function onMatchFound(message)
 				LocalQueued[player] = nil
 			end
 
-			print("[GlobalMatchmaking] Partida encontrada para", player.Name)
+			print("[GlobalMatchmaking] Partida encontrada para", player.Name, "| UserId:", userId)
 			fireClient(player, "MatchFound")
 		end
 	end
 
 	if #LocalPlayersToTeleport == 0 then
+		print("[GlobalMatchmaking] Nenhum jogador deste match está neste servidor, ignorando teleport")
 		return
 	end
 
@@ -241,6 +305,15 @@ local function onMatchFound(message)
 		MatchConfig = Payload.MatchConfig,
 		UserIds = Payload.UserIds,
 	}
+
+	print(
+		"[GlobalMatchmaking] Teleportando",
+		#LocalPlayersToTeleport,
+		"jogador(es) locais para a Arena | PlaceId:",
+		Payload.PlaceId,
+		"| Code:",
+		Payload.Code
+	)
 
 	local ok, err = pcall(function()
 		TeleportService:TeleportToPrivateServer(
@@ -257,20 +330,43 @@ local function onMatchFound(message)
 		for _, player in LocalPlayersToTeleport do
 			fireClient(player, "QueueLeftForcefully", { Message = "FALHA NO TELEPORT, TENTE NOVAMENTE" })
 		end
+	else
+		print("[GlobalMatchmaking] Teleport disparado com sucesso para", #LocalPlayersToTeleport, "jogador(es)")
 	end
 end
 
 local function onPlayerRemoving(player: Player)
+	if LocalQueued[player] then
+		print("[GlobalMatchmaking]", player.Name, "saiu do servidor enquanto estava na fila, removendo da MemoryStore")
+	end
 	removeFromQueue(player)
 end
 
 function GlobalMatchmaking.Init()
+	print(
+		"[GlobalMatchmaking] Inicializando | ArenaPlaceId:",
+		ARENA_PLACE_ID,
+		"| Modos configurados:",
+		table.concat(
+			(function()
+				local names = {}
+				for name in ModeConfigs do
+					table.insert(names, name)
+				end
+				return names
+			end)(),
+			", "
+		)
+	)
+
 	local subscribeOk, err = pcall(function()
 		MessagingService:SubscribeAsync(MATCH_FOUND_TOPIC, onMatchFound)
 	end)
 
 	if not subscribeOk then
 		warn("[GlobalMatchmaking] Falha ao se inscrever no tópico de matchmaking:", err)
+	else
+		print("[GlobalMatchmaking] Inscrito no tópico:", MATCH_FOUND_TOPIC)
 	end
 
 	Players.PlayerRemoving:Connect(onPlayerRemoving)

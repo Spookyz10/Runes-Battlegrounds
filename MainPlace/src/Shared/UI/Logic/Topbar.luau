@@ -12,7 +12,7 @@ local StoreIcon = Icon.new()
 local LogIcon = Icon.new()
 local KillSoundIcon = Icon.new()
 local CosmeticsIcon = Icon.new()
-local Ranked = Icon.new()
+-- local Ranked = Icon.new()
 
 local function ownsKillSound()
 	return table.find(Data.OwnedPasses(), KillSoundPass.GamepassId) ~= nil
@@ -80,9 +80,9 @@ function Topbar.Init()
 	local cosmetics = playerGui:FindFirstChild("Cosmetics")
 	CosmeticsIcon:bindToggleItem(cosmetics)
 
-	Ranked:setLabel("Ranked")
-	local ranked = playerGui:FindFirstChild("Ranked")
-	Ranked:bindToggleItem(ranked)
+	-- Ranked:setLabel("Ranked")
+	-- local ranked = playerGui:FindFirstChild("Ranked")
+	-- Ranked:bindToggleItem(ranked)
 
 	MainIcon:setImageScale(1)
 	StoreIcon:setImageScale(1)
