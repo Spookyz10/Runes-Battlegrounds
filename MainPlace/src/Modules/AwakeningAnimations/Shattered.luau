@@ -154,6 +154,7 @@ local function cleanup(data)
 
 	if data.Player then
 		RemoteManager.FireClient(data.Player, "ReplicateTask", "ShowAwkBar")
+		RemoteManager.FireClient(data.Player, "ReplicateTask", "ShowHotbar")
 	end
 
 	ActiveState[Character] = nil
@@ -194,6 +195,7 @@ function module:Activate(Player)
 	Character:AddTag("CantRotate")
 
 	RemoteManager.FireClient(Player, "ReplicateTask", "HideAwkBar")
+	RemoteManager.FireClient(Player, "ReplicateTask", "HideHotbar")
 
 	local removingConn, diedConn, ancestryConn
 

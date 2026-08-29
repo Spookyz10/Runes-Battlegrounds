@@ -3,7 +3,7 @@ local TS = Constants.TS
 local ParticlesModule = Constants.ParticlesModule
 local CharacterAssets = Constants.CharacterAssets
 
-local RISE_HEIGHT = 100
+local RISE_HEIGHT = 600
 local RISE_TIME = 0.4
 
 local ACTIVE = {}

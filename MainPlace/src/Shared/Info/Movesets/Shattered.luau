@@ -24,5 +24,7 @@ return {
 
 	AwakeningMoves = {},
 
+	UltimateName = "Forgotten Warrior",
+
 	SpecialDisplay = nil,
 }
