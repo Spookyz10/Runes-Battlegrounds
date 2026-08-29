@@ -162,11 +162,6 @@ local function fireProjectile(Character, Origin, Direction)
 
 		local Step = Direction * PROJECTILE_SPEED * dt
 
-		-- Usa o volume real da lua (Blockcast) em vez de um raio do centro
-		-- do projétil. Um raycast de um único ponto deixava a lua afundar
-		-- visualmente no terreno antes de registrar contato, principalmente
-		-- em rampas/terreno irregular onde o raio passa quase paralelo à
-		-- superfície.
 		local CastCFrame = CFrame.new(Projectile.Position, Projectile.Position + Direction)
 		local BlockResult = workspace:Blockcast(CastCFrame, PROJECTILE_SIZE, Step, ProjectileRayParams)
 

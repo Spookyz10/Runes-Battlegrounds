@@ -10,13 +10,13 @@ local SFXModule = require(RS.Shared.Modules.SFXModule)
 local SvModules = SvSt.Modules
 local iFramesHandler = require(SvModules.iFramesService)
 local MovesetHandler = require(SvModules.MovesetHandler)
-local UltimateAnimations
+local Awakenings
 
-local function getUltimateAnimations()
-	if not UltimateAnimations then
-		UltimateAnimations = require(SvModules.AwakeningAnimations)
+local function getAwakenings()
+	if not Awakenings then
+		Awakenings = require(SvModules.AwakeningAnimations)
 	end
-	return UltimateAnimations
+	return Awakenings
 end
 
 local AwakeningMusicFolder = RS.Resources.Music.Awakenings
@@ -122,17 +122,6 @@ local function EndAwakening(
 	MovesetHandler:AddBaseMoveset(Player, Player:GetAttribute("Moveset"))
 end
 
-local UltimateHandlers: { [string]: (Player: Player) -> () } = {
-	["Astral Shift"] = function(Player: Player)
-		local Moveset = Player:GetAttribute("MovesetMode_Eclipse")
-		if Moveset == "Solar" then
-			getUltimateAnimations()["Solar Eclipse"]:Activate(Player)
-		elseif Moveset == "Lunar" then
-			getUltimateAnimations()["Lunar Eclipse"]:Activate(Player)
-		end
-	end,
-}
-
 local function doActivate(Player: Player, Bypass: boolean?)
 	local Character = Player.Character
 
@@ -175,10 +164,13 @@ local function doActivate(Player: Player, Bypass: boolean?)
 	iFramesHandler:AddiFrames(Character, "All")
 
 	local UltimateName = InfoModule.Movesets[CurrentMoveset].UltimateName
-	local Handler = UltimateHandlers[UltimateName]
-	if Handler then
+	local AwakeningModule = getAwakenings()[CurrentMoveset]
+
+	if AwakeningModule then
 		playAwakeningMusic(Player, Character, UltimateName)
-		Handler(Player)
+		AwakeningModule:Activate(Player)
+	else
+		warn("[AwakeningService] Nenhum módulo de awakening registrado para o moveset:", CurrentMoveset)
 	end
 
 	MovesetHandler:AddAwakeningMoveset(Player, Player:GetAttribute("Moveset"))

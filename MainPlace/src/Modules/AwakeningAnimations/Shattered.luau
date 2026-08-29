@@ -14,8 +14,9 @@ local AnimationService = require(ServerModules.AnimationService)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local BodymoverService = require(ServerModules.BodymoverService)
 
-local MoveAnims = ServerStorage.Assets.Animations.Moves
-local UserAnimation = MoveAnims.Shattered.Awakening.Shattered
+local Assets = ServerStorage.Assets
+local Animations = Assets.Animations
+local UserAnimation = Animations.Awakenings.Shattered
 
 local GRAB_HALF_SIZE = Vector3.new(70, 70, 70)
 
