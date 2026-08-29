@@ -2,6 +2,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local ServerModules = ServerStorage.Modules
 
@@ -14,23 +15,26 @@ local AnimationService = require(ServerModules.AnimationService)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local BodymoverService = require(ServerModules.BodymoverService)
 
+local CharacterAssets = ReplicatedStorage.Resources.CharacterAssets
+
 local Assets = ServerStorage.Assets
 local Animations = Assets.Animations
 local UserAnimation = Animations.Awakenings.Shattered
 local GravityAffectedAnim = Assets.Animations.Other.GravityAffected
 
-local GRAB_HALF_SIZE = Vector3.new(70, 70, 70)
+local GRAB_HALF_SIZE = Vector3.new(175.126, 50, 200.696)
 
 local DAMAGE = 25
 local RAGDOLL_TIME = 6
 
-local KNOCK_OUTWARD_FORCE = 300
+local KNOCK_OUTWARD_FORCE = 60
 local KNOCK_UP_FORCE = 90
 local KNOCK_BODY_TIME = 0.3
 
-local ISLAND_RISE_HEIGHT = 100
-local ISLAND_RISE_TIME = 1
+local ISLAND_RISE_HEIGHT = 600
+local ISLAND_RISE_TIME = 1.5
 local ISLAND_START_OFFSET = 5
+local VICTIM_FLOOR_OFFSET = 3
 
 local module = {}
 
@@ -80,9 +84,70 @@ function ActiveState.new(Character, Player)
 		PreviousiFrameLevel = 0,
 		CasterStun = nil,
 		IslandConn = nil,
-		IslandBaseY = nil,
-		IslandStartTime = nil,
+		IslandClone = nil,
+		IslandFloor = nil,
+		IslandDriverConn = nil,
 	}
+end
+
+local function destroyServerIsland(data)
+	if data.IslandDriverConn then
+		data.IslandDriverConn:Disconnect()
+		data.IslandDriverConn = nil
+	end
+
+	if data.IslandClone and data.IslandClone.Parent then
+		data.IslandClone:Destroy()
+	end
+
+	data.IslandClone = nil
+	data.IslandFloor = nil
+end
+
+local function spawnServerIsland(data, HumRP)
+	local IslandAsset = CharacterAssets.Shattered.Island
+	local Clone = IslandAsset:Clone()
+
+	local StartCFrame = CFrame.new(HumRP.Position - Vector3.new(0, ISLAND_START_OFFSET, 0))
+	Clone:PivotTo(StartCFrame)
+	Clone.Parent = workspace
+
+	data.IslandClone = Clone
+	data.IslandFloor = Clone:FindFirstChild("Floor", true)
+
+	local EndCFrame = StartCFrame * CFrame.new(0, ISLAND_RISE_HEIGHT, 0)
+
+	local Driver = Instance.new("CFrameValue")
+	Driver.Value = StartCFrame
+	Driver.Parent = Clone
+
+	local DriverConn
+	DriverConn = Driver:GetPropertyChangedSignal("Value"):Connect(function()
+		if Clone and Clone.Parent then
+			Clone:PivotTo(Driver.Value)
+		end
+	end)
+	data.IslandDriverConn = DriverConn
+
+	local IslandTween = TweenService:Create(
+		Driver,
+		TweenInfo.new(ISLAND_RISE_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{ Value = EndCFrame }
+	)
+
+	IslandTween.Completed:Once(function()
+		if DriverConn then
+			DriverConn:Disconnect()
+		end
+		if data.IslandDriverConn == DriverConn then
+			data.IslandDriverConn = nil
+		end
+		if Driver and Driver.Parent then
+			Driver:Destroy()
+		end
+	end)
+
+	IslandTween:Play()
 end
 
 local function startIslandTracking(data)
@@ -95,16 +160,19 @@ local function startIslandTracking(data)
 			return
 		end
 
-		local alpha = math.clamp((os.clock() - data.IslandStartTime) / ISLAND_RISE_TIME, 0, 1)
-		local eased = 1 - (1 - alpha) ^ 2
-		local currentY = data.IslandBaseY + ISLAND_RISE_HEIGHT * eased
+		local Floor = data.IslandFloor
+		if not Floor or not Floor.Parent then
+			return
+		end
+
+		local FloorY = Floor.Position.Y
 
 		for EnemyCharacter, VictimData in pairs(data.Victims) do
 			if EnemyCharacter and EnemyCharacter.Parent and VictimData.Locked then
 				local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
 				if EnemyHumRP and EnemyHumRP.Parent then
 					local Pos = VictimData.OriginalPosition
-					EnemyHumRP.CFrame = CFrame.new(Pos.X, currentY, Pos.Z)
+					EnemyHumRP.CFrame = CFrame.new(Pos.X, FloorY + VICTIM_FLOOR_OFFSET, Pos.Z)
 				end
 			end
 		end
@@ -127,6 +195,7 @@ local function cleanup(data)
 	local Character = data.Character
 
 	stopIslandTracking(data)
+	destroyServerIsland(data)
 
 	if data.Victims then
 		for EnemyCharacter, VictimData in pairs(data.Victims) do
@@ -134,8 +203,6 @@ local function cleanup(data)
 		end
 		data.Victims = nil
 	end
-
-	RemoteManager.FireAllClients("ReplicateTask", "ShatteredIsland", { func = "Hit", char = Character })
 
 	if Character and Character.Parent then
 		Character:RemoveTag("CantRotate")
@@ -227,12 +294,10 @@ function module:Activate(Player)
 
 			data.Locked = true
 			data.Victims = {}
-			data.IslandBaseY = HumRP.Position.Y - ISLAND_START_OFFSET
-			data.IslandStartTime = os.clock()
 
 			RemoteManager.FireAllClients("ReplicateTask", "ShatteredImpact", { char = Character })
-			RemoteManager.FireAllClients("ReplicateTask", "ShatteredIsland", { func = "Start", char = Character })
 
+			spawnServerIsland(data, HumRP)
 			startIslandTracking(data)
 
 			HitboxHandler:SimpleOnce(
@@ -284,12 +349,6 @@ function module:Activate(Player)
 						OriginalPosition = EnemyHumRP.Position,
 					}
 
-					RemoteManager.FireAllClients(
-						"ReplicateTask",
-						"ShatteredIsland",
-						{ func = "AddVictim", char = Character, victim = EnemyCharacter }
-					)
-
 					if VictimPlayer then
 						RemoteManager.FireClient(
 							VictimPlayer,
@@ -313,7 +372,8 @@ function module:Activate(Player)
 			stopIslandTracking(data)
 
 			RemoteManager.FireAllClients("ReplicateTask", "ShatteredImpact", { char = Character })
-			RemoteManager.FireAllClients("ReplicateTask", "ShatteredIsland", { func = "Hit", char = Character })
+
+			destroyServerIsland(data)
 
 			local Victims = data.Victims
 			data.Victims = nil
