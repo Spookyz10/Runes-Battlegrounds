@@ -2,7 +2,7 @@ local Constants = require(script.Parent.Shared.Constants)
 local RunService = Constants.RunService
 local CharacterAssets = Constants.CharacterAssets
 
-local FISTS_SPAWN_OFFSET = Vector3.new(0, 0, -300)
+local FISTS_SPAWN_OFFSET = Vector3.new(0, 0, 300)
 
 local ACTIVE = {}
 

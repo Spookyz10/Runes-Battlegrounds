@@ -1,5 +1,3 @@
--- MainPlace/src/Modules/Abilities/Shattered/Oblivion.txt
-
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
@@ -301,7 +299,7 @@ return {
 
 		table.insert(
 			UserEvents,
-			UserTrack:GetMarkerReachedSignal("aim"):Once(function()
+			UserTrack:GetMarkerReachedSignal("charge"):Once(function()
 				if cancelled or not Character.Parent then
 					return
 				end
