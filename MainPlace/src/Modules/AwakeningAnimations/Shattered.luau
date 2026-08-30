@@ -461,7 +461,7 @@ function module:Activate(Player)
 
 			RemoteManager.FireAllClients(
 				"ReplicateTask",
-				"IslandExplosion",
+				"ShatterIslandExplosion",
 				{ Part = data.IslandClone.PrimaryPart.Position }
 			)
 

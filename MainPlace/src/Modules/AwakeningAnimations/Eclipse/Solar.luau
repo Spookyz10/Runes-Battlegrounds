@@ -20,14 +20,13 @@ local Animations = Assets.Animations
 local SolarEclipseAnim = Animations.Awakenings["Solar Eclipse"]
 
 local EXPLOSION_DAMAGE = 5
-local EXPLOSION_KNOCKUP = 1200
-local EXPLOSION_KNOCKBACK = 450
-local RAGDOLL_DURATION = 3
+local EXPLOSION_KNOCKUP = 1700
+local EXPLOSION_KNOCKBACK = 650
+local RAGDOLL_DURATION = 12
 local CYLINDER_SIZE = Vector3.new(300, 200, 200)
 local LEVITATE_RADIUS = CYLINDER_SIZE.X
 
-local EXPLOSION_CHECK_INTERVAL = 0.1
-local EXPLOSION_HIT_COOLDOWN = 5
+local EXPLOSION_CHECK_INTERVAL = 0.4
 
 local module = {}
 
@@ -107,8 +106,7 @@ local function startExplosionField(Character, Position)
 				continue
 			end
 
-			local LastHit = hitCooldowns[EnemyCharacter]
-			if LastHit and (now - LastHit) < EXPLOSION_HIT_COOLDOWN then
+			if hitCooldowns[EnemyCharacter] then
 				continue
 			end
 
@@ -128,7 +126,15 @@ local function startExplosionField(Character, Position)
 				nil,
 				nil
 			)
-			RagdollHandler.ragdoll(EnemyHumanoid, RAGDOLL_DURATION)
+
+			RagdollHandler.ragdoll(EnemyHumanoid, RAGDOLL_DURATION, true, Character, nil, nil, false)
+
+			local FallbackStun = StunHandler:Stun(EnemyCharacter, RAGDOLL_DURATION, true, 0, 0, true, nil, false)
+			task.delay(RAGDOLL_DURATION, function()
+				if EnemyCharacter and EnemyCharacter.Parent then
+					StunHandler:Unstun(EnemyCharacter, FallbackStun)
+				end
+			end)
 
 			task.defer(function()
 				if not EnemyCharacter or not EnemyCharacter.Parent then
