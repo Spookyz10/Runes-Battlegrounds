@@ -85,7 +85,7 @@ local function restoreGroundControl(Humanoid, HumRP)
 end
 
 return {
-	Cooldown = 1,
+	Cooldown = 20,
 	Start = function(Player, Tool)
 		local Character = Player.Character
 		if not Character or not Character.Parent then
@@ -365,7 +365,7 @@ return {
 
 				stopRotation()
 
-				local camPartPosition = targetPosition + Vector3.new(30, 0, 0)
+				local camPartPosition = targetPosition + Vector3.new(200, 0, 0)
 
 				camPartActive = true
 				RemoteManager.FireClient(Player, "ReplicateTask", "CustomCamPart", {

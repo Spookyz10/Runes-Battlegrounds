@@ -5,13 +5,21 @@ local CharacterAssets = Constants.CharacterAssets
 
 local FISTS_SLOW_SPEED = 5
 local FISTS_SLOW_TIME = 1.2
-local FISTS_FAST_SPEED = 200
+local FISTS_FAST_SPEED = 5900
 
 local ORIENT_OFFSET_X = 45
 local ORIENT_OFFSET_Y = 0
 local ORIENT_OFFSET_Z = 0
 
-local ACTIVE: { [string]: { model: Model, conn: RBXScriptConnection?, cancelled: boolean, targetPosition: Vector3? } } =
+local ACTIVE: {
+	[string]: {
+		model: Model,
+		conn: RBXScriptConnection?,
+		cancelled: boolean,
+		targetPosition: Vector3?,
+		traveling: boolean,
+	},
+} =
 	{}
 
 local function getKey(char: Model): string
@@ -64,7 +72,13 @@ function Handlers.Start(params)
 	FistsClone:PivotTo(getOrientedCFrame(startPosition, targetPosition))
 	FistsClone.Parent = workspace
 
-	local data = { model = FistsClone, conn = nil, cancelled = false, targetPosition = targetPosition }
+	local data = {
+		model = FistsClone,
+		conn = nil,
+		cancelled = false,
+		targetPosition = targetPosition,
+		traveling = false,
+	}
 	ACTIVE[key] = data
 
 	local startTime = os.clock()
@@ -129,8 +143,10 @@ function Handlers.MoveToTarget(params)
 	local travelTime = totalDistance / FISTS_FAST_SPEED
 	local startTime = os.clock()
 
+	data.traveling = true
+
 	data.conn = RunService.Heartbeat:Connect(function()
-		if data.cancelled or not FistsClone.Parent then
+		if not FistsClone.Parent then
 			if data.conn then
 				data.conn:Disconnect()
 				data.conn = nil
@@ -168,6 +184,10 @@ function Handlers.Stop(params)
 	local key = getKey(Character)
 	local data = ACTIVE[key]
 	if not data then
+		return
+	end
+
+	if data.traveling then
 		return
 	end
 
