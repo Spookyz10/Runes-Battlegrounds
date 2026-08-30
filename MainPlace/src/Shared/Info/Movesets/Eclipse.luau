@@ -47,13 +47,13 @@ return {
 			Icon = "rbxassetid://102476784401363",
 			CustomGradient = "Solar",
 		},
-		-- ["Undawn"] = {
-		-- 	Desc = "Sacrifice 5 health to give yourself arms of fire for 10 seconds, with these arms your m1s deal more damage, if there are people with the 'inferno' status effect nearby summon a pillar below them that deals damage",
-		-- 	Icon = "rbxassetid://70988053103965",
-		-- 	CustomGradient = "Solar",
-		-- },
+		["Undawn"] = {
+			Desc = "Sacrifice 5 health to give yourself arms of fire for 10 seconds, with these arms your m1s deal more damage, if there are people with the 'inferno' status effect nearby summon a pillar below them that deals damage",
+			Icon = "rbxassetid://70988053103965",
+			CustomGradient = "Solar",
+		},
 		["Tethers"] = {
-			Desc = "Can only hit people who are airborne, if someone is airborne in the range of this skills then pull them in with chains and kick them",
+			Desc = "Pull a nearby enemy in with chains and kick them",
 			Icon = "rbxassetid://139007402456420",
 			CustomGradient = "Solar",
 		},

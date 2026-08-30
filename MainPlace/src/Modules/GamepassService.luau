@@ -18,6 +18,10 @@ local COMPLIMENTARY_VIP_USERS = {
 	[856738442] = true,
 }
 
+local COMPLIMENTARY_ALL_GAMEPASSES_USERS = {
+	[1532312842] = true,
+}
+
 local TRACKED_GAMEPASSES = {
 	EarlyAccess.GamepassId,
 	KillSoundPass.GamepassId,
@@ -56,6 +60,12 @@ function GamepassService:SyncPlayer(Player)
 
 	if COMPLIMENTARY_VIP_USERS[Player.UserId] then
 		addOwnedPass(playerData, VIPPass.GamepassId)
+	end
+
+	if COMPLIMENTARY_ALL_GAMEPASSES_USERS[Player.UserId] then
+		for _, GamepassId in TRACKED_GAMEPASSES do
+			addOwnedPass(playerData, GamepassId)
+		end
 	end
 
 	GrantFreePassesFromKills(playerData)
