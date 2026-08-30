@@ -9,7 +9,7 @@ local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local SFXModule = require(ReplicatedStorage.Shared.Modules.SFXModule)
 local StunHandler = require(SvModules.StunHandler)
 local DamageHandler = require(SvModules.DamageHandler)
-local KnockbackService = require(SvModules.KnockbackModule)
+local BodymoverService = require(SvModules.BodymoverService)
 local iFramesService = require(SvModules.iFramesService)
 local RagdollHandler = require(SvModules.RagdollHandler)
 local AnimationService = require(SvModules.AnimationService)
@@ -20,13 +20,39 @@ local Animations = Assets.Animations
 local SolarEclipseAnim = Animations.Awakenings["Solar Eclipse"]
 
 local EXPLOSION_DAMAGE = 5
-local EXPLOSION_KNOCKUP = 1700
-local EXPLOSION_KNOCKBACK = 650
+local EXPLOSION_OUTWARD_FORCE = 50
+local EXPLOSION_UP_FORCE = 100
+local EXPLOSION_KNOCKBACK_BODY_TIME = 0.3
 local RAGDOLL_DURATION = 12
 local CYLINDER_SIZE = Vector3.new(300, 200, 200)
 local LEVITATE_RADIUS = CYLINDER_SIZE.X
 
 local EXPLOSION_CHECK_INTERVAL = 0.4
+
+local HardRagdollConfig = {
+	Damage = EXPLOSION_DAMAGE,
+	Size = Vector3.new(60, 60, 60),
+	Offset = CFrame.new(0, 0, 0),
+	KnockupForce = 225,
+	GroundCrater = {
+		{
+			Seed = math.random(1, 2147483647),
+			amount = 60,
+			["end"] = Vector3.new(0, -20, 0),
+			size = 2.8,
+			rings = 3,
+			ringSpacing = 18,
+			ringSizeGrowth = 1.8,
+			ringGap = 0.22,
+			outwardTilt = true,
+			debrisSizeMin = 7,
+			debrisSizeMax = 18,
+			debrisHeightMin = 4,
+			debrisHeightMax = 9,
+			sizemult = 1.6,
+		},
+	},
+}
 
 local module = {}
 
@@ -127,7 +153,11 @@ local function startExplosionField(Character, Position)
 				nil
 			)
 
-			RagdollHandler.ragdoll(EnemyHumanoid, RAGDOLL_DURATION, true, Character, nil, nil, false)
+			if EnemyCharacter:HasTag("Ragdolled") then
+				RagdollHandler.cancelRagdoll(EnemyHumanoid, nil, false, nil, false, true, true)
+			end
+
+			RagdollHandler.ragdoll(EnemyHumanoid, RAGDOLL_DURATION, true, Character, HardRagdollConfig, nil, false)
 
 			local FallbackStun = StunHandler:Stun(EnemyCharacter, RAGDOLL_DURATION, true, 0, 0, true, nil, false)
 			task.delay(RAGDOLL_DURATION, function()
@@ -140,24 +170,33 @@ local function startExplosionField(Character, Position)
 				if not EnemyCharacter or not EnemyCharacter.Parent then
 					return
 				end
-				local offset = EnemyCharacter.HumanoidRootPart.Position - Character.HumanoidRootPart.Position
+
+				local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
+				if not EnemyHumRP or not EnemyHumRP.Parent then
+					return
+				end
+
+				local offset = EnemyHumRP.Position - Character.HumanoidRootPart.Position
 				local outward = Vector3.new(offset.X, 0, offset.Z)
 				if outward.Magnitude < 0.001 then
 					outward = Character.HumanoidRootPart.CFrame.LookVector
 					outward = Vector3.new(outward.X, 0, outward.Z)
 				end
+				outward = outward.Magnitude > 0 and outward.Unit or Vector3.new(0, 0, -1)
 
-				KnockbackService:Knockback(
-					EnemyCharacter,
-					outward.Unit * EXPLOSION_KNOCKBACK + Vector3.new(0, EXPLOSION_KNOCKUP, 0),
-					nil,
-					nil,
-					nil,
-					nil,
-					nil,
-					false,
-					false
-				)
+				EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
+				EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
+
+				pcall(function()
+					EnemyHumRP:SetNetworkOwner(nil)
+				end)
+
+				BodymoverService:Knockback(EnemyCharacter, {
+					KnockbackType = "Velocity",
+					MaxForce = Vector3.new(100000, 100000, 100000),
+					Velocity = outward * EXPLOSION_OUTWARD_FORCE + Vector3.new(0, EXPLOSION_UP_FORCE, 0),
+					Time = EXPLOSION_KNOCKBACK_BODY_TIME,
+				})
 			end)
 		end
 	end)
