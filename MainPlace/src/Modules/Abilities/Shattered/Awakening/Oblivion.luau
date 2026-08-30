@@ -34,7 +34,7 @@ local JUMP_LAUNCH_HEIGHT = 150
 local JUMP_RAGDOLL_TIME = 3
 
 local LIFT_WAIT_TIME = 0.15
-local CASTER_LIFT_HEIGHT = 400
+local CASTER_LIFT_HEIGHT = 300
 
 local CHARGE_MARKER_DELAY = 0.1
 
@@ -49,11 +49,9 @@ GroundSnapParams.IgnoreWater = true
 
 local CAM_STREAM_DURATION = AIM_DURATION + 2
 
-local PUNCH_WAIT_TIME = 2
-local PUNCH_TRAVEL_TIME = 1.6
 local PUNCH_HOLD_TIME = 2
 
-local FINAL_HITBOX_SIZE = Vector3.new(500, 500, 500)
+local FINAL_HITBOX_SIZE = Vector3.new(300, 300, 300)
 local FINAL_DAMAGE = 30
 
 local ExcludeRayParams = RaycastParams.new()
@@ -110,6 +108,8 @@ return {
 
 		SkillCollision:Lock(Character)
 
+		Character:AddTag("CantRotate")
+
 		local cancelled = false
 		local iFramesGranted = false
 		local cancelHandlerUnregistered = false
@@ -149,6 +149,7 @@ return {
 
 		local function cleanup()
 			SkillCollision:Unlock(Character)
+			Character:RemoveTag("CantRotate")
 
 			stopRotation()
 
@@ -157,11 +158,6 @@ return {
 					restoreGroundControl(Humanoid, HumRP)
 				end
 				isAirborne = false
-			end
-
-			if camPartActive then
-				camPartActive = false
-				RemoteManager.FireClient(Player, "ReplicateTask", "CustomCamPart", { func = "Stop" })
 			end
 
 			RemoteManager.FireAllClients("ReplicateTask", "IndicatorEnd", { id = indicatorId, ownerId = Player.UserId })
@@ -369,7 +365,7 @@ return {
 
 				stopRotation()
 
-				local camPartPosition = targetPosition
+				local camPartPosition = targetPosition + Vector3.new(30, 0, 0)
 
 				camPartActive = true
 				RemoteManager.FireClient(Player, "ReplicateTask", "CustomCamPart", {
@@ -382,8 +378,6 @@ return {
 					func = "Start",
 					char = Character,
 					targetPosition = targetPosition,
-					waitTime = PUNCH_WAIT_TIME,
-					travelTime = PUNCH_TRAVEL_TIME,
 				})
 
 				UserTrack:AdjustSpeed(0)
@@ -396,6 +390,12 @@ return {
 					if UserTrack and UserTrack.IsPlaying then
 						UserTrack:AdjustSpeed(1)
 					end
+
+					RemoteManager.FireAllClients("ReplicateTask", "OblivionFists", {
+						func = "MoveToTarget",
+						char = Character,
+						targetPosition = targetPosition,
+					})
 
 					RemoteManager.FireAllClients("ReplicateTask", "OblivionExplosion", { position = targetPosition })
 					SFXModule:Play("EclipseImpact", targetPosition)
@@ -451,7 +451,7 @@ return {
 						end
 					)
 
-					task.delay(0.3, function()
+					task.delay(1, function()
 						if camPartActive then
 							camPartActive = false
 							RemoteManager.FireClient(Player, "ReplicateTask", "CustomCamPart", { func = "Stop" })

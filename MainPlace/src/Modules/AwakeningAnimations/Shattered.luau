@@ -65,10 +65,6 @@ local function releaseVictim(EnemyCharacter, VictimData)
 		EnemyCharacter:RemoveTag("CantRotate")
 	end
 
-	if VictimData.Player then
-		RemoteManager.FireClient(VictimData.Player, "ReplicateTask", "GravityAffectedVisual", { func = "Stop" })
-	end
-
 	if EnemyHumanoid and EnemyHumanoid.Parent and EnemyHumanoid.Health > 0 then
 		EnemyHumanoid:ChangeState(Enum.HumanoidStateType.Running)
 	end
@@ -261,6 +257,9 @@ function module:Activate(Player)
 	data.CasterStun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
 	Character:AddTag("CantRotate")
 
+	RemoteManager.FireAllClients("ReplicateTask", "LunarAwakenFogEnd", { char = Character })
+	RemoteManager.FireAllClients("ReplicateTask", "GivePlayerAura", { Char = Character, AuraName = "Shattered" })
+
 	RemoteManager.FireClient(Player, "ReplicateTask", "HideAwkBar")
 	RemoteManager.FireClient(Player, "ReplicateTask", "HideHotbar")
 
@@ -353,8 +352,8 @@ function module:Activate(Player)
 						RemoteManager.FireClient(
 							VictimPlayer,
 							"ReplicateTask",
-							"GravityAffectedVisual",
-							{ func = "Start" }
+							"ShakeCamera",
+							{ Intensity = 2, Last = 3 }
 						)
 					end
 				end
@@ -391,15 +390,6 @@ function module:Activate(Player)
 				local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
 				if not EnemyHumanoid or not EnemyHumRP then
 					continue
-				end
-
-				if VictimData.Player then
-					RemoteManager.FireClient(
-						VictimData.Player,
-						"ReplicateTask",
-						"GravityAffectedVisual",
-						{ func = "Stop" }
-					)
 				end
 
 				if VictimData.AnimTrack and VictimData.AnimTrack.IsPlaying then
