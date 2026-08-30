@@ -400,6 +400,14 @@ return {
 					RemoteManager.FireAllClients("ReplicateTask", "OblivionExplosion", { position = targetPosition })
 					SFXModule:Play("EclipseImpact", targetPosition)
 
+					RemoteManager.FireClient(Player, "ReplicateTask", "CustomCamPart", { func = "Stop" })
+
+					RemoteManager.FireClient(Player, "ReplicateTask", "CustomCamPart", {
+						func = "Start",
+						position = HumRP.Position + Vector3.new(0, 50, 200),
+						lookTarget = Character,
+					})
+
 					local HitList = {}
 
 					HitboxHandler:SimpleOnce(

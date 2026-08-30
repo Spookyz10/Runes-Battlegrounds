@@ -257,7 +257,6 @@ function module:Activate(Player)
 	data.CasterStun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
 	Character:AddTag("CantRotate")
 
-	RemoteManager.FireAllClients("ReplicateTask", "LunarAwakenFogEnd", { char = Character })
 	RemoteManager.FireAllClients("ReplicateTask", "GivePlayerAura", { Char = Character, AuraName = "Shattered" })
 
 	RemoteManager.FireClient(Player, "ReplicateTask", "HideAwkBar")

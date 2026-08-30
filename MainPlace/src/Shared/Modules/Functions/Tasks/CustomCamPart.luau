@@ -1,9 +1,7 @@
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
 
-local activeConn = nil
 local originalCameraType = nil
 local originalSubject = nil
 
@@ -18,41 +16,25 @@ function Handlers.Start(params)
 
 	local Camera = workspace.CurrentCamera
 
-	if activeConn then
-		activeConn:Disconnect()
-		activeConn = nil
-	end
-
 	originalCameraType = Camera.CameraType
 	originalSubject = Camera.CameraSubject
 
 	Camera.CameraType = Enum.CameraType.Scriptable
 
-	activeConn = RunService.RenderStepped:Connect(function()
-		if not position then
-			return
+	local lookAtPosition = position + Vector3.new(0, 0, -1)
+
+	if lookTarget and lookTarget.Parent then
+		local HumRP = lookTarget:FindFirstChild("HumanoidRootPart")
+		if HumRP and HumRP.Parent then
+			lookAtPosition = HumRP.Position
 		end
+	end
 
-		local lookAtPosition = position + Vector3.new(0, 0, -1)
-
-		if lookTarget and lookTarget.Parent then
-			local HumRP = lookTarget:FindFirstChild("HumanoidRootPart")
-			if HumRP and HumRP.Parent then
-				lookAtPosition = HumRP.Position
-			end
-		end
-
-		Camera.CFrame = CFrame.new(position, lookAtPosition)
-	end)
+	Camera.CFrame = CFrame.new(position, lookAtPosition)
 end
 
 function Handlers.Stop(_params)
 	local Camera = workspace.CurrentCamera
-
-	if activeConn then
-		activeConn:Disconnect()
-		activeConn = nil
-	end
 
 	Camera.CameraType = originalCameraType or Enum.CameraType.Custom
 
