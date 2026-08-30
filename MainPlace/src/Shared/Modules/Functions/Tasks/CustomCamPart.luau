@@ -10,8 +10,9 @@ local originalSubject = nil
 local Handlers = {}
 
 function Handlers.Start(params)
-	local part = params.part
-	if not part then
+	local position = params.position
+	local lookTarget = params.lookTarget
+	if not position then
 		return
 	end
 
@@ -28,15 +29,20 @@ function Handlers.Start(params)
 	Camera.CameraType = Enum.CameraType.Scriptable
 
 	activeConn = RunService.RenderStepped:Connect(function()
-		if not part or not part.Parent then
-			if activeConn then
-				activeConn:Disconnect()
-				activeConn = nil
-			end
+		if not position then
 			return
 		end
 
-		Camera.CFrame = part.CFrame
+		local lookAtPosition = position + Vector3.new(0, 0, -1)
+
+		if lookTarget and lookTarget.Parent then
+			local HumRP = lookTarget:FindFirstChild("HumanoidRootPart")
+			if HumRP and HumRP.Parent then
+				lookAtPosition = HumRP.Position
+			end
+		end
+
+		Camera.CFrame = CFrame.new(position, lookAtPosition)
 	end)
 end
 

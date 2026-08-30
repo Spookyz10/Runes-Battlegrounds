@@ -34,17 +34,24 @@ local JUMP_LAUNCH_HEIGHT = 150
 local JUMP_RAGDOLL_TIME = 3
 
 local LIFT_WAIT_TIME = 0.15
-local CASTER_LIFT_HEIGHT = 150
+local CASTER_LIFT_HEIGHT = 400
+
+local CHARGE_MARKER_DELAY = 0.1
 
 local AIM_DURATION = 5
-local AIM_RANGE = 200
+local AIM_RANGE = 400
 local AIM_ORIGIN_OFFSET = Vector3.new(0, 70, 0)
+
+local GroundSnapParams = RaycastParams.new()
+GroundSnapParams.FilterType = Enum.RaycastFilterType.Exclude
+GroundSnapParams.FilterDescendantsInstances = { workspace.Live, workspace.Debris }
+GroundSnapParams.IgnoreWater = true
 
 local CAM_STREAM_DURATION = AIM_DURATION + 2
 
 local PUNCH_WAIT_TIME = 2
 local PUNCH_TRAVEL_TIME = 1.6
-local CAMPART_RIGHT_OFFSET = 100
+local PUNCH_HOLD_TIME = 2
 
 local FINAL_HITBOX_SIZE = Vector3.new(500, 500, 500)
 local FINAL_DAMAGE = 30
@@ -80,7 +87,7 @@ local function restoreGroundControl(Humanoid, HumRP)
 end
 
 return {
-	Cooldown = 30,
+	Cooldown = 1,
 	Start = function(Player, Tool)
 		local Character = Player.Character
 		if not Character or not Character.Parent then
@@ -304,6 +311,12 @@ return {
 					return
 				end
 
+				task.wait(CHARGE_MARKER_DELAY)
+
+				if cancelled or not Character.Parent then
+					return
+				end
+
 				UserTrack:AdjustSpeed(0)
 
 				local IndicatorAsset = ObliviionAssets:FindFirstChild("Indicator")
@@ -326,11 +339,19 @@ return {
 					local origin = HumRP.Position + AIM_ORIGIN_OFFSET
 					local ray = workspace:Raycast(origin, aimDirection * AIM_RANGE, ExcludeRayParams)
 
+					local rawTarget
 					if ray then
-						targetPosition = ray.Position
+						rawTarget = ray.Position
 					else
-						targetPosition = origin + aimDirection * AIM_RANGE
+						rawTarget = origin + aimDirection * AIM_RANGE
 					end
+
+					local groundRay = workspace:Raycast(
+						rawTarget + Vector3.new(0, 300, 0),
+						Vector3.new(0, -1000, 0),
+						GroundSnapParams
+					)
+					targetPosition = groundRay and groundRay.Position or rawTarget
 
 					if UserTrack and UserTrack.IsPlaying then
 						UserTrack:AdjustSpeed(1)
@@ -348,8 +369,7 @@ return {
 
 				stopRotation()
 
-				local rightVector = HumRP.CFrame.RightVector
-				local camPartPosition = targetPosition + rightVector * CAMPART_RIGHT_OFFSET
+				local camPartPosition = targetPosition
 
 				camPartActive = true
 				RemoteManager.FireClient(Player, "ReplicateTask", "CustomCamPart", {
@@ -366,9 +386,15 @@ return {
 					travelTime = PUNCH_TRAVEL_TIME,
 				})
 
-				task.delay(PUNCH_WAIT_TIME + PUNCH_TRAVEL_TIME, function()
-					if cancelled then
+				UserTrack:AdjustSpeed(0)
+
+				task.delay(PUNCH_HOLD_TIME, function()
+					if cancelled or not Character.Parent then
 						return
+					end
+
+					if UserTrack and UserTrack.IsPlaying then
+						UserTrack:AdjustSpeed(1)
 					end
 
 					RemoteManager.FireAllClients("ReplicateTask", "OblivionExplosion", { position = targetPosition })
@@ -425,8 +451,12 @@ return {
 						end
 					)
 
-					camPartActive = false
-					RemoteManager.FireClient(Player, "ReplicateTask", "CustomCamPart", { func = "Stop" })
+					task.delay(0.3, function()
+						if camPartActive then
+							camPartActive = false
+							RemoteManager.FireClient(Player, "ReplicateTask", "CustomCamPart", { func = "Stop" })
+						end
+					end)
 
 					if UserTrack and UserTrack.IsPlaying then
 						UserTrack:Stop()
@@ -442,6 +472,15 @@ return {
 
 			if not cancelled then
 				cancelled = true
+
+				if Character and Character.Parent and HumRP and HumRP.Parent then
+					if isAirborne then
+						HumRP.CFrame = CFrame.new(OriginPosition, OriginPosition + HumRP.CFrame.LookVector)
+						HumRP.AssemblyLinearVelocity = Vector3.zero
+					end
+					RemoteManager.FireAllClients("ReplicateTask", "ShatteredImpact", { char = Character })
+				end
+
 				cleanup()
 			end
 		end)

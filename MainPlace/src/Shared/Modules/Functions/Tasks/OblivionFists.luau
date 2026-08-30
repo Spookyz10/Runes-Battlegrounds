@@ -1,8 +1,16 @@
+local RunService = game:GetService("RunService")
+
 local Constants = require(script.Parent.Shared.Constants)
-local RunService = Constants.RunService
 local CharacterAssets = Constants.CharacterAssets
 
-local FISTS_SPAWN_OFFSET = Vector3.new(0, 0, 300)
+local FISTS_START_DISTANCE = 700
+local FISTS_SLOW_SPEED = 5
+local FISTS_SLOW_TIME = 1.2
+local FISTS_FAST_SPEED = 120
+
+local ORIENT_OFFSET_X = 45
+local ORIENT_OFFSET_Y = 0
+local ORIENT_OFFSET_Z = 0
 
 local ACTIVE = {}
 
@@ -16,7 +24,6 @@ function Handlers.Start(params)
 	local Character = params.char
 	local targetPosition = params.targetPosition
 	local waitTime = params.waitTime or 2
-	local travelTime = params.travelTime or 1.6
 
 	if not Character or not Character.Parent or not targetPosition then
 		return
@@ -46,8 +53,20 @@ function Handlers.Start(params)
 		return
 	end
 
+	local approachDirection = targetPosition - HumRP.Position
+	local flatApproach = Vector3.new(approachDirection.X, 0, approachDirection.Z)
+	if flatApproach.Magnitude < 0.001 then
+		local lookVector = HumRP.CFrame.LookVector
+		flatApproach = Vector3.new(lookVector.X, 0, lookVector.Z)
+	end
+	flatApproach = flatApproach.Unit
+
+	local totalDistance = FISTS_START_DISTANCE
+	local startPosition = targetPosition - flatApproach * totalDistance
+
 	local FistsClone = FistsAsset:Clone()
-	local startCFrame = HumRP.CFrame * CFrame.new(FISTS_SPAWN_OFFSET)
+	local startCFrame = CFrame.new(startPosition, targetPosition)
+		* CFrame.Angles(math.rad(ORIENT_OFFSET_X), math.rad(ORIENT_OFFSET_Y), math.rad(ORIENT_OFFSET_Z))
 	FistsClone:PivotTo(startCFrame)
 	FistsClone.Parent = workspace
 
@@ -59,7 +78,10 @@ function Handlers.Start(params)
 			return
 		end
 
-		local travelStart = FistsClone:GetPivot()
+		local slowDistance = FISTS_SLOW_SPEED * FISTS_SLOW_TIME
+		local remainingDistance = math.max(totalDistance - slowDistance, 0)
+		local fastTime = remainingDistance / FISTS_FAST_SPEED
+
 		local startTime = os.clock()
 
 		data.conn = RunService.Heartbeat:Connect(function()
@@ -71,14 +93,26 @@ function Handlers.Start(params)
 				return
 			end
 
-			local t = math.clamp((os.clock() - startTime) / travelTime, 0, 1)
-			local eased = 1 - (1 - t) ^ 3
-			local pos = travelStart.Position:Lerp(targetPosition, eased)
+			local elapsed = os.clock() - startTime
+			local distanceTraveled
 
-			local lookAt = (HumRP and HumRP.Parent) and HumRP.Position or (pos + Vector3.new(0, 0, -1))
-			FistsClone:PivotTo(CFrame.new(pos, lookAt))
+			if elapsed <= FISTS_SLOW_TIME then
+				distanceTraveled = FISTS_SLOW_SPEED * elapsed
+			else
+				local fastElapsed = math.clamp(elapsed - FISTS_SLOW_TIME, 0, fastTime)
+				distanceTraveled = slowDistance + FISTS_FAST_SPEED * fastElapsed
+			end
 
-			if t >= 1 then
+			distanceTraveled = math.clamp(distanceTraveled, 0, totalDistance)
+
+			local pos = startPosition + flatApproach * distanceTraveled
+
+			FistsClone:PivotTo(
+				CFrame.new(pos, targetPosition)
+					* CFrame.Angles(math.rad(ORIENT_OFFSET_X), math.rad(ORIENT_OFFSET_Y), math.rad(ORIENT_OFFSET_Z))
+			)
+
+			if elapsed >= FISTS_SLOW_TIME + fastTime then
 				if data.conn then
 					data.conn:Disconnect()
 					data.conn = nil
@@ -114,7 +148,7 @@ function Handlers.Stop(params)
 	end
 
 	if data.model and data.model.Parent then
-		data.model:Destroy()
+		--data.model:Destroy()
 	end
 end
 
