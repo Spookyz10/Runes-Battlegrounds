@@ -36,9 +36,38 @@ local ISLAND_RISE_TIME = 1.5
 local ISLAND_START_OFFSET = 5
 local VICTIM_FLOOR_OFFSET = 3
 
+local CASTER_LAUNCH_HEIGHT_ABOVE_ISLAND = 100
+local CASTER_LAUNCH_HEIGHT = ISLAND_RISE_HEIGHT + CASTER_LAUNCH_HEIGHT_ABOVE_ISLAND
+local CASTER_LAUNCH_TIME = ISLAND_RISE_TIME
+
 local module = {}
 
 local ActiveState = {}
+
+local function lockAirborne(Humanoid, HumRP)
+	Humanoid.AutoRotate = false
+	Humanoid.PlatformStand = true
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp, false)
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+	Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+	HumRP.AssemblyLinearVelocity = Vector3.zero
+	HumRP.Anchored = true
+end
+
+local function restoreGroundControl(Humanoid, HumRP)
+	HumRP.Anchored = false
+	Humanoid.PlatformStand = false
+	Humanoid.AutoRotate = true
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp, true)
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
+	Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
+	if Humanoid.Health > 0 then
+		Humanoid:ChangeState(Enum.HumanoidStateType.Running)
+	end
+end
 
 local function releaseVictim(EnemyCharacter, VictimData)
 	if not EnemyCharacter or not VictimData then
@@ -83,6 +112,9 @@ function ActiveState.new(Character, Player)
 		IslandClone = nil,
 		IslandFloor = nil,
 		IslandDriverConn = nil,
+		OriginPosition = nil,
+		CasterAirborne = false,
+		CasterLaunchTween = nil,
 	}
 end
 
@@ -146,6 +178,50 @@ local function spawnServerIsland(data, HumRP)
 	IslandTween:Play()
 end
 
+local function launchCasterUp(data, Humanoid, HumRP)
+	lockAirborne(Humanoid, HumRP)
+	data.CasterAirborne = true
+
+	local StartCFrame = HumRP.CFrame
+	local TargetCFrame = CFrame.new(data.OriginPosition + Vector3.new(0, CASTER_LAUNCH_HEIGHT, 0))
+		* StartCFrame.Rotation
+
+	local LaunchTween = TweenService:Create(
+		HumRP,
+		TweenInfo.new(CASTER_LAUNCH_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{ CFrame = TargetCFrame }
+	)
+
+	data.CasterLaunchTween = LaunchTween
+	LaunchTween:Play()
+end
+
+local function stopCasterLaunchTween(data)
+	if data.CasterLaunchTween then
+		data.CasterLaunchTween:Cancel()
+		data.CasterLaunchTween = nil
+	end
+end
+
+local function returnCasterToGround(data, Humanoid, HumRP)
+	stopCasterLaunchTween(data)
+
+	if not data.CasterAirborne then
+		return
+	end
+	data.CasterAirborne = false
+
+	if HumRP and HumRP.Parent and data.OriginPosition then
+		HumRP.Anchored = false
+		HumRP.CFrame = CFrame.new(data.OriginPosition, data.OriginPosition + HumRP.CFrame.LookVector)
+		HumRP.AssemblyLinearVelocity = Vector3.zero
+	end
+
+	if Humanoid and Humanoid.Parent then
+		restoreGroundControl(Humanoid, HumRP)
+	end
+end
+
 local function startIslandTracking(data)
 	data.IslandConn = RunService.Heartbeat:Connect(function()
 		if data.Cancelled or not data.Victims then
@@ -189,9 +265,15 @@ local function cleanup(data)
 	data.Cancelled = true
 
 	local Character = data.Character
+	local Humanoid = Character and Character:FindFirstChild("Humanoid")
+	local HumRP = Character and Character:FindFirstChild("HumanoidRootPart")
 
 	stopIslandTracking(data)
 	destroyServerIsland(data)
+
+	if data.CasterAirborne then
+		returnCasterToGround(data, Humanoid, HumRP)
+	end
 
 	if data.Victims then
 		for EnemyCharacter, VictimData in pairs(data.Victims) do
@@ -240,6 +322,7 @@ function module:Activate(Player)
 	end
 
 	local data = ActiveState.new(Character, Player)
+	data.OriginPosition = HumRP.Position
 	ActiveState[Character] = data
 
 	AnimationService:stopAll(Character)
@@ -295,8 +378,11 @@ function module:Activate(Player)
 
 			RemoteManager.FireAllClients("ReplicateTask", "ShatteredImpact", { char = Character })
 
+			task.wait(0.1)
+
 			spawnServerIsland(data, HumRP)
 			startIslandTracking(data)
+			launchCasterUp(data, Humanoid, HumRP)
 
 			HitboxHandler:SimpleOnce(
 				HumRP,
@@ -367,11 +453,27 @@ function module:Activate(Player)
 				return
 			end
 
+			RemoteManager.FireClient(Player, "ReplicateTask", "CustomCamPart", {
+				func = "Start",
+				position = HumRP.Position + Vector3.new(0, 100, 300),
+				lookTarget = Character,
+			})
+
+			RemoteManager.FireAllClients(
+				"ReplicateTask",
+				"IslandExplosion",
+				{ Part = data.IslandClone.PrimaryPart.Position }
+			)
+
 			stopIslandTracking(data)
 
-			RemoteManager.FireAllClients("ReplicateTask", "ShatteredImpact", { char = Character })
-
 			destroyServerIsland(data)
+
+			task.wait(0.1)
+
+			returnCasterToGround(data, Humanoid, HumRP)
+
+			RemoteManager.FireAllClients("ReplicateTask", "ShatteredImpact", { char = Character })
 
 			local Victims = data.Victims
 			data.Victims = nil
@@ -470,6 +572,10 @@ function module:Activate(Player)
 						{ Intensity = 10, Last = 0.8 }
 					)
 				end
+
+				task.delay(1, function()
+					RemoteManager.FireClient(Player, "ReplicateTask", "CustomCamPart", { func = "Stop" })
+				end)
 			end
 		end)
 	)

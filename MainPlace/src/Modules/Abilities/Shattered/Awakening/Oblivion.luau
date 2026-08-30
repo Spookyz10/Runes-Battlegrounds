@@ -404,7 +404,7 @@ return {
 
 					RemoteManager.FireClient(Player, "ReplicateTask", "CustomCamPart", {
 						func = "Start",
-						position = HumRP.Position + Vector3.new(0, 50, 200),
+						position = HumRP.Position + Vector3.new(0, 50, 500),
 						lookTarget = Character,
 					})
 
