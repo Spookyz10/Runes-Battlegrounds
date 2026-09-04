@@ -31,8 +31,8 @@ local function getConfig(Player)
 	local Moveset = Player:GetAttribute("Moveset") or "Default"
 	local Mode = Player:GetAttribute("MovesetMode_" .. Moveset)
 
-	if Mode and Configs[Moveset .. "_" .. Mode] then
-		return Configs[Moveset .. "_" .. Mode]
+	if Mode and Configs[Moveset .. " " .. Mode] then
+		return Configs[Moveset .. " " .. Mode]
 	end
 
 	return Configs[Moveset] or Configs.Default

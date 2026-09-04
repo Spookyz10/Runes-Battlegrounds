@@ -1,15 +1,19 @@
 local ServerStorage = game:GetService("ServerStorage")
 local StatusEffectHandler = require(ServerStorage.Modules.StatusEffectHandler)
-local Base = require(script.Parent.Eclipse)
+local buildEclipseConfig = require(script.Parent.EclipseBase)
 
-local Config = table.clone(Base)
-Config.Steps = table.clone(Base.Steps)
+local Config = buildEclipseConfig("Solar")
+
+Config.Steps[4] = table.clone(Config.Steps[4])
+Config.Steps[4].Blockable = false
+Config.Steps[4].IgnoreRagdollCheck = true
+Config.Steps[4].Knockback = "RagdollDownslam"
 
 Config.Empowered = {
 	Damage = 22,
 	StunTime = 0.35,
-	Animation = Base.Steps[4].Animation,
-	Hitbox = Base.Steps[4].Hitbox,
+	Animation = Config.Steps[4].Animation,
+	Hitbox = Config.Steps[4].Hitbox,
 	Blockable = true,
 	BypassStunImmunity = true,
 	DoFinisher = false,

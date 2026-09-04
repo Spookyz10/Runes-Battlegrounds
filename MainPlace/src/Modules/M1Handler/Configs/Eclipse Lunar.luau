@@ -1,3 +1,3 @@
 local buildEclipseConfig = require(script.Parent.EclipseBase)
 
-return buildEclipseConfig(nil)
+return buildEclipseConfig("Lunar")
