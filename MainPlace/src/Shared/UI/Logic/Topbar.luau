@@ -3,102 +3,95 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UIConstants = require(ReplicatedStorage.Shared.UI.UIConstants)
 local Data = require(ReplicatedStorage.Shared.Data).client
 local KillSoundPass = require(ReplicatedStorage.Shared.KillSoundPass)
-
 local Icon = require(ReplicatedStorage.Packages.topbarplus)
+
 local Topbar = {}
+local visible = true
+local entries = {
+	{ Name = "RuneSelection", Image = 74892251016594 },
+	{ Name = "Shop", Image = 83529893577215, Label = "Shop" },
+	{ Name = "Log", Image = 73951345498778 },
+	{ Name = "KillSound", Image = 107213877689577 },
+	{ Name = "Cosmetics", Image = 95816009699835 },
+}
 
-local MainIcon = Icon.new()
-local StoreIcon = Icon.new()
-local LogIcon = Icon.new()
-local KillSoundIcon = Icon.new()
-local CosmeticsIcon = Icon.new()
--- local Ranked = Icon.new()
-
-local function ownsKillSound()
-	return table.find(Data.OwnedPasses(), KillSoundPass.GamepassId) ~= nil
+if require(ReplicatedStorage.Shared.AdminAccess)[UIConstants.Player.UserId] then
+	table.insert(entries, { Name = "Admin", Label = "Admin" })
 end
 
-local function refreshKillSoundIcon()
-	KillSoundIcon:setEnabled(ownsKillSound())
+for _, entry in entries do
+	entry.Icon = Icon.new():setImage(entry.Image):setImageScale(1):setEnabled(false)
+
+	if entry.Label then
+		entry.Icon:setLabel(entry.Label)
+	end
+end
+
+local function refresh()
+	for _, entry in entries do
+		local allowed = entry.Name ~= "KillSound"
+			or table.find(Data.OwnedPasses(), KillSoundPass.GamepassId) ~= nil
+		entry.Icon:setEnabled(visible and entry.Gui ~= nil and allowed)
+	end
 end
 
 function Topbar.Show()
-	if MainIcon then
-		MainIcon:setEnabled(true)
-	end
-	if StoreIcon then
-		StoreIcon:setEnabled(true)
-	end
-	if LogIcon then
-		LogIcon:setEnabled(true)
-	end
-	if CosmeticsIcon then
-		CosmeticsIcon:setEnabled(true)
-	end
-
-	refreshKillSoundIcon()
+	visible = true
+	refresh()
 end
 
 function Topbar.Hide()
-	if MainIcon then
-		MainIcon:setEnabled(false)
+	visible = false
+
+	for _, entry in entries do
+		entry.Icon:deselect()
+
+		if entry.Gui then
+			entry.Gui.Enabled = false
+		end
 	end
-	if StoreIcon then
-		StoreIcon:setEnabled(false)
-	end
-	if LogIcon then
-		LogIcon:setEnabled(false)
-	end
-	if CosmeticsIcon then
-		CosmeticsIcon:setEnabled(false)
-	end
-	if KillSoundIcon then
-		KillSoundIcon:setEnabled(false)
-	end
+
+	refresh()
 end
 
 function Topbar.Init()
-	local playerGui = UIConstants.PlayerGui
+	for _, entry in entries do
+		task.spawn(function()
+			local gui = UIConstants.PlayerGui:WaitForChild(entry.Name, 15)
 
-	MainIcon:setImage(74892251016594)
-	local runeSelection = playerGui:FindFirstChild("RuneSelection")
-	MainIcon:bindToggleItem(runeSelection)
+			if not gui then
+				return
+			end
 
-	StoreIcon:setImage(83529893577215)
-	local store = playerGui:FindFirstChild("Store")
-	StoreIcon:bindToggleItem(store)
+			entry.Gui = gui
+			entry.Icon:bindToggleItem(gui)
 
-	LogIcon:setImage(73951345498778)
-	local log = playerGui:FindFirstChild("Log")
-	LogIcon:bindToggleItem(log)
+			local function sync()
+				if gui.Enabled then
+					entry.Icon:select()
 
-	KillSoundIcon:setImage(107213877689577)
-	local killSound = playerGui:FindFirstChild("KillSound")
-	KillSoundIcon:bindToggleItem(killSound)
+					for _, other in entries do
+						if other ~= entry and other.Gui then
+							other.Gui.Enabled = false
+							other.Icon:deselect()
+						end
+					end
+				else
+					entry.Icon:deselect()
+				end
+			end
 
-	CosmeticsIcon:setImage(95816009699835)
-	local cosmetics = playerGui:FindFirstChild("Cosmetics")
-	CosmeticsIcon:bindToggleItem(cosmetics)
+			gui:GetPropertyChangedSignal("Enabled"):Connect(sync)
+			sync()
+			refresh()
+		end)
+	end
 
-	-- Ranked:setLabel("Ranked")
-	-- local ranked = playerGui:FindFirstChild("Ranked")
-	-- Ranked:bindToggleItem(ranked)
-
-	MainIcon:setImageScale(1)
-	StoreIcon:setImageScale(1)
-	LogIcon:setImageScale(1)
-	KillSoundIcon:setImageScale(1)
-	CosmeticsIcon:setImageScale(1)
-
-	refreshKillSoundIcon()
-	Data.OwnedPasses.Changed(function()
-		refreshKillSoundIcon()
-	end)
-
-	local loadedTopBar = Instance.new("BoolValue")
-	loadedTopBar.Name = "loadedTopBar"
-	loadedTopBar.Value = true
-	loadedTopBar.Parent = UIConstants.Player
+	Data.OwnedPasses.Changed(refresh)
+	local loaded = UIConstants.Player:FindFirstChild("loadedTopBar") or Instance.new("BoolValue")
+	loaded.Name = "loadedTopBar"
+	loaded.Value = true
+	loaded.Parent = UIConstants.Player
 end
 
 return Topbar

@@ -17,6 +17,8 @@ local RemoteEvents = {
 	CutsceneEnded = "Server",
 	Comunicator = "Server",
 	Cosmetics = "Server",
+	Shop = "Server",
+	Notification = "Client",
 
 	SpecialsResult = "Client",
 	Cutscenes = "Client",
@@ -32,6 +34,7 @@ local RemoteEvents = {
 }
 
 local RemoteFunctions = {
+	Admin = "Server",
 	Evasive = "Server",
 	AbilitiesHandler = "Server",
 	KillSound = "Server",

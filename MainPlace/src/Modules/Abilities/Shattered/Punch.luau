@@ -15,11 +15,17 @@ local SkillCancelHandler = require(ServerModules.SkillCancelHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local NewKnockback = require(ServerModules.BodymoverService)
+local PerfectKnockback = require(ServerModules.PerfectKnockback)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 
 local HIT_SIZE = Vector3.new(8, 5, 8)
 local HIT_OFFSET = CFrame.new(0, 3, -4)
+local WAVE_SIZE = Vector3.new(30, 30, 70)
+local WAVE_OFFSET = CFrame.new(0, 0, -20)
+local WAVE_DAMAGE = 5
+local WAVE_DURATION = 0.25
+local WAVE_FORCE = 10 / WAVE_DURATION
 
 local DAMAGE = 35
 local RAGDOLL_TIME = 3
@@ -122,97 +128,174 @@ return {
 				RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", { Intensity = 4, Last = 0.3 })
 
 				local HitList = {}
+				local PunchCFrame = HumRP.CFrame
 
-				HitboxHandler:SimpleOnce(HumRP, HIT_SIZE, HIT_OFFSET, { Character }, nil, nil, function(EnemyCharacter)
-					if table.find(HitList, EnemyCharacter) then
-						return
-					end
-
-					local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
-					local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
-					if not EnemyHumanoid or not EnemyHumRP then
-						return
-					end
-					if EnemyHumanoid.Health <= 0 or EnemyHumanoid:GetState() == Enum.HumanoidStateType.Dead then
-						return
-					end
-					if iFramesService:HasiFrame(EnemyCharacter, 1) then
-						return
-					end
-
-					table.insert(HitList, EnemyCharacter)
-
-					local HitInfo = DamageHandler:TakeDamage(
-						Character,
-						EnemyHumanoid,
-						DAMAGE,
-						nil,
-						nil,
-						true,
-						true,
-						true,
-						true,
-						true,
-						nil,
-						nil
-					)
-
-					if HitInfo.Countered or HitInfo.Blocked then
-						return
-					end
-
-					task.spawn(function()
-						if not EnemyCharacter or not EnemyCharacter.Parent then
+				HitboxHandler:SimpleOnce(
+					PunchCFrame,
+					HIT_SIZE,
+					HIT_OFFSET,
+					{ Character },
+					nil,
+					nil,
+					function(EnemyCharacter)
+						if table.find(HitList, EnemyCharacter) then
 							return
 						end
-						if not EnemyHumRP or not EnemyHumRP.Parent then
+						table.insert(HitList, EnemyCharacter)
+
+						local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
+						local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
+						if not EnemyHumanoid or not EnemyHumRP then
+							return
+						end
+						if EnemyHumanoid.Health <= 0 or EnemyHumanoid:GetState() == Enum.HumanoidStateType.Dead then
+							return
+						end
+						if iFramesService:HasiFrame(EnemyCharacter, 1) then
 							return
 						end
 
-						EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
-
-						local pushDir = HumRP.CFrame.LookVector
-						local pushFlat = Vector3.new(pushDir.X, 0, pushDir.Z)
-						pushFlat = pushFlat.Magnitude > 0 and pushFlat.Unit or Vector3.new(0, 0, -1)
-
-						SFXModule:Play("Smack", EnemyHumRP)
-
-						RagdollHandler.ragdoll(
-							EnemyHumanoid,
-							RAGDOLL_TIME,
-							true,
+						local HitInfo = DamageHandler:TakeDamage(
 							Character,
-							LANDING_IMPACT_CONFIG,
+							EnemyHumanoid,
+							DAMAGE,
 							nil,
-							true
+							nil,
+							true,
+							true,
+							true,
+							true,
+							true,
+							nil,
+							nil
 						)
 
-						task.defer(function()
+						if HitInfo.Countered or HitInfo.Blocked then
+							return
+						end
+
+						task.spawn(function()
 							if not EnemyCharacter or not EnemyCharacter.Parent then
 								return
 							end
+							if not EnemyHumRP or not EnemyHumRP.Parent then
+								return
+							end
 
-							NewKnockback:Knockback(EnemyCharacter, {
-								KnockbackType = "Velocity",
-								MaxForce = Vector3.new(100000, 100000, 100000),
-								Velocity = pushFlat * LAUNCH_FORCE + Vector3.new(0, LAUNCH_UP_FORCE, 0),
+							EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
+
+							local pushDir = HumRP.CFrame.LookVector
+							local pushFlat = Vector3.new(pushDir.X, 0, pushDir.Z)
+							pushFlat = pushFlat.Magnitude > 0 and pushFlat.Unit or Vector3.new(0, 0, -1)
+
+							SFXModule:Play("Smack", EnemyHumRP)
+
+							RagdollHandler.ragdoll(
+								EnemyHumanoid,
+								RAGDOLL_TIME,
+								true,
+								Character,
+								LANDING_IMPACT_CONFIG,
+								nil,
+								true
+							)
+
+							task.defer(function()
+								if not EnemyCharacter or not EnemyCharacter.Parent then
+									return
+								end
+
+								NewKnockback:Knockback(EnemyCharacter, {
+									KnockbackType = "Velocity",
+									MaxForce = Vector3.new(100000, 100000, 100000),
+									Velocity = pushFlat * LAUNCH_FORCE + Vector3.new(0, LAUNCH_UP_FORCE, 0),
+								})
+							end)
+
+							RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", {
+								Intensity = SELF_HIT_SHAKE_INTENSITY,
+								Last = SELF_HIT_SHAKE_TIME,
 							})
+
+							local EnemyPlayer = Players:GetPlayerFromCharacter(EnemyCharacter)
+							if EnemyPlayer then
+								RemoteManager.FireClient(EnemyPlayer, "ReplicateTask", "ShakeCamera", {
+									Intensity = ENEMY_HIT_SHAKE_INTENSITY,
+									Last = ENEMY_HIT_SHAKE_TIME,
+								})
+							end
 						end)
+					end
+				)
 
-						RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", {
-							Intensity = SELF_HIT_SHAKE_INTENSITY,
-							Last = SELF_HIT_SHAKE_TIME,
-						})
-
-						local EnemyPlayer = Players:GetPlayerFromCharacter(EnemyCharacter)
-						if EnemyPlayer then
-							RemoteManager.FireClient(EnemyPlayer, "ReplicateTask", "ShakeCamera", {
-								Intensity = ENEMY_HIT_SHAKE_INTENSITY,
-								Last = ENEMY_HIT_SHAKE_TIME,
-							})
+				local WaveIgnore = table.clone(HitList)
+				table.insert(WaveIgnore, Character)
+				HitboxHandler:SimpleOnce(
+					PunchCFrame,
+					WAVE_SIZE,
+					WAVE_OFFSET,
+					WaveIgnore,
+					nil,
+					nil,
+					function(EnemyCharacter)
+						local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
+						local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
+						if not EnemyHumanoid or not EnemyHumRP or EnemyHumanoid.Health <= 0 then
+							return
 						end
-					end)
-				end)
+						if iFramesService:HasiFrame(EnemyCharacter, 1) then
+							return
+						end
+
+						local HitInfo = DamageHandler:TakeDamage(
+							Character,
+							EnemyHumanoid,
+							WAVE_DAMAGE,
+							nil,
+							nil,
+							true,
+							true,
+							true,
+							true,
+							false
+						)
+						if
+							not HitInfo
+							or not HitInfo.CouldHit
+							or HitInfo.Blocked
+							or HitInfo.Countered
+							or EnemyHumanoid.Health <= 0
+						then
+							return
+						end
+
+						local Forward = PunchCFrame.LookVector
+						local Direction = Vector3.new(Forward.X, 0, Forward.Z)
+						Direction = if Direction.Magnitude > 0 then Direction.Unit else Vector3.new(0, 0, -1)
+						PerfectKnockback:KnockBack(nil, EnemyCharacter, {
+							LookVector = Direction,
+							LookForce = WAVE_FORCE,
+							LookFinalForce = WAVE_FORCE / 1.1,
+							GroundStunTime = 0,
+							FallingDetectDelay = 0,
+							DontFreeze = true,
+						}, Character)
+
+						local ActiveKnockback = PerfectKnockback.Active[EnemyCharacter]
+						if ActiveKnockback then
+							task.delay(WAVE_DURATION, function()
+								if PerfectKnockback.Active[EnemyCharacter] ~= ActiveKnockback then
+									return
+								end
+								PerfectKnockback:Cancel(EnemyCharacter)
+								if EnemyHumRP.Parent then
+									local Velocity = EnemyHumRP.AssemblyLinearVelocity
+									EnemyHumRP.AssemblyLinearVelocity = Vector3.new(0, Velocity.Y, 0)
+								end
+							end)
+						end
+					end
+				)
 			end)
 		)
 

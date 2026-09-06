@@ -11,7 +11,7 @@ local CombatLogger = require(script.CombatLogger)
 
 local Utility = require(RPModules.Utility)
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
-local VIPPass = require(ReplicatedStorage.Shared.VIPPass)
+local GoldService = require(ServerStorage.Modules.GoldService)
 local Data = require(ReplicatedStorage.Shared.Data).server
 local AnimationService = require(SvModules.AnimationService)
 local AntiTeamingHandler = require(SvModules.AntiTeamingHandler)
@@ -220,6 +220,11 @@ function module:TakeDamage(
 
 			if DamagerPlayer then
 				if not WasDead and Hum.Health <= 0 then
+					local victim = Players:GetPlayerFromCharacter(Damaged)
+					if victim and victim ~= DamagerPlayer and not Damaged:GetAttribute("GoldRewarded") then
+						Damaged:SetAttribute("GoldRewarded", true)
+						GoldService.Award(DamagerPlayer, 10)
+					end
 					local MostDealt = nil
 					for Name, Value in Damaged:GetAttributes() do
 						if Name:find("_Dealt_Damage") then
@@ -257,10 +262,6 @@ function module:TakeDamage(
 								end)
 
 								BadgeAwardService:CheckKills(DamagerPlayer, NewTotalKills)
-
-								DamagerData.Gold(function(g)
-									return table.find(DamagerData.OwnedPasses(), VIPPass.GamepassId) and 15 or 10
-								end)
 
 								Damager:SetAttribute("Streak", (Damager:GetAttribute("Streak") or 0) + 1)
 							end

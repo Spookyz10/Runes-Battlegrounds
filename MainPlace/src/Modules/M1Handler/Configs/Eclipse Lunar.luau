@@ -1,3 +1,6 @@
 local buildEclipseConfig = require(script.Parent.EclipseBase)
 
-return buildEclipseConfig("Lunar")
+local Config = buildEclipseConfig("Lunar")
+Config.EffectProfile = "EclipseLunar"
+
+return Config

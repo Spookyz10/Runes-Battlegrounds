@@ -170,6 +170,14 @@ function M1Handler:Punch(Player)
 		PunchEvents,
 		PunchAnimTrack:GetMarkerReachedSignal("hit"):Connect(function()
 			SFXModule:Play(Step.HitSound or "M1", HumRP)
+			if Config.EffectProfile then
+				RemoteManager.FireAllClients("ReplicateTask", "M1Effect", {
+					Character = Character,
+					Profile = Config.EffectProfile,
+					Step = StepId,
+					CFrame = HumRP.CFrame,
+				})
+			end
 
 			HitboxHandler:SimpleOnce(
 				HumRP,

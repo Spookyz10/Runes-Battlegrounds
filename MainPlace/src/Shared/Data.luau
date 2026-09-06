@@ -32,6 +32,8 @@ local template = {
 
 	OwnedAuras = {} :: { string },
 	OwnedRuneCosmetics = {} :: { string },
+	OwnedRuneSkins = {} :: { string },
+	AdminProcessed = {} :: { [string]: number },
 	EquippedAura = nil :: string?,
 	EquippedRuneCosmetic = nil :: string?,
 

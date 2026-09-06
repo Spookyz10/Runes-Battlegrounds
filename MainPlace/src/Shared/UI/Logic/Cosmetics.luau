@@ -1,152 +1,148 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Data = require(ReplicatedStorage.Shared.Data).client
-local CosmeticsInfo = require(ReplicatedStorage.Shared.Info.Cosmetics)
+local Info = require(ReplicatedStorage.Shared.Info.Cosmetics)
 local UIConstants = require(ReplicatedStorage.Shared.UI.UIConstants)
 local RemoteManager = require(ReplicatedStorage.Shared.Modules.RemoteManager)
+local Window = require(ReplicatedStorage.Shared.UI.Window)
+local Preview = require(ReplicatedStorage.Shared.UI.ItemPreview)
 
-local Player = UIConstants.Player
-local PlayerGui = UIConstants.PlayerGui
+local Cosmetics = {}
 
-local GUI = PlayerGui:WaitForChild("Cosmetics")
-local Main = GUI:WaitForChild("Main")
-local Tabs = Main:WaitForChild("Tabs")
-local Content = Main:WaitForChild("Content")
+function Cosmetics.Init()
+	task.spawn(function()
+		local gui = UIConstants.PlayerGui:WaitForChild("Cosmetics", 15)
 
-local Template = ReplicatedStorage.Resources.UI.Templates.CosmeticTemplate
-
-local ValidTabs = {
-	Auras = true,
-	RuneCosmetics = true,
-}
-
-local OwnedGetters = {
-	Auras = function()
-		return Data.OwnedAuras()
-	end,
-	RuneCosmetics = function()
-		return Data.OwnedRuneCosmetics()
-	end,
-}
-
-local AttributeNames = {
-	Auras = "EquippedAura",
-	RuneCosmetics = "EquippedRuneCosmetic",
-}
-
-local activeButtons = {
-	Auras = {},
-	RuneCosmetics = {},
-}
-
-local CosmeticsUI = {}
-
-local function isOwned(cosmeticType, name)
-	local owned = OwnedGetters[cosmeticType]()
-	return table.find(owned, name) ~= nil
-end
-
-local function refreshButton(cosmeticType, name, button)
-	local equipped = Player:GetAttribute(AttributeNames[cosmeticType])
-	local owned = isOwned(cosmeticType, name)
-
-	if not owned then
-		button.Text = "LOCKED"
-	elseif equipped == name then
-		button.Text = "UNEQUIP"
-	else
-		button.Text = "EQUIP"
-	end
-end
-
-local function refreshAll(cosmeticType)
-	for name, button in activeButtons[cosmeticType] do
-		refreshButton(cosmeticType, name, button)
-	end
-end
-
-local function onEquipPressed(cosmeticType, name)
-	if not isOwned(cosmeticType, name) then
-		return
-	end
-
-	local equipped = Player:GetAttribute(AttributeNames[cosmeticType])
-
-	if equipped == name then
-		RemoteManager.FireServer("Cosmetics", "Unequip", { Type = cosmeticType })
-	else
-		RemoteManager.FireServer("Cosmetics", "Equip", { Type = cosmeticType, Name = name })
-	end
-end
-
-local function populateType(cosmeticType)
-	local Container = Content:WaitForChild(cosmeticType)
-
-	for _, button in activeButtons[cosmeticType] do
-		if button.Parent then
-			button.Parent:Destroy()
+		if not gui then
+			return
 		end
-	end
-	table.clear(activeButtons[cosmeticType])
 
-	local catalog = CosmeticsInfo[cosmeticType]
-	for name, info in catalog do
-		local clone = Template:Clone()
-		clone.ItemName.Text = info.DisplayName or name
-		clone.Parent = Container
+		Window.Bind(gui)
+		local selected = "RuneCosmetics"
 
-		activeButtons[cosmeticType][name] = clone.Equip
+		local cards = {}
+		local ownedFields = { Auras = "OwnedAuras", RuneCosmetics = "OwnedRuneCosmetics" }
+		local equippedFields = { Auras = "EquippedAura", RuneCosmetics = "EquippedRuneCosmetic" }
+		local purple = Color3.fromRGB(128, 104, 231)
 
-		clone.Equip.Activated:Connect(function()
-			onEquipPressed(cosmeticType, name)
-		end)
-
-		refreshButton(cosmeticType, name, clone.Equip)
-	end
-end
-
-local function showTab(tabName)
-	for _, frame in Content:GetChildren() do
-		if frame:IsA("GuiObject") and ValidTabs[frame.Name] then
-			frame.Visible = frame.Name == tabName
+		local function resize()
+			gui.Main.Content.Grid.CellSize =
+				UDim2.fromScale(if gui.Main.AbsoluteSize.X < 600 then 0.96 else 0.31, 0.94)
 		end
-	end
 
-	for _, button in Tabs:GetChildren() do
-		if button:IsA("TextButton") and ValidTabs[button.Name] then
-			button.BackgroundTransparency = (button.Name == tabName) and 0.75 or 1
+		gui.Main:GetPropertyChangedSignal("AbsoluteSize"):Connect(resize)
+		resize()
+
+		local function refresh()
+			local count = 0
+
+			for _, entry in cards do
+				local owned = table.find(Data[ownedFields[entry.Category]](), entry.Id) ~= nil
+				local equipped = UIConstants.Player:GetAttribute(equippedFields[entry.Category]) == entry.Id
+				entry.Card.Visible = entry.Category == selected
+
+				if entry.Card.Visible then
+					count += 1
+				end
+
+				entry.Card.Price.Text = if equipped then "EQUIPPED" elseif owned then "OWNED" else "NOT OWNED"
+				entry.Card.Equip.Text = if not owned
+					then "Visit shop"
+					elseif equipped then "Unequip"
+					else "Equip"
+				entry.Card.Equip.BackgroundColor3 = if equipped then Color3.fromRGB(46, 93, 73) else purple
+			end
+
+			gui.Main.Empty.Visible = count == 0
+			gui.Main.Empty.Text = if selected == "RuneSkins"
+				then "Rune skins\nComing soon"
+				else "Your next look is on the way."
+			for _, tab in gui.Main.Tabs:GetChildren() do
+				if tab:IsA("TextButton") then
+					tab.BackgroundColor3 = if tab.Name == selected then purple else Color3.fromRGB(40, 40, 57)
+				end
+			end
 		end
-	end
-end
 
-function CosmeticsUI.Init()
-	for _, button in Tabs:GetChildren() do
-		if button:IsA("TextButton") and ValidTabs[button.Name] then
-			button.Activated:Connect(function()
-				showTab(button.Name)
-			end)
+		for _, tab in gui.Main.Tabs:GetChildren() do
+			if tab:IsA("TextButton") then
+				tab.Activated:Connect(function()
+					selected = tab.Name
+					gui.Main.Content.CanvasPosition = Vector2.zero
+					refresh()
+				end)
+			end
 		end
-	end
 
-	populateType("Auras")
-	populateType("RuneCosmetics")
-	showTab("Auras")
+		for _, category in { "Auras", "RuneCosmetics" } do
+			local names = {}
 
-	Player:GetAttributeChangedSignal("EquippedAura"):Connect(function()
-		refreshAll("Auras")
-	end)
+			for name in Info[category] do
+				table.insert(names, name)
+			end
 
-	Player:GetAttributeChangedSignal("EquippedRuneCosmetic"):Connect(function()
-		refreshAll("RuneCosmetics")
-	end)
+			table.sort(names)
 
-	Data.OwnedAuras.Changed(function()
-		refreshAll("Auras")
-	end)
+			for index, name in names do
+				local info = Info[category][name]
+				local card = gui.Templates.Item:Clone()
+				card.Name = name
+				card.ItemName.Text = info.DisplayName or name
+				card.Description.Text = info.Description
+					or (
+						if category == "Auras"
+							then "An aura that follows your style."
+							else "A finishing touch for your rune."
+					)
+				card.LayoutOrder = index
+				card.Parent = gui.Main.Content
 
-	Data.OwnedRuneCosmetics.Changed(function()
-		refreshAll("RuneCosmetics")
+				if category == "Auras" then
+					card.Preview.Visible = false
+					card.Image.Visible = true
+					card.Image.Image = info.Image or ""
+					card.Placeholder.Visible = not info.Image or info.Image == ""
+				else
+					Preview(
+						gui,
+						card,
+						{ ModelPath = info.ModelPath or { "Resources", "RuneCosmetics", name } }
+					)
+				end
+
+				table.insert(cards, { Card = card, Category = category, Id = name })
+				local pending = false
+				card.Equip.Activated:Connect(function()
+					if pending then
+						return
+					end
+
+					if not table.find(Data[ownedFields[category]](), name) then
+						local shop = UIConstants.PlayerGui:FindFirstChild("Shop")
+
+						if shop then
+							gui.Enabled = false
+							shop.Enabled = true
+						end
+
+						return
+					end
+
+					pending = true
+					local equipped = UIConstants.Player:GetAttribute(equippedFields[category]) == name
+					RemoteManager.FireServer("Cosmetics", if equipped then "Unequip" else "Equip", { Type = category, Name = name })
+					task.delay(0.4, function()
+						pending = false
+					end)
+				end)
+			end
+
+			Data[ownedFields[category]].Changed(refresh)
+			UIConstants.Player:GetAttributeChangedSignal(equippedFields[category]):Connect(refresh)
+		end
+
+		refresh()
 	end)
 end
 
-return CosmeticsUI
+return Cosmetics

@@ -1,67 +1,74 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local LogInfo = require(ReplicatedStorage.Shared.Info.Log)
+local Info = require(ReplicatedStorage.Shared.Info.Log)
 local UIConstants = require(ReplicatedStorage.Shared.UI.UIConstants)
-
-local PlayerGui = UIConstants.PlayerGui
-
-local GUI = PlayerGui:WaitForChild("Log")
-local Main = GUI:WaitForChild("Main")
-local Container = Main:WaitForChild("Container")
-local Swap = Main:WaitForChild("Swap")
-local Title = Main:WaitForChild("Title")
-local TitleLabel = Title:WaitForChild("TextLabel")
-
-local LabelTemplate = ReplicatedStorage.Resources.UI.Templates.LabelTemplate
+local Window = require(ReplicatedStorage.Shared.UI.Window)
 
 local Log = {}
-
-local activeLabels = {}
-local currentMode = "Update"
-
-local function clearContainer()
-	for _, label in activeLabels do
-		label:Destroy()
-	end
-	table.clear(activeLabels)
-end
-
-local function populate(lines)
-	clearContainer()
-
-	for _, text in lines do
-		local clone = LabelTemplate:Clone()
-		clone.Text = text
-		clone.Parent = Container
-		table.insert(activeLabels, clone)
-	end
-end
-
-local function showUpdate()
-	currentMode = "Update"
-	TitleLabel.Text = LogInfo.Version
-	populate(LogInfo.UpdateLog)
-end
-
-local function showRoadmap()
-	currentMode = "Roadmap"
-	TitleLabel.Text = "Roadmap"
-	populate(LogInfo.Roadmap)
-end
+local gui
 
 function Log.Show()
-	GUI.Enabled = true
+	if gui then
+		gui.Enabled = true
+	end
 end
 
 function Log.Hide()
-	GUI.Enabled = false
+	if gui then
+		gui.Enabled = false
+	end
 end
 
 function Log.Init()
-	Swap.Update.Activated:Connect(showUpdate)
-	Swap.Roaadmap.Activated:Connect(showRoadmap)
+	task.spawn(function()
+		gui = UIConstants.PlayerGui:WaitForChild("Log", 15)
 
-	showUpdate()
+		if not gui then
+			return
+		end
+
+		Window.Bind(gui)
+		local rows = {}
+
+		local function show(mode)
+			for _, row in rows do
+				row:Destroy()
+			end
+
+			table.clear(rows)
+			local update = mode == "Update"
+			gui.Main.Version.Text = if update then Info.Version else "ON THE HORIZON"
+			gui.Main.Title.Text = if update then "What is new" else "Looking ahead"
+
+			for _, name in { "Update", "Roadmap" } do
+				gui.Main[name].BackgroundColor3 = if name == mode
+					then Color3.fromRGB(128, 104, 231)
+					else Color3.fromRGB(40, 40, 57)
+			end
+
+			for index, text in (if update then Info.UpdateLog else Info.Roadmap) do
+				local row = gui.Templates.Entry:Clone()
+				row.Number.Text = string.format("%02d", index)
+				row.Body.Text = text
+				row.LayoutOrder = index
+				row.Visible = true
+				row.Parent = gui.Main.Content
+				table.insert(rows, row)
+			end
+
+			gui.Main.Content.CanvasPosition = Vector2.zero
+		end
+
+		gui.Main.Update.Activated:Connect(function()
+			show("Update")
+		end)
+
+		gui.Main.Roadmap.Activated:Connect(function()
+			show("Roadmap")
+		end)
+
+		show("Update")
+	end)
 end
 
 return Log
