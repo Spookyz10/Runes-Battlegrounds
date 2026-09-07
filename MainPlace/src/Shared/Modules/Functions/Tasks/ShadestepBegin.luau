@@ -17,6 +17,7 @@ local SHADOW_TRANSPARENCY = 0.8
 
 local savedTransparencies = {} -- [char] = { [part] = originalTransparency }
 local savedStartupVFX = {}
+local removingConnections = {}
 
 local Handlers = {}
 
@@ -26,6 +27,7 @@ function Handlers.ShadestepBeginStart(params)
 		return
 	end
 
+	Handlers.ShadestepBeginEnd({ char = char })
 	savedTransparencies[char] = {}
 
 	for _, part in char:GetDescendants() do
@@ -53,14 +55,28 @@ function Handlers.ShadestepBeginStart(params)
 	Clone.Parent = workspace
 	Clone.CFrame = char.PrimaryPart.CFrame * CFrame.Angles(0, math.rad(180), 0)
 	savedStartupVFX[char] = Clone
+	removingConnections[char] = char.AncestryChanged:Connect(function()
+		if not char:IsDescendantOf(workspace) then
+			Handlers.ShadestepBeginEnd({ char = char })
+		end
+	end)
+	task.delay(10, function()
+		if savedStartupVFX[char] == Clone then
+			Handlers.ShadestepBeginEnd({ char = char })
+		end
+	end)
 end
 
 function Handlers.ShadestepBeginEnd(params)
 	local char = params.char
-	if not char or not char.Parent then
+	if not char then
 		return
 	end
 
+	if removingConnections[char] then
+		removingConnections[char]:Disconnect()
+		removingConnections[char] = nil
+	end
 	local saved = savedTransparencies[char]
 	if saved then
 		for part, transparency in saved do

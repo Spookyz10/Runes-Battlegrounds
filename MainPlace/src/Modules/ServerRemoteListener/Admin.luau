@@ -90,11 +90,7 @@ local function apply(player, message)
 
 		grant(data, if category == "Auras" then "OwnedAuras" else "OwnedRuneCosmetics", message.Value)
 	elseif message.Action == "Skin" then
-		if
-			typeof(message.Value) ~= "string"
-			or not message.Value:match("^[%w_%-]+$")
-			or #message.Value > 80
-		then
+		if typeof(message.Value) ~= "string" or not message.Value:match("^[%w_%-]+$") or #message.Value > 80 then
 			return
 		end
 
@@ -136,11 +132,8 @@ local function execute(player, params)
 			return result(false, "Invalid scope.")
 		end
 
-		local ok, message = Disaster.Command(
-			if action == "Disaster" then "Start" else "Stop",
-			"Volcano",
-			params.Scope == "Global"
-		)
+		local ok, message =
+			Disaster.Command(if action == "Disaster" then "Start" else "Stop", "Volcano", params.Scope == "Global")
 
 		return result(ok, message)
 	end
@@ -245,13 +238,9 @@ local function execute(player, params)
 
 	local sent = Data.Service:sendGlobalMessage("AdminAction_v1", id, message)
 
-	return result(
-		sent == true,
-
-		if sent
-			then "Command queued for the target server. Delivery is asynchronous."
-			else "Could not send the command."
-	)
+	return result(sent == true, if sent
+		then "Command queued for the target server. Delivery is asynchronous."
+		else "Could not send the command.")
 end
 
 function Admin:Invoke(player, params)
@@ -277,8 +266,6 @@ function Admin:Invoke(player, params)
 
 		return result(false, "Command failed. Check the server output and service permissions.")
 	end
-
-	print("[Admin]", player.UserId, params.Action, params.Target or params.Scope, response.Success)
 
 	return response
 end

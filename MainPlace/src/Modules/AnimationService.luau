@@ -1,5 +1,6 @@
 local SvSt = game:GetService("ServerStorage")
 local RS = game:GetService("ReplicatedStorage")
+local CharacterLifetime = require(script.Parent.CharacterLifetime)
 
 local Animations = SvSt.Assets.Animations
 local Resources = RS.Resources
@@ -17,6 +18,9 @@ function AnimationService:getAnimationTrack(Character, Animation)
 		return
 	end
 	local AnimationTable = AnimationService:getLoadedAnimations(Character)[Animation]
+	if not AnimationTable then
+		return
+	end
 
 	return AnimationTable[1], AnimationTable[2]
 end
@@ -33,6 +37,9 @@ function AnimationService:playAnimation(Character, Animation, Speed, TimePositio
 	end
 
 	local anim = loadedAnims[Animation][1]
+	local entry = loadedAnims[Animation]
+	entry.Generation = (entry.Generation or 0) + 1
+	local generation = entry.Generation
 
 	anim:AdjustSpeed(1)
 
@@ -60,6 +67,13 @@ function AnimationService:playAnimation(Character, Animation, Speed, TimePositio
 
 	anim:AdjustWeight(0.001, 0)
 	anim:Play(FadeInTime)
+	if Animation:IsDescendantOf(Animations.Moves) or Animation:IsDescendantOf(Animations.Awakenings) then
+		task.delay(60, function()
+			if entry.Generation == generation and anim.IsPlaying then
+				anim:Stop(0)
+			end
+		end)
+	end
 
 	if Speed then
 		anim:AdjustSpeed(Speed)
@@ -141,6 +155,27 @@ function AnimationService:loadAnimations(Character)
 	end
 	game:GetService("AnimationClipProvider")
 	self.Loaded[Character] = {}
+	local loaded = self.Loaded[Character]
+	local disconnectLifetime
+	local disposed = false
+	local function dispose()
+		if disposed then
+			return
+		end
+		disposed = true
+		if disconnectLifetime then
+			disconnectLifetime()
+		end
+		for _, entry in loaded do
+			if entry[1].IsPlaying then
+				entry[1]:Stop(0)
+			end
+		end
+		if self.Loaded[Character] == loaded then
+			self.Loaded[Character] = nil
+		end
+	end
+	disconnectLifetime = CharacterLifetime.Watch(Character, dispose)
 
 	local Animator = Character.Humanoid.Animator
 
@@ -159,15 +194,15 @@ function AnimationService:loadAnimations(Character)
 			self.Loaded[Character][animation][2] = {}
 
 			self.Loaded[Character][animation][1].Stopped:Connect(function()
-				self.Loaded[Character][animation][1]:AdjustSpeed(1)
+				loaded[animation][1]:AdjustSpeed(1)
 
-				for i, v in self.Loaded[Character][animation][2] do
+				for i, v in loaded[animation][2] do
 					if typeof(v) ~= "RBXScriptConnection" then
 						continue
 					end
 
 					v:Disconnect()
-					self.Loaded[Character][animation][2][i] = nil
+					loaded[animation][2][i] = nil
 				end
 			end)
 		end

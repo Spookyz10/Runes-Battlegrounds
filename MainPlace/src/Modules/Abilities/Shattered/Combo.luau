@@ -10,6 +10,7 @@ local StunHandler = require(ServerModules.StunHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local AnimationService = require(ServerModules.AnimationService)
+local CharacterLifetime = require(ServerModules.CharacterLifetime)
 local SkillCancelHandler = require(ServerModules.SkillCancelHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local RagdollHandler = require(ServerModules.RagdollHandler)
@@ -65,10 +66,14 @@ return {
 		local Cancelled = false
 		local CasterAirborne = false
 		local Victims = {}
+		local CasterLaunchTween
 
 		local onDamageCancel
 
 		local function unlockCaster()
+			if CasterLaunchTween then
+				CasterLaunchTween:Cancel()
+			end
 			if not CasterAirborne then
 				return
 			end
@@ -104,6 +109,10 @@ return {
 		end
 
 		local function releaseVictim(Entry, Unanchor)
+			if Entry.DisconnectLifetime then
+				Entry.DisconnectLifetime()
+				Entry.DisconnectLifetime = nil
+			end
 			destroyVictimLaunch(Entry)
 
 			local EnemyCharacter = Entry.Character
@@ -120,6 +129,7 @@ return {
 		end
 
 		local function cleanupAll()
+			Cancelled = true
 			unlockCaster()
 
 			for _, Entry in Victims do
@@ -147,6 +157,9 @@ return {
 		SkillCancelHandler:Register(Character, onDamageCancel)
 
 		local function launchVictim(Entry, LookFlat)
+			Entry.DisconnectLifetime = CharacterLifetime.Watch(Entry.Character, function()
+				releaseVictim(Entry, true)
+			end)
 			local EnemyHumRP = Entry.HumRP
 			if not EnemyHumRP or not EnemyHumRP.Parent then
 				return
@@ -309,7 +322,7 @@ return {
 
 				local CasterTarget = HumRP.CFrame + Vector3.new(0, LAUNCH_HEIGHT, 0) + LookFlat * LAUNCH_FORWARD
 
-				local CasterLaunchTween = TweenService:Create(
+				CasterLaunchTween = TweenService:Create(
 					HumRP,
 					TweenInfo.new(LAUNCH_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 					{ CFrame = CasterTarget }
@@ -320,7 +333,7 @@ return {
 				end
 
 				task.delay(0.5, function()
-					if Cancelled then
+					if Cancelled or not CasterAirborne then
 						return
 					end
 					CasterLaunchTween:Play()

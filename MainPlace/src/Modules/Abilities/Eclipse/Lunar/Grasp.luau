@@ -14,6 +14,7 @@ local SkillCancelHandler = require(ServerModules.SkillCancelHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local AnimationService = require(ServerModules.AnimationService)
+local CharacterLifetime = require(ServerModules.CharacterLifetime)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 
@@ -40,6 +41,12 @@ local function clearMark(EnemyCharacter, Silent)
 		return
 	end
 	Marks[EnemyCharacter] = nil
+	if Entry.DisconnectOwner then
+		Entry.DisconnectOwner()
+	end
+	if Entry.DisconnectVictim then
+		Entry.DisconnectVictim()
+	end
 
 	if Entry.ExpireThread then
 		pcall(task.cancel, Entry.ExpireThread)
@@ -71,6 +78,7 @@ local function setMark(EnemyCharacter, CasterCharacter, CasterPlayer)
 	}
 
 	Entry.ExpireThread = task.delay(COOLDOWN, function()
+		Entry.ExpireThread = nil
 		if Marks[EnemyCharacter] == Entry then
 			clearMark(EnemyCharacter)
 		end
@@ -78,9 +86,14 @@ local function setMark(EnemyCharacter, CasterCharacter, CasterPlayer)
 
 	Marks[EnemyCharacter] = Entry
 
-	EnemyCharacter.AncestryChanged:Once(function(_, Parent)
-		if not Parent and Marks[EnemyCharacter] == Entry then
-			clearMark(EnemyCharacter, true)
+	Entry.DisconnectOwner = CharacterLifetime.Watch(CasterCharacter, function()
+		if Marks[EnemyCharacter] == Entry then
+			clearMark(EnemyCharacter)
+		end
+	end)
+	Entry.DisconnectVictim = CharacterLifetime.Watch(EnemyCharacter, function()
+		if Marks[EnemyCharacter] == Entry then
+			clearMark(EnemyCharacter)
 		end
 	end)
 end
@@ -100,7 +113,7 @@ local function releasePulled(EnemyCharacter, CasterCharacter, FreezeToken)
 	EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
 	EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
 
-	if EnemyHumanoid.Health > 0 then
+	if EnemyHumanoid.Health > 0 and CasterCharacter.Parent then
 		DamageHandler:TakeDamage(
 			CasterCharacter,
 			EnemyHumanoid,
@@ -155,6 +168,7 @@ return {
 		local hitbox = nil
 		local HitboxPart = nil
 		local travelConn = nil
+		local disconnectHand
 
 		local function tryMark(enemyChar)
 			if table.find(hitList, enemyChar) then
@@ -201,6 +215,10 @@ return {
 		end
 
 		local function stopHand()
+			if disconnectHand then
+				disconnectHand()
+				disconnectHand = nil
+			end
 			if travelConn then
 				travelConn:Disconnect()
 				travelConn = nil
@@ -244,6 +262,7 @@ return {
 				return
 			end
 			cancelled = true
+			stopHand()
 			if UserTrack and UserTrack.IsPlaying then
 				UserTrack:Stop()
 			end
@@ -254,6 +273,10 @@ return {
 		table.insert(
 			UserEvents,
 			UserTrack:GetMarkerReachedSignal("summon"):Once(function()
+				if cancelled or cleanedUp then
+					return
+				end
+				disconnectHand = CharacterLifetime.Watch(Character, stopHand)
 				SkillCancelHandler:Unregister(Character, onDamageCancel)
 				iFramesService:AddiFrames(Character, "Base")
 
@@ -380,7 +403,7 @@ return {
 				EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
 				EnemyHumanoid:ChangeState(Enum.HumanoidStateType.PlatformStanding)
 
-				local freezeToken = StunHandler:Stun(EnemyCharacter, nil, true, 0, 0, true)
+				local freezeToken = StunHandler:Stun(EnemyCharacter, PULL_TIME + 1, true, 0, 0, true)
 
 				SFXModule:Play("graspPull", EnemyHumRP)
 

@@ -122,6 +122,7 @@ return {
 		local indicatorId = tostring(Character) .. "_Oblivion_Indicator"
 		local OriginPosition = HumRP.Position
 
+		local backTween
 		local onDamageCancel
 
 		local function stopRotation()
@@ -148,6 +149,14 @@ return {
 		end
 
 		local function cleanup()
+			if backTween then
+				backTween:Cancel()
+				backTween = nil
+			end
+			if camPartActive then
+				camPartActive = false
+				RemoteManager.FireClient(Player, "ReplicateTask", "CustomCamPart", { func = "Stop" })
+			end
 			SkillCollision:Unlock(Character)
 			Character:RemoveTag("CantRotate")
 
@@ -198,9 +207,10 @@ return {
 		SkillCancelHandler:Register(Character, onDamageCancel)
 
 		local backTarget = HumRP.CFrame * CFrame.new(0, 0, BACK_TWEEN_DISTANCE)
-		TweenService:Create(HumRP, TweenInfo.new(BACK_TWEEN_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		backTween = TweenService:Create(HumRP, TweenInfo.new(BACK_TWEEN_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 			CFrame = backTarget,
-		}):Play()
+		})
+		backTween:Play()
 
 		table.insert(
 			UserEvents,

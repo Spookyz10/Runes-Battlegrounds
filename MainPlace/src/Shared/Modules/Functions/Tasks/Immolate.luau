@@ -142,6 +142,9 @@ local function start(Character, Duration)
 	ACTIVE[Character] = data
 
 	task.delay(Duration or 8, function()
+		if ACTIVE[Character] ~= data then
+			return
+		end
 		stop(Character)
 	end)
 end

@@ -9,6 +9,7 @@ local StunHandler = require(ServerModules.StunHandler)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
 local AnimationService = require(ServerModules.AnimationService)
+local CharacterLifetime = require(ServerModules.CharacterLifetime)
 local iFramesService = require(ServerModules.iFramesService)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local KnockbackService = require(ServerModules.KnockbackModule)
@@ -68,8 +69,17 @@ return {
 		local UserAnimation = MoveAnims.Eclipse.Solar.Undawn
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
 
-		AnimationService:stopAll(Character)
-		AnimationService:playAnimation(Character, UserAnimation)
+		if not UserTrack then
+			iFramesService:RemoveiFrames(Character, "Base")
+			StunHandler:Unstun(Character, Stun)
+			return
+		end
+		local cancelled = false
+		local disconnectLifetime = CharacterLifetime.Watch(Character, function()
+			cancelled = true
+			fireVFX("IndicatorRemove", { char = Character })
+		end)
+		task.delay(5, disconnectLifetime)
 
 		table.insert(
 			UserEvents,
@@ -115,6 +125,9 @@ return {
 				end
 
 				task.delay(PILLAR_DELAY, function()
+					if cancelled then
+						return
+					end
 					local beamPositions = {}
 					for _, Target in targets do
 						local pos = Target.Position
@@ -131,6 +144,9 @@ return {
 						local PillarPosition = Target.Position
 
 						task.spawn(function()
+							if cancelled or not EnemyCharacter.Parent then
+								return
+							end
 							if not EnemyCharacter or not StatusEffectHandler:Has(EnemyCharacter, "Inferno") then
 								return
 							end
@@ -228,5 +244,7 @@ return {
 			iFramesService:RemoveiFrames(Character, "All")
 			StunHandler:Unstun(Character, Stun)
 		end)
+		AnimationService:stopAll(Character)
+		AnimationService:playAnimation(Character, UserAnimation)
 	end,
 }

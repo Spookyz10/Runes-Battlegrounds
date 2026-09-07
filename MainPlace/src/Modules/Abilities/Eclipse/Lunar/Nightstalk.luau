@@ -245,6 +245,10 @@ return {
 
 		local UserAnimation = MoveAnims.Eclipse.Lunar:FindFirstChild("Nightstalk")
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
+		if not UserTrack then
+			cleanup()
+			return
+		end
 
 		onDamageCancel = function()
 			if cancelled then

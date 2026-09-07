@@ -22,6 +22,23 @@ function Handlers.start(params)
 	gravityVFX:PivotTo(CFrame.new(pos))
 
 	table.insert(activeGravity[char], gravityVFX)
+	game:GetService("Debris"):AddItem(gravityVFX, 30)
+	local connection = char.AncestryChanged:Connect(function()
+		if not char:IsDescendantOf(workspace) then
+			gravityVFX:Destroy()
+		end
+	end)
+	gravityVFX.Destroying:Once(function()
+		connection:Disconnect()
+		local list = activeGravity[char]
+		local index = list and table.find(list, gravityVFX)
+		if index then
+			table.remove(list, index)
+			if #list == 0 then
+				activeGravity[char] = nil
+			end
+		end
+	end)
 end
 
 function Handlers.End(params)
@@ -35,6 +52,7 @@ function Handlers.End(params)
 		return
 	end
 
+	activeGravity[char] = nil
 	for _, vfx in ipairs(list) do
 		if vfx and vfx.Parent then
 			vfx:Destroy()

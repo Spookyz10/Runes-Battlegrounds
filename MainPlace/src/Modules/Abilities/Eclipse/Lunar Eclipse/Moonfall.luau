@@ -16,6 +16,7 @@ local RagdollHandler = require(SvModules.RagdollHandler)
 local AnimationService = require(SvModules.AnimationService)
 local StunHandler = require(SvModules.StunHandler)
 local CombatEvents = require(SvModules.CombatEvents)
+local CharacterLifetime = require(SvModules.CharacterLifetime)
 local DestructionSystem = require(SvModules.DestructionSystem)
 local SceneObjectReservation = require(SvModules.SceneObjectReservation)
 
@@ -191,6 +192,7 @@ local function captureGravityVictim(data, otherChar, otherHum)
 	end)
 
 	victimData.HardReleaseThread = task.delay(GRAVITY_FREEZE_AUTO_RELEASE + 10, function()
+		victimData.HardReleaseThread = nil
 		if data.GravityVictims and data.GravityVictims[otherChar] == victimData then
 			if victimData.StunFolder then
 				StunHandler:Unstun(otherChar, victimData.StunFolder)
@@ -219,6 +221,13 @@ local function captureGravityVictim(data, otherChar, otherHum)
 		end)
 	end
 
+	victimData.DisconnectLifetime = CharacterLifetime.Watch(otherChar, function()
+		if victimData.StunFolder then
+			StunHandler:Unstun(otherChar, victimData.StunFolder)
+		end
+		releaseGravityVictim(data, otherChar, victimData)
+	end)
+
 	if stunFolder then
 		stunFolder.Destroying:Once(function()
 			releaseGravityVictim(data, otherChar, victimData)
@@ -231,6 +240,10 @@ function releaseGravityVictim(data, otherChar, victimData)
 		return
 	end
 	data.GravityVictims[otherChar] = nil
+	if victimData.DisconnectLifetime then
+		victimData.DisconnectLifetime()
+		victimData.DisconnectLifetime = nil
+	end
 
 	data.ReleasedVictims = data.ReleasedVictims or {}
 	data.ReleasedVictims[otherChar] = true
@@ -276,8 +289,6 @@ local function releaseGravityVictims(data)
 		table.insert(pending, { otherChar = otherChar, victimData = victimData })
 	end
 
-	data.GravityVictims = nil
-
 	for _, entry in pending do
 		local otherChar, victimData = entry.otherChar, entry.victimData
 		if victimData.StunFolder then
@@ -285,6 +296,7 @@ local function releaseGravityVictims(data)
 		end
 		releaseGravityVictim(data, otherChar, victimData)
 	end
+	data.GravityVictims = nil
 end
 
 local function stopGravityField(data)
@@ -655,6 +667,10 @@ local function cleanup(data)
 
 	stopGravityField(data)
 	destroyIsland(data)
+	if data.GroundStun then
+		StunHandler:Unstun(Character, data.GroundStun)
+		data.GroundStun = nil
+	end
 
 	if Character and Character.Parent then
 		local Humanoid = Character:FindFirstChild("Humanoid")
@@ -739,9 +755,13 @@ return {
 
 		local removingConn
 		local diedConn
+		local ancestryConn
 
 		local function onInterrupt()
 			cleanup(data)
+			if AnimTrack.IsPlaying then
+				AnimTrack:Stop()
+			end
 		end
 
 		removingConn = Players.PlayerRemoving:Connect(function(leavingPlayer)
@@ -750,7 +770,7 @@ return {
 			end
 		end)
 		diedConn = Humanoid.Died:Connect(onInterrupt)
-		Character.AncestryChanged:Connect(function(_, parent)
+		ancestryConn = Character.AncestryChanged:Connect(function(_, parent)
 			if not parent then
 				onInterrupt()
 			end
@@ -785,6 +805,9 @@ return {
 				SFXModule:Play("Moonfall2", HumRP)
 
 				task.wait(0.1)
+				if data.Cancelled or not Character.Parent or Humanoid.Health <= 0 then
+					return
+				end
 				HumRP.CFrame = HumRP.CFrame + Vector3.new(JUMP_X_OFFSET, JUMP_HEIGHT, 0)
 				lockAirborne(Humanoid, HumRP)
 				data.IsAirborne = true
@@ -856,6 +879,9 @@ return {
 		)
 
 		AnimTrack.Stopped:Once(function()
+			if ancestryConn then
+				ancestryConn:Disconnect()
+			end
 			if removingConn then
 				removingConn:Disconnect()
 			end
@@ -900,7 +926,7 @@ return {
 				if Character then
 					Character:SetAttribute("iFrames", data.PreviousiFrameLevel)
 				end
-				ActiveState[Character] = nil
+				cleanup(data)
 			end
 		end)
 

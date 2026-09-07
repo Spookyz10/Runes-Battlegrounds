@@ -25,14 +25,31 @@ return function(Params)
 	local Moon = data.moon
 
 	data.moon = nil
+	local oldMoon = State.launchedMoons[Character]
+	if oldMoon then
+		oldMoon:Destroy()
+	end
 	State.launchedMoons[Character] = Moon
+	game:GetService("Debris"):AddItem(Moon, 11)
+	Moon.Destroying:Once(function()
+		if State.launchedMoons[Character] == Moon then
+			State.launchedMoons[Character] = nil
+			State:endNight("Lunar", Character)
+		end
+	end)
 
 	local direction = Params.direction
 	local speed = 80
 	local launchConn
 
 	launchConn = RunService.Heartbeat:Connect(function(dt)
+		if not Character.Parent then
+			Moon:Destroy()
+		end
 		if not Moon or not Moon.Parent then
+			if State.launchedMoons[Character] == Moon then
+				State.launchedMoons[Character] = nil
+			end
 			launchConn:Disconnect()
 			return
 		end

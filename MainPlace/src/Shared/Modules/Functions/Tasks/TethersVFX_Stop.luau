@@ -3,7 +3,7 @@ local TethersVFXState = require(script.Parent.Shared.TethersVFXState)
 local activeVFX = TethersVFXState.activeVFX
 
 local function getKey(casterChar)
-	return tostring(casterChar)
+	return casterChar
 end
 
 return function(params)
@@ -18,7 +18,17 @@ return function(params)
 		return
 	end
 
+	activeVFX[key] = nil
+	for _, connection in entry.connections or {} do
+		connection:Disconnect()
+	end
 	for _, c in entry.chains or {} do
+		if c.travelConn then
+			c.travelConn:Disconnect()
+		end
+		if c.travelAnchor then
+			c.travelAnchor:Destroy()
+		end
 		if c.chain and c.chain.Parent then
 			c.chain:Destroy()
 		end

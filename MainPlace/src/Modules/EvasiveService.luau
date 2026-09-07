@@ -149,7 +149,6 @@ function module:Escape(Character)
 	end
 
 	Character:SetAttribute("EvasivaCharges", Charges - 1)
-	print("used evaisve")
 
 	iFramesService:AddiFrames(Character, "Base")
 	task.delay(ESCAPE_IFRAME_TIME, function()

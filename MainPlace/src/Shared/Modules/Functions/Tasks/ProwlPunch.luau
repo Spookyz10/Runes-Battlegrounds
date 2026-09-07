@@ -50,6 +50,12 @@ local function doStart(Char)
 	Weld.Parent = FIClone
 
 	ActiveArmVFX[Char] = FIClone
+	Debris:AddItem(FIClone, 8)
+	FIClone.Destroying:Once(function()
+		if ActiveArmVFX[Char] == FIClone then
+			ActiveArmVFX[Char] = nil
+		end
+	end)
 end
 
 local function doEnd(Char)
@@ -78,11 +84,11 @@ end
 
 return function(Params)
 	local Char = Params and Params.Char
-	if not Char or not Char.Parent then
+	if not Char then
 		return
 	end
 
-	if Params.func == "Start" then
+	if Params.func == "Start" and Char.Parent then
 		doStart(Char)
 	elseif Params.func == "End" then
 		doEnd(Char)

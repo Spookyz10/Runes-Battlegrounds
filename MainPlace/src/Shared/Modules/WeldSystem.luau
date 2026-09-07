@@ -39,143 +39,122 @@ local function ClearVelocities(Part: Part, Ignore: BodyVelocity?)
 end
 
 function WSys:Start(TweenTime, Player)
-	if not self.Part1 then
+	local Part0, Part1 = self.Part0, self.Part1
+	if not Part0 or not Part0.Parent or not Part1 or not Part1.Parent then
 		return
 	end
-
+	self:Stop()
+	self.Stopped = false
+	self.Connections = {}
+	self.PartStates = {}
+	local Character = Part1.Parent
+	self.Character = Character
 	TweenTime = TweenTime or 0.25
 
-	local Part0 = self.Part0
-	local Part1 = self.Part1
-
 	local Bind = Instance.new("Folder")
-	Bind.Name = "#WeldBind_" .. Part0.Parent.Name .. "_" .. Part1.Parent.Name .. "_" .. tostring(os.clock())
+	Bind.Name = "#WeldBind_" .. Part0.Parent.Name .. "_" .. Character.Name .. "_" .. tostring(os.clock())
 	Bind.Parent = Part1
 	self.Bind = Bind
 
+	self.PartStates[Part1] = Part1.Massless
 	Part1.Massless = true
-
-	if Part1.Parent:FindFirstChild("Humanoid") then
-		for _, v in Part1.Parent:GetChildren() do
-			if v:IsA("BasePart") then
-				v.Massless = true
-			end
-		end
-
-		self.AntiRotateConnection = game.CollectionService:GetInstanceRemovedSignal("CantRotate"):Connect(function(c)
-			if c == Part1.Parent then
-				Part1.Parent:AddTag("CantRotate")
-			end
-		end)
-	end
-
-	Part1.Parent:AddTag("WeldedToReplicated")
-
-	self.Weld = Instance.new("WeldConstraint")
-	self.Weld.Name = "GrabWeld"
-	if self.Lifetime then
-		Debris:AddItem(self.Weld, self.Lifetime)
-	end
-
-	self.Weld.Destroying:Once(function()
-		if not self then
-			return
-		end
-
-		if Part1 and Part1.Parent then
-			Part1.Parent:RemoveTag("WeldedToReplicated")
-			Part1.Massless = false
-
-			if Part1.Parent:FindFirstChild("Humanoid") then
-				for _, v in Part1.Parent:GetChildren() do
-					if v:IsA("BasePart") then
-						v.Massless = false
-					end
+	if Character:FindFirstChild("Humanoid") then
+		for _, part in Character:GetChildren() do
+			if part:IsA("BasePart") then
+				if self.PartStates[part] == nil then
+					self.PartStates[part] = part.Massless
 				end
+				part.Massless = true
 			end
 		end
+		table.insert(self.Connections, game:GetService("CollectionService"):GetInstanceRemovedSignal("CantRotate"):Connect(function(character)
+			if character == Character and not self.Stopped then
+				Character:AddTag("CantRotate")
+			end
+		end))
+	end
+	Character:AddTag("WeldedToReplicated")
 
-		if self.Bind then
-			self.Bind:Destroy()
-			self.Bind = nil
-		end
-
-		if self.TweenConnection then
-			self.TweenConnection:Disconnect()
-			self.TweenConnection = nil
-		end
-
-		if self.AntiRotateConnection then
-			self.AntiRotateConnection:Disconnect()
-		end
-
-		setmetatable(self, nil)
-	end)
-
-	self.Weld.Part0 = Part0
-	self.Weld.Part1 = Part1
+	local Weld = Instance.new("WeldConstraint")
+	Weld.Name = "GrabWeld"
+	Weld.Part0 = Part0
+	Weld.Part1 = Part1
+	self.Weld = Weld
+	table.insert(self.Connections, Weld.Destroying:Connect(function()
+		self:Stop()
+	end))
+	for _, part in { Part0, Part1 } do
+		table.insert(self.Connections, part.Destroying:Connect(function()
+			self:Stop()
+		end))
+		table.insert(self.Connections, part.AncestryChanged:Connect(function()
+			if not part:IsDescendantOf(workspace) then
+				self:Stop()
+			end
+		end))
+	end
+	if self.LifeTime and self.LifeTime > 0 then
+		Debris:AddItem(Weld, self.LifeTime)
+	end
 
 	task.spawn(function()
-		if RunService:IsServer() and Player then
-			Part1:SetNetworkOwner(Player)
-
+		if self.Stopped or self.Weld ~= Weld then
+			return
+		end
+		if RunService:IsServer() and Player and Player.Parent then
+			pcall(function()
+				Part1:SetNetworkOwner(Player)
+			end)
 			ClearVelocities(Part1)
-
 			RemoteManager.FireClient(Player, "ReplicateTask", "smoothweld", {
 				Character = Part0.Parent,
-				EnemyCharacter = Part1.Parent,
+				EnemyCharacter = Character,
 				TweenTime = TweenTime,
 				Offset = self.Offset,
 				Bind = Bind,
 			})
-
 			task.wait(TweenTime)
 		end
-
+		if self.Stopped or self.Weld ~= Weld or not Part0.Parent or not Part1.Parent then
+			return
+		end
 		Part1.CFrame = Part0.CFrame * self.Offset
-		self.Weld.Parent = Part1
+		Weld.Parent = Part1
 	end)
-
-	return self.Weld
+	return Weld
 end
 
-function WSys:Stop(dontDelete)
-	if self.Weld then
-		if self.Weld.Part1 then
-			self.Weld.Part1.Parent:RemoveTag("WeldedToReplicated")
-
-			self.Weld.Part1.Massless = false
-
-			if self.Weld.Part1.Parent:FindFirstChild("Humanoid") then
-				for _, v in self.Weld.Part1.Parent:GetChildren() do
-					if v:IsA("BasePart") then
-						v.Massless = false
-					end
-				end
-			end
-		end
-
-		self.Weld:Destroy()
-		self.Weld = nil
+function WSys:Stop(_dontDelete)
+	if self.Stopped then
+		return
 	end
-
+	self.Stopped = true
+	for _, connection in self.Connections or {} do
+		connection:Disconnect()
+	end
+	self.Connections = nil
+	local Weld = self.Weld
+	self.Weld = nil
+	if Weld then
+		Weld:Destroy()
+	end
 	if self.Bind then
 		self.Bind:Destroy()
 		self.Bind = nil
 	end
-
 	if self.TweenConnection then
 		self.TweenConnection:Disconnect()
 		self.TweenConnection = nil
 	end
-
-	if self.AntiRotateConnection then
-		self.AntiRotateConnection:Disconnect()
+	if self.Character then
+		self.Character:RemoveTag("WeldedToReplicated")
 	end
-
-	if dontDelete ~= true then
-		setmetatable(self, nil)
+	for part, massless in self.PartStates or {} do
+		if part.Parent then
+			part.Massless = massless
+		end
 	end
+	self.PartStates = nil
 end
 
 return WSys

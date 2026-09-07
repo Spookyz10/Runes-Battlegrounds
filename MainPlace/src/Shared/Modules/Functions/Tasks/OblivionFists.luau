@@ -12,7 +12,7 @@ local ORIENT_OFFSET_Y = 0
 local ORIENT_OFFSET_Z = 0
 
 local ACTIVE: {
-	[string]: {
+	[Model]: {
 		model: Model,
 		conn: RBXScriptConnection?,
 		cancelled: boolean,
@@ -22,8 +22,8 @@ local ACTIVE: {
 } =
 	{}
 
-local function getKey(char: Model): string
-	return tostring(char)
+local function getKey(char: Model): Model
+	return char
 end
 
 local function getOrientedCFrame(position: Vector3, lookAt: Vector3): CFrame
@@ -80,6 +80,22 @@ function Handlers.Start(params)
 		traveling = false,
 	}
 	ACTIVE[key] = data
+	game:GetService("Debris"):AddItem(FistsClone, 15)
+	local removingConnection = Character.AncestryChanged:Connect(function()
+		if not Character:IsDescendantOf(workspace) then
+			FistsClone:Destroy()
+		end
+	end)
+	FistsClone.Destroying:Once(function()
+		removingConnection:Disconnect()
+		if data.conn then
+			data.conn:Disconnect()
+			data.conn = nil
+		end
+		if ACTIVE[key] == data then
+			ACTIVE[key] = nil
+		end
+	end)
 
 	local startTime = os.clock()
 
@@ -193,6 +209,9 @@ function Handlers.Stop(params)
 
 	data.cancelled = true
 	ACTIVE[key] = nil
+	if data.model then
+		data.model:Destroy()
+	end
 
 	if data.conn then
 		data.conn:Disconnect()

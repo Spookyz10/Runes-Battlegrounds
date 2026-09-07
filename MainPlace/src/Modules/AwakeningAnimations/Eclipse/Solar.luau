@@ -176,11 +176,13 @@ local function startExplosionField(Character, Position)
 					return
 				end
 
-				local offset = EnemyHumRP.Position - Character.HumanoidRootPart.Position
+				if stopped then
+					return
+				end
+				local offset = EnemyHumRP.Position - Position
 				local outward = Vector3.new(offset.X, 0, offset.Z)
 				if outward.Magnitude < 0.001 then
-					outward = Character.HumanoidRootPart.CFrame.LookVector
-					outward = Vector3.new(outward.X, 0, outward.Z)
+					outward = Vector3.new(0, 0, -1)
 				end
 				outward = outward.Magnitude > 0 and outward.Unit or Vector3.new(0, 0, -1)
 
@@ -207,6 +209,7 @@ local function startExplosionField(Character, Position)
 				return
 			end
 			stopped = true
+			RemoteManager.FireAllClients("ReplicateTask", "SolarAwakenExplosion", { func = "Stop", id = Player.UserId })
 
 			if conn then
 				conn:Disconnect()
@@ -256,6 +259,7 @@ function module:Activate(Player)
 	local levitationId = nil
 	local fakeDebrisId = nil
 	local explosionField = nil
+	local finished = false
 
 	local AwakeningStun = StunHandler:Stun(Character, nil, true, 0, 0, true, nil, false)
 
@@ -266,6 +270,9 @@ function module:Activate(Player)
 		AnimEvents,
 		AnimTrack:GetMarkerReachedSignal("jump"):Connect(function()
 			task.wait(0.1)
+			if finished or not Character.Parent or Humanoid.Health <= 0 then
+				return
+			end
 			RemoteManager.FireAllClients("ReplicateTask", "SolarAwakenStart", { char = Character })
 			RemoteManager.FireAllClients("ReplicateTask", "SolarImpact", { char = Character })
 			SFXModule:Play("EclipseImpact", HumRP.Position)
@@ -328,7 +335,12 @@ function module:Activate(Player)
 		end)
 	)
 
-	AnimTrack.Stopped:Once(function()
+	local function finish()
+		if finished then
+			return
+		end
+		finished = true
+		Character:RemoveTag("CantRotate")
 		if explosionField then
 			explosionField.Stop()
 			explosionField = nil
@@ -344,12 +356,20 @@ function module:Activate(Player)
 		RemoteManager.FireClient(Player, "Cutscenes", "SolarAwaken", "End", {})
 		RemoteManager.FireAllClients("ReplicateTask", "SolarAwakenEnd", { char = Character })
 		StunHandler:Unstun(Character, AwakeningStun)
-	end)
+		RemoteManager.FireClient(Player, "ReplicateTask", "ShowHotbar")
+		RemoteManager.FireClient(Player, "ReplicateTask", "ShowAwkBar")
+	end
+	AnimTrack.Stopped:Once(finish)
 
 	Character:AddTag("CantRotate")
-	AnimationService:playAnimation(Character, SolarEclipseAnim)
+	if not AnimationService:playAnimation(Character, SolarEclipseAnim) then
+		finish()
+		return
+	end
 	RemoteManager.FireClient(Player, "Cutscenes", "SolarAwaken", "Start", { Offset = CFrame.new(0, -3, 0) })
-	AnimTrack.Stopped:Wait()
+	if not finished then
+		AnimTrack.Stopped:Wait()
+	end
 	Character:RemoveTag("CantRotate")
 	RemoteManager.FireClient(Player, "ReplicateTask", "ShowHotbar")
 	RemoteManager.FireClient(Player, "ReplicateTask", "ShowAwkBar")

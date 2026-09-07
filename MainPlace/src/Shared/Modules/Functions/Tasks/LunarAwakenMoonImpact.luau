@@ -20,18 +20,7 @@ return function(Params)
 	end
 
 	-- Limpeza de segurança, caso ainda exista algo pendente em lunarData
-	local data = State.lunarData[Character]
-	if data then
-		if data.moonConn then
-			data.moonConn:Disconnect()
-			data.moonConn = nil
-		end
-		if data.moon and data.moon.Parent then
-			data.moon:Destroy()
-			data.moon = nil
-		end
-		State.lunarData[Character] = nil
-	end
+	require(script.Parent.LunarAwakenEnd)({ char = Character })
 
 	if impactPosition then
 		local ImpactAsset = CharacterAssets.Eclipse.Lunar.Awaken:FindFirstChild("Impact")
@@ -61,8 +50,5 @@ return function(Params)
 		end
 	end
 
-	State.lunarNightCount = math.max(0, State.lunarNightCount - 1)
-	if State.lunarNightCount <= 0 then
-		State:tweenToDay()
-	end
+	State:endNight("Lunar", Character)
 end

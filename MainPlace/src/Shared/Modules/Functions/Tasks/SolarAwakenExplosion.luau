@@ -29,6 +29,18 @@ function Handlers.Start(params)
 	ExplosionClone.Parent = workspace
 
 	ACTIVE[id] = ExplosionClone
+	game:GetService("Debris"):AddItem(ExplosionClone, 60)
+	local removingConnection = game:GetService("Players").PlayerRemoving:Connect(function(player)
+		if player.UserId == id then
+			ExplosionClone:Destroy()
+		end
+	end)
+	ExplosionClone.Destroying:Once(function()
+		removingConnection:Disconnect()
+		if ACTIVE[id] == ExplosionClone then
+			ACTIVE[id] = nil
+		end
+	end)
 end
 
 function Handlers.Stop(params)

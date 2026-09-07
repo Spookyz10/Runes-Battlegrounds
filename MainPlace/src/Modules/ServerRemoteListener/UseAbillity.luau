@@ -11,7 +11,8 @@ local Remote = {}
 
 function Remote:Activate(Player: Player, Ability: string)
 	local Character = Player.Character
-	if not Character then
+	local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+	if not Character or not Character.Parent or not Humanoid or Humanoid.Health <= 0 or Character:HasTag("Ragdolled") then
 		return
 	end
 

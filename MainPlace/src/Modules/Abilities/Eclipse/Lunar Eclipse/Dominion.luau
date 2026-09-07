@@ -17,6 +17,7 @@ local HitboxHandler = require(ServerModules.HitboxHandler)
 local AnimationService = require(ServerModules.AnimationService)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local CombatEvents = require(ServerModules.CombatEvents)
+local CharacterLifetime = require(ServerModules.CharacterLifetime)
 
 local MoveAnims = ServerStorage.Assets.Animations.Moves
 local UserAnimation = MoveAnims.Eclipse.Lunar.Awakening.Dominion
@@ -137,6 +138,13 @@ local function captureVictim(data, otherChar, otherHum)
 		end)
 	end
 
+	victimData.DisconnectLifetime = CharacterLifetime.Watch(otherChar, function()
+		if victimData.StunFolder then
+			StunHandler:Unstun(otherChar, victimData.StunFolder)
+		end
+		releaseVictim(data, otherChar, victimData)
+	end)
+
 	if stunFolder then
 		stunFolder.Destroying:Once(function()
 			releaseVictim(data, otherChar, victimData)
@@ -152,6 +160,10 @@ function releaseVictim(data, otherChar, victimData)
 		return
 	end
 	data.Victims[otherChar] = nil
+	if victimData.DisconnectLifetime then
+		victimData.DisconnectLifetime()
+		victimData.DisconnectLifetime = nil
+	end
 
 	data.ReleasedVictims = data.ReleasedVictims or {}
 	data.ReleasedVictims[otherChar] = true
@@ -192,8 +204,6 @@ local function releaseAllVictims(data)
 		table.insert(pending, { otherChar = otherChar, victimData = victimData })
 	end
 
-	data.Victims = nil
-
 	for _, entry in pending do
 		local otherChar, victimData = entry.otherChar, entry.victimData
 		if victimData.StunFolder then
@@ -201,6 +211,7 @@ local function releaseAllVictims(data)
 		end
 		releaseVictim(data, otherChar, victimData)
 	end
+	data.Victims = nil
 end
 
 local function stopField(data)
@@ -276,11 +287,46 @@ local function startField(data, position)
 	end)
 end
 
+local function releaseLaunchedVictim(data, otherChar, victimData)
+	if not data.LaunchedVictims or data.LaunchedVictims[otherChar] ~= victimData then
+		return
+	end
+	data.LaunchedVictims[otherChar] = nil
+	if victimData.DisconnectLaunch then
+		victimData.DisconnectLaunch()
+	end
+	if victimData.LaunchTween then
+		victimData.LaunchTween:Cancel()
+	end
+	if victimData.SlamTween then
+		victimData.SlamTween:Cancel()
+	end
+	local root = otherChar:FindFirstChild("HumanoidRootPart")
+	if root then
+		root.Anchored = false
+	end
+	otherChar:RemoveTag("CantRotate")
+	if victimData.SlamStun then
+		StunHandler:Unstun(otherChar, victimData.SlamStun)
+		victimData.SlamStun = nil
+	end
+end
+
 local function cleanup(data)
 	if data.Cancelled then
 		return
 	end
 	data.Cancelled = true
+	data.Locked = false
+	if data.DisconnectLifetime then
+		data.DisconnectLifetime()
+	end
+	if data.LaunchedVictims then
+		for otherChar, victimData in table.clone(data.LaunchedVictims) do
+			releaseLaunchedVictim(data, otherChar, victimData)
+		end
+		data.LaunchedVictims = nil
+	end
 
 	if data.CancelFn then
 		SkillCancelHandler:Unregister(data.Character, data.CancelFn)
@@ -297,7 +343,7 @@ local function cleanup(data)
 	ActiveState[Character] = nil
 end
 
-local function slamVictim(Character, Player, otherChar, victimData)
+local function slamVictim(data, Character, Player, otherChar, victimData)
 	if not otherChar or not otherChar.Parent then
 		return
 	end
@@ -318,7 +364,11 @@ local function slamVictim(Character, Player, otherChar, victimData)
 		{ CFrame = CFrame.new(landPos) }
 	)
 
+	victimData.SlamTween = SlamTween
 	SlamTween.Completed:Once(function(state)
+		if data.Cancelled or not data.LaunchedVictims or data.LaunchedVictims[otherChar] ~= victimData then
+			return
+		end
 		if state ~= Enum.PlaybackState.Completed then
 			return
 		end
@@ -341,6 +391,7 @@ local function slamVictim(Character, Player, otherChar, victimData)
 			RemoteManager.FireClient(EnemyPlayer, "ReplicateTask", "ShakeCamera", { Intensity = 14, Last = 0.9 })
 		end
 
+		releaseLaunchedVictim(data, otherChar, victimData)
 		EnemyHumRP.Anchored = false
 		EnemyHumRP.AssemblyLinearVelocity = Vector3.zero
 		EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
@@ -409,17 +460,16 @@ local function slamVictim(Character, Player, otherChar, victimData)
 end
 
 local function slamAllLaunched(data)
-	if data.Slammed then
+	if data.Cancelled or data.Slammed then
 		return
 	end
 	data.Slammed = true
 
 	local victims = data.LaunchedVictims
-	data.LaunchedVictims = nil
 
 	if victims then
 		for otherChar, victimData in pairs(victims) do
-			slamVictim(data.Character, data.Player, otherChar, victimData)
+			slamVictim(data, data.Character, data.Player, otherChar, victimData)
 		end
 	end
 
@@ -428,7 +478,7 @@ local function slamAllLaunched(data)
 		if Character and Character.Parent then
 			iFramesService:RemoveiFrames(Character, "All")
 		end
-		ActiveState[Character] = nil
+		cleanup(data)
 	end)
 end
 
@@ -475,6 +525,13 @@ return {
 		end
 		data.CancelFn = onDamageCancel
 		SkillCancelHandler:Register(Character, onDamageCancel)
+		data.DisconnectLifetime = CharacterLifetime.Watch(Character, function()
+			cleanup(data)
+			StunHandler:Unstun(Character, CasterStun)
+			if UserTrack.IsPlaying then
+				UserTrack:Stop()
+			end
+		end)
 
 		table.insert(
 			UserEvents,
@@ -526,7 +583,6 @@ return {
 				end
 
 				local victims = data.Victims or {}
-				data.Victims = nil
 				data.LaunchedVictims = {}
 
 				for otherChar, victimData in pairs(victims) do
@@ -535,6 +591,11 @@ return {
 						local EnemyHumRP = otherChar:FindFirstChild("HumanoidRootPart")
 
 						if EnemyHumanoid and EnemyHumRP and EnemyHumanoid.Health > 0 then
+							data.Victims[otherChar] = nil
+							if victimData.DisconnectLifetime then
+								victimData.DisconnectLifetime()
+								victimData.DisconnectLifetime = nil
+							end
 							if victimData.AutoReleaseThread then
 								pcall(task.cancel, victimData.AutoReleaseThread)
 								victimData.AutoReleaseThread = nil
@@ -576,11 +637,12 @@ return {
 							local startPos = EnemyHumRP.Position
 							local upPos = startPos + Vector3.new(0, LAUNCH_HEIGHT, 0)
 
-							TweenService:Create(
+							victimData.LaunchTween = TweenService:Create(
 								EnemyHumRP,
 								TweenInfo.new(LAUNCH_UP_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 								{ CFrame = CFrame.new(upPos) }
-							):Play()
+							)
+							victimData.LaunchTween:Play()
 
 							local EnemyPlayer = Players:GetPlayerFromCharacter(otherChar)
 							if EnemyPlayer then
@@ -593,9 +655,16 @@ return {
 							end
 
 							data.LaunchedVictims[otherChar] = victimData
+							victimData.DisconnectLaunch = CharacterLifetime.Watch(otherChar, function()
+								releaseLaunchedVictim(data, otherChar, victimData)
+							end)
 						end
 					end
 				end
+
+				data.Locked = false
+				releaseAllVictims(data)
+				data.Locked = true
 
 				if next(data.LaunchedVictims) == nil then
 					task.delay(0.1, function()
@@ -603,7 +672,7 @@ return {
 						if ch and ch.Parent then
 							iFramesService:RemoveiFrames(ch, "All")
 						end
-						ActiveState[ch] = nil
+						cleanup(data)
 					end)
 				else
 					task.delay(LAUNCH_UP_TIME + SLAM_SAFETY_TIMEOUT, function()
@@ -630,7 +699,7 @@ return {
 				v:Disconnect()
 			end
 
-			if not data.Locked then
+			if not data.Slammed then
 				cleanup(data)
 				StunHandler:Unstun(Character, CasterStun)
 			end

@@ -26,7 +26,7 @@ function Handlers.Attach(params)
 		return
 	end
 
-	local key = tostring(char)
+	local key = char
 
 	if activeData[key] and activeData[key].fireball and activeData[key].fireball.Parent then
 		activeData[key].fireball:Destroy()
@@ -48,7 +48,14 @@ function Handlers.Attach(params)
 
 	ParticlesModule.Emit(Fireball)
 
-	activeData[key] = { fireball = Fireball }
+	local data = { fireball = Fireball }
+	activeData[key] = data
+	Debris:AddItem(Fireball, 10)
+	Fireball.Destroying:Once(function()
+		if activeData[key] == data then
+			activeData[key] = nil
+		end
+	end)
 end
 
 function Handlers.Launch(params)
@@ -58,7 +65,7 @@ function Handlers.Launch(params)
 		return
 	end
 
-	local key = tostring(char)
+	local key = char
 	local data = activeData[key]
 	if not data or not data.fireball or not data.fireball.Parent then
 		return
@@ -106,7 +113,7 @@ function Handlers.Cancel(params)
 		return
 	end
 
-	local key = tostring(char)
+	local key = char
 	local data = activeData[key]
 	if not data or not data.fireball then
 		return

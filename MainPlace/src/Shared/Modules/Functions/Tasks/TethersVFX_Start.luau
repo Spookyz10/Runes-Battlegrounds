@@ -8,7 +8,7 @@ local TethersVFXState = require(script.Parent.Shared.TethersVFXState)
 local activeVFX = TethersVFXState.activeVFX
 
 local function getKey(casterChar)
-	return tostring(casterChar)
+	return casterChar
 end
 
 local function spawnFlareArms(casterChar)
@@ -162,33 +162,26 @@ return function(params)
 
 	local key = getKey(casterChar)
 
-	-- Limpa VFX anterior se existir
-	local existing = activeVFX[key]
-	if existing then
-		for _, c in existing.chains or {} do
-			if c.travelConn then
-				c.travelConn:Disconnect()
-			end
-			if c.travelAnchor and c.travelAnchor.Parent then
-				c.travelAnchor:Destroy()
-			end
-			if c.chain and c.chain.Parent then
-				c.chain:Destroy()
-			end
-			if c.victimPart and c.victimPart.Parent then
-				c.victimPart:Destroy()
-			end
-		end
-		for _, part in existing.armParts or {} do
-			if part and part.Parent then
-				part:Destroy()
-			end
-		end
-		activeVFX[key] = nil
-	end
+	local stop = require(script.Parent.TethersVFX_Stop)
+	stop({ casterChar = casterChar })
 
 	activeVFX[key] = {
 		armParts = spawnFlareArms(casterChar),
 		chains = spawnFlareChains(casterChar, victimChar, travelTime),
 	}
+	local entry = activeVFX[key]
+	entry.connections = {}
+	for _, character in { casterChar, victimChar } do
+		table.insert(entry.connections, character.AncestryChanged:Connect(function()
+			if not character:IsDescendantOf(workspace) and activeVFX[key] == entry then
+				stop({ casterChar = casterChar })
+			end
+		end))
+	end
+	task.delay(10, function()
+		if activeVFX[key] == entry then
+			stop({ casterChar = casterChar })
+		end
+	end)
+
 end

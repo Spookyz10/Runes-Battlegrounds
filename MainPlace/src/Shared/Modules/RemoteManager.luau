@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 
 local RemoteManager = {}
 
@@ -78,6 +79,9 @@ function RemoteManager.FireAllClients(remoteName: string, ...: any)
 end
 
 function RemoteManager.FireClient(Player: Player, remoteName: string, ...: any)
+	if not Player or Player.Parent ~= Players then
+		return
+	end
 	local remote = getRemote(remoteName, "Client")
 	if not remote then
 		return

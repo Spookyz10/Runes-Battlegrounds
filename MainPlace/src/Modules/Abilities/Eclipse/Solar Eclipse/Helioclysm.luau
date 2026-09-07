@@ -9,6 +9,7 @@ local StunHandler = require(ServerModules.StunHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local AnimationService = require(ServerModules.AnimationService)
+local CharacterLifetime = require(ServerModules.CharacterLifetime)
 local iFramesService = require(ServerModules.iFramesService)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local SkillCancelHandler = require(ServerModules.SkillCancelHandler)
@@ -93,6 +94,8 @@ return {
 		local VictimHumRP = nil
 		local VictimAnchored = false
 		local CasterAnchored = false
+		local victimTween
+		local disconnectVictim
 
 		onDamageCancel = function()
 			if cancelled then
@@ -156,6 +159,7 @@ return {
 					return
 				end
 
+				disconnectVictim = CharacterLifetime.Watch(Victim, onDamageCancel)
 				RagdollHandler.ragdoll(VictimHumanoid, RAGDOLL_TIME, nil, nil, nil, nil, true)
 
 				local OriginPosition = VictimHumRP.Position
@@ -165,26 +169,28 @@ return {
 				VictimAnchored = true
 
 				local RiseTarget = CFrame.new(OriginPosition + Vector3.new(0, RISE_HEIGHT, 0))
-				TweenService:Create(
+				victimTween = TweenService:Create(
 					VictimHumRP,
 					TweenInfo.new(RISE_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 					{ CFrame = RiseTarget }
-				):Play()
+				)
+				victimTween:Play()
 
 				task.delay(RISE_TIME + HOVER_WAIT_TIME, function()
 					if not Victim or not Victim.Parent or not VictimHumRP or not VictimHumRP.Parent then
 						return
 					end
-					if not VictimAnchored then
+					if cancelled or not VictimAnchored then
 						return
 					end
 
 					local DescendTarget = CFrame.new(OriginPosition + Vector3.new(0, HOVER_HEIGHT, 0))
-					TweenService:Create(
+					victimTween = TweenService:Create(
 						VictimHumRP,
 						TweenInfo.new(DESCEND_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 						{ CFrame = DescendTarget }
-					):Play()
+					)
+				victimTween:Play()
 				end)
 			end)
 		)
@@ -235,6 +241,14 @@ return {
 		)
 
 		UserTrack.Stopped:Once(function()
+			local interrupted = cancelled or not Character:IsDescendantOf(workspace) or Humanoid.Health <= 0 or Player.Character ~= Character or Player.Parent == nil
+			cancelled = true
+			if disconnectVictim then
+				disconnectVictim()
+			end
+			if victimTween then
+				victimTween:Cancel()
+			end
 			for _, v in UserEvents do
 				v:Disconnect()
 			end
@@ -250,7 +264,7 @@ return {
 			end
 
 			if
-				not cancelled
+				not interrupted
 				and Victim
 				and Victim.Parent
 				and VictimHumanoid
@@ -292,6 +306,7 @@ return {
 			elseif VictimAnchored and VictimHumRP and VictimHumRP.Parent then
 				VictimHumRP.Anchored = false
 			end
+			VictimAnchored = false
 		end)
 
 		AnimationService:stopAll(Character)

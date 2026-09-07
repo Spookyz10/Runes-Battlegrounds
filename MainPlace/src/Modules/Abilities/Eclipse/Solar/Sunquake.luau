@@ -56,6 +56,7 @@ return {
 		end
 
 		local cancelled = false
+		local exploded = false
 		local onDamageCancel
 		onDamageCancel = function()
 			if cancelled then
@@ -79,10 +80,11 @@ return {
 				RemoteManager.FireAllClients("ReplicateTask", "SunquakeVFX", { char = Character })
 
 				task.delay(1, function()
-					if not UserTrack.IsPlaying then
+					if cancelled or not Character.Parent or Humanoid.Health <= 0 or not UserTrack.IsPlaying then
 						return
 					end
 
+					exploded = true
 					UserTrack:AdjustSpeed(1)
 
 					local HitList = {}
@@ -190,7 +192,7 @@ return {
 				v:Disconnect()
 			end
 
-			if cancelled then
+			if cancelled or not exploded or not Character.Parent or Humanoid.Health <= 0 then
 				RemoteManager.FireAllClients("ReplicateTask", "SunquakeVFX", { func = "Stop", char = Character })
 			else
 				task.delay(VFX_LINGER_TIME, function()
@@ -198,6 +200,7 @@ return {
 				end)
 			end
 
+			cancelled = true
 			SkillCancelHandler:Unregister(Character, onDamageCancel)
 			StunHandler:Unstun(Character, Stun)
 		end)

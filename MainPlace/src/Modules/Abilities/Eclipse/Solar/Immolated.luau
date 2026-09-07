@@ -10,6 +10,7 @@ local StunHandler = require(ServerModules.StunHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local SkillCancelHandler = require(ServerModules.SkillCancelHandler)
 local AnimationService = require(ServerModules.AnimationService)
+local CharacterLifetime = require(ServerModules.CharacterLifetime)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 
 local DURATION = 10
@@ -30,13 +31,13 @@ local function cleanUp(
 	originalWalkSpeed
 )
 	if diedConnection then
-		diedConnection:Disconnect()
+		diedConnection()
 	end
 	if immolateStun then
 		StunHandler:Unstun(Character, immolateStun)
 	end
 	if pulseThread then
-		task.cancel(pulseThread)
+		pcall(task.cancel, pulseThread)
 	end
 
 	if loopSound then
@@ -52,6 +53,7 @@ local function cleanUp(
 		end
 	end
 
+	table.clear(slowedEnemies)
 	Character:SetAttribute("Immolated", nil)
 	Character:SetAttribute("DamageTakenMult", nil)
 
@@ -197,35 +199,16 @@ return {
 					end
 				end)
 
-				diedConnection = Humanoid.Died:Once(function()
-					cleanUp(
-						Character,
-						diedConnection,
-						immolateStun,
-						pulseThread,
-						loopSound,
-						slowedEnemies,
-						originalWalkSpeed
-					)
-				end)
-
-				task.delay(DURATION, function()
-					if not Character or not Character.Parent then
+				local ended = false
+				local function finish()
+					if ended then
 						return
 					end
-					if not Character:GetAttribute("Immolated") then
-						return
-					end
-					cleanUp(
-						Character,
-						diedConnection,
-						immolateStun,
-						pulseThread,
-						loopSound,
-						slowedEnemies,
-						originalWalkSpeed
-					)
-				end)
+					ended = true
+					cleanUp(Character, diedConnection, immolateStun, pulseThread, loopSound, slowedEnemies, originalWalkSpeed)
+				end
+				diedConnection = CharacterLifetime.Watch(Character, finish)
+				task.delay(DURATION, finish)
 			end)
 		)
 

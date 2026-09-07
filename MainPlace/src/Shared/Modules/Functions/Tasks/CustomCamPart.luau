@@ -4,6 +4,7 @@ local LocalPlayer = Players.LocalPlayer
 
 local originalCameraType = nil
 local originalSubject = nil
+local active = false
 
 local Handlers = {}
 
@@ -16,8 +17,11 @@ function Handlers.Start(params)
 
 	local Camera = workspace.CurrentCamera
 
-	originalCameraType = Camera.CameraType
-	originalSubject = Camera.CameraSubject
+	if not active then
+		originalCameraType = Camera.CameraType
+		originalSubject = Camera.CameraSubject
+	end
+	active = true
 
 	Camera.CameraType = Enum.CameraType.Scriptable
 
@@ -34,6 +38,10 @@ function Handlers.Start(params)
 end
 
 function Handlers.Stop(_params)
+	if not active then
+		return
+	end
+	active = false
 	local Camera = workspace.CurrentCamera
 
 	Camera.CameraType = originalCameraType or Enum.CameraType.Custom
@@ -41,11 +49,15 @@ function Handlers.Stop(_params)
 	local Character = LocalPlayer.Character
 	local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
 
-	Camera.CameraSubject = originalSubject or Humanoid
+	Camera.CameraSubject = (originalSubject and originalSubject.Parent and originalSubject) or Humanoid
 
 	originalCameraType = nil
 	originalSubject = nil
 end
+
+LocalPlayer.CharacterRemoving:Connect(function()
+	Handlers.Stop({})
+end)
 
 return function(params)
 	local handler = Handlers[params.func]

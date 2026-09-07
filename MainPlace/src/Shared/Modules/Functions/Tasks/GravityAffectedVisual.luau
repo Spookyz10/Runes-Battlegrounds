@@ -98,6 +98,10 @@ function Handlers.Stop(_params)
 	end
 end
 
+game:GetService("Players").LocalPlayer.CharacterRemoving:Connect(function()
+	Handlers.Stop({})
+end)
+
 return function(params)
 	local Handler = Handlers[params.func]
 	if Handler then

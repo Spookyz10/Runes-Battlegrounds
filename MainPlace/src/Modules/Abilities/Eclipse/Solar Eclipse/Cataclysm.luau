@@ -13,6 +13,7 @@ local DamageHandler = require(ServerModules.DamageHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local AnimationService = require(ServerModules.AnimationService)
+local CharacterLifetime = require(ServerModules.CharacterLifetime)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local BodymoverService = require(ServerModules.BodymoverService)
 
@@ -72,15 +73,24 @@ return {
 		local VictimStun = nil
 		local VictimLocked = false
 		local Cleaned = false
+		local disconnectCaster, disconnectVictim
+		local VictimTween
+		local VictimTrack
+		local mainStarted = false
+		local missed = false
 
 		local function cleanupCaster()
 			if Cleaned then
 				return
 			end
 			Cleaned = true
+			if disconnectCaster then
+				disconnectCaster()
+			end
+			RemoteManager.FireClient(Player, "Cutscenes", "Cataclysm", "End", {})
 
 			if FreezeDelayThread then
-				task.cancel(FreezeDelayThread)
+				pcall(task.cancel, FreezeDelayThread)
 				FreezeDelayThread = nil
 			end
 
@@ -101,6 +111,20 @@ return {
 		end
 
 		local function cleanupVictim()
+			if VictimTrack and VictimTrack.IsPlaying then
+				VictimTrack:Stop()
+			end
+			if disconnectVictim then
+				disconnectVictim()
+			end
+			if VictimTween then
+				VictimTween:Cancel()
+				VictimTween = nil
+			end
+			local victimPlayer = HitCharacter and Players:GetPlayerFromCharacter(HitCharacter)
+			if victimPlayer then
+				RemoteManager.FireClient(victimPlayer, "Cutscenes", "Cataclysm", "End", {})
+			end
 			if not HitCharacter or not HitCharacter.Parent then
 				return
 			end
@@ -119,6 +143,13 @@ return {
 				VictimStun = nil
 			end
 		end
+
+		local function interrupt()
+			cleanupCaster()
+			cleanupVictim()
+			AnimationService:stopAll(Character)
+		end
+		disconnectCaster = CharacterLifetime.Watch(Character, interrupt)
 
 		local function startCutscene()
 			RemoteManager.FireClient(
@@ -144,7 +175,8 @@ return {
 		end
 
 		local function playMainAnimation()
-			if not Character.Parent or Humanoid.Health <= 0 then
+			if Cleaned or not Character.Parent or Humanoid.Health <= 0 then
+				cleanupVictim()
 				cleanupCaster()
 				return
 			end
@@ -298,7 +330,7 @@ return {
 
 					local HitCharacterForDelay = HitCharacter
 					task.delay(1, function()
-						if not HitCharacterForDelay or not HitCharacterForDelay.Parent then
+						if Cleaned or not HitCharacterForDelay or not HitCharacterForDelay.Parent then
 							return
 						end
 
@@ -334,6 +366,7 @@ return {
 				cleanupVictim()
 			end)
 
+			mainStarted = true
 			AnimationService:stopAll(Character)
 			AnimationService:playAnimation(Character, UserAnimation)
 		end
@@ -373,11 +406,13 @@ return {
 			)
 
 			if not FoundVictim then
+				missed = true
 				task.delay(MISS_WAIT_TIME, cleanupCaster)
 				return
 			end
 
 			HitCharacter = FoundVictim
+			disconnectVictim = CharacterLifetime.Watch(HitCharacter, interrupt)
 
 			startCutscene()
 
@@ -397,7 +432,7 @@ return {
 			EnemyHumRP.AssemblyAngularVelocity = Vector3.zero
 
 			AnimationService:stopAll(HitCharacter)
-			AnimationService:playAnimation(HitCharacter, VictimAnimation)
+			VictimTrack = AnimationService:playAnimation(HitCharacter, VictimAnimation)
 
 			local lookFlat = HumRP.CFrame.LookVector
 			lookFlat = Vector3.new(lookFlat.X, 0, lookFlat.Z)
@@ -412,7 +447,7 @@ return {
 
 			EnemyHumRP.Anchored = false
 
-			local VictimTween = TweenService:Create(
+			VictimTween = TweenService:Create(
 				EnemyHumRP,
 				TweenInfo.new(VICTIM_TWEEN_TIME, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
 				{ CFrame = targetCFrame }
@@ -449,6 +484,9 @@ return {
 		)
 
 		WindupTrack.Stopped:Once(function()
+			if not mainStarted and not missed then
+				interrupt()
+			end
 			for _, v in WindupEvents do
 				v:Disconnect()
 			end

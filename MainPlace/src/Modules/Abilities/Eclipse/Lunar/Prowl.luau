@@ -40,14 +40,19 @@ return {
 
 		local UserAnimation = MoveAnims.Eclipse.Lunar["Prowl"]
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
+		if not UserTrack then
+			StunHandler:Unstun(Character, Stun)
+			return
+		end
 
 		local cancelled = false
 		local punchVFXStarted = false
 		local punchVFXEnded = false
 
 		local function endPunchVFX()
-			if punchVFXStarted and not punchVFXEnded then
-				punchVFXEnded = true
+			local wasEnded = punchVFXEnded
+			punchVFXEnded = true
+			if punchVFXStarted and not wasEnded then
 				RemoteManager.FireAllClients("ReplicateTask", "ProwlPunch", {
 					func = "End",
 					Char = Character,
@@ -61,6 +66,7 @@ return {
 				return
 			end
 			cancelled = true
+			endPunchVFX()
 			if UserTrack and UserTrack.IsPlaying then
 				UserTrack:Stop()
 			end
@@ -262,6 +268,7 @@ return {
 		)
 
 		UserTrack.Stopped:Once(function()
+			cancelled = true
 			for _, v in UserEvents do
 				v:Disconnect()
 			end

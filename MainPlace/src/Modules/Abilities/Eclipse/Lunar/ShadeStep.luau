@@ -73,12 +73,18 @@ return {
 		local activeStun = nil
 		local cancelled = false
 		local onDamageCancel
+		local dashTween
 
 		local function doFullCleanup()
 			if cleanupDone then
 				return
 			end
 			cleanupDone = true
+			cancelled = true
+			if dashTween then
+				dashTween:Cancel()
+				dashTween = nil
+			end
 			Humanoid.WalkSpeed = 16
 
 			RemoteManager.FireAllClients(
@@ -194,13 +200,16 @@ return {
 
 				SFXModule:Play("shadestepTeleport", HumRP)
 
-				local dashTween = TweenService:Create(
+				dashTween = TweenService:Create(
 					HumRP,
 					TweenInfo.new(DASH_TWEEN_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 					{ CFrame = endCFrame }
 				)
 				dashTween:Play()
 				dashTween.Completed:Wait()
+				if cancelled or not Character.Parent or Humanoid.Health <= 0 then
+					return
+				end
 
 				RemoteManager.FireAllClients(
 					"ReplicateTask",

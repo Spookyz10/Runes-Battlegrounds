@@ -5,6 +5,9 @@ return function(Params)
 	State.solarData = State.solarData or {}
 	local data = State.solarData[Character]
 	if data then
+		if data.removingConnection then
+			data.removingConnection:Disconnect()
+		end
 		if data.sunConn then
 			data.sunConn:Disconnect()
 		end
@@ -21,8 +24,5 @@ return function(Params)
 		State.solarData[Character] = nil
 	end
 
-	State.lunarNightCount = math.max(0, State.lunarNightCount - 1)
-	if State.lunarNightCount <= 0 then
-		State:tweenToDay()
-	end
+	State:endNight("Solar", Character)
 end

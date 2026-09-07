@@ -139,6 +139,13 @@ local function fireProjectile(Character, Origin, Direction)
 	local Connection
 
 	Connection = RunService.Heartbeat:Connect(function(dt)
+		if not Character.Parent or not Character:FindFirstChild("Humanoid") or Character.Humanoid.Health <= 0 then
+			Exploded = true
+			Connection:Disconnect()
+			Projectile:Destroy()
+			RemoteManager.FireAllClients("ReplicateTask", "LunarAwakenMoonImpact", { char = Character, position = Projectile.Position })
+			return
+		end
 		if Exploded then
 			return
 		end
@@ -281,6 +288,7 @@ function module:Activate(Player)
 	RemoteManager.FireClient(Player, "ReplicateTask", "HideHotbar")
 	RemoteManager.FireClient(Player, "ReplicateTask", "HideAwkBar")
 
+	local finished = false
 	local isAirborne = false
 	local aimBridge = nil
 
@@ -363,7 +371,7 @@ function module:Activate(Player)
 			end
 
 			task.delay(THROW_DELAY, function()
-				if Character and Character.Parent then
+				if not finished and Character and Character.Parent and Humanoid.Health > 0 then
 					fireProjectile(Character, LaunchOrigin, LaunchDirection)
 					RemoteManager.FireAllClients("ReplicateTask", "LunarAwakenMoonLaunch", {
 						char = Character,
@@ -408,7 +416,11 @@ function module:Activate(Player)
 		end)
 	)
 
-	AnimTrack.Stopped:Once(function()
+	local function finish()
+		if finished then
+			return
+		end
+		finished = true
 		if isAirborne then
 			HumRP.Anchored = false
 			restoreGroundControl(Humanoid, HumRP)
@@ -424,10 +436,18 @@ function module:Activate(Player)
 		RemoteManager.FireClient(Player, "ReplicateTask", "LunarAimRestoreCamera", {})
 		RemoteManager.FireAllClients("ReplicateTask", "LunarAwakenEnd", { char = Character })
 		StunHandler:Unstun(Character, AwakeningStun)
-	end)
+		RemoteManager.FireClient(Player, "ReplicateTask", "ShowHotbar")
+		RemoteManager.FireClient(Player, "ReplicateTask", "ShowAwkBar")
+	end
+	AnimTrack.Stopped:Once(finish)
 
-	AnimationService:playAnimation(Character, LunarEclipseAnim)
-	AnimTrack.Stopped:Wait()
+	if not AnimationService:playAnimation(Character, LunarEclipseAnim) then
+		finish()
+		return
+	end
+	if not finished then
+		AnimTrack.Stopped:Wait()
+	end
 
 	RemoteManager.FireClient(Player, "ReplicateTask", "ShowHotbar")
 	RemoteManager.FireClient(Player, "ReplicateTask", "ShowAwkBar")

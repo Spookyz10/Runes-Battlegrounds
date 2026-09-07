@@ -12,6 +12,7 @@ local DamageHandler = require(ServerModules.DamageHandler)
 local iFramesService = require(ServerModules.iFramesService)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local AnimationService = require(ServerModules.AnimationService)
+local CharacterLifetime = require(ServerModules.CharacterLifetime)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local BodymoverService = require(ServerModules.BodymoverService)
 
@@ -74,6 +75,10 @@ local function releaseVictim(EnemyCharacter, VictimData)
 		return
 	end
 
+	if VictimData.DisconnectLifetime then
+		VictimData.DisconnectLifetime()
+		VictimData.DisconnectLifetime = nil
+	end
 	local EnemyHumanoid = EnemyCharacter:FindFirstChild("Humanoid")
 	local EnemyHumRP = EnemyCharacter:FindFirstChild("HumanoidRootPart")
 
@@ -217,7 +222,7 @@ local function returnCasterToGround(data, Humanoid, HumRP)
 		HumRP.AssemblyLinearVelocity = Vector3.zero
 	end
 
-	if Humanoid and Humanoid.Parent then
+	if Humanoid and Humanoid.Parent and HumRP and HumRP.Parent then
 		restoreGroundControl(Humanoid, HumRP)
 	end
 end
@@ -298,6 +303,7 @@ local function cleanup(data)
 	end
 
 	if data.Player then
+		RemoteManager.FireClient(data.Player, "ReplicateTask", "CustomCamPart", { func = "Stop" })
 		RemoteManager.FireClient(data.Player, "ReplicateTask", "ShowAwkBar")
 		RemoteManager.FireClient(data.Player, "ReplicateTask", "ShowHotbar")
 	end
@@ -379,6 +385,9 @@ function module:Activate(Player)
 			RemoteManager.FireAllClients("ReplicateTask", "ShatteredImpact", { char = Character })
 
 			task.wait(0.1)
+			if data.Cancelled or not Character.Parent or Humanoid.Health <= 0 then
+				return
+			end
 
 			spawnServerIsland(data, HumRP)
 			startIslandTracking(data)
@@ -432,6 +441,13 @@ function module:Activate(Player)
 						AnimTrack = VictimAnimTrack,
 						OriginalPosition = EnemyHumRP.Position,
 					}
+					local victimData = data.Victims[EnemyCharacter]
+					victimData.DisconnectLifetime = CharacterLifetime.Watch(EnemyCharacter, function()
+						if data.Victims and data.Victims[EnemyCharacter] == victimData then
+							data.Victims[EnemyCharacter] = nil
+						end
+						releaseVictim(EnemyCharacter, victimData)
+					end)
 
 					if VictimPlayer then
 						RemoteManager.FireClient(
@@ -459,17 +475,22 @@ function module:Activate(Player)
 				lookTarget = Character,
 			})
 
-			RemoteManager.FireAllClients(
-				"ReplicateTask",
-				"ShatterIslandExplosion",
-				{ Part = data.IslandClone.PrimaryPart.Position }
-			)
+			if data.IslandClone and data.IslandClone.PrimaryPart then
+				RemoteManager.FireAllClients(
+					"ReplicateTask",
+					"ShatterIslandExplosion",
+					{ Part = data.IslandClone.PrimaryPart.Position }
+				)
+			end
 
 			stopIslandTracking(data)
 
 			destroyServerIsland(data)
 
 			task.wait(0.1)
+			if data.Cancelled or not Character.Parent then
+				return
+			end
 
 			returnCasterToGround(data, Humanoid, HumRP)
 
@@ -483,6 +504,7 @@ function module:Activate(Player)
 			end
 
 			for EnemyCharacter, VictimData in pairs(Victims) do
+				releaseVictim(EnemyCharacter, VictimData)
 				if not EnemyCharacter or not EnemyCharacter.Parent then
 					continue
 				end

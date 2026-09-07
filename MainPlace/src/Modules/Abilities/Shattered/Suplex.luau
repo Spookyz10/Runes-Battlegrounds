@@ -10,6 +10,7 @@ local DamageHandler = require(ServerModules.DamageHandler)
 local HitboxHandler = require(ServerModules.HitboxHandler)
 local AnimationService = require(ServerModules.AnimationService)
 local SkillCancelHandler = require(ServerModules.SkillCancelHandler)
+local CharacterLifetime = require(ServerModules.CharacterLifetime)
 local iFramesService = require(ServerModules.iFramesService)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local SkillCollision = require(ServerModules.SkillCollision)
@@ -58,9 +59,19 @@ return {
 		local VictimHumRP = nil
 		local VictimTrack = nil
 
+		local disconnectVictim
+		local tweens = {}
 		local onDamageCancel
 
 		local function cleanupVictim()
+			if disconnectVictim then
+				disconnectVictim()
+				disconnectVictim = nil
+			end
+			for _, tween in tweens do
+				tween:Cancel()
+			end
+			table.clear(tweens)
 			if not VictimCharacter or not VictimCharacter.Parent then
 				return
 			end
@@ -165,6 +176,7 @@ return {
 					return
 				end
 
+				disconnectVictim = CharacterLifetime.Watch(VictimCharacter, onDamageCancel)
 				HitHappened = true
 				SkillCancelHandler:Unregister(Character, onDamageCancel)
 				SkillCancelHandler:Register(Character, onDamageCancel)
@@ -194,6 +206,7 @@ return {
 					TweenInfo.new(CASTER_TWEEN_TIME, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
 					{ CFrame = CasterTargetCFrame }
 				)
+				table.insert(tweens, CasterTween)
 				CasterTween:Play()
 
 				local HitVictim = VictimCharacter
@@ -243,9 +256,11 @@ return {
 							TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
 							{ CFrame = DownTargetCFrame }
 						)
+						table.insert(tweens, DownTween)
 						DownTween:Play()
 					end)
 
+					table.insert(tweens, BackTween)
 					BackTween:Play()
 				end)
 			end)
@@ -298,13 +313,15 @@ return {
 		)
 
 		UserTrack.Stopped:Once(function()
+			local wasCancelled = Cancelled
+			Cancelled = true
 			for _, v in UserEvents do
 				v:Disconnect()
 			end
 
 			SkillCancelHandler:Unregister(Character, onDamageCancel)
 
-			if not Cancelled then
+			if not wasCancelled then
 				if HitHappened then
 					cleanupVictim()
 				end

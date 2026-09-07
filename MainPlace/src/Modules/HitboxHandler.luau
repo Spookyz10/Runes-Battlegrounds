@@ -18,6 +18,9 @@ overlapParams.FilterDescendantsInstances = { workspace.Live }
 
 local getCframe = {
 	["Instance"] = function(point)
+		if not point.Parent then
+			return nil
+		end
 		return point.CFrame
 	end,
 
@@ -165,15 +168,13 @@ function HB:Clear()
 end
 
 function HB:Start()
-	task.spawn(function()
-		self.Connection = RNS.Heartbeat:Connect(function(dt)
-			if not pcall(function()
-				self:_Cast(dt)
-			end) then
-				self.Connection:Disconnect()
-				self.Connection = nil
-			end
-		end)
+	self:Clear()
+	self.Connection = RNS.Heartbeat:Connect(function(dt)
+		if not pcall(function()
+			self:_Cast(dt)
+		end) then
+			self:Clear()
+		end
 	end)
 end
 
@@ -224,7 +225,11 @@ function HB:SimpleOnce(Object, Size, Offset, Ignore, Method, HitType, onTouch, D
 		return
 	end
 
-	local HitboxCFrame = cframeFunc(Object) * Offset
+	local HitboxCFrame = cframeFunc(Object)
+	if not HitboxCFrame then
+		return
+	end
+	HitboxCFrame *= Offset
 
 	if RNS:IsStudio() and DebugHitboxes then
 		task.spawn(function()

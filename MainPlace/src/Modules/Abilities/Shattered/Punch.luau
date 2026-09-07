@@ -87,6 +87,10 @@ return {
 
 		local UserAnimation = MoveAnims.Shattered.Punch
 		local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
+		if not UserTrack then
+			StunHandler:Unstun(Character, Stun)
+			return
+		end
 
 		local cancelled = false
 		local onDamageCancel

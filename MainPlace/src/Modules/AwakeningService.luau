@@ -10,6 +10,8 @@ local SFXModule = require(RS.Shared.Modules.SFXModule)
 local SvModules = SvSt.Modules
 local iFramesHandler = require(SvModules.iFramesService)
 local MovesetHandler = require(SvModules.MovesetHandler)
+local CharacterLifetime = require(SvModules.CharacterLifetime)
+local AnimationService = require(SvModules.AnimationService)
 local Awakenings
 
 local function getAwakenings()
@@ -58,12 +60,9 @@ local function EndAwakening(
 	Player: Player,
 	Awk0C: RBXScriptConnection?,
 	AwkTween: Tween?,
-	DeathConn: RBXScriptConnection?
+	DeathConn: RBXScriptConnection?,
+	OriginalCharacter: Model?
 )
-	if not Player or not Player.Parent then
-		return
-	end
-
 	if Awk0C then
 		Awk0C:Disconnect()
 	end
@@ -76,10 +75,10 @@ local function EndAwakening(
 
 	if AwkTween then
 		if AwkTween.PlaybackState ~= Enum.PlaybackState.Completed then
-			local Character = Player.Character
+			local Character = OriginalCharacter or Player.Character
 			if Character then
 				local HumRP = Character:FindFirstChild("HumanoidRootPart")
-				if HumRP then
+				if HumRP and HumRP:FindFirstChild("AwakeningMusic") then
 					RemoteManager.FireAllClients(
 						"ReplicateTask",
 						"StopAwakeningMusics",
@@ -93,7 +92,7 @@ local function EndAwakening(
 
 	Player:SetAttribute("Awakened", nil)
 
-	local Character = Player.Character
+	local Character = OriginalCharacter or Player.Character
 	if not Character or not Character.Parent then
 		return
 	end
@@ -119,7 +118,9 @@ local function EndAwakening(
 		Humanoid.WalkSpeed = 16
 	end
 
-	MovesetHandler:AddBaseMoveset(Player, Player:GetAttribute("Moveset"))
+	if Player.Parent and Player.Character == Character and Humanoid and Humanoid.Health > 0 then
+		MovesetHandler:AddBaseMoveset(Player, Player:GetAttribute("Moveset"))
+	end
 end
 
 local function doActivate(Player: Player, Bypass: boolean?)
@@ -154,6 +155,29 @@ local function doActivate(Player: Player, Bypass: boolean?)
 		end
 	end
 
+	local State = { Ended = false }
+	local Active = { State = State, Character = Character, Starting = true }
+	ActiveAwakenings[Player] = Active
+	local function finish()
+		if State.Ended then
+			return
+		end
+		State.Ended = true
+		if ActiveAwakenings[Player] == Active then
+			ActiveAwakenings[Player] = nil
+		end
+		if Active.DisconnectLifetime then
+			Active.DisconnectLifetime()
+		end
+		if Active.Starting then
+			AnimationService:stopAll(Character)
+		end
+		iFramesHandler:RemoveiFrames(Character, "All")
+		EndAwakening(Player, Active.Awk0C, Active.AwkTween, nil, Character)
+	end
+	Active.Finish = finish
+	Active.DisconnectLifetime = CharacterLifetime.Watch(Character, finish)
+
 	AwkProgressObj.Value = 100
 
 	local CurrentMoveset = Player:GetAttribute("Moveset")
@@ -168,16 +192,27 @@ local function doActivate(Player: Player, Bypass: boolean?)
 
 	if AwakeningModule then
 		playAwakeningMusic(Player, Character, UltimateName)
-		AwakeningModule:Activate(Player)
+		local ok, err = xpcall(function()
+			AwakeningModule:Activate(Player)
+		end, debug.traceback)
+		if not ok then
+			finish()
+			warn(err)
+			return
+		end
 	else
 		warn("[AwakeningService] Nenhum módulo de awakening registrado para o moveset:", CurrentMoveset)
+	end
+
+	Active.Starting = false
+	if State.Ended or not Player.Parent or Player.Character ~= Character or not Character.Parent or Character.Humanoid.Health <= 0 then
+		finish()
+		return
 	end
 
 	MovesetHandler:AddAwakeningMoveset(Player, Player:GetAttribute("Moveset"))
 
 	iFramesHandler:RemoveiFrames(Character, "All")
-
-	local State = { Ended = false }
 
 	local AwkTween = TS:Create(
 		AwkProgressObj,
@@ -187,35 +222,15 @@ local function doActivate(Player: Player, Bypass: boolean?)
 
 	local Humanoid = Character:FindFirstChild("Humanoid") :: Humanoid?
 
-	local Awk0C: RBXScriptConnection
-	local DeathConn: RBXScriptConnection?
-
-	Awk0C = AwkProgressObj:GetPropertyChangedSignal("Value"):Connect(function()
-		if not State.Ended and AwkProgressObj.Value <= 0 then
-			State.Ended = true
-			ActiveAwakenings[Player] = nil
-			EndAwakening(Player, nil, AwkTween, DeathConn)
+	Active.AwkTween = AwkTween
+	Active.Awk0C = AwkProgressObj:GetPropertyChangedSignal("Value"):Connect(function()
+		if AwkProgressObj.Value <= 0 then
+			finish()
 		end
 	end)
-
 	if Humanoid then
-		DeathConn = Humanoid.Died:Connect(function()
-			if not State.Ended then
-				State.Ended = true
-				ActiveAwakenings[Player] = nil
-				EndAwakening(Player, Awk0C, AwkTween, nil)
-			end
-		end)
-
 		Humanoid.WalkSpeed = 25
 	end
-
-	ActiveAwakenings[Player] = {
-		State = State,
-		Awk0C = Awk0C,
-		AwkTween = AwkTween,
-		DeathConn = DeathConn,
-	}
 
 	AwkTween:Play()
 end
@@ -234,10 +249,7 @@ function AwakeningService:EndEarly(Player: Player)
 		return
 	end
 
-	Active.State.Ended = true
-	ActiveAwakenings[Player] = nil
-
-	EndAwakening(Player, Active.Awk0C, Active.AwkTween, Active.DeathConn)
+	Active.Finish()
 end
 
 function AwakeningService:IsAwakened(Player: Player)
@@ -275,8 +287,11 @@ function AwakeningService:DrainProgress(Player: Player, Amount: number)
 end
 
 local function ClearAwakenedAttribute(Player: Player)
+	local Active = ActiveAwakenings[Player]
+	if Active then
+		Active.Finish()
+	end
 	Player:SetAttribute("Awakened", nil)
-	ActiveAwakenings[Player] = nil
 end
 
 Players.PlayerAdded:Connect(function(Player)
@@ -292,6 +307,10 @@ for _, Player in Players:GetPlayers() do
 end
 
 Players.PlayerRemoving:Connect(function(Player)
+	local Active = ActiveAwakenings[Player]
+	if Active then
+		Active.Finish()
+	end
 	stopAwakeningMusic(Player)
 end)
 

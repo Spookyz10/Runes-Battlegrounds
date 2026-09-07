@@ -13,6 +13,7 @@ local DamageHandler = require(ServerModules.DamageHandler)
 local AnimationService = require(ServerModules.AnimationService)
 local iFramesService = require(ServerModules.iFramesService)
 local SkillCancelHandler = require(ServerModules.SkillCancelHandler)
+local CharacterLifetime = require(ServerModules.CharacterLifetime)
 local RagdollHandler = require(ServerModules.RagdollHandler)
 local PerfectKnockback = require(ServerModules.PerfectKnockback)
 local SkillCollision = require(ServerModules.SkillCollision)
@@ -286,6 +287,10 @@ local function runAirVariant(Player, Tool, Character, HumRP, Humanoid, InitialTa
 
 	local UserAnimation = MoveAnims.Eclipse.Solar.Tethers
 	local UserTrack, UserEvents = AnimationService:getAnimationTrack(Character, UserAnimation)
+	if not UserTrack then
+		StunHandler:Unstun(Character, CasterStun)
+		return
+	end
 
 	onDamageCancel = function()
 		if cancelled then
@@ -312,6 +317,9 @@ local function runAirVariant(Player, Tool, Character, HumRP, Humanoid, InitialTa
 	local pullDone = false
 	local hitDone = false
 	local Weld = nil
+	local PullAnchor, PullWeld, PullTween, CasterTween
+	local proximityConn, timeoutThread
+	local disconnectVictim
 	local rotateConn = nil
 
 	local casterCleaned = false
@@ -352,6 +360,26 @@ local function runAirVariant(Player, Tool, Character, HumRP, Humanoid, InitialTa
 	end
 
 	local function cleanupWeld()
+		if PullTween then
+			PullTween:Cancel()
+			PullTween = nil
+		end
+		if PullWeld then
+			PullWeld:Stop()
+			PullWeld = nil
+		end
+		if PullAnchor then
+			PullAnchor:Destroy()
+			PullAnchor = nil
+		end
+		if proximityConn then
+			proximityConn:Disconnect()
+			proximityConn = nil
+		end
+		if timeoutThread then
+			pcall(task.cancel, timeoutThread)
+			timeoutThread = nil
+		end
 		if Weld then
 			pcall(function()
 				Weld:Stop()
@@ -368,6 +396,9 @@ local function runAirVariant(Player, Tool, Character, HumRP, Humanoid, InitialTa
 			SFXModule:Play("tethersStart", HumRP)
 
 			task.wait(0.2)
+			if cancelled or not Character.Parent or Humanoid.Health <= 0 then
+				return
+			end
 
 			-- Usa o alvo já capturado no Start() (momento em que o player
 			-- apertou a skill), em vez de buscar de novo aqui. Buscar de novo
@@ -418,6 +449,7 @@ local function runAirVariant(Player, Tool, Character, HumRP, Humanoid, InitialTa
 
 			cancelAllKnockbackStates(closestEnemy)
 
+			disconnectVictim = CharacterLifetime.Watch(closestEnemy, onDamageCancel)
 			VictimStun = StunHandler:Stun(closestEnemy, nil, true, 0, 0, true)
 			closestEnemy:AddTag("CantRotate")
 			closestEnemy:AddTag("Knockbacked")
@@ -438,7 +470,7 @@ local function runAirVariant(Player, Tool, Character, HumRP, Humanoid, InitialTa
 
 			task.wait(CHAIN_TRAVEL_TIME)
 
-			if pullDone then
+			if cancelled or pullDone then
 				return
 			end
 			if not closestEnemy or not closestEnemy.Parent then
@@ -452,7 +484,7 @@ local function runAirVariant(Player, Tool, Character, HumRP, Humanoid, InitialTa
 
 			local PullTarget = (HumRP.CFrame * CFrame.new(PULL_OFFSET)).Position
 
-			local PullAnchor = Instance.new("Part")
+			PullAnchor = Instance.new("Part")
 			PullAnchor.Name = "FlarewhipPullAnchor"
 			PullAnchor.Anchored = true
 			PullAnchor.CanCollide = false
@@ -464,17 +496,17 @@ local function runAirVariant(Player, Tool, Character, HumRP, Humanoid, InitialTa
 			PullAnchor.Parent = workspace
 
 			local PullOffset = PullAnchor.CFrame:ToObjectSpace(EnemyHumRP.CFrame)
-			local PullWeld = WeldSystem.new(PullAnchor, EnemyHumRP, PullOffset, -1)
+			PullWeld = WeldSystem.new(PullAnchor, EnemyHumRP, PullOffset, -1)
 			PullWeld:Start(PULL_TIME + WELD_TIME + 0.5, EnemyPlayer, Player)
 
-			local PullTween = TweenService:Create(
+			PullTween = TweenService:Create(
 				PullAnchor,
 				TweenInfo.new(PULL_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.In),
 				{ CFrame = CFrame.new(PullTarget, PullTarget + HumRP.CFrame.LookVector) }
 			)
 
 			local function onVictimArrived()
-				if pullDone then
+				if cancelled or pullDone then
 					return
 				end
 				pullDone = true
@@ -516,11 +548,10 @@ local function runAirVariant(Player, Tool, Character, HumRP, Humanoid, InitialTa
 				UserTrack:AdjustSpeed(1)
 			end
 
-			local proximityConn
-			local timeoutThread
 
 			timeoutThread = task.delay(MAX_PULL_WAIT, function()
-				if pullDone then
+				timeoutThread = nil
+				if cancelled or pullDone then
 					return
 				end
 				pullDone = true
@@ -568,7 +599,7 @@ local function runAirVariant(Player, Tool, Character, HumRP, Humanoid, InitialTa
 			end)
 
 			proximityConn = RunService.Heartbeat:Connect(function()
-				if pullDone then
+				if cancelled or pullDone then
 					proximityConn:Disconnect()
 					return
 				end
@@ -586,7 +617,7 @@ local function runAirVariant(Player, Tool, Character, HumRP, Humanoid, InitialTa
 			end)
 
 			PullTween.Completed:Once(function(state)
-				if state == Enum.PlaybackState.Completed and not pullDone then
+				if state == Enum.PlaybackState.Completed and not cancelled and not pullDone then
 					if proximityConn then
 						proximityConn:Disconnect()
 					end
@@ -716,6 +747,17 @@ local function runAirVariant(Player, Tool, Character, HumRP, Humanoid, InitialTa
 	)
 
 	UserTrack.Stopped:Once(function()
+		cancelled = true
+		if disconnectVictim then
+			disconnectVictim()
+		end
+		if CasterTween then
+			CasterTween:Cancel()
+		end
+		RemoteManager.FireAllClients("ReplicateTask", "TethersVFX_Stop", {
+			casterChar = Character,
+			victimChar = closestEnemy,
+		})
 		for _, v in UserEvents do
 			v:Disconnect()
 		end
@@ -776,6 +818,9 @@ local function runGroundVariant(Player, Tool, Character, HumRP, Humanoid)
 	local casterAirborne = false
 	local hitDone = false
 	local Weld = nil
+	local PullAnchor, PullWeld, PullTween, CasterTween
+	local proximityConn, timeoutThread
+	local disconnectVictim
 
 	local casterCleaned = false
 
@@ -794,6 +839,26 @@ local function runGroundVariant(Player, Tool, Character, HumRP, Humanoid)
 	end
 
 	local function cleanupWeld()
+		if PullTween then
+			PullTween:Cancel()
+			PullTween = nil
+		end
+		if PullWeld then
+			PullWeld:Stop()
+			PullWeld = nil
+		end
+		if PullAnchor then
+			PullAnchor:Destroy()
+			PullAnchor = nil
+		end
+		if proximityConn then
+			proximityConn:Disconnect()
+			proximityConn = nil
+		end
+		if timeoutThread then
+			pcall(task.cancel, timeoutThread)
+			timeoutThread = nil
+		end
 		if Weld then
 			pcall(function()
 				Weld:Stop()
@@ -834,11 +899,12 @@ local function runGroundVariant(Player, Tool, Character, HumRP, Humanoid)
 
 			local CasterTarget = HumRP.CFrame + Vector3.new(0, GROUND_JUMP_HEIGHT, 0) + LookFlat * GROUND_JUMP_FORWARD
 
-			TweenService:Create(
+			CasterTween = TweenService:Create(
 				HumRP,
 				TweenInfo.new(GROUND_JUMP_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 				{ CFrame = CasterTarget }
-			):Play()
+			)
+			CasterTween:Play()
 		end)
 	)
 
@@ -895,6 +961,7 @@ local function runGroundVariant(Player, Tool, Character, HumRP, Humanoid)
 
 			cancelAllKnockbackStates(closestEnemy)
 
+			disconnectVictim = CharacterLifetime.Watch(closestEnemy, onDamageCancel)
 			VictimStun = StunHandler:Stun(closestEnemy, nil, true, 0, 0, true)
 			closestEnemy:AddTag("CantRotate")
 			closestEnemy:AddTag("Knockbacked")
@@ -933,7 +1000,7 @@ local function runGroundVariant(Player, Tool, Character, HumRP, Humanoid)
 
 			local PullTarget = (HumRP.CFrame * CFrame.new(PULL_OFFSET)).Position
 
-			local PullAnchor = Instance.new("Part")
+			PullAnchor = Instance.new("Part")
 			PullAnchor.Name = "TethersAirPullAnchor"
 			PullAnchor.Anchored = true
 			PullAnchor.CanCollide = false
@@ -945,10 +1012,10 @@ local function runGroundVariant(Player, Tool, Character, HumRP, Humanoid)
 			PullAnchor.Parent = workspace
 
 			local PullOffset = PullAnchor.CFrame:ToObjectSpace(EnemyHumRP.CFrame)
-			local PullWeld = WeldSystem.new(PullAnchor, EnemyHumRP, PullOffset, -1)
+			PullWeld = WeldSystem.new(PullAnchor, EnemyHumRP, PullOffset, -1)
 			PullWeld:Start(GROUND_PULL_TIME + WELD_TIME + 0.3, EnemyPlayer, Player)
 
-			local PullTween = TweenService:Create(
+			PullTween = TweenService:Create(
 				PullAnchor,
 				TweenInfo.new(GROUND_PULL_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
 				{ CFrame = CFrame.new(PullTarget, PullTarget + HumRP.CFrame.LookVector) }
@@ -956,7 +1023,7 @@ local function runGroundVariant(Player, Tool, Character, HumRP, Humanoid)
 
 			local arrived = false
 			local function onArrived()
-				if arrived then
+				if cancelled or arrived then
 					return
 				end
 				arrived = true
@@ -1106,6 +1173,17 @@ local function runGroundVariant(Player, Tool, Character, HumRP, Humanoid)
 	)
 
 	UserTrack.Stopped:Once(function()
+		cancelled = true
+		if disconnectVictim then
+			disconnectVictim()
+		end
+		if CasterTween then
+			CasterTween:Cancel()
+		end
+		RemoteManager.FireAllClients("ReplicateTask", "TethersVFX_Stop", {
+			casterChar = Character,
+			victimChar = closestEnemy,
+		})
 		for _, v in UserEvents do
 			v:Disconnect()
 		end

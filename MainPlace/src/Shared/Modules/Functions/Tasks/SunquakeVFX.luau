@@ -23,6 +23,7 @@ function Handlers.Start(Params)
 		return
 	end
 
+	Handlers.Stop({ char = Character })
 	local Clone = SunquakeAsset:Clone()
 	Clone.Parent = workspace
 	Clone.WorldPosition = HumRP.Position + Vector3.new(0, -3, 0)
@@ -30,6 +31,11 @@ function Handlers.Start(Params)
 	ParticlesModule.Emit(Clone)
 	ACTIVE[Character] = Clone
 	Debris:AddItem(Clone, 5)
+	Clone.Destroying:Once(function()
+		if ACTIVE[Character] == Clone then
+			ACTIVE[Character] = nil
+		end
+	end)
 end
 
 function Handlers.Stop(Params)

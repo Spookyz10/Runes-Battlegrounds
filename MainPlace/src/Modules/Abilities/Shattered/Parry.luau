@@ -9,6 +9,7 @@ local StunHandler = require(ServerModules.StunHandler)
 local DamageHandler = require(ServerModules.DamageHandler)
 local AnimationService = require(ServerModules.AnimationService)
 local SkillCancelHandler = require(ServerModules.SkillCancelHandler)
+local CharacterLifetime = require(ServerModules.CharacterLifetime)
 local CounterHandler = require(ServerModules.CounterHandler)
 local CombatEvents = require(ServerModules.CombatEvents)
 local iFramesService = require(ServerModules.iFramesService)
@@ -65,6 +66,7 @@ return {
 		local VictimStun = nil
 		local slamActive = false
 		local pendingCleanup = false
+		local disconnectCaster, disconnectVictim
 
 		local function stopCountering()
 			if counterToken then
@@ -78,6 +80,10 @@ return {
 		end
 
 		local function cleanupVictim()
+			if disconnectVictim then
+				disconnectVictim()
+				disconnectVictim = nil
+			end
 			if not AttackerCharacter or not AttackerCharacter.Parent then
 				return
 			end
@@ -110,6 +116,10 @@ return {
 		end
 
 		local function cleanupCaster()
+			if disconnectCaster then
+				disconnectCaster()
+				disconnectCaster = nil
+			end
 			Character:RemoveTag("CantRotate")
 			iFramesService:RemoveiFrames(Character, "Base")
 			StunHandler:Unstun(Character, Stun)
@@ -139,6 +149,7 @@ return {
 			cleanupCaster()
 		end
 
+		disconnectCaster = CharacterLifetime.Watch(Character, onDamageCancel)
 		SkillCancelHandler:Register(Character, onDamageCancel)
 
 		local function beginParry(Attacker)
@@ -158,6 +169,7 @@ return {
 				return
 			end
 
+			disconnectVictim = CharacterLifetime.Watch(AttackerCharacter, onDamageCancel)
 			iFramesService:AddiFrames(Character, "Base")
 			iFramesService:AddiFrames(AttackerCharacter, "Base")
 
@@ -229,7 +241,6 @@ return {
 					})
 
 					if Player then
-						print("ShakeCamera for AttackerPlayer")
 						RemoteManager.FireClient(Player, "ReplicateTask", "ShakeCamera", { Intensity = 4, Last = 0.3 })
 					end
 

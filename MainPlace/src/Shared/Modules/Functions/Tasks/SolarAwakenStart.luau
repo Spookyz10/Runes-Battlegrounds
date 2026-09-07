@@ -12,10 +12,8 @@ return function(Params)
 		return
 	end
 
-	State.lunarNightCount += 1
-	if State.lunarNightCount == 1 then
-		State:tweenToNight()
-	end
+	require(script.Parent.SolarAwakenEnd)({ char = Character })
+	State:beginNight("Solar", Character)
 
 	local SolarAwaken = CharacterAssets.Eclipse.Solar.Awaken
 
@@ -26,4 +24,15 @@ return function(Params)
 
 	State.solarData = State.solarData or {}
 	State.solarData[Character] = { solarFog = SolarFog }
+	local data = State.solarData[Character]
+	data.removingConnection = Character.AncestryChanged:Connect(function()
+		if not Character:IsDescendantOf(workspace) and State.solarData[Character] == data then
+			require(script.Parent.SolarAwakenEnd)({ char = Character })
+		end
+	end)
+	task.delay(60, function()
+		if State.solarData[Character] == data then
+			require(script.Parent.SolarAwakenEnd)({ char = Character })
+		end
+	end)
 end

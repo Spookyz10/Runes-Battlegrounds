@@ -5,6 +5,9 @@ return function(Params)
 	local Character = Params.char
 	local data = State.lunarData[Character]
 	if data then
+		if data.removingConnection then
+			data.removingConnection:Disconnect()
+		end
 		if data.moonConn then
 			data.moonConn:Disconnect()
 		end
@@ -19,5 +22,8 @@ return function(Params)
 			data.moonFog = nil
 		end
 		State.lunarData[Character] = nil
+	end
+	if not State.launchedMoons[Character] then
+		State:endNight("Lunar", Character)
 	end
 end

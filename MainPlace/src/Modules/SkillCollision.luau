@@ -1,4 +1,5 @@
 local SkillCollision = {}
+local CharacterLifetime = require(script.Parent.CharacterLifetime)
 
 local ActiveLocks = {}
 
@@ -29,6 +30,9 @@ function SkillCollision:Lock(Character)
 	end
 
 	ActiveLocks[Character] = data
+	data.DisconnectLifetime = CharacterLifetime.Watch(Character, function()
+		self:Unlock(Character, data)
+	end)
 
 	return data
 end
@@ -39,11 +43,14 @@ function SkillCollision:Unlock(Character, data)
 	end
 
 	data = data or ActiveLocks[Character]
-	if not data then
+	if not data or ActiveLocks[Character] ~= data then
 		return
 	end
 
 	ActiveLocks[Character] = nil
+	if data.DisconnectLifetime then
+		data.DisconnectLifetime()
+	end
 
 	for part, wasCollide in data.PartStates do
 		if part and part.Parent then
