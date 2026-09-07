@@ -475,7 +475,7 @@ function Ragdoll.ragdoll(Humanoid, Duration, HardRagdoll, Ragdoller, HardRagdoll
 						HitboxHandler:SimpleOnce(
 							HumRP,
 							ShakeHitboxSize,
-							ImpactOffset + Vector3.nwe(0, 5, 0),
+							ImpactOffset + Vector3.new(0, 5, 0),
 							{},
 							nil,
 							nil,

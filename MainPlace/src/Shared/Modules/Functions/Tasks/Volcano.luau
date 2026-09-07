@@ -50,7 +50,7 @@ RunService.RenderStepped:Connect(function()
 		local r = data.Rock
 		local position = r.Origin + r.Velocity * t + Vector3.new(0, -r.Gravity * t * t / 2, 0)
 		data.Part.CFrame = CFrame.new(position) * CFrame.Angles(t * 1.3, t * 0.8, t * 0.6)
-		data.Indicator.Transparency = 1 - math.clamp(t / r.Duration, 0, 1)
+		data.Indicator.Transparency = 0.65 - 0.5 * math.clamp(t / r.Duration, 0, 1)
 	end
 end)
 
@@ -78,7 +78,7 @@ return function(params)
 
 		tangent = tangent.Unit
 		indicator.CFrame = CFrame.fromMatrix(r.Target + normal * 0.1, normal, tangent, normal:Cross(tangent))
-		indicator.Transparency = 1
+		indicator.Transparency = 0.65
 		block.CFrame = CFrame.new(r.Origin)
 		rocks[params.Id] = { Part = block, Indicator = indicator, Rock = r }
 		local source = workspace:FindFirstChild("VolcanoPart")

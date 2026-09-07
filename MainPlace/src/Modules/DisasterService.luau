@@ -5,7 +5,15 @@ local Players = game:GetService("Players")
 
 local Remote = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 local ApplyLighting = require(script.Parent.DisasterLighting)
-local Catalog = { Volcano = require(script.Parent.Disasters.Volcano) }
+local Catalog = {
+	Volcano = require(script.Parent.Disasters.Volcano),
+	Storm = require(script.Parent.Disasters.Storm),
+	Blizzard = require(script.Parent.Disasters.Blizzard),
+	MeteorShower = require(script.Parent.Disasters.MeteorShower),
+}
+local names = { "Volcano", "Storm", "Blizzard", "MeteorShower" }
+local random = Random.new()
+local nextName = names[random:NextInteger(1, #names)]
 
 local Service = {}
 local active
@@ -26,14 +34,16 @@ local function notify(message)
 	})
 end
 
-local function resetTimer()
+local function resetTimer(prefix)
+	nextName = names[random:NextInteger(1, #names)]
 	nextStart = os.time() + 600
 	notified = {}
 	workspace:SetAttribute("NextDisasterAt", nextStart)
-	notify("Volcanic eruption will begin in 10 minutes.")
+	notify((prefix or "") .. Catalog[nextName].Name .. " will begin in 10 minutes.")
 end
 
-function Service.Stop()
+function Service.Stop(replacing)
+	local endedName = active and active.Name
 	if active then
 		active.Cleanup()
 		active.Restore()
@@ -42,7 +52,10 @@ function Service.Stop()
 
 	workspace:SetAttribute("ActiveDisaster", nil)
 	workspace:SetAttribute("DisasterEndsAt", nil)
-	resetTimer()
+	if not replacing then
+		-- One notification keeps the end announcement from being replaced immediately.
+		resetTimer(if endedName then endedName .. " has ended! " else nil)
+	end
 end
 
 function Service.Start(name, endsAt)
@@ -57,28 +70,39 @@ function Service.Start(name, endsAt)
 	end
 
 	if active then
-		Service.Stop()
+		Service.Stop(true)
 	end
 
 	local ok, cleanup = pcall(disaster.Start)
 
 	if not ok then
+		resetTimer()
 		return false, tostring(cleanup)
 	end
 
-	local lightingOk, restore = pcall(ApplyLighting)
+	local lightingOk, restore = pcall(ApplyLighting, name)
 
 	if not lightingOk then
 		cleanup()
+		resetTimer()
 
 		return false, tostring(restore)
 	end
 
-	active = { Cleanup = cleanup, Restore = restore, EndsAt = endsAt or os.time() + disaster.Duration }
+	local finish = endsAt or os.time() + disaster.Duration
+	active = {
+		Name = disaster.Name,
+		Cleanup = cleanup,
+		Restore = restore,
+		EndsAt = finish,
+		RemainingMinutes = math.ceil((finish - os.time()) / 60),
+	}
 	workspace:SetAttribute("ActiveDisaster", name)
 	workspace:SetAttribute("DisasterEndsAt", active.EndsAt)
 	workspace:SetAttribute("NextDisasterAt", nil)
-	notify(disaster.Name .. " has begun! Avoid the marked impact zones.")
+	notify(
+		disaster.Name .. " has begun! Ends in " .. active.RemainingMinutes .. " minutes. Avoid the marked impact zones."
+	)
 
 	return true, "Disaster started on this server."
 end
@@ -107,11 +131,14 @@ local function receive(data)
 end
 
 function Service.Command(action, name, global)
+	if action == "Start" and (typeof(name) ~= "string" or not Catalog[name]) then
+		return false, "Unknown disaster."
+	end
 	if not global then
 		if action == "Stop" then
 			Service.Stop()
 
-			return true, "Disaster stopped locally."
+			return true, "All events stopped on this server. Random events resume in 10 minutes."
 		end
 
 		return Service.Start(name)
@@ -162,10 +189,14 @@ local function welcome(player)
 		end
 
 		local message = if active
-			then "Volcanic eruption is active! Avoid the marked impact zones."
-			else "Volcanic eruption in " .. tostring(
-				math.max(1, math.ceil((nextStart - os.time()) / 60))
-			) .. " minutes."
+			then active.Name
+				.. " is active! Ends in "
+				.. math.max(1, math.ceil((active.EndsAt - os.time()) / 60))
+				.. " minutes."
+			else Catalog[nextName].Name
+				.. " in "
+				.. tostring(math.max(1, math.ceil((nextStart - os.time()) / 60)))
+				.. " minutes."
 		Remote.FireClient(
 			player,
 			"Notification",
@@ -189,23 +220,31 @@ task.spawn(function()
 		if active then
 			if now >= active.EndsAt then
 				Service.Stop()
+			else
+				local minutes = math.ceil((active.EndsAt - now) / 60)
+				if minutes < active.RemainingMinutes then
+					active.RemainingMinutes = minutes
+					notify(active.Name .. " ends in " .. minutes .. (if minutes == 1 then " minute!" else " minutes."))
+				end
 			end
 		else
 			local remaining = nextStart - now
 
 			if remaining <= 0 then
-				local ok, reason = Service.Start("Volcano")
+				local ok, reason = Service.Start(nextName)
 
 				if not ok then
 					warn("[Disaster] " .. reason)
-					resetTimer()
 				end
 			elseif remaining <= 10 and not notified[remaining] then
 				notified[remaining] = true
-				notify("Volcanic eruption in " .. tostring(remaining) .. " seconds!")
-			elseif remaining <= 300 and not notified.Five then
+				notify(Catalog[nextName].Name .. " in " .. tostring(remaining) .. " seconds!")
+			elseif remaining > 10 and remaining <= 60 and not notified.One then
+				notified.One = true
+				notify(Catalog[nextName].Name .. " will begin in 1 minute.")
+			elseif remaining > 60 and remaining <= 300 and not notified.Five then
 				notified.Five = true
-				notify("Volcanic eruption will begin in 5 minutes.")
+				notify(Catalog[nextName].Name .. " will begin in 5 minutes.")
 			end
 		end
 

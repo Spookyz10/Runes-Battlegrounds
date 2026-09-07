@@ -24,6 +24,57 @@ function Admin.Init()
 		local main = gui.Main
 		local selected = "Gold"
 		local scope = "Local"
+		local playersPage = main.PlayerPage
+		local eventsPage = main.EventsPage
+		local disasters = {
+			{ "Volcano", "Volcanic eruption" },
+			{ "Storm", "Thunderstorm" },
+			{ "Blizzard", "Blizzard" },
+			{ "MeteorShower", "Meteor shower" },
+		}
+		local disasterIndex = 1
+		local function selectEvent(index)
+			disasterIndex = index
+			eventsPage.StartDisaster.Text = "Start " .. disasters[index][2]:lower()
+			for i, entry in disasters do
+				eventsPage[entry[1]].BackgroundColor3 = if i == index
+					then Color3.fromRGB(111, 99, 225)
+					else Color3.fromRGB(30, 33, 47)
+			end
+		end
+		for index, entry in disasters do
+			eventsPage[entry[1]].Activated:Connect(function()
+				selectEvent(index)
+			end)
+		end
+		local function tab(events)
+			playersPage.Visible, eventsPage.Visible = not events, events
+			main.PlayersTab.BackgroundColor3 = if events
+				then Color3.fromRGB(30, 33, 47)
+				else Color3.fromRGB(111, 99, 225)
+			main.EventsTab.BackgroundColor3 = if events
+				then Color3.fromRGB(111, 99, 225)
+				else Color3.fromRGB(30, 33, 47)
+		end
+		main.PlayersTab.Activated:Connect(function()
+			tab(false)
+		end)
+		main.EventsTab.Activated:Connect(function()
+			tab(true)
+		end)
+		local function activeEvent()
+			local name = workspace:GetAttribute("ActiveDisaster")
+			for _, entry in disasters do
+				if entry[1] == name then
+					name = entry[2]
+					break
+				end
+			end
+			eventsPage.ActiveEvent.Text = "This server: " .. (name or "no active event")
+		end
+		workspace:GetAttributeChangedSignal("ActiveDisaster"):Connect(activeEvent)
+		activeEvent()
+		selectEvent(1)
 		local busy = false
 		local confirmation
 		local help = {
@@ -42,30 +93,30 @@ function Admin.Init()
 
 		local function resetConfirmation()
 			confirmation = nil
-			main.Execute.Text = "Send command"
+			playersPage.Execute.Text = "Send command"
 		end
 
 		local function select(action)
 			selected = action
 			resetConfirmation()
-			main.Value.Text = ""
-			main.Value.PlaceholderText = help[action][1]
-			main.Help.Text = help[action][2]
+			playersPage.Value.Text = ""
+			playersPage.Value.PlaceholderText = help[action][1]
+			playersPage.Help.Text = help[action][2]
 
 			for name in help do
-				main[name].BackgroundColor3 = if name == action
+				playersPage[name].BackgroundColor3 = if name == action
 					then Color3.fromRGB(128, 104, 231)
 					else Color3.fromRGB(40, 40, 57)
 			end
 		end
 
 		for name in help do
-			main[name].Activated:Connect(function()
+			playersPage[name].Activated:Connect(function()
 				select(name)
 			end)
 		end
 
-		for _, field in { main.Target, main.Value, main.Reason } do
+		for _, field in { playersPage.Target, playersPage.Value, playersPage.Reason } do
 			field:GetPropertyChangedSignal("Text"):Connect(resetConfirmation)
 		end
 
@@ -78,10 +129,11 @@ function Admin.Init()
 			main.Status.Text = "Sending command..."
 			local ok, response = pcall(Remote.InvokeServer, "Admin", {
 				Action = action,
-				Target = main.Target.Text,
-				Value = main.Value.Text,
-				Reason = main.Reason.Text,
+				Target = playersPage.Target.Text,
+				Value = playersPage.Value.Text,
+				Reason = playersPage.Reason.Text,
 				Scope = scope,
+				Disaster = disasters[disasterIndex][1],
 			})
 			busy = false
 			resetConfirmation()
@@ -89,20 +141,15 @@ function Admin.Init()
 			main.Status.Text = if ok and typeof(response) == "table"
 				then response.Message
 				else "No response. Check server output."
-			main.Status.TextColor3 = if success
-				then Color3.fromRGB(103, 231, 157)
-				else Color3.fromRGB(255, 110, 123)
+			main.Status.TextColor3 = if success then Color3.fromRGB(103, 231, 157) else Color3.fromRGB(255, 110, 123)
 		end
 
-		main.Execute.Activated:Connect(function()
+		playersPage.Execute.Activated:Connect(function()
 			if selected == "Ban" or selected == "Kick" then
 				if confirmation ~= selected then
 					confirmation = selected
-					main.Execute.Text = "Confirm " .. selected
-					main.Status.Text = selected
-						.. " target: "
-						.. main.Target.Text
-						.. ". Click again to confirm."
+					playersPage.Execute.Text = "Confirm " .. selected
+					main.Status.Text = selected .. " target: " .. playersPage.Target.Text .. ". Click again to confirm."
 					return
 				end
 			end
@@ -110,17 +157,18 @@ function Admin.Init()
 			send(selected)
 		end)
 
-		main.Scope.Activated:Connect(function()
+		eventsPage.Scope.Activated:Connect(function()
 			scope = if scope == "Local" then "Global" else "Local"
-			main.Scope.Text = if scope == "Local" then "This server" else "All servers"
+			eventsPage.Scope.Text = if scope == "Local" then "This server" else "All servers"
+			main.StopDisaster.Text = "Stop all events - " .. eventsPage.Scope.Text
 		end)
 
-		main.StartDisaster.Activated:Connect(function()
+		eventsPage.StartDisaster.Activated:Connect(function()
 			send("Disaster")
 		end)
 
 		main.StopDisaster.Activated:Connect(function()
-			send("StopDisaster")
+			send("StopAllDisasters")
 		end)
 
 		select("Gold")

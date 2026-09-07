@@ -9,7 +9,7 @@ local Topbar = {}
 local visible = true
 local entries = {
 	{ Name = "RuneSelection", Image = 74892251016594 },
-	{ Name = "Shop", Image = 83529893577215, Label = "Shop" },
+	{ Name = "Shop", Image = 83529893577215 },
 	{ Name = "Log", Image = 73951345498778 },
 	{ Name = "KillSound", Image = 107213877689577 },
 	{ Name = "Cosmetics", Image = 95816009699835 },
@@ -29,8 +29,7 @@ end
 
 local function refresh()
 	for _, entry in entries do
-		local allowed = entry.Name ~= "KillSound"
-			or table.find(Data.OwnedPasses(), KillSoundPass.GamepassId) ~= nil
+		local allowed = entry.Name ~= "KillSound" or table.find(Data.OwnedPasses(), KillSoundPass.GamepassId) ~= nil
 		entry.Icon:setEnabled(visible and entry.Gui ~= nil and allowed)
 	end
 end

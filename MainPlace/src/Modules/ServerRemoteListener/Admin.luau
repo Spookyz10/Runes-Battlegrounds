@@ -127,13 +127,16 @@ Data.Service:addGlobalCallback("AdminAction_v1", apply)
 local function execute(player, params)
 	local action = params.Action
 
-	if action == "Disaster" or action == "StopDisaster" then
+	if action == "Disaster" or action == "StopDisaster" or action == "StopAllDisasters" then
 		if params.Scope ~= "Local" and params.Scope ~= "Global" then
 			return result(false, "Invalid scope.")
 		end
 
-		local ok, message =
-			Disaster.Command(if action == "Disaster" then "Start" else "Stop", "Volcano", params.Scope == "Global")
+		local ok, message = Disaster.Command(
+			if action == "Disaster" then "Start" else "Stop",
+			params.Disaster or "Volcano",
+			params.Scope == "Global"
+		)
 
 		return result(ok, message)
 	end
@@ -238,9 +241,12 @@ local function execute(player, params)
 
 	local sent = Data.Service:sendGlobalMessage("AdminAction_v1", id, message)
 
-	return result(sent == true, if sent
-		then "Command queued for the target server. Delivery is asynchronous."
-		else "Could not send the command.")
+	return result(
+		sent == true,
+		if sent
+			then "Command queued for the target server. Delivery is asynchronous."
+			else "Could not send the command."
+	)
 end
 
 function Admin:Invoke(player, params)

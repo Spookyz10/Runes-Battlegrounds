@@ -4,9 +4,7 @@ local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 
 local Hitbox = require(script.Parent.Parent.HitboxHandler)
-local Ragdoll = require(script.Parent.Parent.RagdollHandler)
-local Knockback = require(script.Parent.Parent.BodymoverService)
-local IFrames = require(script.Parent.Parent.iFramesService)
+local Impact = require(script.Parent.Impact)
 local Remote = require(ReplicatedStorage.Shared.Modules.RemoteManager)
 
 local Volcano = { Name = "Volcanic eruption", Duration = 300 }
@@ -124,29 +122,8 @@ function Volcano.Start()
 			nil,
 			nil,
 			function(character)
-				local hum = character:FindFirstChildOfClass("Humanoid")
-				local root = character:FindFirstChild("HumanoidRootPart")
-
-				if not hum or not root or hum.Health <= 0 or IFrames:HasiFrame(character, 1) then
-					return
-				end
-
-				hum:TakeDamage(15)
-				local direction = root.Position - position
-				direction = Vector3.new(direction.X, 0, direction.Z)
-				direction = if direction.Magnitude > 0.01 then direction.Unit else Vector3.new(1, 0, 0)
-				Ragdoll.ragdoll(hum, 5)
-				task.defer(function()
-					if not active or not root.Parent then
-						return
-					end
-
-					Knockback:Knockback(character, {
-						KnockbackType = "Velocity",
-						Velocity = direction * 90 + Vector3.new(0, 55, 0),
-						MaxForce = Vector3.new(100000, 100000, 100000),
-						Time = 0.3,
-					})
+				Impact(character, position, 15, "Volcano", function()
+					return active
 				end)
 			end
 		)
@@ -161,9 +138,22 @@ function Volcano.Start()
 				+ rock.Velocity * elapsed
 				+ Vector3.new(0, -rock.Gravity * elapsed * elapsed / 2, 0)
 			local delta = position - rock.Last
-			local hit = if delta.Magnitude > 0.001
-				then workspace:Spherecast(rock.Last, 10, delta, collisionParams)
-				else nil
+			local hit
+			local distance = delta.Magnitude
+			if distance > 0.001 then
+				local direction = delta.Unit
+				-- Leave room for floating-point rounding below the 1024-stud limit.
+				for offset = 0, distance, 1000 do
+					local length = math.min(1000, distance - offset)
+					if length <= 0 then
+						break
+					end
+					hit = workspace:Spherecast(rock.Last + direction * offset, 10, direction * length, collisionParams)
+					if hit then
+						break
+					end
+				end
+			end
 			if hit or elapsed >= rock.Duration then
 				rocks[id] = nil
 				local point = if hit then hit.Position else rock.Target
